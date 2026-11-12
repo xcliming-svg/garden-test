@@ -22,12 +22,12 @@
   });
 
   const hud = Object.freeze({
-    padding: spacing.base, gap: spacing.small, labelSize: 12, valueSize: 11,
+    padding: spacing.base, gap: spacing.small, labelSize: 12, valueSize: 12,
     centerY: spec.top / 2, iconSize: 12, barHeight: 12,
     // 표시 폭 예약용 문자열이다. 게임 수치의 최대값을 의미하지 않는다.
     timeSample: '88:88', counterSample: '88888'
   });
-  // Preserve 24px horizontal three-digit cost; micro text is a native-size exception.
+  // Preserve the approved 24px horizontal three-digit cost layout; micro text is the only native-size exception.
   const slotCost = Object.freeze({ padding: spacing.micro, gap: spacing.micro, iconSize: 6, fontSize: 7, minFontSize: 6, maxDigits: 3 });
 
   // size = 원본 PNG 및 1배 표시 크기. 파일을 생성하거나 로드하지 않는다.
@@ -84,10 +84,10 @@
     }
   }
 
-  function text(scene, x, y, value, size, color, align, bold) {
+  function text(scene, x, y, value, size, color, align) {
     return window.GardenUI.text(scene, x, y, value, size, color, {
       originX: align === 'center' ? 0.5 : align === 'right' ? 1 : 0,
-      originY: 0.5, bold: !!bold
+      originY: 0.5
     });
   }
 
@@ -107,7 +107,7 @@
   // 숫자의 표시 폭은 실제 폰트로 측정한다. 시간/카운터는 예약 폭을 확보하고
   // 현재 값이 더 길다면 그 폭을 사용한다. 임의의 컬럼 x좌표를 사용하지 않는다.
   function metricValue(scene, value, reserve) {
-    const item = text(scene, 0, hud.centerY, reserve, hud.valueSize, colors.value, 'left', true);
+    const item = text(scene, 0, hud.centerY, reserve, hud.valueSize, colors.value, 'left');
     const reservedWidth = item.width;
     item.setText(value);
     return { item, width: Math.ceil(Math.max(reservedWidth, item.width)) };
@@ -159,7 +159,7 @@
     const barW = progressEnd - hud.padding - barX;
     frame(g, barX, hud.centerY - hud.barHeight / 2, barW, hud.barHeight,
       colors.normalFill, colors.normalBorder);
-    text(scene, barX + barW / 2, hud.centerY, '0%', 11, '#cad7ce', 'center', true);
+    text(scene, barX + barW / 2, hud.centerY, '0%', hud.valueSize, '#cad7ce', 'center');
 
     // 보석도 다른 그룹과 동일한 패딩/간격을 사용한다. 아이콘 위치는
     // 현재 숫자의 자릿수가 바뀌어도 이동하지 않는다.
@@ -230,7 +230,7 @@
 
     const header = scene.add.graphics().setDepth(11).setName('blueprint-header');
     frame(header, b.x, b.y, b.width, b.header, colors.hud, colors.hudBorder);
-    text(scene, b.x + b.padding, b.y + b.header / 2, '도안', 12, '#c7d1d9', 'left', true).setDepth(12);
+    text(scene, b.x + b.padding, b.y + b.header / 2, '도안', 12, '#c7d1d9', 'left').setDepth(12);
     const arrow = scene.add.graphics().setDepth(12).setName('blueprint-chevron');
     let expanded = true;
     function drawArrow() {

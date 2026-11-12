@@ -66,7 +66,7 @@
 ## 5. 구조와 작성 규칙
 
 - `index.html`: 별도 빌드 도구가 없어도 열리는 정적 페이지. Phaser 3.90.0 CDN 사용. 해당 CDN에 접근할 수 있어야 한다.
-- `src/ui.js`: 색상, 텍스트, 버튼, 패널, ESC 및 공통 오버레이 유틸리티. 게임 상태를 두지 않는다. 영문·숫자 Departure Mono, 한글 Galmuri11 Condensed/Bold를 사용하고 Phaser 시작 전 로드한다. `assets/fonts/`의 원본 WOFF2 내장 CSS와 OFL 저작권·라이선스를 함께 배포한다.
+- `src/ui.js`: 색상, 텍스트, 버튼, 패널, ESC 및 공통 오버레이 유틸리티. 게임 상태를 두지 않는다. 영문·한글·숫자 모두 Fusion Pixel 12px Proportional KO Regular를 사용하고 Phaser 시작 전 로드한다. 굵은꼴 합성·글자폭 변경 금지. 기본 논리 크기 12px의 정수 배수(확장 슬롯 비용 7/6px 예외). 폰트 로드 실패 시 다른 폰트로 게임을 실행하지 않는다. `assets/fonts/`의 원본 WOFF2 내장 CSS와 OFL 저작권·라이선스를 함께 배포한다.
 - `src/scenes.js`: 화면별 Scene 클래스만 작성한다. 결과 통계의 숫자, 전투, 입력 이동 등은 넣지 않는다.
 - `src/main.js`: Phaser 인스턴스 설정, 640×360 고정 논리 좌표와 최대 16:9 창 맞춤(비정수 허용), 배율별 텍스트 렌더링, 씬 등록.
 - `src/game-layout.js`: 사용자가 승인한 전장 UI 규격, 10×10 그리드, 도안 접기/펼치기, 정적 에셋 크기 도형, 슬롯 UI만 렌더링한다. 실제 게임 상태 또는 에셋 로딩을 추가하지 않는다.

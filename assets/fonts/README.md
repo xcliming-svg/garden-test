@@ -1,11 +1,9 @@
-# UI fonts
+# UI font
 
-Unmodified upstream WOFF2 bytes are embedded in local CSS as base64 data URLs for file:// compatibility. CSS family names are application aliases. Distribute the CSS and both original OFL notices together.
+Fusion Pixel 12px Proportional KO Regular (400) is the sole UI font, for Korean, English, and numerals. The original WOFF2 is embedded unchanged in `fusion.css` as a data URL for file:// execution, without a font CDN or installed system font. The CSS family name Garden Fusion is an application alias; the binary is unchanged.
 
-| Font | Version | Original Git blob | License |
-| --- | --- | --- | --- |
-| Departure Mono Regular | 1.500 | b4a23dc1dad1c934005d0862e62c0294636afb08 | [OFL 1.1](DepartureMono-OFL.txt) |
-| Galmuri11 Condensed | 2.40.3 | f42ac0dfdd91e1cf083ced16ad2f0a962ec1f81b | [OFL 1.1](Galmuri-OFL.txt) |
-| Galmuri11 Bold | 2.40.3 | 787829ba0623ff594dc7ff33c68ef0a2044b0b5b | [OFL 1.1](Galmuri-OFL.txt) |
-
-Sources: [Departure Mono v1.500](https://github.com/rektdeckard/departure-mono/releases/tag/v1.500), [Galmuri](https://github.com/quiple/galmuri). Checked 2026-11-12. The Galmuri author identifies Bold and Condensed as original glyph designs. OFL permits commercial bundling if copyright and license notices remain included and the fonts are not sold separately. Game source is not subject to the font licenses.
+- Upstream: [TakWolf / Fusion Pixel Font](https://github.com/TakWolf/fusion-pixel-font)
+- [Pinned source copy](https://github.com/Lhcfl/sharkey-stelpolva/blob/4eb54e5b2532dcc1c4079eae3efb9c69319ba37f/packages/backend/assets/fonts/fusion-pixel/fusion-pixel-12px-proportional-ko.woff2)
+- Original Git blob: `960c0565b564136e8bc470da6fd3325064f486db`, 618,900 bytes (WOFF2 header and Git blob hash verified).
+- Exact upstream release version of this mirrored binary is not identified; do not label it as the latest release.
+- License: [SIL OFL 1.1](Fusion-Pixel-OFL.txt). Upstream [credits and component licenses](https://github.com/TakWolf/fusion-pixel-font#许可证) apply; retain the font and license notices together in distributions. The font may be bundled with a paid game, but not sold alone. Game code is not covered by OFL.

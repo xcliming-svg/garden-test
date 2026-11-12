@@ -21,9 +21,9 @@
     constructor() { super('MainMenu'); }
     create() {
       U.background(this, 'MAIN MENU');
-      centered(this, 640, 168, 'GARDEN', 66, U.C.text, { bold: true });
-      centered(this, 640, 248, 'TEST', 66, '#e1b875', { bold: true });
-      centered(this, 640, 304, 'ROGUELIKE / SCENE STRUCTURE', 22, U.C.muted);
+      centered(this, 640, 168, 'GARDEN', 72, U.C.text);
+      centered(this, 640, 248, 'TEST', 72, '#e1b875');
+      centered(this, 640, 304, 'ROGUELIKE / SCENE STRUCTURE', 24, U.C.muted);
 
       const x = 640;
       const w = 392;
@@ -61,7 +61,7 @@
     create() {
       U.overlay(this);
       U.panel(this, 640, 360, 528, 520, { fill: 0x17212d, stroke: U.C.gold, strokeWidth: 2 });
-      centered(this, 640, 152, '일시정지', 48, U.C.text, { bold: true });
+      centered(this, 640, 152, '일시정지', 48, U.C.text);
       centered(this, 640, 192, '게임 화면은 중단된 상태입니다.', 24, U.C.muted);
       U.rule(this, 408, 224, 872, 224, U.C.border, 1);
       const first = 264;
@@ -92,7 +92,7 @@
     drawShell(title, subtitle) {
       U.overlay(this);
       U.panel(this, 640, 360, 928, 544, { fill: 0x17212d, stroke: U.C.border });
-      U.text(this, 208, 136, title, 48, U.C.text, { bold: true, originY: 0.5 });
+      U.text(this, 208, 136, title, 48, U.C.text, { originY: 0.5 });
       U.text(this, 208, 176, subtitle, 24, U.C.muted, { originY: 0.5 });
       U.rule(this, 208, 208, 1072, 208, U.C.border, 1);
       U.button(this, 976, 584, 192, '돌아가기', () => this.close(), { height: menu.buttonHeight, fontSize: 24 });
@@ -154,7 +154,7 @@
     create() {
       this.drawShell('도감', '향후 맵 도감이 들어갈 화면입니다.');
       U.panel(this, 640, 384, 864, 304, { fill: 0x101823 });
-      centered(this, 640, 360, '맵 도감', 48, U.C.text, { bold: true });
+      centered(this, 640, 360, '맵 도감', 48, U.C.text);
       centered(this, 640, 408, '맵 도감 콘텐츠 미구현', 24, U.C.muted);
     }
   }
@@ -168,7 +168,7 @@
     create() {
       U.overlay(this);
       U.panel(this, 640, 360, 608, 320, { fill: 0x1b2532, stroke: U.C.red, strokeWidth: 2 });
-      centered(this, 640, 264, '메인 메뉴로 돌아가시겠습니까?', 24, U.C.text, { bold: true });
+      centered(this, 640, 264, '메인 메뉴로 돌아가시겠습니까?', 24, U.C.text);
       centered(this, 640, 320, '진행 상황 저장은 미구현 상태입니다.', 24, U.C.muted);
       U.button(this, 512, 432, 240, '취소', () => this.cancel(), { height: menu.buttonHeight });
       U.button(this, 768, 432, 240, '돌아가기', () => this.confirm(), { height: menu.buttonHeight, danger: true });
@@ -190,7 +190,7 @@
       const accent = this.victory ? U.C.green : U.C.red;
       U.panel(this, 640, 360, 896, 496, { fill: 0x15202b, stroke: accent, strokeWidth: 2 });
       centered(this, 640, 184, this.victory ? '성공' : '실패', 48,
-        this.victory ? '#84d0aa' : '#e18f91', { bold: true });
+        this.victory ? '#84d0aa' : '#e18f91');
       centered(this, 640, 240, '런 결과 화면 · UI 미리보기', 24, U.C.muted);
       U.rule(this, 224, 272, 1056, 272, U.C.border, 1);
 
@@ -199,7 +199,7 @@
         const x = index % 2 === 0 ? 240 : 656;
         const y = 312 + Math.floor(index / 2) * 88;
         U.text(this, x, y, name, 24, U.C.muted, { originY: 0.5 });
-        U.text(this, x, y + 32, '—', 22, U.C.text, { originY: 0.5 });
+        U.text(this, x, y + 32, '—', 24, U.C.text, { originY: 0.5 });
       });
       centered(this, 640, 504, '결과 데이터 계산·저장은 미구현 상태입니다.', 24, '#e1b875');
       U.button(this, 496, 560, 272, '새 게임', () => this.scene.start('Game'), { primary: true, height: menu.buttonHeight, fontSize: 24 });

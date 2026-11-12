@@ -17,20 +17,15 @@
     red: 0xe18f91,
     white: 0xffffff
   };
-  const fonts = Object.freeze({
-    latin: '"Garden Departure"', korean: '"Garden Korean Condensed"',
-    koreanBold: '"Garden Korean Bold"', fallback: 'Arial, "Malgun Gothic", sans-serif'
-  });
-  function fontFamily(bold) {
-    return [fonts.latin, bold ? fonts.koreanBold : fonts.korean, fonts.fallback].join(', ');
-  }
+  // One unmodified Regular face for Korean, English and numerals.
+  const fontFamily = '"Garden Fusion"';
   async function loadFonts() {
-    if (!document.fonts || !document.fonts.load) return;
-    const checks = [[fonts.latin, 'GARDEN 0123456789'], [fonts.korean, '정원 완성도'], [fonts.koreanBold, '새 게임']];
-    const results = await Promise.allSettled(checks.map(([family, sample]) => document.fonts.load('24px ' + family, sample)));
-    results.forEach((result, i) => {
-      if (result.status !== 'fulfilled' || result.value.length === 0) console.warn('Garden UI font unavailable: ' + checks[i][0]);
-    });
+    if (!document.fonts || !document.fonts.load) throw new Error('Font Loading API unavailable');
+    const loaded = await document.fonts.load('400 24px ' + fontFamily,
+      '정원 완성도 시간 처치 수 보석 수량 도안 새 게임 설정 일시정지 GARDEN TEST 0123456789 83%');
+    if (!loaded.length || loaded.some(face => face.status !== 'loaded')) {
+      throw new Error('Fusion Pixel font failed to load');
+    }
   }
   // Rasterize at the actual zoom (at least 1), not a rounded-up zoom that
   // would require shrinking the texture at common fractional menu scales.
@@ -41,10 +36,10 @@
     const item = scene.add.text(x, y, content, {
       // 텍스트의 논리 크기는 유지하고 현재 렌더 배율에 맞는 텍스처를 만든다.
       resolution: textResolution(scene),
-      fontFamily: fontFamily(opts.bold),
+      fontFamily: fontFamily,
       fontSize: String(size) + 'px',
       color: color || C.text,
-      // Select the actual bold Korean face; do not synthesize a bold pixel font.
+      // Regular only; no synthetic bold, width compression or letter spacing.
       fontStyle: 'normal',
       align: opts.align || 'left',
       lineSpacing: opts.lineSpacing || 9,
@@ -124,10 +119,10 @@
     decor.strokeCircle(1054, 314, 181);
     rule(scene, 40, 76, 1240, 76, C.border, 0.8);
     rule(scene, 40, 664, 1240, 664, C.border, 0.8);
-    text(scene, 43, 30, 'GARDEN TEST', 22, '#e1b875', { bold: true });
-    text(scene, 1238, 33, label || 'SCENE PROTOTYPE', 22, C.muted, { originX: 1 });
-    text(scene, 43, 680, 'PHASER 3.90.0 / UI SCENES ONLY', 22, C.muted);
-    text(scene, 1238, 680, 'NO GAMEPLAY LOGIC', 22, C.muted, { originX: 1 });
+    text(scene, 43, 30, 'GARDEN TEST', 24, '#e1b875');
+    text(scene, 1238, 33, label || 'SCENE PROTOTYPE', 24, C.muted, { originX: 1 });
+    text(scene, 43, 680, 'PHASER 3.90.0 / UI SCENES ONLY', 24, C.muted);
+    text(scene, 1238, 680, 'NO GAMEPLAY LOGIC', 24, C.muted, { originX: 1 });
   }
 
   function button(scene, x, y, width, label, action, options) {
@@ -140,7 +135,7 @@
       disabled ? 0x151d27 : fill, 1);
     base.setStrokeStyle(1, disabled ? 0x2b3641 : border, 1);
     const caption = text(scene, 0, 0, label, opts.fontSize || 24,
-      disabled ? '#738191' : C.text, { originX: 0.5, originY: 0.5, bold: !!opts.primary });
+      disabled ? '#738191' : C.text, { originX: 0.5, originY: 0.5 });
     const group = scene.add.container(x, y, [base, caption]);
     if (!disabled && typeof action === 'function') {
       base.setInteractive({ useHandCursor: true });
@@ -188,7 +183,7 @@
   }
 
   window.GardenUI = Object.freeze({
-    W: W, H: H, C: C, fonts, fontFamily, loadFonts, text: text, panel: panel, rule: rule,
+    W: W, H: H, C: C, fontFamily, loadFonts, text: text, panel: panel, rule: rule,
     background: background, button: button, overlay: overlay, fitCamera: fitCamera,
     bindEscape: bindEscape, openSubscene: openSubscene,
     closeSubscene: closeSubscene

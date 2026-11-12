@@ -17,7 +17,16 @@
     return { width, height };
   }
   // Measure UI text only after the bundled fonts have loaded.
-  await window.GardenUI.loadFonts();
+  try {
+    await window.GardenUI.loadFonts();
+  } catch (error) {
+    // Never silently render a different UI font on load failure.
+    parent.textContent = 'Fusion Pixel UI font loading failed. Check assets/fonts/fusion.css.';
+    parent.style.color = '#eaf0f5';
+    parent.style.fontFamily = 'sans-serif';
+    console.error(error);
+    return;
+  }
   const initial = fitParent();
 
   const game = new Phaser.Game({
