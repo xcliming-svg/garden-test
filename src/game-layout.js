@@ -375,13 +375,20 @@
       y: Math.round(clamp(best[1], top, bottom - height)) };
   }
 
+  // 카드·슬롯 선택과 정보창의 시각적 연결. 기존 팔레트만 사용한다.
+  const itemTooltip = Object.freeze({
+    width: 144, padding: spacing.base, fontSize: bottomStats.fontSize,
+    rowGap: spacing.small, lineSpacing: 1, accent: P.n.gold,
+    background: P.n.shadow, tint: P.n.bark, tintAlpha: 0.2,
+    divider: P.n.orange, title: P.hex.paper, description: P.hex.sand, hint: P.hex.label
+  });
+
   function drawItemPreview(scene, layout, cards) {
     const U = window.GardenUI;
     const s = spec.slots;
     const equipped = Array(s.preview).fill(null);
     let hovered = null, pinned = null, dragging = null, target = -1;
     const clickable = new Set();
-    const font = U.fontSize.base;
     const accents = scene.add.graphics().setDepth(22).setName('preview-slot-highlight');
     const slotItems = [];
     const slots = layout.slots.slice(0, s.preview);
@@ -399,7 +406,7 @@
       };
     });
     const tooltip = scene.add.container(0, 0).setDepth(40).setName('item-preview-tooltip').setVisible(false);
-    let tooltipKey = null, tooltipSize = { width: 176, height: 0 };
+    let tooltipKey = null, tooltipSize = { width: itemTooltip.width, height: 0 };
 
     function signed(n) { return (n > 0 ? '+' : '') + String(n); }
     function renderStats() {
@@ -440,25 +447,28 @@
       if (tooltipKey === key) return;
       tooltipKey = key;
       tooltip.removeAll(true);
-      const w = 176, pad = spacing.base;
+      const t = itemTooltip;
+      const w = t.width, pad = t.padding;
       const background = scene.add.graphics();
       tooltip.add(background);
-      let y = pad;
+      let y = pad, dividerY = 0;
       rows.forEach((row, index) => {
         if (index === 1) {
-          background.fillStyle(P.n.edge, 1).fillRect(pad, y, w - 2 * pad, 1);
-          y += spacing.small;
+          dividerY = y - 2;
+          y += t.rowGap;
         }
-        const label = U.text(scene, pad, y, row.value, font, row.color, { wrap: w - 2 * pad, lineSpacing: 2 });
+        const label = U.text(scene, pad, y, row.value, t.fontSize, row.color, {
+          wrap: w - 2 * pad, lineSpacing: t.lineSpacing
+        });
         tooltip.add(label);
-        y += Math.max(font, Math.ceil(label.height)) + spacing.small;
+        y += Math.max(t.fontSize, Math.ceil(label.height)) + t.rowGap;
       });
-      tooltipSize = { width: w, height: y + pad - spacing.small };
-      // 배경을 먼저 그리고 구분선을 다시 그린다. 텍스트는 컨테이너 내 상위 레이어.
-      background.clear();
-      frame(background, 0, 0, w, tooltipSize.height, P.n.soil, P.n.slot);
-      const heading = tooltip.list[1];
-      background.fillStyle(P.n.edge, 1).fillRect(pad, pad + Math.max(font, Math.ceil(heading.height)) + spacing.small, w - 2 * pad, 1);
+      tooltipSize = { width: w, height: y + pad - t.rowGap };
+      // 불투명 shadow 위에 bark를 얇게 올려 어두운 갈색 톤을 유지한다.
+      // 골드 1px 외곽선은 카드와 슬롯의 활성 색상과 동일하다.
+      frame(background, 0, 0, w, tooltipSize.height, t.background, t.accent);
+      background.fillStyle(t.tint, t.tintAlpha).fillRect(1, 1, w - 2, tooltipSize.height - 2);
+      if (dividerY) background.fillStyle(t.divider, 1).fillRect(pad, dividerY, w - 2 * pad, 1);
     }
     function refreshTooltip() {
       let focus = hovered || pinned;
@@ -473,14 +483,14 @@
         { x: card.marker.x, y: card.marker.y, size: assets.item.size };
       let rows;
       if (previous) {
-        rows = [{ value: previous.name + ' → ' + item.name, color: colors.value },
-          ...effectRows(item, false), { value: item.desc, color: colors.label },
-          ...effectRows(previous, true), { value: '놓으면 기존 아이템 교체', color: colors.disabledText }];
+        rows = [{ value: previous.name + ' → ' + item.name, color: itemTooltip.title },
+          ...effectRows(item, false), { value: item.desc, color: itemTooltip.description },
+          ...effectRows(previous, true), { value: '놓으면 기존 아이템 교체', color: itemTooltip.hint }];
       } else {
-        rows = [{ value: item.name, color: colors.value }, ...effectRows(item, false),
-          { value: item.desc, color: colors.label }];
-        if (dragging && target >= 0) rows.push({ value: '놓으면 장착', color: colors.disabledText });
-        else if (!card) rows.push({ value: '장착 중', color: colors.disabledText });
+        rows = [{ value: item.name, color: itemTooltip.title }, ...effectRows(item, false),
+          { value: item.desc, color: itemTooltip.description }];
+        if (dragging && target >= 0) rows.push({ value: '놓으면 장착', color: itemTooltip.hint });
+        else if (!card) rows.push({ value: '장착 중', color: itemTooltip.hint });
       }
       const key = JSON.stringify(rows);
       rebuildTooltip(key, rows);
@@ -493,11 +503,16 @@
       accents.clear();
       cards.forEach(card => {
         const active = dragging ? dragging === card : focus && focus.card === card;
-        card.marker.setStrokeStyle(active ? 1 : 0, P.n.paper, active ? 1 : 0);
+        if (active && !card.consumed) {
+          // 카드 자체가 금색이므로 1px 빈 간격을 둔 L자 외곽선을 사용한다.
+          const half = assets.item.size / 2;
+          slotCorners(accents, Math.round(card.marker.x - half - 2),
+            Math.round(card.marker.y - half - 2), assets.item.size + 4, itemTooltip.accent);
+        }
       });
       slots.forEach((slot, index) => {
         const active = dragging ? target === index : focus && focus.slot === index && equipped[index];
-        if (active) slotCorners(accents, slot.x, slot.y, slot.size, dragging ? P.n.growth : P.n.gold);
+        if (active) slotCorners(accents, slot.x, slot.y, slot.size, itemTooltip.accent);
         slotItems[index].setVisible(!!equipped[index]).setAlpha(dragging && target === index ? 0.45 : 1);
       });
       renderStats();
@@ -574,12 +589,17 @@
     scene.input.on('gameout', cancel);
     scene.events.on('pause', cancel);
     // fitCamera가 텍스트 해상도를 동기화한 다음 바운딩 크기로 다시 정렬한다.
-    scene.scale.on('resize', renderStats);
+    const resizePreview = () => {
+      renderStats();
+      tooltipKey = null;
+      refreshTooltip();
+    };
+    scene.scale.on('resize', resizePreview);
     scene.events.once('shutdown', () => {
       scene.input.off('pointerdown', dismiss);
       scene.input.off('gameout', cancel);
       scene.events.off('pause', cancel);
-      scene.scale.off('resize', renderStats);
+      scene.scale.off('resize', resizePreview);
     });
     refresh();
   }
@@ -597,5 +617,5 @@
     drawItemPreview(scene, layout, cards);
   }
 
-  window.GardenGameLayout = Object.freeze({ spec, assets, colors, spacing, hud, slotCost, formatHudTime, formatHudCount, hudColumns, bottomStats, bottomLayout, sumPreviewStats, getPreviewStats, tooltipPosition, draw });
+  window.GardenGameLayout = Object.freeze({ spec, assets, colors, spacing, hud, slotCost, formatHudTime, formatHudCount, hudColumns, bottomStats, itemTooltip, bottomLayout, sumPreviewStats, getPreviewStats, tooltipPosition, draw });
 }());
