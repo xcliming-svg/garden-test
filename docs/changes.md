@@ -417,3 +417,8 @@
 ## 2026-11-13 — 아이템 정보창 글꼴 10px 통일
 
 - 제목 14→10px, 설명·능력치·보조 안내 12→10px. 기존 폭 240px, 좌우 패딩 6px, 행 5px·줄 4px 간격, 보더 1px 및 색상 유지. 정보창 높이는 실제 글자 높이에 맞춰 자동 조정. 실제 Chromium 220/220 검사 통과(5개 드롭 및 교체 정보창 모든 행 10px 확인): https://github.com/xcliming-svg/garden-test/actions/runs/43329954434. HUD 및 다른 화면, main 변경 없음.
+
+
+## 2026-11-13 — 정보창 폭을 완성도 게이지와 통일
+
+- 정보창 폭 240→158px, `hud.barWidth` 공통 참조. 내부 텍스트 폭 146px, 폰트 10px, 좌우 패딩 6px, 기존 색상·행/줄 간격 유지. 실제 Chromium 220/220 검사 통과(드롭 5종 및 교체 정보창 폭/줄바꿈/경계 검사 포함): https://github.com/xcliming-svg/garden-test/actions/runs/43332806170. main 변경 없음.
