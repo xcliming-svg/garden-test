@@ -357,3 +357,8 @@
 
 - Boneraiser Minions / Tiny Rogues / 20 Minutes Till Dawn 공개 전투·인벤토리 화면의 가장자리 HUD, 좁은 슬롯 간격, 어두운 정보창, 강조 시간 숫자를 참고. 내부 원본 규격을 확인한 것은 아니며 수치는 Garden Test의 독립 실험값. 8px 배수 강제 대신 외측 12px, 슬롯 간격 4px, 도안 패딩 4px, 정보창 패딩 10px·행/줄 간격 4/2px, HUD 레이블-수치 6px, 게이지 높이 12px. 일반 10px/시간 20px, 주요 메뉴 버튼 288×40px·20px 글꼴·6px 간격. 24px 내부 그리드, 16px 이미지, 1px 외곽선, 기존 UI 내용·동작·스케일 정책 유지. 출처/관찰/적용의 구분은 [resolution-960x540.md](./resolution-960x540.md).
 - JS 7개 구문, 전장 5모드 205개, 메뉴/씬 113개, 총 318개 모의 검사 통과. 실제 브라우저 시각·폰트 실측 미검증(검증 환경 GitHub 소스 접속 불가(DNS 오류)). main 변경 없음.
+
+
+## 2026-11-12 — devel 병합 및 main/devel 웹 배포 구성
+
+- main 7198cba에서 devel 생성, feature/resolution-960x540 b18a6c6 fast-forward 병합, origin/devel push. main 게임 소스 변경 없음. devel push 시 main/devel 정적 실행 파일을 단일 Pages artifact로 조립하고 루트 및 /devel/ 경로에서 제공하는 워크플로 추가. JS 구문 검사·필수 파일·배포 SHA 확인 포함. Pages Source GitHub Actions 설정 및 github-pages 환경의 devel 허용 여부 확인이 필요하다. main 단독 push는 다음 devel 배포에서 반영한다. [배포 문서](./deployment.md) 참조.

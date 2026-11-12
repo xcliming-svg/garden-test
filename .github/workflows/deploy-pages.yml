@@ -1,0 +1,69 @@
+name: Deploy main and devel to GitHub Pages
+
+on:
+  push:
+    branches: [devel]
+
+permissions:
+  contents: read
+
+concurrency:
+  group: garden-test-pages
+  cancel-in-progress: false
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout main
+        uses: actions/checkout@v6
+        with:
+          ref: refs/heads/main
+          path: main-source
+          persist-credentials: false
+      - name: Checkout devel
+        uses: actions/checkout@v6
+        with:
+          ref: refs/heads/devel
+          path: devel-source
+          persist-credentials: false
+      - name: Assemble and validate both versions
+        shell: bash
+        run: |
+          set -euo pipefail
+          mkdir -p _site/devel
+          for branch in main devel; do
+            source="${branch}-source"
+            target="_site"
+            if [[ "$branch" == "devel" ]]; then target="_site/devel"; fi
+            cp "$source/index.html" "$source/card-compare.html" "$target/"
+            cp -R "$source/src" "$source/assets" "$target/"
+            for entry in index.html card-compare.html assets/fonts/fusion.css assets/fonts/Fusion-Pixel-OFL.txt; do
+              test -s "$target/$entry"
+            done
+            for script in "$target"/src/*.js; do node --check "$script"; done
+            git -C "$source" rev-parse HEAD > "$target/version.txt"
+          done
+          touch _site/.nojekyll
+          test -s _site/index.html
+          test -s _site/devel/index.html
+          echo "main: $(cat _site/version.txt)"
+          echo "devel: $(cat _site/devel/version.txt)"
+      - name: Upload Pages artifact
+        uses: actions/upload-pages-artifact@v4
+        with:
+          path: _site
+  deploy:
+    needs: build
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      pages: write
+      id-token: write
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    steps:
+      - name: Deploy both versions
+        id: deployment
+        uses: actions/deploy-pages@v4
