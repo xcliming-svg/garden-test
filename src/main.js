@@ -38,8 +38,8 @@
     width: initial.width,
     height: initial.height,
     backgroundColor: P.ink,
-    // 전체 렌더러의 안티앨리어싱은 유지한다. UI 글자만 개별 텍스처 NEAREST
-    // 필터로 렌더링하며 실제 픽셀아트 PNG도 향후 텍스처별 지정한다.
+    // 기존 배율별 텍스트 래스터화와 기본 안티앨리어싱을 유지한다.
+    // ?font=sharp 비교 모드에서만 글자 텍스처에 NEAREST를 적용한다.
     render: { antialias: true, pixelArt: false, roundPixels: false },
     scale: {
       mode: Phaser.Scale.RESIZE,

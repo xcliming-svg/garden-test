@@ -22,7 +22,7 @@
 | 확장 슬롯(1칸) | 364, 330 | 24×24 | 48×48 |
 | 슬롯 간격 | — | 4 | 8 |
 
-정원 외부 전장에는 그리드를 그리지 않는다. 꽃이나 도안 그림을 임의로 제작하지 않는다. 도안 접기는 제목 영역만 유지하며 정원이나 전장의 위치는 바뀌지 않는다. 메인 메뉴 등 기존 1280×720 배치와 Game 씬의 640×360 좌표를 각각 실제 렌더링 버퍼에 맞춰 카메라 배율로 매핑한다. UI 글자는 씬 논리 좌표에서 해상도 1로 래스터화하고 개별 텍스처에 Phaser.Textures.FilterMode.NEAREST를 적용한다. 전체 렌더러의 안티앨리어싱은 유지한다. 텍스트 갱신 시 필터를 재적용하며 표시 원점 및 초기 좌표를 정수로 맞춘다. 향후 픽셀아트 PNG도 개별 NEAREST 필터를 설정한다. 비정수 배율에서 픽셀의 화면상 폭이 균일하지 않을 수 있다.
+정원 외부 전장에는 그리드를 그리지 않는다. 꽃이나 도안 그림을 임의로 제작하지 않는다. 도안 접기는 제목 영역만 유지하며 정원이나 전장의 위치는 바뀌지 않는다. 메인 메뉴 등 기존 1280×720 배치와 Game 씬의 640×360 좌표를 각각 실제 렌더링 버퍼에 맞춰 카메라 배율로 매핑한다. UI 글자는 실제 카메라 배율(최소 1)에서 래스터화하며 기본 선형 필터와 기존 표시 원점을 사용한다. 1배 고정/최근접 확대는 사용자 시각 확인에서 악화되어 폐기했다. `?font=sharp` 비교 옵션에서만 같은 고해상도 텍스처에 NEAREST를 적용하고 갱신 시 재적용한다. 창 크기 변경 시 style 및 frame.source 해상도를 동기화한다. 향후 픽셀아트 PNG도 개별 NEAREST 필터를 설정한다. 비정수 배율에서 픽셀의 화면상 폭이 균일하지 않을 수 있다.
 
 ## 2. PNG 출력 크기 및 임시 도형
 
@@ -64,7 +64,7 @@ SVG 원본은 보존한다. 다음은 **PNG 래스터화 목표 크기**이며 �
 
 - Phaser 3.90.0 ScaleManager: https://docs.phaser.io/api-documentation/3.90.0/class/scale-scalemanager — RESIZE 방식으로 실제 Canvas를 부모 영역에 맞춰 변경한다. 부모를 최대 16:9 크기로 제한하는 것은 프로젝트의 구현 결정이다.
 - Phaser 3.90.0 Core types: https://phaser.io/oss/docs/api-documentation/3.90.0/typedef/types-core — pixelArt 옵션, 정수 좌표 렌더링. UI 글자의 가독성을 위해 전역 pixelArt는 사용하지 않고, 실제 픽셀아트 텍스처에 개별 최근접 필터를 적용한다.
-- Phaser 3.90 Text: https://docs.phaser.io/api-documentation/3.90.0/class/gameobjects-text — 해상도 1 고정. [Text.js](https://github.com/phaserjs/phaser/blob/v3.90.0/src/gameobjects/text/Text.js), [WebGLRenderer.js](https://github.com/phaserjs/phaser/blob/v3.90.0/src/renderer/webgl/WebGLRenderer.js), [TextureSource.js](https://github.com/phaserjs/phaser/blob/v3.90.0/src/textures/TextureSource.js)에서 텍스트 업데이트 시 필터 재설정 및 텍스처별 최근접 필터 처리 확인.
+- Phaser 3.90 Text: https://docs.phaser.io/api-documentation/3.90.0/class/gameobjects-text — 실제 카메라 배율에 맞는 해상도 설정. [Text.js](https://github.com/phaserjs/phaser/blob/v3.90.0/src/gameobjects/text/Text.js), [WebGLRenderer.js](https://github.com/phaserjs/phaser/blob/v3.90.0/src/renderer/webgl/WebGLRenderer.js), [TextureSource.js](https://github.com/phaserjs/phaser/blob/v3.90.0/src/textures/TextureSource.js)에서 텍스트 업데이트 시 필터 재설정 및 텍스처별 최근접 필터 처리 확인.
 - Phaser Camera: https://docs.phaser.io/api-documentation/3.90.0/class/cameras-scene2d-basecamera — setSize, setZoom, centerOn을 통한 디자인 좌표 매핑.
 - Godot 공식 Multiple resolutions: https://docs.godotengine.org/en/4.5/tutorials/rendering/multiple_resolutions.html — 픽셀아트의 640×360 기준 해상도와 정수배 확대 참고. Godot 엔진을 사용한다는 뜻은 아니다.
 - Terraria 공식 위키 Minimap: https://terraria.wiki.gg/wiki/Minimap — 축소 지도 표시/숨김/줌 사례. 이번 접이식 도안의 정확한 수치는 사용자와 확정한 디자인이다.

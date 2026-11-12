@@ -23,35 +23,28 @@
       throw new Error('Fusion Pixel font failed to load');
     }
   }
-  // Fusion Pixel의 논리 크기에서 한 번 래스터화하고 최근접 이웃으로 확대한다.
-  // Phaser 3.90 Text.updateText는 WebGL canvasToTexture에서 필터를 다시 설정하므로
-  // 내용/색/크기 변경 시마다 개별 텍스처의 NEAREST를 복원한다.
-  function crispText(item) {
+  // Rasterize at the actual zoom (at least 1), not a rounded-up zoom that
+  // would require shrinking the texture at common fractional menu scales.
+  function textResolution(scene) { return Math.max(1, scene.cameras.main.zoom); }
+
+  // 기본값은 1배 고정 이전의 배율별 래스터화 + 선형 필터로 복원한다.
+  // 선택 비교: 같은 고해상도 텍스처에만 최근접 필터를 적용한다.
+  const compareSharp = new URLSearchParams(window.location.search).get('font') === 'sharp';
+  function applyComparisonFilter(item) {
     const update = item.updateText;
     item.updateText = function () {
       const result = update.apply(this, arguments);
       this.texture.setFilter(Phaser.Textures.FilterMode.NEAREST);
       return result;
     };
-    // 중심 정렬에서 홀수 폭/높이가 반 픽셀에 걸리지 않도록 표시 원점만 정수화.
-    // 실제 origin 비율과 글자 측정 폭은 유지한다(Phaser 3.90 Origin 컴포넌트).
-    const updateOrigin = item.updateDisplayOrigin;
-    item.updateDisplayOrigin = function () {
-      updateOrigin.call(this);
-      this._displayOriginX = Math.round(this._displayOriginX);
-      this._displayOriginY = Math.round(this._displayOriginY);
-      return this;
-    };
-    item.autoRound = true;
     item.texture.setFilter(Phaser.Textures.FilterMode.NEAREST);
-    return item;
   }
 
   function text(scene, x, y, content, size, color, options) {
     const opts = options || {};
-    const item = scene.add.text(Math.round(x), Math.round(y), content, {
-      // 고정 1:1 텍스처. 카메라 확대 시 글리프를 다시 래스터화하지 않는다.
-      resolution: 1,
+    const item = scene.add.text(x, y, content, {
+      // 텍스트의 논리 크기는 유지하고 현재 렌더 배율에 맞는 텍스처를 만든다.
+      resolution: textResolution(scene),
       fontFamily: fontFamily,
       fontSize: String(size) + 'px',
       color: color || C.text,
@@ -61,10 +54,15 @@
       lineSpacing: opts.lineSpacing || 9,
       wordWrap: opts.wrap ? { width: opts.wrap } : undefined
     });
-    crispText(item);
+    if (compareSharp) applyComparisonFilter(item);
     item.setOrigin(opts.originX === undefined ? 0 : opts.originX,
       opts.originY === undefined ? 0 : opts.originY);
     if (opts.alpha !== undefined) item.setAlpha(opts.alpha);
+    if (scene.layoutTextObjects) {
+      const tracked = scene.layoutTextObjects;
+      tracked.add(item);
+      item.once('destroy', () => tracked.delete(item));
+    }
     return item;
   }
 
@@ -88,9 +86,10 @@
 
   // 각 씬의 디자인 좌표를 실제 16:9 렌더링 버퍼에 매핑한다.
   // Game: 640×360, 기존 메뉴/오버레이: 1280×720.
-  // 일시정지 중인 씬도 resize 이벤트에 맞춰 카메라를 갱신한다.
-  // 텍스트는 해상도 1 고정이므로 창 크기에 따른 재래스터화는 하지 않는다.
+  // 일시정지 중인 씬도 resize 이벤트에 맞춰 카메라와 텍스트를 갱신한다.
   function fitCamera(scene, designWidth, designHeight) {
+    const tracked = new Set();
+    scene.layoutTextObjects = tracked;
 
     function resize(gameSize) {
       const width = gameSize.width;
@@ -98,12 +97,23 @@
       const zoom = Math.min(width / designWidth, height / designHeight);
       scene.cameras.main.setSize(width, height).setZoom(zoom)
         .centerOn(designWidth / 2, designHeight / 2);
+      const resolution = textResolution(scene);
+      tracked.forEach(item => {
+        if (item.style.resolution !== resolution) {
+          item.setResolution(resolution);
+          // CanvasRenderer는 frame.source.resolution을 사용한다.
+          // Phaser 3.90 setResolution은 style만 바꾸므로 함께 갱신한다.
+          item.frame.source.resolution = resolution;
+        }
+      });
     }
 
     resize(scene.scale.gameSize);
     scene.scale.on('resize', resize);
     scene.events.once('shutdown', () => {
       scene.scale.off('resize', resize);
+      tracked.clear();
+      scene.layoutTextObjects = null;
     });
   }
 
