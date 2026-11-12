@@ -194,3 +194,5 @@ await browser.close();server.close();
 const ranked=results.filter(r=>r.eligible).sort((a,b)=>b.score-a.score);
 console.log('RANKING '+JSON.stringify(ranked.map(r=>({id:r.id,score:r.score}))));
 if(!ranked.length)process.exitCode=1;
+
+// White square regression uses the actual devel layout and preserves its input geometry.
