@@ -17,10 +17,10 @@
   });
   // One unmodified Regular face for Korean, English and numerals.
   const fontFamily = '"Garden Fusion"';
-  // Fusion Pixel 10px 원본의 정수 배수만 일반 UI에 사용한다.
-  const fontSize = Object.freeze({ base: 10, compact: 10, heading: 20, title: 40, timer: 20, menuBase: 10, menuAction: 20, menuHeading: 20, menuTitle: 40 });
+  // Fusion Pixel 원본을 유지하고 가독성 비교 결과에 따라 역할별 크기를 지정한다.
+  const fontSize = Object.freeze({ base: 12, compact: 12, heading: 20, title: 40, timer: 22, menuBase: 12, menuAction: 20, menuHeading: 20, menuTitle: 40 });
   // 메뉴와 전장 모두 동일한 960×540 좌표, 기능적 선 1px.
-  const menuStyle = Object.freeze({ strokeWidth: 1, buttonHeight: 32, gap: spacing.base, navHeight: 40, navGap: spacing.compact });
+  const menuStyle = Object.freeze({ strokeWidth: 1, buttonHeight: 32, gap: spacing.base, navHeight: 38, navGap: 6 });
   async function loadFonts() {
     if (!document.fonts || !document.fonts.load) throw new Error('Font Loading API unavailable');
     const loaded = await document.fonts.load('400 20px ' + fontFamily,

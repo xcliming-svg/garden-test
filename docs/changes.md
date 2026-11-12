@@ -362,3 +362,8 @@
 ## 2026-11-12 — devel 병합 및 main/devel 웹 배포 구성
 
 - main 7198cba에서 devel 생성, feature/resolution-960x540 b18a6c6 fast-forward 병합, origin/devel push. main 게임 소스 변경 없음. devel push 시 main/devel 정적 실행 파일을 단일 Pages artifact로 조립하고 루트 및 /devel/ 경로에서 제공하는 워크플로 추가. JS 구문 검사·필수 파일·배포 SHA 확인 포함. Pages Source GitHub Actions 설정 및 github-pages 환경의 devel 허용 여부 확인이 필요하다. main 단독 push는 다음 devel 배포에서 반영한다. [배포 문서](./deployment.md) 참조.
+
+
+## 2026-11-12 — UI 크기·간격 실제 브라우저 비교 및 1위 J안 적용
+
+- devel의 960×540 화면을 기준으로 24px 정원·슬롯 내부, 16px 아이콘, 1px 외곽선, 기존 팔레트와 조작을 고정. A~F 1차 후 드래그 경계 검사기 오탐 수정, G~J 추가 및 전체 재실행. 후보별 107개 실제 Chromium/Phaser 검사, 총 1070개 통과. J 94.25점 > H 93.72점 > I 93.20점 > G 92.89점, 기존 A 78.31점. J를 devel에 적용했다. 상단/전장/하단 34/462/44, HUD 12/14/22px, 능력치 12/16px, 일반/정보창 12px, 메뉴 288×38px, 외측 10px, 슬롯 4px 간격, 정보창 192px/10px 패딩. [평가 기준·전체 결과](./ui-metrics-benchmark.md), [현행 규격](./resolution-960x540.md). 점수는 자체 휴리스틱으로 사람 대상 선호도는 미검증.
