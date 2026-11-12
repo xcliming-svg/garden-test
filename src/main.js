@@ -1,4 +1,4 @@
-(function () {
+(async function () {
   'use strict';
 
   // Phaser만 생성한다. 게임 상태, 전투 루프, 생성 로직 등은 등록하지 않는다.
@@ -16,6 +16,8 @@
     parent.style.height = height + 'px';
     return { width, height };
   }
+  // Measure UI text only after the bundled fonts have loaded.
+  await window.GardenUI.loadFonts();
   const initial = fitParent();
 
   const game = new Phaser.Game({

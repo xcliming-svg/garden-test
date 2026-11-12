@@ -17,17 +17,35 @@
     red: 0xe18f91,
     white: 0xffffff
   };
-  const font = 'Arial, "Malgun Gothic", sans-serif';
+  const fonts = Object.freeze({
+    latin: '"Garden Departure"', korean: '"Garden Korean Condensed"',
+    koreanBold: '"Garden Korean Bold"', fallback: 'Arial, "Malgun Gothic", sans-serif'
+  });
+  function fontFamily(bold) {
+    return [fonts.latin, bold ? fonts.koreanBold : fonts.korean, fonts.fallback].join(', ');
+  }
+  async function loadFonts() {
+    if (!document.fonts || !document.fonts.load) return;
+    const checks = [[fonts.latin, 'GARDEN 0123456789'], [fonts.korean, '정원 완성도'], [fonts.koreanBold, '새 게임']];
+    const results = await Promise.allSettled(checks.map(([family, sample]) => document.fonts.load('24px ' + family, sample)));
+    results.forEach((result, i) => {
+      if (result.status !== 'fulfilled' || result.value.length === 0) console.warn('Garden UI font unavailable: ' + checks[i][0]);
+    });
+  }
+  // Rasterize at the actual zoom (at least 1), not a rounded-up zoom that
+  // would require shrinking the texture at common fractional menu scales.
+  function textResolution(scene) { return Math.max(1, scene.cameras.main.zoom); }
 
   function text(scene, x, y, content, size, color, options) {
     const opts = options || {};
     const item = scene.add.text(x, y, content, {
       // 텍스트의 논리 크기는 유지하고 현재 렌더 배율에 맞는 텍스처를 만든다.
-      resolution: Math.max(1, Math.ceil(scene.cameras.main.zoom)),
-      fontFamily: font,
+      resolution: textResolution(scene),
+      fontFamily: fontFamily(opts.bold),
       fontSize: String(size) + 'px',
       color: color || C.text,
-      fontStyle: opts.bold ? 'bold' : 'normal',
+      // Select the actual bold Korean face; do not synthesize a bold pixel font.
+      fontStyle: 'normal',
       align: opts.align || 'left',
       lineSpacing: opts.lineSpacing || 9,
       wordWrap: opts.wrap ? { width: opts.wrap } : undefined
@@ -74,7 +92,7 @@
       const zoom = Math.min(width / designWidth, height / designHeight);
       scene.cameras.main.setSize(width, height).setZoom(zoom)
         .centerOn(designWidth / 2, designHeight / 2);
-      const resolution = Math.max(1, Math.ceil(zoom));
+      const resolution = textResolution(scene);
       tracked.forEach(item => {
         if (item.style.resolution !== resolution) item.setResolution(resolution);
       });
@@ -106,10 +124,10 @@
     decor.strokeCircle(1054, 314, 181);
     rule(scene, 40, 76, 1240, 76, C.border, 0.8);
     rule(scene, 40, 664, 1240, 664, C.border, 0.8);
-    text(scene, 43, 30, 'GARDEN TEST', 19, '#e1b875', { bold: true });
-    text(scene, 1238, 33, label || 'SCENE PROTOTYPE', 12, C.muted, { originX: 1 });
-    text(scene, 43, 680, 'PHASER 3.90.0 / UI SCENES ONLY', 11, C.muted);
-    text(scene, 1238, 680, 'NO GAMEPLAY LOGIC', 11, C.muted, { originX: 1 });
+    text(scene, 43, 30, 'GARDEN TEST', 22, '#e1b875', { bold: true });
+    text(scene, 1238, 33, label || 'SCENE PROTOTYPE', 22, C.muted, { originX: 1 });
+    text(scene, 43, 680, 'PHASER 3.90.0 / UI SCENES ONLY', 22, C.muted);
+    text(scene, 1238, 680, 'NO GAMEPLAY LOGIC', 22, C.muted, { originX: 1 });
   }
 
   function button(scene, x, y, width, label, action, options) {
@@ -121,7 +139,7 @@
     const base = scene.add.rectangle(0, 0, width, height,
       disabled ? 0x151d27 : fill, 1);
     base.setStrokeStyle(1, disabled ? 0x2b3641 : border, 1);
-    const caption = text(scene, 0, 0, label, opts.fontSize || 19,
+    const caption = text(scene, 0, 0, label, opts.fontSize || 24,
       disabled ? '#738191' : C.text, { originX: 0.5, originY: 0.5, bold: !!opts.primary });
     const group = scene.add.container(x, y, [base, caption]);
     if (!disabled && typeof action === 'function') {
@@ -170,7 +188,7 @@
   }
 
   window.GardenUI = Object.freeze({
-    W: W, H: H, C: C, text: text, panel: panel, rule: rule,
+    W: W, H: H, C: C, fonts, fontFamily, loadFonts, text: text, panel: panel, rule: rule,
     background: background, button: button, overlay: overlay, fitCamera: fitCamera,
     bindEscape: bindEscape, openSubscene: openSubscene,
     closeSubscene: closeSubscene

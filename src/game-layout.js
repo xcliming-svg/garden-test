@@ -22,11 +22,12 @@
   });
 
   const hud = Object.freeze({
-    padding: spacing.base, gap: spacing.small, labelSize: 10, valueSize: 12,
+    padding: spacing.base, gap: spacing.small, labelSize: 12, valueSize: 11,
     centerY: spec.top / 2, iconSize: 12, barHeight: 12,
     // 표시 폭 예약용 문자열이다. 게임 수치의 최대값을 의미하지 않는다.
     timeSample: '88:88', counterSample: '88888'
   });
+  // Preserve 24px horizontal three-digit cost; micro text is a native-size exception.
   const slotCost = Object.freeze({ padding: spacing.micro, gap: spacing.micro, iconSize: 6, fontSize: 7, minFontSize: 6, maxDigits: 3 });
 
   // size = 원본 PNG 및 1배 표시 크기. 파일을 생성하거나 로드하지 않는다.
@@ -158,7 +159,7 @@
     const barW = progressEnd - hud.padding - barX;
     frame(g, barX, hud.centerY - hud.barHeight / 2, barW, hud.barHeight,
       colors.normalFill, colors.normalBorder);
-    text(scene, barX + barW / 2, hud.centerY, '0%', 10, '#cad7ce', 'center', true);
+    text(scene, barX + barW / 2, hud.centerY, '0%', 11, '#cad7ce', 'center', true);
 
     // 보석도 다른 그룹과 동일한 패딩/간격을 사용한다. 아이콘 위치는
     // 현재 숫자의 자릿수가 바뀌어도 이동하지 않는다.
@@ -229,7 +230,7 @@
 
     const header = scene.add.graphics().setDepth(11).setName('blueprint-header');
     frame(header, b.x, b.y, b.width, b.header, colors.hud, colors.hudBorder);
-    text(scene, b.x + b.padding, b.y + b.header / 2, '도안', 10, '#c7d1d9', 'left', true).setDepth(12);
+    text(scene, b.x + b.padding, b.y + b.header / 2, '도안', 12, '#c7d1d9', 'left', true).setDepth(12);
     const arrow = scene.add.graphics().setDepth(12).setName('blueprint-chevron');
     let expanded = true;
     function drawArrow() {
