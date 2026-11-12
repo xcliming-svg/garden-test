@@ -38,8 +38,8 @@
     width: initial.width,
     height: initial.height,
     backgroundColor: P.ink,
-    // UI 글자는 부드럽게 렌더링한다. 실제 픽셀아트 PNG는 향후
-    // 텍스처별 NEAREST 필터를 지정한다(전체 Canvas를 픽셀화하지 않는다).
+    // 전체 렌더러의 안티앨리어싱은 유지한다. UI 글자만 개별 텍스처 NEAREST
+    // 필터로 렌더링하며 실제 픽셀아트 PNG도 향후 텍스처별 지정한다.
     render: { antialias: true, pixelArt: false, roundPixels: false },
     scale: {
       mode: Phaser.Scale.RESIZE,

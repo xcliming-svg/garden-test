@@ -22,7 +22,7 @@
 | 확장 슬롯(1칸) | 364, 330 | 24×24 | 48×48 |
 | 슬롯 간격 | — | 4 | 8 |
 
-정원 외부 전장에는 그리드를 그리지 않는다. 꽃이나 도안 그림을 임의로 제작하지 않는다. 도안 접기는 제목 영역만 유지하며 정원이나 전장의 위치는 바뀌지 않는다. 메인 메뉴 등 기존 1280×720 배치와 Game 씬의 640×360 좌표를 각각 실제 렌더링 버퍼에 맞춰 카메라 배율로 매핑한다. UI 글자는 실제 카메라 배율(최소 1)로 텍스처를 생성하고 안티앨리어싱을 유지한다. 향후 픽셀아트 PNG는 텍스처별 Phaser.Textures.FilterMode.NEAREST를 설정한다. 비정수 배율에서 픽셀의 화면상 폭이 균일하지 않을 수 있다.
+정원 외부 전장에는 그리드를 그리지 않는다. 꽃이나 도안 그림을 임의로 제작하지 않는다. 도안 접기는 제목 영역만 유지하며 정원이나 전장의 위치는 바뀌지 않는다. 메인 메뉴 등 기존 1280×720 배치와 Game 씬의 640×360 좌표를 각각 실제 렌더링 버퍼에 맞춰 카메라 배율로 매핑한다. UI 글자는 씬 논리 좌표에서 해상도 1로 래스터화하고 개별 텍스처에 Phaser.Textures.FilterMode.NEAREST를 적용한다. 전체 렌더러의 안티앨리어싱은 유지한다. 텍스트 갱신 시 필터를 재적용하며 표시 원점 및 초기 좌표를 정수로 맞춘다. 향후 픽셀아트 PNG도 개별 NEAREST 필터를 설정한다. 비정수 배율에서 픽셀의 화면상 폭이 균일하지 않을 수 있다.
 
 ## 2. PNG 출력 크기 및 임시 도형
 
@@ -55,7 +55,7 @@ SVG 원본은 보존한다. 다음은 **PNG 래스터화 목표 크기**이며 �
 ## 4. UI 정렬 및 간격
 
 - 전장 UI는 논리 픽셀 2/4/8/12/16 간격 체계를 사용한다. 기본 간격 8, HUD 그룹 내부 간격 4, 좌우 패딩 각 8, 슬롯 내부 아이콘-수치 2. 1280×720 기존 메뉴 좌표는 이 값의 2배 기준으로 맞춘다.
-- 확정 한 줄 HUD: 시간 / 처치 수 / 보석 / 정원 완성도 순. 상단 높이 24px, 하단 36px, 모든 항목 중심 y=12. 10px 단일 폰트, 그룹 좌우 각 8px 패딩, 레이블·값 최소 4px 간격, 구분점 2×4px(y=10~14). 시간은 `00:00:00`으로 시작하고 시 자리수는 최소 2자리(100시간 이상도 그대로 표시), 최대 4자리 시의 표시 폭을 기본 예약한다. 처치 수 및 보석은 쉼표 포함 12자리(999,999,999,999) 기준으로 동일한 수치 폭을 예약한다. 시간·처치 수·보석 세 열의 폭은 모두 동일하며 최소 144px, 가장 넓은 항목의 레이블/아이콘+4px 간격+수치 예약 폭+좌우 패딩을 합산한 폭이 더 크면 8px 단위로 올림한다. 숫자 0~9 중 가장 넓은 글리프와 구분 기호의 실제 폰트 폭을 측정한다. 각 열의 레이블·아이콘은 왼쪽 패딩부터 배치하며 숫자는 레이블·아이콘의 실제 폭 바로 뒤 4px 간격에 왼쪽 정렬한다. 완성도는 맨 뒤에 위치하고 남은 폭을 사용하며 레이블 다음의 게이지는 높이 12px, 폭 최소 64px, 퍼센트 중앙 정렬(채움에 겹치면 어두운 글자 또는 어두운 글자 배경으로 대비 확보). 게이지 테두리 #777D6D, 빈 영역 #101210, 채움 #B3D96A, 숫자 #F1F0E8, 30% 정적 시안. 시간/처치/보석의 예약 자릿수는 실제 게임 수치 상한이 아니다. 예약치를 초과해도 실측 폭을 반영하지만 남은 게이지 폭이 64px 미만이면 현재 UI 배치 함수는 오류를 발생시키므로 더 큰 값의 표시 정책은 실제 게임 수치 확정 시 결정해야 한다. `index.html?hud=stress`로 9,999시간 및 12자리 수치의 정적 표시를 확인할 수 있다.
+- 확정 한 줄 HUD: 시간 / 처치 수 / 보석 / 정원 완성도 순. 상단 높이 24px, 하단 36px, 모든 항목 중심 y=12. 10px 단일 폰트, 그룹 좌우 각 8px 패딩, 레이블·값 최소 4px 간격, 구분선 1×16px(y=4~19), 색 #45483D. 시간은 `00:00:00`으로 시작하고 시 자리수는 최소 2자리(100시간 이상도 그대로 표시), 최대 4자리 시의 표시 폭을 기본 예약한다. 처치 수 및 보석은 쉼표 포함 12자리(999,999,999,999) 기준으로 동일한 수치 폭을 예약한다. 시간·처치 수·보석 세 열의 폭은 모두 동일하며 최소 144px, 가장 넓은 항목의 레이블/아이콘+4px 간격+수치 예약 폭+좌우 패딩을 합산한 폭이 더 크면 8px 단위로 올림한다. 숫자 0~9 중 가장 넓은 글리프와 구분 기호의 실제 폰트 폭을 측정한다. 각 열의 레이블·아이콘은 왼쪽 패딩부터 배치하며 숫자는 레이블·아이콘의 실제 폭 바로 뒤 4px 간격에 왼쪽 정렬한다. 완성도는 맨 뒤에 위치하고 남은 폭을 사용하며 레이블 다음의 게이지는 높이 12px, 폭 최소 64px, 퍼센트 중앙 정렬(채움에 겹치면 어두운 글자 또는 어두운 글자 배경으로 대비 확보). 게이지 테두리 #777D6D, 빈 영역 #101210, 채움 #B3D96A, 숫자 #F1F0E8, 30% 정적 시안. 시간/처치/보석의 예약 자릿수는 실제 게임 수치 상한이 아니다. 예약치를 초과해도 실측 폭을 반영하지만 남은 게이지 폭이 64px 미만이면 현재 UI 배치 함수는 오류를 발생시키므로 더 큰 값의 표시 정책은 실제 게임 수치 확정 시 결정해야 한다. `index.html?hud=stress`로 9,999시간 및 12자리 수치의 정적 표시를 확인할 수 있다.
 - 도안 헤더 높이 16, 본문 그리드 상하좌우 패딩 4. 헤더 텍스트와 화살표도 동일한 내부 패딩을 사용한다. 패널 폭과 높이는 80px 그리드에 패딩 및 헤더를 합산하여 계산한다. 정원과 슬롯 크기는 그대로이며, 한 줄 상단 HUD에 맞춰 전장 높이는 300px, 정원과 도안의 y좌표는 각각 94, 32로 조정한다.
 - 메뉴 버튼 높이 48(기존 1280 좌표), 간격 8. 설정의 레이블과 수치, 팝업 제목과 버튼을 공통 중심선/패딩에 정렬한다.
 - 근거: [IBM Carbon spacing](https://www.carbondesignsystem.com/building-blocks/foundations/spacing/overview)의 2·4·8·12·16 간격 단위, [Material metrics and keylines](https://m1.material.io/layout/metrics-keylines.html)의 8dp 기준 및 소형 요소 4dp 기준을 참고했다. 게임 HUD 구조는 [Vampire Survivors HUD 화면 분석](https://teemo.dev/game-design/vampire-survivors/systems/ui-ux-design/)과 [Diablo IV 공식 게임플레이 이미지](https://blizzard.gamespress.com/Diablo-IV/Focus/Gameplay-Screenshots)의 정보 그룹화 및 슬롯 정렬 사례를 참고했다. 추가로 [MDN의 flex-basis/grow 설명](https://developer.mozilla.org/en-US/docs/Web/CSS/Guides/Flexible_box_layout/Controlling_flex_item_ratios)의 콘텐츠 기반 폭과 잔여 공간 배분 원리 및 [Android Developers의 숫자 타이포그래피 가이드](https://developer.android.com/design/ui/wear/guides/styles/typography/apply)의 수치 변화 시 위치 안정성을 참고했다. 각 수치는 해당 게임의 공식 픽셀 규격이 아니라 이 프로젝트 좌표에 적용한 설계값이다.
@@ -64,7 +64,7 @@ SVG 원본은 보존한다. 다음은 **PNG 래스터화 목표 크기**이며 �
 
 - Phaser 3.90.0 ScaleManager: https://docs.phaser.io/api-documentation/3.90.0/class/scale-scalemanager — RESIZE 방식으로 실제 Canvas를 부모 영역에 맞춰 변경한다. 부모를 최대 16:9 크기로 제한하는 것은 프로젝트의 구현 결정이다.
 - Phaser 3.90.0 Core types: https://phaser.io/oss/docs/api-documentation/3.90.0/typedef/types-core — pixelArt 옵션, 정수 좌표 렌더링. UI 글자의 가독성을 위해 전역 pixelArt는 사용하지 않고, 실제 픽셀아트 텍스처에 개별 최근접 필터를 적용한다.
-- Phaser Text: https://docs.phaser.io/api-documentation/3.90.0/class/gameobjects-text — setResolution을 이용한 고해상도 글자 텍스처.
+- Phaser 3.90 Text: https://docs.phaser.io/api-documentation/3.90.0/class/gameobjects-text — 해상도 1 고정. [Text.js](https://github.com/phaserjs/phaser/blob/v3.90.0/src/gameobjects/text/Text.js), [WebGLRenderer.js](https://github.com/phaserjs/phaser/blob/v3.90.0/src/renderer/webgl/WebGLRenderer.js), [TextureSource.js](https://github.com/phaserjs/phaser/blob/v3.90.0/src/textures/TextureSource.js)에서 텍스트 업데이트 시 필터 재설정 및 텍스처별 최근접 필터 처리 확인.
 - Phaser Camera: https://docs.phaser.io/api-documentation/3.90.0/class/cameras-scene2d-basecamera — setSize, setZoom, centerOn을 통한 디자인 좌표 매핑.
 - Godot 공식 Multiple resolutions: https://docs.godotengine.org/en/4.5/tutorials/rendering/multiple_resolutions.html — 픽셀아트의 640×360 기준 해상도와 정수배 확대 참고. Godot 엔진을 사용한다는 뜻은 아니다.
 - Terraria 공식 위키 Minimap: https://terraria.wiki.gg/wiki/Minimap — 축소 지도 표시/숨김/줌 사례. 이번 접이식 도안의 정확한 수치는 사용자와 확정한 디자인이다.
@@ -133,7 +133,7 @@ SVG 원본은 보존한다. 다음은 **PNG 래스터화 목표 크기**이며 �
 
 ### B안 보더 및 색상 규칙
 
-- 전장·상단·하단 공통 #191B19. 화면 외곽 및 HUD 패널 프레임 제거. 상단 y=23, 하단 y=324에 x=8~631의 1px #343D30 수평선만 유지. 항목 사이 2×4px 구분점.
+- 전장·상단·하단 공통 #191B19. 화면 외곽 및 HUD 패널 프레임 제거. 상단 y=23, 하단 y=324에 x=8~631의 1px #343D30 수평선만 유지. 항목 사이 1×16px #45483D 세로 구분선(상하 4px 여백).
 - 정원과 도안 그리드 바닥 #222820, 내부 1px #343D30, 외곽 #45483D. 도안의 외부 패널 프레임 제거, 제목 영역과 접기 동작 유지.
 - 슬롯은 24×24 좌표와 간격 유지. 내부는 공통 배경, 네 모서리에 각 8px 길이의 1px L자 표시만 적용. 일반 #777D6D, 비활성 #45483D, 활성(규격) #B3D96A. 비용 글자/아이콘 #A2A69A, 활성 비용 #B3D96A. 실제 활성화 미구현.
 - 레이블 #C0C1B7, 수치 #F1F0E8. 게이지 트랙 #101210, 테두리 #777D6D, 채움 #B3D96A. 정적 30% 및 기존 HUD 폭·높이·순서 유지.

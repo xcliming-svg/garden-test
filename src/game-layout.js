@@ -48,7 +48,7 @@
   });
 
   const colors = Object.freeze({
-    field: P.n.ink, hud: P.n.ink, hudBorder: P.n.grid,
+    field: P.n.ink, hud: P.n.ink, hudBorder: P.n.grid, hudDivider: P.n.edge,
     label: P.hex.label, value: P.hex.paper,
     gridFill: P.n.soil, gridLine: P.n.grid, gridBorder: P.n.edge,
     normalFill: P.n.ink, normalBorder: P.n.slot,
@@ -182,8 +182,9 @@
     const labelWidth = measure('정원 완성도');
     probe.destroy();
 
-    g.fillStyle(colors.hudBorder, 1);
-    [columns.kills.x, columns.gems.x, columns.progress.x].forEach(x => g.fillRect(x, hud.centerY - 2, 2, 4));
+    // 24px HUD 안에서 상하 4px 여백을 두는 1×16px 구분선.
+    g.fillStyle(colors.hudDivider, 1);
+    [columns.kills.x, columns.gems.x, columns.progress.x].forEach(x => g.fillRect(x, spacing.small, 1, spec.top - 2 * spacing.small));
 
     // 레이블과 수치는 같은 그룹의 왼쪽에서 4px 간격으로 이어서 표시한다.
     function metric(column, label, value) {
