@@ -17,7 +17,11 @@ const configs = [
   candidate('C','balanced 12/14',{top:36,bottom:52,margin:12,label:10,value:14,timer:20,body:12,menu:12,navFont:18,navHeight:40,navGap:6,blueCell:10,bluePad:5,blueHead:24,slotGap:4,statLabel:10,statValue:14,statCol:76,statGap:4,hudGap:6,bar:14,tipW:208,tipPad:10,tipRow:4,tipLine:3,tipFont:12}),
   candidate('D','readable 12/16',{top:40,bottom:56,margin:14,label:12,value:16,timer:20,body:12,menu:14,navFont:20,navHeight:42,navGap:6,blueCell:10,bluePad:6,blueHead:26,slotGap:6,statLabel:12,statValue:16,statCol:76,statGap:4,hudGap:6,bar:16,tipW:224,tipPad:12,tipRow:5,tipLine:3,tipFont:12}),
   candidate('E','native hierarchy',{top:36,bottom:56,margin:12,label:10,value:10,timer:20,body:10,menu:10,navFont:20,navHeight:40,navGap:6,blueCell:10,bluePad:4,blueHead:24,slotGap:4,statLabel:10,statValue:20,statCol:82,statGap:3,hudGap:6,bar:14,tipW:208,tipPad:10,tipRow:4,tipLine:2,tipFont:10}),
-  candidate('F','large text',{top:44,bottom:60,margin:16,label:14,value:16,timer:24,body:14,menu:14,navFont:20,navHeight:42,navGap:6,blueCell:12,bluePad:6,blueHead:28,slotGap:6,statLabel:12,statValue:16,statCol:80,statGap:5,hudGap:8,bar:18,tipW:240,tipPad:12,tipRow:6,tipLine:4,tipFont:14})
+  candidate('F','large text',{top:44,bottom:60,margin:16,label:14,value:16,timer:24,body:14,menu:14,navFont:20,navHeight:42,navGap:6,blueCell:12,bluePad:6,blueHead:28,slotGap:6,statLabel:12,statValue:16,statCol:80,statGap:5,hudGap:8,bar:18,tipW:240,tipPad:12,tipRow:6,tipLine:4,tipFont:14}),
+  candidate('G','readable compact',{top:36,bottom:48,margin:12,label:12,value:16,timer:24,body:12,menu:12,navFont:20,navHeight:40,navGap:6,blueCell:8,bluePad:4,blueHead:24,slotGap:4,statLabel:12,statValue:16,statCol:76,statGap:4,hudGap:6,bar:16,tipW:208,tipPad:10,tipRow:4,tipLine:2,tipFont:12}),
+  candidate('H','compact 12/14',{top:34,bottom:46,margin:12,label:12,value:14,timer:22,body:12,menu:12,navFont:20,navHeight:38,navGap:6,blueCell:8,bluePad:4,blueHead:22,slotGap:4,statLabel:12,statValue:16,statCol:74,statGap:3,hudGap:5,bar:14,tipW:208,tipPad:10,tipRow:4,tipLine:2,tipFont:12}),
+  candidate('I','compact tooltip',{top:36,bottom:48,margin:10,label:12,value:14,timer:24,body:12,menu:12,navFont:18,navHeight:38,navGap:6,blueCell:8,bluePad:4,blueHead:22,slotGap:4,statLabel:12,statValue:16,statCol:74,statGap:3,hudGap:5,bar:14,tipW:192,tipPad:8,tipRow:3,tipLine:2,tipFont:12}),
+  candidate('J','maximum field',{top:34,bottom:44,margin:10,label:12,value:14,timer:22,body:12,menu:12,navFont:20,navHeight:38,navGap:6,blueCell:8,bluePad:4,blueHead:22,slotGap:4,statLabel:12,statValue:16,statCol:74,statGap:3,hudGap:5,bar:14,tipW:192,tipPad:10,tipRow:4,tipLine:2,tipFont:12})
 ];
 function replace(s,a,b) { if(!s.includes(a)) throw Error('missing source anchor: '+a); return s.replaceAll(a,b); }
 // Shared transformation: used both by the experiment and --apply winner. Only size/spacing values.
@@ -139,7 +143,10 @@ for(const c of configs){
     check(label+' stat nonoverlap',m.stats.every((a,i)=>m.stats.every((b,j)=>i===j||!overlap(a,b))));
     check(label+' stats/slots separation',m.stats.every(t=>m.slots.every(b=>!overlap(t,{x:b.x,y:b.y,w:b.size,h:b.size}))));
     let cost=m.cost,b=m.slots[9];check(label+' cost bounds',!!cost&&cost.x>=b.x+1-eps&&cost.y>=b.y+1-eps&&cost.x+cost.w<=b.x+25+eps&&cost.y+cost.h<=b.y+25+eps,JSON.stringify(cost));
-    check(label+' field marker bounds',m.markerOverflow.length===0,JSON.stringify(m.markerOverflow));
+    // A dragged item intentionally follows the pointer into the HUD/slot. Only this specific card
+    // is exempt during replacement; independently verify its exact target/alpha below.
+    const overflow=m.markerOverflow.filter(n=>label!=='replacement stats'||n!=='placeholder:item:3');
+    check(label+' field marker bounds',overflow.length===0,JSON.stringify(overflow));
     check(label+' font loaded',m.fontLoaded);
     check(label+' zoom',Math.abs(m.zoom-Math.min(m.canvas[0]/960,m.canvas[1]/540))<1e-6&&m.hud.every(t=>Math.abs(t.resolution-Math.max(1,m.zoom))<1e-6));
   };
@@ -165,7 +172,9 @@ for(const c of configs){
   check('equip',await page.evaluate(()=>window.__benchmarkGame.scene.getScene('Game').children.getByName('preview-equipped:0').visible));
   await drag('placeholder:item:3',slot.x+13,slot.y+13,false);await page.waitForTimeout(100);inspectTip(await tip(),'replace');
   await page.screenshot({path:join(out,c.id+'-replace.png')});
-  const delta=await gameMetrics();inspectGame(delta,'replacement stats');await page.mouse.up();
+  const delta=await gameMetrics();inspectGame(delta,'replacement stats');
+  check('dragged item follows target',await page.evaluate(({x,y})=>{const s=window.__benchmarkGame.scene.getScene('Game'),o=s.children.getByName('placeholder:item:3'),ghost=s.children.getByName('item-preview-ghost');return Math.abs(o.x-x)<1&&Math.abs(o.y-y)<1&&Math.abs(o.alpha-.25)<.001&&ghost.visible&&Math.abs(ghost.x-x)<1&&Math.abs(ghost.y-y)<1;},{x:slot.x+13,y:slot.y+13}));
+  await page.mouse.up();
   check('replace',await page.evaluate(()=>window.__benchmarkGame.scene.getScene('Game').children.getByName('preview-equipped:0').visible&&!window.__benchmarkGame.scene.getScene('Game').children.getByName('placeholder:item:3').visible));
   await drag('placeholder:item:1',last.x+13,last.y+13);
   check('locked reject',await page.evaluate(()=>window.__benchmarkGame.scene.getScene('Game').children.getByName('placeholder:item:1').visible));
