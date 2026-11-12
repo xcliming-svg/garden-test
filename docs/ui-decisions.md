@@ -2,12 +2,12 @@
 
 - 확정일: 2026-11-12
 - 상태: 승인·소스 반영 완료, main 병합 대상으로 확정
-- 구현 기준 커밋: [f26dd68](https://github.com/xcliming-svg/garden-test/commit/f26dd68a230e54264312850c8027808c3da02f1f)
+- 최신 소스 기준: [30dab4f](https://github.com/xcliming-svg/garden-test/commit/30dab4fb9ad43f6472f463442c5a58339a29a9a9); 최초 sharp 확정 [f26dd68](https://github.com/xcliming-svg/garden-test/commit/f26dd68a230e54264312850c8027808c3da02f1f)
 - 범위: 전장·HUD·도안·슬롯, 공통 메뉴 색상, 글꼴 및 해상도 대응. 게임플레이 규칙이나 최종 에셋은 포함하지 않는다.
 
 이 문서는 이번 UI 설계의 최종 선택과 이유를 보존하는 결정 기록이다. 현행 구현은 [implementation.md](./implementation.md), 세부 기술 규격은 [ASSET_SPECS.md](../ASSET_SPECS.md), 변경 이력은 [changes.md](./changes.md)를 따른다. 이후 변경은 사용자 승인 및 관련 문서 갱신을 전제로 한다.
 
-현재 `feature/item-card-ui`에서 하단 및 아이템 UI를 추가 검토한다. 아래 B안은 이전 확정 기록이며 하단 변경은 마지막 절과 현행 구현 문서를 따른다.
+하단·아이템 UI 및 공통 메뉴 보더/색상은 후속 작업에서 확정했다. 현행 통합 규격은 [ui-spec.md](./ui-spec.md)이며 아래 결정과 이력을 참조한다.
 
 ## 1. 레이아웃
 
@@ -17,7 +17,7 @@
 | 상단 HUD / 전장 / 하단 | 24 / 300 / 36px |
 | 정원 | x=240, y=94, 160×160, 16px × 10×10 |
 | 도안 | x=8, y=32, 88×104 펼침 / 88×16 접힘, 8px × 10×10, 헤더 16px, 패딩 4px |
-| 장착 슬롯 | 하단 중앙, 24×24, 간격 4px, y=330, 초기 일반 4칸 + 확장 1칸, 최대 일반 10칸(설계) |
+| 장착 슬롯 | 하단 중앙, 24×24, 간격 4px, y=330, 초기 일반 4칸 + 확장 1칸, 최대 일반 10칸(설계); 현 시안 9+1 |
 | 간격 체계 | 2 / 4 / 8 / 12 / 16px |
 
 상단은 두 줄 36px 안보다 한 줄 24px 안을 선택하여 전장 면적을 확보했다. 하단은 슬롯 크기 때문에 36px 유지. 정원은 화면 전체가 아닌 전장 중앙에 위치한다. 도안 접기/펼치기는 전장이나 정원 위치를 바꾸지 않는다.
@@ -62,7 +62,7 @@
 
 ## 4. 폰트 및 렌더링 — 최종 sharp
 
-- Fusion Pixel 10px Proportional KO Regular(400) 단일 원본. 한글·영문·숫자 공통. 10px 기본, 20px 강조, 30px 제목. 메뉴는 1280×720 디자인 좌표에서 2배 크기. 확장 비용 7px(필요 시 6px)는 예외.
+- Fusion Pixel 10px Proportional KO Regular(400) 단일 원본. 한글·영문·숫자 공통. 10px 기본, 20px 강조, 30px 제목. 메뉴는 1280×720 디자인 좌표에서 2배 크기. 하단 능력치·정보창 7px, 확장 비용 7px(필요 시 6px)는 예외.
 - 로컬 WOFF2 내장 CSS, OFL 라이선스 및 출처 보존. Phaser 시작 전 폰트 로드, 실패 시 대체 폰트로 실행하지 않는다. 정확한 upstream 버전은 미확인.
 - 실제 카메라 배율(최소 1)로 텍스처를 래스터화하고 개별 텍스처에 NEAREST 필터 적용. Text 갱신 시 필터 재적용. 창 크기 변경 시 style.resolution과 frame.source.resolution 동기화. 전역 antialias=true, pixelArt=false, roundPixels=false 유지.
 - 1배 텍스처 고정 확대는 사용자 확인에서 흐려져 폐기. linear보다 sharp가 조금 나았고 crisp와 sharp는 차이가 미미했다. 글리프 알파 직접 보정 및 비교용 URL 분기는 제거하여 sharp 단일 방식 확정.
@@ -73,7 +73,7 @@
 
 최종 렌더링 구현 커밋에서 전체 5개 JS 구문, 9개 씬 생성, 10개 창 크기(320×180~7680×4320), 텍스트·색·크기 변경 시 NEAREST 유지, Canvas 해상도 동기화, 씬 종료 추적 해제, 일반/장시간 HUD 모의 테스트를 통과했다. 색 대비 및 32색 고유값 검사도 통과했다. 사용자가 실제 화면에서 폰트 비교를 수행했으나 자동화된 실제 브라우저 렌더링 검증 및 완성 에셋 검증은 미실행이다.
 
-실제 유닛/정원 에셋, 게임플레이, 스폰, 이동, 전투, 시간·처치·완성도·재화 집계, 확장·장착·저장, 설정 적용, 데스크톱 패키징은 아직 구현하지 않았다. 시안의 값이나 도형을 실제 게임 규칙으로 해석하지 않는다. 별도 로컬 비교 폴더의 이전 폰트 물리 삭제는 미완료이며 main 배포 범위 밖이다.
+실제 유닛/정원 에셋, 게임플레이, 스폰, 이동, 전투, 시간·처치·완성도·재화 집계, 실제 확장·장착·저장, 설정 적용, 데스크톱 패키징은 아직 구현하지 않았다. 시안의 값이나 도형을 실제 게임 규칙으로 해석하지 않는다. 별도 로컬 비교 폴더의 이전 폰트 물리 삭제는 미완료이며 main 배포 범위 밖이다.
 
 ## 6. 주요 결정 이력
 
@@ -87,7 +87,7 @@
 | [e471b14](https://github.com/xcliming-svg/garden-test/commit/e471b1415d92259ce6201a537a9861b0ac20d3d7) | 1×16px 구분선(유지), 1배 글자 확대(폐기) |
 | [f26dd68](https://github.com/xcliming-svg/garden-test/commit/f26dd68a230e54264312850c8027808c3da02f1f) | sharp 단일 렌더링 확정 |
 
-## 7. 아이템 카드 UI 검토 — feature/item-card-ui
+## 7. 아이템 카드 UI 확정 — feature/item-card-ui
 
 - 하단 36px로 복원, 전장 300px, 정원 y=94. 중앙 24px 일반 9칸과 비활성 확장 1칸(999), 슬롯 간격 4px, 좌우 126px(42px×3열), 바깥 여백 8px, 슬롯과 그룹 사이 48px. 실제 초기 슬롯 설계 유지.
 - 능력치 6종: 방어력·최대 체력·행운 / 이동 속도·획득 범위·초당 피해량. 별도 분류 제목이나 꽃 접두어 없이 표시한다. 행운은 필요한 꽃의 등장 확률과 연관되나 실제 계산식 미정.
@@ -100,3 +100,13 @@
 
 - 사용자 승인: 주요 메뉴 버튼·활성 탭·일시정지·게임 제목의 황록색을 paper(#F1F0E8)로 변경한다. 성장·성공·증가 및 기존 확장 가능 상태는 growth 유지. gold는 아이템 강조, 개발용 안내는 label로 변경한다.
 - 기능적 테두리/구분선은 640×360 논리 1px(기존 메뉴 좌표 2px), 호버 시 두께 고정. 일반 버튼 호버 paper, 위험 버튼 red 유지. 주요 행동과 선택 탭의 상태 속성은 분리한다. 일반 팝업/구분선 edge 유지. 기존 전장·하단·정보창 규격 및 메뉴 배치 유지.
+
+### 후속 확정 커밋
+
+| 커밋 | 결정 |
+| --- | --- |
+| [379467f](https://github.com/xcliming-svg/garden-test/commit/379467ff2ce3b6263ccd8f788140011350c5c62f) | 하단 36px 복원, 7px 능력치·외측 정렬 확정 |
+| [8ef7c6f](https://github.com/xcliming-svg/garden-test/commit/8ef7c6f4fc4378e3755876e677f14fa1cacaa2d6) | 정보창 120px, 같은 스트로크, 설명 우선 |
+| [92dcca3](https://github.com/xcliming-svg/garden-test/commit/92dcca3ffbd046c9b1a68a51ce55c79a989cd834) | 교체 제목 A안 |
+| [80032c6](https://github.com/xcliming-svg/garden-test/commit/80032c6df1618290c9710e6d576fd8632d587794) | 장착·교체 골드 |
+| [30dab4f](https://github.com/xcliming-svg/garden-test/commit/30dab4fb9ad43f6472f463442c5a58339a29a9a9) | 메뉴 paper 강조 및 논리 1px 통일 |

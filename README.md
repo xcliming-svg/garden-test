@@ -43,6 +43,7 @@ Phaser 3.90.0 기반 **로그라이크 게임용 화면/씬 스켈레톤**. 게�
 
 - [docs/README.md](./docs/README.md): 개발 문서 목차 및 관리 기준.
 - [docs/implementation.md](./docs/implementation.md): 확정 설계와 실제 적용 구현을 시스템별로 정리한 현행 문서.
+- [docs/ui-spec.md](./docs/ui-spec.md): 메뉴부터 전장까지 확정 UI 규격 요약.
 - [docs/ui-decisions.md](./docs/ui-decisions.md): UI 디자인 최종 확정 기록.
 - [docs/changes.md](./docs/changes.md): 시스템별 변경 이력과 검증 상태.
 
