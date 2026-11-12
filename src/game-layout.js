@@ -15,12 +15,14 @@
   const hudGap = 5;
   // 제목 박스의 내용 여백과 그리드 간격은 HUD 레이블 간격을 공유한다.
   const blueprintPadding = hudGap;
-  const blueprintHeader = U.fontSize.base + 2 * blueprintPadding;
+  // Fusion Pixel 12px의 실제 Phaser 텍스트 높이(Chromium 실측)는 15px.
+  const hudTextHeight = 15, hudCenterY = 15;
+  const blueprintHeader = hudTextHeight + 2 * blueprintPadding;
   const width = U.W, height = U.H;
   const topHudHeight = 32;
   const bottomHudHeight = 44;
   const fieldHeight = height - topHudHeight - bottomHudHeight;
-  const blueprintTopGap = 10;
+  const blueprintTopGap = topHudHeight - (hudCenterY + hudTextHeight / 2);
   const blueprintY = topHudHeight + blueprintTopGap;
   // 참조 트리 외형 24px = 내부 22px + 1px 프레임. 기존 대형 비교는 내부 32px 유지.
   // 이전 ?garden=36 링크는 대형 비교의 호환 별칭으로 유지한다.
@@ -45,7 +47,7 @@
 
   const hud = Object.freeze({
     padding: 10, gap: hudGap, labelSize: 12, valueSize: 12, timeSize: 12,
-    centerY: 15, iconSize: 14, barHeight: 14, barWidth: 158, // 외형 14, 이중 프레임 2px
+    centerY: hudCenterY, iconSize: 14, barHeight: 14, barWidth: 158, // 외형 14, 이중 프레임 2px
     columnUnit: 1, minMetricWidth: 0, hourDigits: 4, counterDigits: 12, minBarWidth: tile * 4,
     // 표시 폭 예약 기준이며 게임 데이터의 최대값이 아니다.
     previewProgress: 30,
