@@ -54,7 +54,14 @@
     return graphics;
   }
 
+  // 기존 메뉴/결과/오버레이의 1280×720 배치를 유지하면서
+  // 640×360 논리 캔버스에 맞춘다. Game 씬은 이 카메라를 사용하지 않는다.
+  function legacyCamera(scene) {
+    scene.cameras.main.setZoom(0.5).centerOn(W / 2, H / 2);
+  }
+
   function background(scene, label) {
+    legacyCamera(scene);
     scene.cameras.main.setBackgroundColor('#0b1018');
     scene.add.rectangle(W / 2, H / 2, W, H, C.bg);
     const decor = scene.add.graphics();
@@ -100,6 +107,7 @@
   }
 
   function overlay(scene) {
+    legacyCamera(scene);
     return scene.add.rectangle(W / 2, H / 2, W, H, 0x05090f, 0.74)
       .setInteractive();
   }

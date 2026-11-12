@@ -41,32 +41,7 @@
     constructor() { super('Game'); }
 
     create() {
-      U.background(this, 'GAME / EMPTY SCENE');
-      U.text(this, 53, 100, '게임 화면', 25, U.C.text, { bold: true });
-      U.text(this, 1230, 110, 'ESC  일시정지', 16, '#e1b875', { originX: 1 });
-      U.panel(this, 510, 397, 916, 500, { fill: 0x101823 });
-      U.panel(this, 1081, 397, 254, 500, { fill: 0x151f2b });
-
-      const grid = this.add.graphics();
-      grid.lineStyle(1, 0x455464, 0.20);
-      for (let x = 96; x < 957; x += 70) grid.lineBetween(x, 163, x, 632);
-      for (let y = 188; y < 626; y += 70) grid.lineBetween(78, y, 952, y);
-
-      U.text(this, 510, 327, '플레이 영역', 31, U.C.text, { bold: true, originX: 0.5 });
-      U.text(this, 510, 381, '게임플레이 미구현', 20, '#e1b875', { originX: 0.5 });
-      U.text(this, 510, 432, '맵 생성 · 이동 · 전투 · 적 · 아이템 로직 없음', 16, U.C.muted, { originX: 0.5 });
-
-      U.text(this, 987, 173, 'HUD / 자리만 배치', 17, U.C.text, { bold: true });
-      U.rule(this, 982, 206, 1178, 206, U.C.border, 0.9);
-      const rows = ['체력', '진행 구역', '장비 / 소지품', '기록'];
-      rows.forEach((name, index) => {
-        const y = 236 + index * 79;
-        U.text(this, 991, y, name, 15, U.C.muted);
-        U.text(this, 1169, y + 27, '—', 20, U.C.text, { originX: 1 });
-        U.rule(this, 990, y + 62, 1167, y + 62, U.C.border, 0.54);
-      });
-      U.text(this, 986, 591, '수치는 연결하지 않았습니다.', 13, '#e1b875');
-
+      window.GardenGameLayout.draw(this);
       U.bindEscape(this, () => {
         this.scene.pause('Game');
         this.scene.launch('Pause');
@@ -151,7 +126,7 @@
         ],
         video: [
           ['화면 모드', '브라우저 화면'],
-          ['해상도', '캔버스 1280 × 720 기준'],
+          ['해상도', '논리 캔버스 640 × 360 / 16:9'],
           ['그래픽 옵션', '제어 기능 미연결']
         ]
       }[this.activeTab];

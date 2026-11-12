@@ -9,17 +9,16 @@
     :root { color-scheme: dark; }
     * { box-sizing: border-box; }
     html, body { margin: 0; width: 100%; height: 100%; background: #0b1018; }
-    body { display: flex; flex-direction: column; align-items: center; justify-content: center; font-family: Arial, "Malgun Gothic", sans-serif; color: #a2afbd; overflow: hidden; }
-    #game { width: 100%; max-width: 1600px; height: min(92vh, 900px); display: flex; align-items: center; justify-content: center; }
-    #game canvas { display: block; }
-    .note { margin: 8px 16px 12px; text-align: center; font-size: 12px; letter-spacing: .04em; }
+    body { display: flex; align-items: center; justify-content: center; font-family: Arial, "Malgun Gothic", sans-serif; overflow: hidden; }
+    #game { width: 640px; height: 360px; flex: none; }
+    #game canvas { display: block; image-rendering: pixelated; }
   </style>
 </head>
 <body>
   <main id="game" aria-label="Garden Test 게임 씬 화면"></main>
-  <p class="note">SCENE-ONLY PROTOTYPE · 게임 로직 없음 · Phaser 3.90.0 · 최초 실행 시 인터넷 연결 필요</p>
   <script src="https://cdn.jsdelivr.net/npm/phaser@3.90.0/dist/phaser.min.js"></script>
   <script src="./src/ui.js"></script>
+  <script src="./src/game-layout.js"></script>
   <script src="./src/scenes.js"></script>
   <script src="./src/main.js"></script>
 </body>
