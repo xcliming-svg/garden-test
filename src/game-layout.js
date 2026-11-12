@@ -377,8 +377,8 @@
 
   // 기존 카드 선택의 밝은 테두리를 정보창에도 적용한다.
   const itemTooltip = Object.freeze({
-    width: 176, padding: spacing.base, fontSize: bottomStats.fontSize,
-    rowGap: spacing.small, lineSpacing: 2, accent: P.n.paper,
+    width: 120, padding: spacing.base, fontSize: bottomStats.fontSize,
+    rowGap: spacing.small, lineSpacing: 2, strokeWidth: 1, accent: P.n.paper,
     background: P.n.soil, divider: P.n.edge,
     title: colors.value, description: colors.label, hint: colors.disabledText
   });
@@ -449,8 +449,7 @@
       tooltip.removeAll(true);
       const t = itemTooltip;
       const w = t.width, pad = t.padding;
-      const background = scene.add.graphics();
-      tooltip.add(background);
+      const labels = [];
       let y = pad, dividerY = 0;
       rows.forEach((row, index) => {
         if (index === 1) {
@@ -460,12 +459,23 @@
         const label = U.text(scene, pad, y, row.value, t.fontSize, row.color, {
           wrap: w - 2 * pad, lineSpacing: t.lineSpacing
         });
-        tooltip.add(label);
+        labels.push(label);
         y += Math.max(t.fontSize, Math.ceil(label.height)) + t.rowGap;
       });
       tooltipSize = { width: w, height: y + pad - t.rowGap };
-      frame(background, 0, 0, w, tooltipSize.height, t.background, t.accent);
-      if (dividerY) background.fillStyle(t.divider, 1).fillRect(pad, dividerY, w - 2 * pad, 1);
+      // 카드와 동일한 Rectangle + setStrokeStyle을 사용한다.
+      // 기존 채운 사각형 테두리와 달리 선이 경계 중심에 그려진다.
+      const background = scene.add.rectangle(w / 2, tooltipSize.height / 2,
+        w, tooltipSize.height, t.background)
+        .setName('item-tooltip-background')
+        .setStrokeStyle(t.strokeWidth, t.accent, 1);
+      tooltip.add(background);
+      if (dividerY) {
+        const divider = scene.add.graphics().setName('item-tooltip-divider');
+        divider.fillStyle(t.divider, 1).fillRect(pad, dividerY, w - 2 * pad, 1);
+        tooltip.add(divider);
+      }
+      labels.forEach(label => tooltip.add(label));
     }
     function refreshTooltip() {
       let focus = hovered || pinned;
@@ -481,18 +491,19 @@
       let rows;
       if (previous) {
         rows = [{ value: previous.name + ' → ' + item.name, color: itemTooltip.title },
-          ...effectRows(item, false), { value: item.desc, color: itemTooltip.description },
+          { value: item.desc, color: itemTooltip.description }, ...effectRows(item, false),
           ...effectRows(previous, true), { value: '놓으면 기존 아이템 교체', color: itemTooltip.hint }];
       } else {
-        rows = [{ value: item.name, color: itemTooltip.title }, ...effectRows(item, false),
-          { value: item.desc, color: itemTooltip.description }];
+        rows = [{ value: item.name, color: itemTooltip.title },
+          { value: item.desc, color: itemTooltip.description }, ...effectRows(item, false)];
         if (dragging && target >= 0) rows.push({ value: '놓으면 장착', color: itemTooltip.hint });
         else if (!card) rows.push({ value: '장착 중', color: itemTooltip.hint });
       }
       const key = JSON.stringify(rows);
       rebuildTooltip(key, rows);
-      const pos = tooltipPosition(anchor, tooltipSize.width, tooltipSize.height, layout.top);
-      tooltip.setPosition(pos.x, pos.y).setVisible(true);
+      // 중앙 스트로크의 바깥쪽 0.5px까지 경계 안에 두고 정수 좌표를 유지한다.
+      const pos = tooltipPosition(anchor, tooltipSize.width + 2, tooltipSize.height + 2, layout.top);
+      tooltip.setPosition(pos.x + 1, pos.y + 1).setVisible(true);
     }
     function sameFocus(a, b) { return !!a && !!b && (a.card ? a.card === b.card : a.slot === b.slot); }
     function refresh() {
@@ -500,7 +511,7 @@
       accents.clear();
       cards.forEach(card => {
         const active = dragging ? dragging === card : focus && focus.card === card;
-        card.marker.setStrokeStyle(active ? 1 : 0, itemTooltip.accent, active ? 1 : 0);
+        card.marker.setStrokeStyle(active ? itemTooltip.strokeWidth : 0, itemTooltip.accent, active ? 1 : 0);
       });
       slots.forEach((slot, index) => {
         const active = dragging ? target === index : focus && focus.slot === index && equipped[index];
