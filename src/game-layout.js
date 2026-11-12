@@ -22,7 +22,7 @@
   });
 
   const hud = Object.freeze({
-    padding: spacing.base, gap: spacing.small, labelSize: 12, valueSize: 12,
+    padding: spacing.base, gap: spacing.small, labelSize: window.GardenUI.fontSize.base, valueSize: window.GardenUI.fontSize.base,
     centerY: spec.top / 2, iconSize: 12, barHeight: 12,
     // 표시 폭 예약용 문자열이다. 게임 수치의 최대값을 의미하지 않는다.
     timeSample: '88:88', counterSample: '88888'
@@ -230,7 +230,7 @@
 
     const header = scene.add.graphics().setDepth(11).setName('blueprint-header');
     frame(header, b.x, b.y, b.width, b.header, colors.hud, colors.hudBorder);
-    text(scene, b.x + b.padding, b.y + b.header / 2, '도안', 12, '#c7d1d9', 'left').setDepth(12);
+    text(scene, b.x + b.padding, b.y + b.header / 2, '도안', window.GardenUI.fontSize.base, '#c7d1d9', 'left').setDepth(12);
     const arrow = scene.add.graphics().setDepth(12).setName('blueprint-chevron');
     let expanded = true;
     function drawArrow() {

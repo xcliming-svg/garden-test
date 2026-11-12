@@ -19,9 +19,10 @@
   };
   // One unmodified Regular face for Korean, English and numerals.
   const fontFamily = '"Garden Fusion"';
+  const fontSize = Object.freeze({ base: 10, heading: 20, title: 30, menuBase: 20, menuHeading: 40, menuTitle: 60 });
   async function loadFonts() {
     if (!document.fonts || !document.fonts.load) throw new Error('Font Loading API unavailable');
-    const loaded = await document.fonts.load('400 24px ' + fontFamily,
+    const loaded = await document.fonts.load('400 20px ' + fontFamily,
       '정원 완성도 시간 처치 수 보석 수량 도안 새 게임 설정 일시정지 GARDEN TEST 0123456789 83%');
     if (!loaded.length || loaded.some(face => face.status !== 'loaded')) {
       throw new Error('Fusion Pixel font failed to load');
@@ -119,10 +120,10 @@
     decor.strokeCircle(1054, 314, 181);
     rule(scene, 40, 76, 1240, 76, C.border, 0.8);
     rule(scene, 40, 664, 1240, 664, C.border, 0.8);
-    text(scene, 43, 30, 'GARDEN TEST', 24, '#e1b875');
-    text(scene, 1238, 33, label || 'SCENE PROTOTYPE', 24, C.muted, { originX: 1 });
-    text(scene, 43, 680, 'PHASER 3.90.0 / UI SCENES ONLY', 24, C.muted);
-    text(scene, 1238, 680, 'NO GAMEPLAY LOGIC', 24, C.muted, { originX: 1 });
+    text(scene, 43, 30, 'GARDEN TEST', fontSize.menuBase, '#e1b875');
+    text(scene, 1238, 33, label || 'SCENE PROTOTYPE', fontSize.menuBase, C.muted, { originX: 1 });
+    text(scene, 43, 680, 'PHASER 3.90.0 / UI SCENES ONLY', fontSize.menuBase, C.muted);
+    text(scene, 1238, 680, 'NO GAMEPLAY LOGIC', fontSize.menuBase, C.muted, { originX: 1 });
   }
 
   function button(scene, x, y, width, label, action, options) {
@@ -134,7 +135,7 @@
     const base = scene.add.rectangle(0, 0, width, height,
       disabled ? 0x151d27 : fill, 1);
     base.setStrokeStyle(1, disabled ? 0x2b3641 : border, 1);
-    const caption = text(scene, 0, 0, label, opts.fontSize || 24,
+    const caption = text(scene, 0, 0, label, opts.fontSize || fontSize.menuBase,
       disabled ? '#738191' : C.text, { originX: 0.5, originY: 0.5 });
     const group = scene.add.container(x, y, [base, caption]);
     if (!disabled && typeof action === 'function') {
@@ -183,7 +184,7 @@
   }
 
   window.GardenUI = Object.freeze({
-    W: W, H: H, C: C, fontFamily, loadFonts, text: text, panel: panel, rule: rule,
+    W: W, H: H, C: C, fontFamily, fontSize, loadFonts, text: text, panel: panel, rule: rule,
     background: background, button: button, overlay: overlay, fitCamera: fitCamera,
     bindEscape: bindEscape, openSubscene: openSubscene,
     closeSubscene: closeSubscene
