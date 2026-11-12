@@ -35,6 +35,14 @@ Phaser 3.90.0 기반 **로그라이크 게임용 화면/씬 스켈레톤**. 게�
 - [ASSET_SPECS.md](./ASSET_SPECS.md): 에셋별 목표 PNG 크기, 색상 식별표, 경로 제안, 원본 SVG 보존 정책 및 배치 수치.
 - [src/game-layout.js](./src/game-layout.js): 규격과 정적 화면 렌더링의 기준 파일.
 
+## 개발 문서
+
+- [docs/README.md](./docs/README.md): 개발 문서 목차 및 관리 기준.
+- [docs/implementation.md](./docs/implementation.md): 확정 설계와 실제 적용 구현을 시스템별로 정리한 현행 문서.
+- [docs/changes.md](./docs/changes.md): 시스템별 변경 이력과 검증 상태.
+
+구현 변경 시 관련 현행 문서 및 변경 이력도 함께 갱신합니다.
+
 ## 출처와 의사결정
 
 기술 선택과 화면 구성의 근거, 추후 작업 금지 범위 및 개발 규칙은 [AGENTS.md](./AGENTS.md)에 정리했습니다. 씬 참조 문서는 [Phaser 공식 Scene 가이드](https://docs.phaser.io/phaser/concepts/scenes)입니다.
