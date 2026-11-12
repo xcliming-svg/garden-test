@@ -27,42 +27,17 @@
   // would require shrinking the texture at common fractional menu scales.
   function textResolution(scene) { return Math.max(1, scene.cameras.main.zoom); }
 
-  // 사용자 비교 결과: 고해상도 NEAREST를 기본값으로 사용한다.
-  // linear는 이전 기본, crisp는 반투명 글리프 경계의 대비만 강화하는 실험.
-  const requestedFontMode = new URLSearchParams(window.location.search).get('font');
-  const fontMode = requestedFontMode === 'linear' ? 'linear' : requestedFontMode === 'crisp' ? 'crisp' : 'sharp';
-
-  function sharpenGlyphEdges(item) {
-    // 작은 비용 글자나 불투명 배경이 있는 퍼센트는 획 손실/배경 손상을 피한다.
-    if (parseFloat(item.style.fontSize) < fontSize.base || item.style.backgroundColor) return;
-    if (item.width === 0 || item.height === 0 || !item.canvas.width || !item.canvas.height) return;
-    const image = item.context.getImageData(0, 0, item.canvas.width, item.canvas.height);
-    const pixels = image.data;
-    let changed = false;
-    for (let i = 3; i < pixels.length; i += 4) {
-      const alpha = pixels[i];
-      // 0과 255는 유지. 중간 범위만 대비를 강화해 얇은 획을 완전히 이진화하지 않는다.
-      const next = Math.max(0, Math.min(255, Math.round((alpha - 127.5) * 2 + 127.5)));
-      if (alpha !== next) { pixels[i] = next; changed = true; }
-    }
-    if (changed) {
-      item.context.putImageData(image, 0, 0);
-      item.texture.refresh();
-    }
-  }
-
+  // 사용자 비교 결과로 확정한 고해상도 NEAREST.
+  // Phaser의 Text.updateText는 텍스처 업로드 시 필터를 재설정할 수 있다.
+  // 글리프 원본 픽셀은 변경하지 않고 해당 텍스처의 필터만 복원한다.
   function applyFontFilter(item) {
-    function finish(target) {
-      if (fontMode === 'crisp') sharpenGlyphEdges(target);
-      target.texture.setFilter(Phaser.Textures.FilterMode.NEAREST);
-    }
     const update = item.updateText;
     item.updateText = function () {
       const result = update.apply(this, arguments);
-      finish(this);
+      this.texture.setFilter(Phaser.Textures.FilterMode.NEAREST);
       return result;
     };
-    finish(item);
+    item.texture.setFilter(Phaser.Textures.FilterMode.NEAREST);
   }
 
   function text(scene, x, y, content, size, color, options) {
@@ -79,7 +54,7 @@
       lineSpacing: opts.lineSpacing || 9,
       wordWrap: opts.wrap ? { width: opts.wrap } : undefined
     });
-    if (fontMode !== 'linear') applyFontFilter(item);
+    applyFontFilter(item);
     item.setOrigin(opts.originX === undefined ? 0 : opts.originX,
       opts.originY === undefined ? 0 : opts.originY);
     if (opts.alpha !== undefined) item.setAlpha(opts.alpha);

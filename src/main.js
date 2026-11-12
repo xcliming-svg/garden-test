@@ -39,7 +39,7 @@
     height: initial.height,
     backgroundColor: P.ink,
     // 배율별 텍스트 래스터화와 전체 렌더러의 안티앨리어싱은 유지한다.
-    // 글자만 기본 NEAREST, ?font=linear는 이전 필터, ?font=crisp는 경계 대비 실험.
+    // 글자 텍스처에만 NEAREST를 적용하며 원본 글리프 픽셀은 보존한다.
     render: { antialias: true, pixelArt: false, roundPixels: false },
     scale: {
       mode: Phaser.Scale.RESIZE,
