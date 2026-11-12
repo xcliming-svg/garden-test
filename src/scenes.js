@@ -2,7 +2,7 @@
   'use strict';
 
   const U = window.GardenUI;
-  // 24px 타일 기준 공통 960×540 좌표. 메뉴는 4/8/16/24px 간격 토큰을 따른다.
+  // 24px 타일 기준 공통 960×540 좌표. 메뉴는 기능에 맞는 간격을 선택하고 주요 행동은 크게 표시한다.
   const menu = Object.freeze({ ...U.menuStyle, row: 48 });
   function centered(scene, x, y, label, size, color, options = {}) {
     return U.text(scene, x, y, label, size, color, { ...options, originX: 0.5, originY: 0.5 });
@@ -27,13 +27,14 @@
 
       const x = U.W / 2;
       const w = 288;
-      const first = 260;
-      const step = menu.buttonHeight + menu.gap;
-      U.button(this, x, first, w, '새 게임', () => this.scene.start('Game'), { height: menu.buttonHeight, primary: true });
-      U.button(this, x, first + step, w, '이어하기 · 미구현', null, { height: menu.buttonHeight, disabled: true });
-      U.button(this, x, first + step * 2, w, '설정', () => U.openSubscene(this, 'Settings'), { height: menu.buttonHeight });
-      U.button(this, x, first + step * 3, w, '도감', () => U.openSubscene(this, 'Codex'), { height: menu.buttonHeight });
-      U.button(this, x, first + step * 4, w, '종료 · 웹 미지원', null, { height: menu.buttonHeight, disabled: true });
+      const first = 252;
+      const step = menu.navHeight + menu.navGap;
+      const nav = { height: menu.navHeight, fontSize: U.fontSize.menuAction };
+      U.button(this, x, first, w, '새 게임', () => this.scene.start('Game'), { ...nav, primary: true });
+      U.button(this, x, first + step, w, '이어하기 · 미구현', null, { ...nav, disabled: true });
+      U.button(this, x, first + step * 2, w, '설정', () => U.openSubscene(this, 'Settings'), nav);
+      U.button(this, x, first + step * 3, w, '도감', () => U.openSubscene(this, 'Codex'), nav);
+      U.button(this, x, first + step * 4, w, '종료 · 웹 미지원', null, { ...nav, disabled: true });
 
       // 결과 씬 미리보기는 명시적인 개발용 URL에서만 나타난다.
       if (previewMode) {
@@ -64,17 +65,18 @@
       centered(this, 480, 124, '일시정지', U.fontSize.menuHeading, U.C.text);
       centered(this, 480, 152, '게임 화면은 중단된 상태입니다.', U.fontSize.menuBase, U.C.muted);
       U.rule(this, 312, 172, 648, 172, U.C.border, 1);
-      const first = 204;
-      const step = menu.buttonHeight + menu.gap;
-      U.button(this, 480, first, 288, '계속하기', () => this.resumeGame(), { height: menu.buttonHeight, primary: true });
-      U.button(this, 480, first + step, 288, '재시작 · 미구현', null, { height: menu.buttonHeight, disabled: true });
-      U.button(this, 480, first + step * 2, 288, '설정', () => U.openSubscene(this, 'Settings'), { height: menu.buttonHeight });
-      U.button(this, 480, first + step * 3, 288, '도감', () => U.openSubscene(this, 'Codex'), { height: menu.buttonHeight });
+      const first = 202;
+      const step = menu.navHeight + menu.navGap;
+      const nav = { height: menu.navHeight, fontSize: U.fontSize.menuAction };
+      U.button(this, 480, first, 288, '계속하기', () => this.resumeGame(), { ...nav, primary: true });
+      U.button(this, 480, first + step, 288, '재시작 · 미구현', null, { ...nav, disabled: true });
+      U.button(this, 480, first + step * 2, 288, '설정', () => U.openSubscene(this, 'Settings'), nav);
+      U.button(this, 480, first + step * 3, 288, '도감', () => U.openSubscene(this, 'Codex'), nav);
       U.button(this, 480, first + step * 4, 288, '메인 메뉴로', () => {
         this.scene.pause('Pause');
         this.scene.launch('Confirm', { returnTo: 'Pause', action: 'returnToMenu' });
-      }, { height: menu.buttonHeight, danger: true });
-      centered(this, 480, 416, 'ESC  계속하기', U.fontSize.menuBase, U.C.muted);
+      }, { ...nav, danger: true });
+      centered(this, 480, 430, 'ESC  계속하기', U.fontSize.menuBase, U.C.muted);
       U.bindEscape(this, () => this.resumeGame());
     }
     resumeGame() {

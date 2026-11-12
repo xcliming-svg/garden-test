@@ -4,9 +4,9 @@
   // 공유되는 것은 화면 스타일과 입력용 UI 컴포넌트뿐이다.
   const W = 960;
   const H = 540;
-  // 8px 기본 모듈. 2/4px은 픽셀 세부 간격, 1px은 기능적 선의 예외.
+  // 8px은 기본 간격 참고값일 뿐. 용도·정보 밀도에 따라 2/4/6/10/12px도 사용한다.
   const unit = 8, tile = unit * 3;
-  const spacing = Object.freeze({ micro: 2, small: 4, base: unit, section: unit * 2, large: tile });
+  const spacing = Object.freeze({ micro: 2, small: 4, compact: 6, base: unit, inset: 10, medium: 12, section: unit * 2, large: tile });
   const P = window.GardenPalette;
   const C = Object.freeze({
     bg: P.n.ink, panel: P.n.soil, panelAlt: P.n.grid,
@@ -18,9 +18,9 @@
   // One unmodified Regular face for Korean, English and numerals.
   const fontFamily = '"Garden Fusion"';
   // Fusion Pixel 10px 원본의 정수 배수만 일반 UI에 사용한다.
-  const fontSize = Object.freeze({ base: 10, compact: 10, heading: 20, title: 40, menuBase: 10, menuHeading: 20, menuTitle: 40 });
+  const fontSize = Object.freeze({ base: 10, compact: 10, heading: 20, title: 40, timer: 20, menuBase: 10, menuAction: 20, menuHeading: 20, menuTitle: 40 });
   // 메뉴와 전장 모두 동일한 960×540 좌표, 기능적 선 1px.
-  const menuStyle = Object.freeze({ strokeWidth: 1, buttonHeight: 32, gap: spacing.base });
+  const menuStyle = Object.freeze({ strokeWidth: 1, buttonHeight: 32, gap: spacing.base, navHeight: 40, navGap: spacing.compact });
   async function loadFonts() {
     if (!document.fonts || !document.fonts.load) throw new Error('Font Loading API unavailable');
     const loaded = await document.fonts.load('400 20px ' + fontFamily,
