@@ -30,8 +30,7 @@
   function textResolution(scene) { return Math.max(1, scene.cameras.main.zoom); }
 
   // 사용자 비교 결과로 확정한 고해상도 NEAREST.
-  // Phaser의 Text.updateText는 텍스처 업로드 시 필터를 재설정할 수 있다.
-  // 글리프 원본 픽셀은 변경하지 않고 해당 텍스처의 필터만 복원한다.
+  // 글리프의 반투명 픽셀을 보존하고 텍스처 필터만 복원한다.
   function applyFontFilter(item) {
     const update = item.updateText;
     item.updateText = function () {
