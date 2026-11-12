@@ -38,8 +38,8 @@
     width: initial.width,
     height: initial.height,
     backgroundColor: P.ink,
-    // 기존 배율별 텍스트 래스터화와 기본 안티앨리어싱을 유지한다.
-    // ?font=sharp 비교 모드에서만 글자 텍스처에 NEAREST를 적용한다.
+    // 배율별 텍스트 래스터화와 전체 렌더러의 안티앨리어싱은 유지한다.
+    // 글자만 기본 NEAREST, ?font=linear는 이전 필터, ?font=crisp는 경계 대비 실험.
     render: { antialias: true, pixelArt: false, roundPixels: false },
     scale: {
       mode: Phaser.Scale.RESIZE,
