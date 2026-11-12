@@ -565,7 +565,8 @@
       });
       slots.forEach((slot, index) => {
         const active = dragging ? target === index : focus && focus.slot === index && equipped[index];
-        if (active) slotCorners(accents, slot.x, slot.y, slot.size, dragging ? P.n.growth : P.n.gold);
+        // 장착·교체 대상과 장착 슬롯 선택은 아이템 골드로 통일.
+        if (active) slotCorners(accents, slot.x, slot.y, slot.size, P.n.gold);
         slotItems[index].setVisible(!!equipped[index]).setAlpha(dragging && target === index ? 0.45 : 1);
       });
       renderStats();
