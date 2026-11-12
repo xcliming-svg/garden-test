@@ -163,12 +163,23 @@ for(const c of configs){
           const title=bounds(bp.x*2,Math.floor(bp.y*2),Math.ceil((bp.x+40)*2),Math.ceil((bp.y+bp.header)*2),ink);
           const header=bounds(bp.x*2,64,(bp.x+bp.width)*2,Math.ceil((bp.y+bp.header)*2),exact(103,103,119));
           const grid=bounds(bp.x*2,Math.floor((bp.y+bp.header)*2),(bp.x+bp.width)*2,Math.ceil((bp.gridY+91)*2),exact(81,81,107));
-          return {image:[cv.width,cv.height],label,time,title,header,grid,
+          const bar=bounds(1500,10,1920,54,exact(135,135,150));
+          const dividers=bounds(0,10,1920,50,exact(32,32,32));
+          const dividerRuns=[];
+          for(let x=0;x<1920;x++){
+            if(!exact(32,32,32)(rgb(x,12)))continue;
+            let left=x;
+            while(x+1<1920&&exact(32,32,32)(rgb(x+1,12)))x++;
+            dividerRuns.push([left,x]);
+          }
+          return {image:[cv.width,cv.height],label,time,title,header,grid,bar,dividerRuns,
+            leftPadding:label.left,rightPadding:cv.width-bar.right-1,
             timeGap:time.left-label.right-1,hudBottomGap:64-Math.max(label.bottom,time.bottom)-1,
             headerTopGap:header.top-64,titleLeftGap:title.left-header.left,titleTopGap:title.top-header.top,
             titleBottomGap:header.bottom-title.bottom,gridGap:grid.top-header.bottom-1};
         },{data:png.toString('base64'),hud:m.hud,bp:m.blueprint});
         console.log('PIXEL_REPORT '+JSON.stringify(pixels));
+        check('FHD right-aligned gauge and two left dividers',pixels.leftPadding===20&&pixels.rightPadding===pixels.leftPadding&&pixels.bar.width===316&&JSON.stringify(pixels.dividerRuns)===JSON.stringify([[334,337],[668,671]]),JSON.stringify(pixels));
         check('FHD actual screenshot alignment and visible gaps',pixels.header.width===182&&pixels.grid.width===182&&pixels.header.left===pixels.grid.left&&Math.abs(pixels.hudBottomGap-pixels.headerTopGap)<=1&&[pixels.titleLeftGap,pixels.titleTopGap,pixels.titleBottomGap].every(g=>Math.abs(g-pixels.gridGap)<=1)&&pixels.gridGap===pixels.timeGap&&pixels.timeGap===15,JSON.stringify(pixels));
       }
     }
