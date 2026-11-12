@@ -78,7 +78,10 @@ for(const c of configs){
     const clock=hud.find(o=>o.text==='시간'), kills=hud.find(o=>o.text==='처치 수'), gardenLabel=hud.find(o=>o.text==='정원 완성도');
     const gemValue=hud.filter(o=>o.text==='999,999,999,999').sort((a,b)=>a.x-b.x).at(-1);
     const metricWidth=kills.x-clock.x;
-    const hudLayout={metricWidth,gemX:gemValue.x-L.hud.padding-L.hud.iconSize-L.hud.gap,progressX:gardenLabel.x-L.hud.padding,centerY:L.hud.centerY,labelColors:[clock.color,kills.color,gardenLabel.color],valueColors:hud.filter(o=>!['시간','처치 수','정원 완성도'].includes(o.text)).map(o=>o.color)};
+    const timeValue=hud.find(o=>o.text==='9999:59:59'), percent=hud.find(o=>o.text==='30%');
+    const timeGap=timeValue.x-clock.x-Math.ceil(clock.w);
+    const barGap=percent.x+percent.w/2-L.hud.barWidth/2-gardenLabel.x-Math.ceil(gardenLabel.w);
+    const hudLayout={metricWidth,timeGap,barGap,gemX:gemValue.x-L.hud.padding-L.hud.iconSize-L.hud.gap,progressX:gardenLabel.x-L.hud.padding,centerY:L.hud.centerY,labelColors:[clock.color,kills.color,gardenLabel.color],valueColors:hud.filter(o=>!['시간','처치 수','정원 완성도'].includes(o.text)).map(o=>o.color)};
     const stats=visibleText.filter(o=>o.name?.startsWith('stat-'));
     const cost=visibleText.find(o=>o.text==='999');
     const context=document.createElement('canvas').getContext('2d');
@@ -98,7 +101,7 @@ for(const c of configs){
     check(label+' fixed sizes',JSON.stringify(m.fixed)===JSON.stringify({garden:22,slot:34,slotOuter:36,flower:16,item:16,card:36,line:1}));
     check(label+' HUD bounds',m.hud.length>=6&&m.hud.every(t=>t.x>=-eps&&t.y>=-eps&&t.x+t.w<=960+eps&&t.y+t.h<=m.top+eps),JSON.stringify(m.hud));
     check(label+' HUD nonoverlap',m.hud.every((a,i)=>m.hud.every((b,j)=>i===j||!overlap(a,b))));
-    check(label+' equal HUD widths, center and labels',m.top===32&&m.hudLayout.centerY===15&&m.hudLayout.metricWidth>0&&m.hudLayout.gemX===2*m.hudLayout.metricWidth&&3*m.hudLayout.metricWidth<=m.hudLayout.progressX&&m.hudLayout.labelColors.every(c=>c.toLowerCase()==='#b0b0b0')&&m.hudLayout.valueColors.every(c=>c.toLowerCase()==='#ffffff'),JSON.stringify(m.hudLayout));
+    check(label+' equal HUD widths, center and labels',m.top===32&&m.hudLayout.centerY===15&&Math.abs(m.hudLayout.timeGap-5)<0.01&&Math.abs(m.hudLayout.barGap-5)<0.01&&m.hudLayout.metricWidth>0&&m.hudLayout.gemX===2*m.hudLayout.metricWidth&&3*m.hudLayout.metricWidth<=m.hudLayout.progressX&&m.hudLayout.labelColors.every(c=>c.toLowerCase()==='#b0b0b0')&&m.hudLayout.valueColors.every(c=>c.toLowerCase()==='#ffffff'),JSON.stringify(m.hudLayout));
     check(label+' stat bounds',m.stats.length>=12&&m.stats.every(t=>t.y>=540-m.bottom-eps&&t.y+t.h<=540+eps&&t.x>=-eps&&t.x+t.w<=960+eps),JSON.stringify(m.stats));
     check(label+' stat nonoverlap',m.stats.every((a,i)=>m.stats.every((b,j)=>i===j||!overlap(a,b))));
     check(label+' stats/slots separation',m.stats.every(t=>m.slots.every(b=>!overlap(t,{x:b.x,y:b.y,w:b.size,h:b.size}))));
