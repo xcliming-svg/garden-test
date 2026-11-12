@@ -69,7 +69,7 @@
     disabledFill: P.n.soil, disabledBorder: P.n.edge, disabledText: P.hex.disabled,
     enabledFill: P.n.ink, enabledBorder: P.n.growth, enabledText: P.hex.growth,
     focusBorder: P.n.paper, invalidBorder: P.n.red,
-    gardenSoil: P.n.bark, gardenSoilAlpha: 0.30,
+    gardenSoil: P.demo.garden, gardenSoilAlpha: 1,
     blueprintLine: P.n.grid, reservedIcon: P.n.steel
   });
 
@@ -337,8 +337,37 @@
     return layout;
   }
 
+  // 필드 드롭은 흰색 24px 사각형과 16px 아이콘을 함께 부유시킨다.
+  // 26px 히트 영역은 고정하고 장착 슬롯/스냅 고스트는 기존 카드 표현 유지.
+  function floatingDrop(scene, marker, index) {
+    const [border, face, image] = marker.list;
+    border.setVisible(false);
+    face.setVisible(true).setFillStyle(P.n.paper, 1);
+    // 기존 카드의 호버 콜백이 흰색 면을 어둡게 변경하지 않도록 드롭만 재정의.
+    marker.setStrokeStyle = () => marker;
+    const shadow = scene.add.ellipse(0, 15, 12, 3, P.n.shadow, 0.25);
+    marker.add(shadow);
+    const period = 1800, phase = index * 317;
+    function update(time) {
+      const floating = marker.visible && marker.depth < 30;
+      shadow.setVisible(floating);
+      if (!floating) {
+        face.setY(0);
+        image.setY(0);
+        return;
+      }
+      const lift = (1 - Math.cos((time + phase) * Math.PI * 2 / period)) * 2;
+      face.setY(-Math.round(lift));
+      image.setY(-Math.round(lift));
+      shadow.setScale(1 - lift * 0.0625, 1);
+      shadow.setAlpha(1 - lift * 0.125);
+    }
+    update(0);
+    return update;
+  }
+
   function drawMarkers(scene) {
-    const cards = [], flowers = [];
+    const cards = [], flowers = [], animations = [];
     Object.entries(samples).forEach(([type, positions]) => {
       const asset = assets[type];
       positions.forEach(([baseX, baseY], i) => {
@@ -350,10 +379,15 @@
           type === 'flower' ? testSprites.flowerCard(scene, x, y, spriteName, asset.cardSize, asset.size) :
           spriteName ? testSprites.marker(scene, x, y, spriteName, asset.size) : scene.add.rectangle(x, y, asset.size, asset.size, asset.color))
           .setName('placeholder:' + asset.assetKey + ':' + i);
+        if (type === 'item' || type === 'flower') animations.push(floatingDrop(scene, marker, animations.length));
         if (type === 'item') cards.push({ item: previewItems[i], marker, x, y });
         if (type === 'flower') flowers.push({ marker, x, y, spriteName });
       });
     });
+    // Scene update는 일시정지 중 멈추고 shutdown에서 정리된다.
+    const updateDrops = time => animations.forEach(update => update(time));
+    scene.events.on('update', updateDrops);
+    scene.events.once('shutdown', () => scene.events.off('update', updateDrops));
     return { cards, flowers };
   }
 
@@ -812,7 +846,7 @@
     function refreshSoil() {
       const ctx = soilTexture.getContext();
       ctx.clearRect(0, 0, soilWidth, soilHeight);
-      // 외곽선만 불투명하게, 흙 면은 기존 bark 30% 투명도를 유지한다.
+      // 기존 1px 외곽선과 24px 내부 면 유지. 단색 흙 면은 불투명.
       for (const key of new Set([...occupied, ...gardenCandidates(occupied)])) {
         const x = (key % garden.columns) * garden.pitch, y = Math.floor(key / garden.columns) * garden.pitch;
         const l = garden.line, s = garden.pitch;
