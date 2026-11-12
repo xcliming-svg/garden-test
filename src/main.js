@@ -1,8 +1,11 @@
-(function () {
+(async function () {
   'use strict';
 
   // Phaser만 생성한다. 게임 상태, 전투 루프, 생성 로직 등은 등록하지 않는다.
   const S = window.GardenScenes;
+  const P = window.GardenPalette.hex;
+  document.documentElement.style.backgroundColor = P.ink;
+  document.body.style.backgroundColor = P.ink;
   const parent = document.getElementById('game');
 
   // 640×360은 게임 좌표 기준일 뿐 실제 렌더링 버퍼 크기가 아니다.
@@ -16,6 +19,17 @@
     parent.style.height = height + 'px';
     return { width, height };
   }
+  // Measure UI text only after the bundled fonts have loaded.
+  try {
+    await window.GardenUI.loadFonts();
+  } catch (error) {
+    // Never silently render a different UI font on load failure.
+    parent.textContent = 'Fusion Pixel UI font loading failed. Check assets/fonts/fusion.css.';
+    parent.style.color = P.paper;
+    parent.style.fontFamily = 'sans-serif';
+    console.error(error);
+    return;
+  }
   const initial = fitParent();
 
   const game = new Phaser.Game({
@@ -23,9 +37,9 @@
     parent: 'game',
     width: initial.width,
     height: initial.height,
-    backgroundColor: '#0b1018',
-    // UI 글자는 부드럽게 렌더링한다. 실제 픽셀아트 PNG는 향후
-    // 텍스처별 NEAREST 필터를 지정한다(전체 Canvas를 픽셀화하지 않는다).
+    backgroundColor: P.ink,
+    // 배율별 텍스트 래스터화와 전체 렌더러의 안티앨리어싱은 유지한다.
+    // 글자 텍스처에만 NEAREST를 적용하며 원본 글리프 픽셀은 보존한다.
     render: { antialias: true, pixelArt: false, roundPixels: false },
     scale: {
       mode: Phaser.Scale.RESIZE,

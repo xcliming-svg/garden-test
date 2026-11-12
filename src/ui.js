@@ -4,34 +4,57 @@
   // 공유되는 것은 화면 스타일과 입력용 UI 컴포넌트뿐이다.
   const W = 1280;
   const H = 720;
-  const C = {
-    bg: 0x0b1018,
-    panel: 0x18212d,
-    panelAlt: 0x202d3b,
-    border: 0x3b4b5c,
-    subtle: 0x7e91a3,
-    text: '#eaf0f5',
-    muted: '#9cabb9',
-    gold: 0xe1b875,
-    green: 0x84d0aa,
-    red: 0xe18f91,
-    white: 0xffffff
-  };
-  const font = 'Arial, "Malgun Gothic", sans-serif';
+  const P = window.GardenPalette;
+  const C = Object.freeze({
+    bg: P.n.ink, panel: P.n.soil, panelAlt: P.n.grid,
+    border: P.n.edge, subtle: P.n.slot,
+    text: P.hex.paper, muted: P.hex.label, disabled: P.hex.disabled,
+    gold: P.n.gold, goldText: P.hex.gold, green: P.n.growth, greenText: P.hex.growth,
+    red: P.n.red, redText: P.hex.red, white: P.n.paper
+  });
+  // One unmodified Regular face for Korean, English and numerals.
+  const fontFamily = '"Garden Fusion"';
+  const fontSize = Object.freeze({ base: 10, heading: 20, title: 30, menuBase: 20, menuHeading: 40, menuTitle: 60 });
+  async function loadFonts() {
+    if (!document.fonts || !document.fonts.load) throw new Error('Font Loading API unavailable');
+    const loaded = await document.fonts.load('400 20px ' + fontFamily,
+      '정원 완성도 시간 처치 수 보석 수량 도안 새 게임 설정 일시정지 GARDEN TEST 0123456789 83%');
+    if (!loaded.length || loaded.some(face => face.status !== 'loaded')) {
+      throw new Error('Fusion Pixel font failed to load');
+    }
+  }
+  // Rasterize at the actual zoom (at least 1), not a rounded-up zoom that
+  // would require shrinking the texture at common fractional menu scales.
+  function textResolution(scene) { return Math.max(1, scene.cameras.main.zoom); }
+
+  // 사용자 비교 결과로 확정한 고해상도 NEAREST.
+  // Phaser의 Text.updateText는 텍스처 업로드 시 필터를 재설정할 수 있다.
+  // 글리프 원본 픽셀은 변경하지 않고 해당 텍스처의 필터만 복원한다.
+  function applyFontFilter(item) {
+    const update = item.updateText;
+    item.updateText = function () {
+      const result = update.apply(this, arguments);
+      this.texture.setFilter(Phaser.Textures.FilterMode.NEAREST);
+      return result;
+    };
+    item.texture.setFilter(Phaser.Textures.FilterMode.NEAREST);
+  }
 
   function text(scene, x, y, content, size, color, options) {
     const opts = options || {};
     const item = scene.add.text(x, y, content, {
       // 텍스트의 논리 크기는 유지하고 현재 렌더 배율에 맞는 텍스처를 만든다.
-      resolution: Math.max(1, Math.ceil(scene.cameras.main.zoom)),
-      fontFamily: font,
+      resolution: textResolution(scene),
+      fontFamily: fontFamily,
       fontSize: String(size) + 'px',
       color: color || C.text,
-      fontStyle: opts.bold ? 'bold' : 'normal',
+      // Regular only; no synthetic bold, width compression or letter spacing.
+      fontStyle: 'normal',
       align: opts.align || 'left',
       lineSpacing: opts.lineSpacing || 9,
       wordWrap: opts.wrap ? { width: opts.wrap } : undefined
     });
+    applyFontFilter(item);
     item.setOrigin(opts.originX === undefined ? 0 : opts.originX,
       opts.originY === undefined ? 0 : opts.originY);
     if (opts.alpha !== undefined) item.setAlpha(opts.alpha);
@@ -74,9 +97,14 @@
       const zoom = Math.min(width / designWidth, height / designHeight);
       scene.cameras.main.setSize(width, height).setZoom(zoom)
         .centerOn(designWidth / 2, designHeight / 2);
-      const resolution = Math.max(1, Math.ceil(zoom));
+      const resolution = textResolution(scene);
       tracked.forEach(item => {
-        if (item.style.resolution !== resolution) item.setResolution(resolution);
+        if (item.style.resolution !== resolution) {
+          item.setResolution(resolution);
+          // CanvasRenderer는 frame.source.resolution을 사용한다.
+          // Phaser 3.90 setResolution은 style만 바꾸므로 함께 갱신한다.
+          item.frame.source.resolution = resolution;
+        }
       });
     }
 
@@ -95,39 +123,32 @@
 
   function background(scene, label) {
     legacyCamera(scene);
-    scene.cameras.main.setBackgroundColor('#0b1018');
+    scene.cameras.main.setBackgroundColor(P.hex.ink);
     scene.add.rectangle(W / 2, H / 2, W, H, C.bg);
-    const decor = scene.add.graphics();
-    decor.lineStyle(1, C.border, 0.14);
-    for (let x = 40; x < W; x += 64) decor.lineBetween(x, 0, x, H);
-    for (let y = 36; y < H; y += 64) decor.lineBetween(0, y, W, y);
-    decor.lineStyle(2, C.gold, 0.22);
-    decor.strokeCircle(1054, 314, 242);
-    decor.strokeCircle(1054, 314, 181);
     rule(scene, 40, 76, 1240, 76, C.border, 0.8);
     rule(scene, 40, 664, 1240, 664, C.border, 0.8);
-    text(scene, 43, 30, 'GARDEN TEST', 19, '#e1b875', { bold: true });
-    text(scene, 1238, 33, label || 'SCENE PROTOTYPE', 12, C.muted, { originX: 1 });
-    text(scene, 43, 680, 'PHASER 3.90.0 / UI SCENES ONLY', 11, C.muted);
-    text(scene, 1238, 680, 'NO GAMEPLAY LOGIC', 11, C.muted, { originX: 1 });
+    text(scene, 43, 30, 'GARDEN TEST', fontSize.menuBase, C.greenText);
+    text(scene, 1238, 33, label || 'SCENE PROTOTYPE', fontSize.menuBase, C.muted, { originX: 1 });
+    text(scene, 43, 680, 'PHASER 3.90.0 / UI SCENES ONLY', fontSize.menuBase, C.muted);
+    text(scene, 1238, 680, 'NO GAMEPLAY LOGIC', fontSize.menuBase, C.muted, { originX: 1 });
   }
 
   function button(scene, x, y, width, label, action, options) {
     const opts = options || {};
     const height = opts.height || 52;
     const disabled = !!opts.disabled;
-    const border = opts.danger ? C.red : opts.primary ? C.gold : C.border;
-    const fill = opts.primary ? 0x38362f : C.panel;
+    const border = opts.danger ? C.red : opts.primary ? C.green : C.subtle;
+    const fill = opts.primary ? C.panelAlt : C.panel;
     const base = scene.add.rectangle(0, 0, width, height,
-      disabled ? 0x151d27 : fill, 1);
-    base.setStrokeStyle(1, disabled ? 0x2b3641 : border, 1);
-    const caption = text(scene, 0, 0, label, opts.fontSize || 19,
-      disabled ? '#738191' : C.text, { originX: 0.5, originY: 0.5, bold: !!opts.primary });
+      disabled ? P.n.ink : fill, 1);
+    base.setStrokeStyle(1, disabled ? C.border : border, 1);
+    const caption = text(scene, 0, 0, label, opts.fontSize || fontSize.menuBase,
+      disabled ? C.disabled : C.text, { originX: 0.5, originY: 0.5 });
     const group = scene.add.container(x, y, [base, caption]);
     if (!disabled && typeof action === 'function') {
       base.setInteractive({ useHandCursor: true });
       base.on('pointerover', function () {
-        base.setFillStyle(opts.danger ? 0x4d3036 : 0x2c3948);
+        base.setFillStyle(C.panelAlt);
         base.setStrokeStyle(2, border);
       });
       base.on('pointerout', function () {
@@ -141,7 +162,7 @@
 
   function overlay(scene) {
     legacyCamera(scene);
-    return scene.add.rectangle(W / 2, H / 2, W, H, 0x05090f, 0.74)
+    return scene.add.rectangle(W / 2, H / 2, W, H, P.n.shadow, 0.74)
       .setInteractive();
   }
 
@@ -170,7 +191,7 @@
   }
 
   window.GardenUI = Object.freeze({
-    W: W, H: H, C: C, text: text, panel: panel, rule: rule,
+    W: W, H: H, C: C, fontFamily, fontSize, loadFonts, text: text, panel: panel, rule: rule,
     background: background, button: button, overlay: overlay, fitCamera: fitCamera,
     bindEscape: bindEscape, openSubscene: openSubscene,
     closeSubscene: closeSubscene
