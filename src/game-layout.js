@@ -384,15 +384,17 @@
     const slotItems = [];
     const slots = layout.slots.slice(0, s.preview);
 
+    // 하단 레이블/증감만 축소하여 숫자와의 시각적 위계를 비교한다.
+    const statLabelFont = 8;
     // 양쪽 166px을 각각 동일한 3열로 나눈다. 값과 증감은 별도 행에 표시.
     const stats = statKeys.map((key, index) => {
       const left = index < 3 ? layout.left : layout.right;
       const x = left + layout.sideWidth * ((index % 3) + 0.5) / 3;
       return {
         key,
-        label: text(scene, x, layout.top + 10, statLabels[key], font, colors.label, 'center'),
+        label: text(scene, x, layout.top + 10, statLabels[key], statLabelFont, colors.label, 'center'),
         value: text(scene, x, layout.top + 24, '', font, colors.value, 'center'),
-        delta: text(scene, x, layout.top + 38, '', font, colors.value, 'center')
+        delta: text(scene, x, layout.top + 38, '', statLabelFont, colors.value, 'center')
       };
     });
     const tooltip = scene.add.container(0, 0).setDepth(40).setName('item-preview-tooltip').setVisible(false);
