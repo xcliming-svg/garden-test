@@ -18,7 +18,7 @@
       height: blueprintHeader + blueprintGrid + 2 * blueprintPadding,
       gridX: 8 + blueprintPadding, gridY: 32 + blueprintHeader + blueprintPadding
     }),
-    slots: Object.freeze({ size: 24, gap: 4, initial: 4, max: 10, y: 330, exampleCost: 10 })
+    slots: Object.freeze({ size: 24, gap: 4, initial: 4, max: 10, y: 330, exampleCost: 999 })
   });
 
   const hud = Object.freeze({
@@ -27,7 +27,7 @@
     // 표시 폭 예약용 문자열이다. 게임 수치의 최대값을 의미하지 않는다.
     timeSample: '88:88', counterSample: '88888'
   });
-  const slotCost = Object.freeze({ padding: spacing.micro, gap: spacing.micro, iconSize: 6, fontSize: 8, minFontSize: 6, maxDigits: 3 });
+  const slotCost = Object.freeze({ padding: spacing.micro, gap: spacing.micro, iconSize: 6, fontSize: 7, minFontSize: 6, maxDigits: 3 });
 
   // size = 원본 PNG 및 1배 표시 크기. 파일을 생성하거나 로드하지 않는다.
   // assetKey와 suggestedFile은 이후 에셋 작업 시 참조할 식별자이다.
@@ -170,14 +170,21 @@
   function drawSlotCost(scene, g, x, y, size, value) {
     const c = slotCost;
     const centerY = y + size / 2;
-    const cost = text(scene, 0, centerY, String(value), c.fontSize, colors.disabledText);
     const maxTextWidth = size - 2 * c.padding - c.iconSize - c.gap;
-    // 1~3자리 모두 같은 가로 행에 둔다. 3자리일 때만 필요에 따라
-    // 폰트 크기를 줄여 테두리 안쪽 최소 패딩을 보장한다.
+    // 최대 자릿수의 가장 넓은 숫자를 기준으로 공통 폰트 크기를 정한다.
+    // 현재 값이 1~3자리 중 무엇이든 같은 크기를 사용한다.
+    const cost = text(scene, 0, centerY, '', c.fontSize, colors.disabledText);
     let fontSize = c.fontSize;
-    while (cost.width > maxTextWidth && fontSize > c.minFontSize) {
+    while (true) {
+      let widest = 0;
+      for (let digit = 0; digit <= 9; digit++) {
+        cost.setText(String(digit).repeat(c.maxDigits));
+        widest = Math.max(widest, Math.ceil(cost.width));
+      }
+      if (widest <= maxTextWidth || fontSize <= c.minFontSize) break;
       cost.setFontSize(--fontSize);
     }
+    cost.setText(String(value));
     const textWidth = Math.ceil(cost.width);
     const groupWidth = c.iconSize + c.gap + textWidth;
     const groupX = Math.round(x + (size - groupWidth) / 2);
