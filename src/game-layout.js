@@ -459,7 +459,7 @@
 
   // 참조 정보창의 중성 회색 테두리, 보라색 제목 바와 크림색 본문.
   const itemTooltip = Object.freeze({
-    width: 240, padding: 6, gap: 8, bottomPadding: 14, fontSize: 12, titleSize: 14,
+    width: 240, padding: 6, gap: 8, bottomPadding: 14, fontSize: 10, titleSize: 10,
     rowGap: 5, lineSpacing: 4, strokeWidth: 1, accent: R.n.panelBorder,
     background: R.n.tooltip, header: R.n.tooltipHeader, divider: R.n.rule,
     title: colors.value, description: R.hex.description, hint: colors.disabledText
