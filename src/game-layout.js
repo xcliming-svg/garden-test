@@ -15,14 +15,15 @@
   const hudGap = 5;
   // 제목 박스의 내용 여백과 그리드 간격은 HUD 레이블 간격을 공유한다.
   const blueprintPadding = hudGap;
-  // Fusion Pixel 12px의 실제 Phaser 텍스트 높이(Chromium 실측)는 15px.
-  const hudTextHeight = 15, hudCenterY = 15;
-  const blueprintHeader = hudTextHeight + 2 * blueprintPadding;
+  // FHD(2x) 프레임버퍼의 밝은 글리프 실측: 제목 21px, HUD 그룹 마지막 픽셀 Y=40.
+  // 투명한 텍스트 객체 여백을 제외한 가시 영역 기준. 1px=0.5 논리 px.
+  const hudCenterY = 15, hudInkBottom = 20.5, blueprintInkHeight = 10.5;
+  const blueprintHeader = blueprintInkHeight + 2 * blueprintPadding;
   const width = U.W, height = U.H;
   const topHudHeight = 32;
   const bottomHudHeight = 44;
   const fieldHeight = height - topHudHeight - bottomHudHeight;
-  const blueprintTopGap = topHudHeight - (hudCenterY + hudTextHeight / 2);
+  const blueprintTopGap = topHudHeight - hudInkBottom;
   const blueprintY = topHudHeight + blueprintTopGap;
   // 참조 트리 외형 24px = 내부 22px + 1px 프레임. 기존 대형 비교는 내부 32px 유지.
   // 이전 ?garden=36 링크는 대형 비교의 호환 별칭으로 유지한다.
@@ -407,7 +408,7 @@
 
     const header = scene.add.graphics().setDepth(11).setName('blueprint-header');
     frame(header, b.x, b.y, b.width, b.header, R.n.header, R.n.panelBorder);
-    text(scene, b.x + b.padding, b.y + b.header / 2, '도안', window.GardenUI.fontSize.base, colors.label, 'left').setDepth(12).setName('blueprint-title');
+    text(scene, b.x + b.padding, b.y + b.header / 2 - 0.25, '도안', window.GardenUI.fontSize.base, colors.label, 'left').setDepth(12).setName('blueprint-title');
     const arrow = scene.add.graphics().setDepth(12).setName('blueprint-chevron');
     let expanded = true;
     function drawArrow() {
