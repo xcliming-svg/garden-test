@@ -55,9 +55,12 @@
     "0000000000010000000000000011000000000000011000010000000211000010000002222200011000012222222111000112222222221100112222222211110011122222211121001111222111133300111111111133300033111112103330000001113330000000000003330000000000000333000000000000000000000000"
   ]
 };
-  // 꽃과 아이템은 16px 원본을 1:1 논리 크기로 표시한다. 적 18px만 12px 원본을 확대한다.
-  const sourceSize = size => size === 18 ? 12 : size;
-  const key = (name, size) => 'ui-test:' + name + ':' + sourceSize(size);
+  // 12px 달팽이 샘플을 16px 프레임 중앙에 투명 패딩 2px로 배치한다.
+  // 원본 픽셀을 보간하거나 확대하지 않는다. 원본 12px 샘플도 보존한다.
+  const [, snailPalette, snailPixels] = samples['snail:12'];
+  const snailRows = Array.from({ length: 12 }, (_, y) => '00' + snailPixels.slice(y * 12, (y + 1) * 12) + '00');
+  samples['snail:16'] = [16, snailPalette, '0'.repeat(32) + snailRows.join('') + '0'.repeat(32)];
+  const key = (name, size) => 'ui-test:' + name + ':' + size;
   // 공통 원본 픽셀 데이터를 복사해 게임 텍스처와 독립 비교 페이지에서 사용한다.
   function pixelData(name, size) {
     const sample = samples[name + ':' + size];

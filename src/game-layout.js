@@ -8,20 +8,22 @@
   const testSprites = window.GardenTestSprites;
   // 24px 타일 기반 UI: 메뉴와 같은 간격 토큰 및 논리 좌표를 사용한다.
   const U = window.GardenUI;
-  const { tile, spacing } = U;
-  const blueprintCell = tile / 2, blueprintLine = 1, blueprintPitch = blueprintCell + blueprintLine;
+  const { unit, tile, spacing } = U;
+  const blueprintCell = unit, blueprintLine = 1, blueprintPitch = blueprintCell + blueprintLine;
   const blueprintGrid = 10 * blueprintPitch + blueprintLine;
-  const blueprintPadding = spacing.small;
+  const blueprintPadding = spacing.base;
   const blueprintHeader = tile;
   const width = U.W, height = U.H;
   const topHudHeight = tile + spacing.base;
   const bottomHudHeight = tile * 2;
   const fieldHeight = height - topHudHeight - bottomHudHeight;
   const blueprintY = topHudHeight + spacing.section;
-  // 24px 내부 면 + 바깥쪽 1px 테두리. 36px 비교는 명시적인 ?garden=36에서만.
-  const gardenCell = new URLSearchParams(window.location.search).get('garden') === '36' ? 36 : tile;
+  // 24px 기본 내부 면 + 바깥쪽 1px 테두리. 대형 비교는 32px 모듈로 통일.
+  // 이전 ?garden=36 링크는 대형 비교의 호환 별칭으로 유지한다.
+  const gardenMode = new URLSearchParams(window.location.search).get('garden');
+  const gardenCell = gardenMode === '32' || gardenMode === '36' ? unit * 4 : tile;
   const cellLine = 1, gardenPitch = gardenCell + 2 * cellLine;
-  const iconSize = 16, slotSize = tile + 2 * cellLine;
+  const iconSize = unit * 2, slotSize = tile + 2 * cellLine;
   const gardenSize = 10 * gardenPitch;
   const spec = Object.freeze({
     width, height,
@@ -34,26 +36,26 @@
       height: blueprintHeader + blueprintGrid + 2 * blueprintPadding,
       gridX: spacing.section + blueprintPadding, gridY: blueprintY + blueprintHeader + blueprintPadding
     }),
-    slots: Object.freeze({ size: slotSize, cell: tile, line: cellLine, gap: spacing.small, initial: 4, preview: 9, max: 10, y: height - bottomHudHeight + (bottomHudHeight - slotSize) / 2, exampleCost: 999 })
+    slots: Object.freeze({ size: slotSize, cell: tile, line: cellLine, gap: spacing.base, initial: 4, preview: 9, max: 10, y: height - bottomHudHeight + (bottomHudHeight - slotSize) / 2, exampleCost: 999 })
   });
 
   const hud = Object.freeze({
     padding: spacing.section, gap: spacing.base, labelSize: U.fontSize.compact, valueSize: U.fontSize.base,
-    centerY: spec.top / 2, iconSize: 16, barHeight: 12, // 내부 높이 10px + 상하 1px 외곽선
+    centerY: spec.top / 2, iconSize: unit * 2, barHeight: unit * 2, // 외형 16px, 내부 14px
     columnUnit: spacing.base, minMetricWidth: tile * 8, hourDigits: 4, counterDigits: 12, minBarWidth: tile * 4,
     // 표시 폭 예약 기준이며 게임 데이터의 최대값이 아니다.
     previewProgress: 30,
   });
-  // 24px 내부 면에서 3자리 비용과 보석 아이콘을 한 행으로 표시한다.
-  const slotCost = Object.freeze({ padding: spacing.micro, gap: spacing.micro, iconSize: 6, fontSize: 7, minFontSize: 6, maxDigits: 3 });
+  // 24px 내부 면에서 8px 아이콘과 10px 네이티브 숫자를 위아래로 배치한다.
+  const slotCost = Object.freeze({ padding: 1, gap: spacing.micro, iconSize: unit, fontSize: U.fontSize.compact, maxDigits: 3 });
 
   // size = 비교 브랜치의 논리 표시 크기. 기존 저해상도 테스트 원본은 그대로 사용한다.
   // assetKey와 suggestedFile은 이후 에셋 작업 시 참조할 식별자이다.
   const assets = Object.freeze({
     gardenTile: Object.freeze({ size: spec.garden.cell, assetKey: 'garden-tile', suggestedFile: 'assets/garden-tile.png' }),
     guardian: Object.freeze({ size: 24, color: P.n.teal, assetKey: 'guardian', suggestedFile: 'assets/guardian.png' }),
-    enemy: Object.freeze({ size: 18, color: P.n.red, assetKey: 'enemy', suggestedFile: 'assets/enemy.png' }),
-    gem: Object.freeze({ size: 12, color: P.n.sky, assetKey: 'gem', suggestedFile: 'assets/gem.png' }),
+    enemy: Object.freeze({ size: unit * 2, color: P.n.red, assetKey: 'enemy', suggestedFile: 'assets/enemy.png' }),
+    gem: Object.freeze({ size: unit, color: P.n.sky, assetKey: 'gem', suggestedFile: 'assets/gem.png' }),
     flower: Object.freeze({ size: iconSize, cardSize: spec.slots.size, color: P.n.pink, assetKey: 'flower', suggestedFile: 'assets/flower.png' }),
     item: Object.freeze({ size: iconSize, cardSize: spec.slots.size, color: P.n.gold, assetKey: 'item', suggestedFile: 'assets/item.png' })
   });
@@ -258,27 +260,14 @@
 
   function drawSlotCost(scene, g, x, y, size, value) {
     const c = slotCost;
-    const centerY = y + size / 2;
-    const maxTextWidth = size - 2 * c.padding - c.iconSize - c.gap;
-    // 최대 자릿수의 가장 넓은 숫자를 기준으로 공통 폰트 크기를 정한다.
-    // 현재 값이 1~3자리 중 무엇이든 같은 크기를 사용한다.
-    const cost = text(scene, 0, centerY, '', c.fontSize, colors.disabledText);
-    let fontSize = c.fontSize;
-    while (true) {
-      let widest = 0;
-      for (let digit = 0; digit <= 9; digit++) {
-        cost.setText(String(digit).repeat(c.maxDigits));
-        widest = Math.max(widest, Math.ceil(cost.width));
-      }
-      if (widest <= maxTextWidth || fontSize <= c.minFontSize) break;
-      cost.setFontSize(--fontSize);
-    }
-    cost.setText(String(value));
-    const textWidth = Math.ceil(cost.width);
-    const groupWidth = c.iconSize + c.gap + textWidth;
-    const groupX = Math.round(x + (size - groupWidth) / 2);
-    reserveIcon(g, groupX, Math.round(centerY - c.iconSize / 2), c.iconSize, P.n.disabled);
-    cost.setX(groupX + c.iconSize + c.gap);
+    // 10px 네이티브 글꼴을 유지하고 실측 높이에 따라 세로 묶음만 중앙 정렬한다.
+    const cost = text(scene, x + size / 2, 0, String(value), c.fontSize, colors.disabledText, 'center');
+    const textHeight = Math.ceil(cost.height);
+    const gap = Math.max(0, Math.min(c.gap, size - 2 * c.padding - c.iconSize - textHeight));
+    const groupHeight = c.iconSize + gap + textHeight;
+    const top = y + Math.floor((size - groupHeight) / 2);
+    reserveIcon(g, x + (size - c.iconSize) / 2, top, c.iconSize, P.n.disabled);
+    cost.setPosition(x + size / 2, top + c.iconSize + gap + textHeight / 2);
   }
 
   // 9개 일반 + 마지막 확장 슬롯을 최대 폭에서 검토한다. 실제 초기 슬롯 정책은 4개로 유지.
@@ -420,7 +409,7 @@
   // 기존 카드 선택의 밝은 테두리를 정보창에도 적용한다.
   const itemTooltip = Object.freeze({
     width: tile * 8, padding: spacing.section, fontSize: U.fontSize.base,
-    rowGap: spacing.small, lineSpacing: spacing.micro, strokeWidth: 1, accent: P.n.paper,
+    rowGap: spacing.base, lineSpacing: spacing.small, strokeWidth: 1, accent: P.n.paper,
     background: P.n.soil, divider: P.n.edge,
     title: colors.value, description: colors.label, hint: colors.disabledText
   });
@@ -476,7 +465,7 @@
     const ghost = testSprites.itemCard(scene, 0, 0, 'wheelbarrow', assets.item.cardSize, assets.item.size)
       .setDepth(22).setAlpha(0.45).setVisible(false).setName('item-preview-ghost');
 
-    // 양쪽 바깥 12px부터 동일한 72px 열 3개. 각 텍스트 묶음의 실제 크기로 중앙 정렬.
+    // 양쪽 바깥 16px부터 동일한 72px 열 3개. 각 텍스트 묶음의 실제 크기로 중앙 정렬.
     const stats = statKeys.map((key, index) => {
       const left = index < bottomStats.columns ? layout.left : layout.right;
       const x = left + bottomStats.columnWidth * ((index % bottomStats.columns) + 0.5);

@@ -2,7 +2,7 @@
   'use strict';
 
   const U = window.GardenUI;
-  // 24px 타일 기준 공통 960×540 좌표. 메뉴는 4/8/12/24px 간격 토큰을 따른다.
+  // 24px 타일 기준 공통 960×540 좌표. 메뉴는 4/8/16/24px 간격 토큰을 따른다.
   const menu = Object.freeze({ ...U.menuStyle, row: 48 });
   function centered(scene, x, y, label, size, color, options = {}) {
     return U.text(scene, x, y, label, size, color, { ...options, originX: 0.5, originY: 0.5 });

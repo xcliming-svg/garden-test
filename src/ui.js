@@ -4,9 +4,9 @@
   // 공유되는 것은 화면 스타일과 입력용 UI 컴포넌트뿐이다.
   const W = 960;
   const H = 540;
-  // 24px 타일의 절반·1/3·1/6을 UI 기준 단위로 사용한다.
-  const tile = 24;
-  const spacing = Object.freeze({ micro: 2, small: 4, base: 8, section: 12, large: 24 });
+  // 8px 기본 모듈. 2/4px은 픽셀 세부 간격, 1px은 기능적 선의 예외.
+  const unit = 8, tile = unit * 3;
+  const spacing = Object.freeze({ micro: 2, small: 4, base: unit, section: unit * 2, large: tile });
   const P = window.GardenPalette;
   const C = Object.freeze({
     bg: P.n.ink, panel: P.n.soil, panelAlt: P.n.grid,
@@ -17,7 +17,8 @@
   });
   // One unmodified Regular face for Korean, English and numerals.
   const fontFamily = '"Garden Fusion"';
-  const fontSize = Object.freeze({ base: 12, compact: 10, heading: 20, title: 40, menuBase: 12, menuHeading: 20, menuTitle: 40 });
+  // Fusion Pixel 10px 원본의 정수 배수만 일반 UI에 사용한다.
+  const fontSize = Object.freeze({ base: 10, compact: 10, heading: 20, title: 40, menuBase: 10, menuHeading: 20, menuTitle: 40 });
   // 메뉴와 전장 모두 동일한 960×540 좌표, 기능적 선 1px.
   const menuStyle = Object.freeze({ strokeWidth: 1, buttonHeight: 32, gap: spacing.base });
   async function loadFonts() {
@@ -197,7 +198,7 @@
   }
 
   window.GardenUI = Object.freeze({
-    W: W, H: H, C: C, tile, spacing, fontFamily, fontSize, menuStyle, loadFonts, text: text, panel: panel, rule: rule,
+    W: W, H: H, C: C, unit, tile, spacing, fontFamily, fontSize, menuStyle, loadFonts, text: text, panel: panel, rule: rule,
     background: background, button: button, overlay: overlay, fitCamera: fitCamera,
     bindEscape: bindEscape, openSubscene: openSubscene,
     closeSubscene: closeSubscene
