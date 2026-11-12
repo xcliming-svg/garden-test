@@ -28,7 +28,7 @@
   const hud = Object.freeze({
     padding: spacing.base, gap: spacing.small, labelSize: window.GardenUI.fontSize.base, valueSize: window.GardenUI.fontSize.base,
     centerY: spec.top / 2, iconSize: 12, barHeight: 12,
-    columnUnit: spacing.base, hourDigits: 4, counterDigits: 12, minBarWidth: 64,
+    columnUnit: spacing.base, minMetricWidth: 144, hourDigits: 4, counterDigits: 12, minBarWidth: 64,
     // 표시 폭 예약 기준이며 게임 데이터의 최대값이 아니다.
     previewProgress: 30,
   });
@@ -129,19 +129,20 @@
       measure(killsValue), measure(gemsValue));
     const quantize = width => Math.ceil(width / hud.columnUnit) * hud.columnUnit;
     const paddedWidth = (label, value) => quantize(2 * hud.padding + label + hud.gap + value);
-    const timeWidth = paddedWidth(measure('시간'), timeReserve);
-    // 처치와 보석은 동일 수치 규격 및 동일한 바깥 폭을 사용한다.
-    const counterWidth = paddedWidth(Math.max(measure('처치 수'), hud.iconSize), counterReserve);
-    const progressWidth = spec.width - timeWidth - 2 * counterWidth;
+    // 세 열 모두 가장 넓은 항목의 예약 폭을 공유한다.
+    // 144px은 합의된 최소 폭이며 실측 결과가 더 넓으면 8px 단위로 늘린다.
+    const metricWidth = Math.max(hud.minMetricWidth, paddedWidth(measure('시간'), timeReserve),
+      paddedWidth(measure('처치 수'), counterReserve), paddedWidth(hud.iconSize, counterReserve));
+    const progressWidth = spec.width - 3 * metricWidth;
     const barWidth = progressWidth - 2 * hud.padding - measure('정원 완성도') - hud.gap;
     if (barWidth < hud.minBarWidth) {
       throw new RangeError('HUD values exceed the available display width');
     }
     return {
-      time: { x: 0, width: timeWidth },
-      progress: { x: timeWidth, width: progressWidth, barWidth },
-      kills: { x: timeWidth + progressWidth, width: counterWidth },
-      gems: { x: spec.width - counterWidth, width: counterWidth }
+      time: { x: 0, width: metricWidth },
+      kills: { x: metricWidth, width: metricWidth },
+      gems: { x: 2 * metricWidth, width: metricWidth },
+      progress: { x: 3 * metricWidth, width: progressWidth, barWidth }
     };
   }
 
@@ -165,15 +166,19 @@
     probe.destroy();
 
     g.fillStyle(0x46515b, 1);
-    [columns.progress.x, columns.kills.x, columns.gems.x].forEach(x => g.fillRect(x, 4, 1, spec.top - 8));
+    [columns.kills.x, columns.gems.x, columns.progress.x].forEach(x => g.fillRect(x, 4, 1, spec.top - 8));
 
-    // 동일한 좌우 패딩, 동일한 세로 중심. 레이블은 왼쪽, 수치는 오른쪽 기준선.
+    // 레이블과 수치는 같은 그룹의 왼쪽에서 4px 간격으로 이어서 표시한다.
     function metric(column, label, value) {
-      text(scene, column.x + hud.padding, hud.centerY, label, hud.labelSize, colors.label, 'left');
-      text(scene, column.x + column.width - hud.padding, hud.centerY, value, hud.valueSize, colors.value, 'right');
+      const caption = text(scene, column.x + hud.padding, hud.centerY, label, hud.labelSize, colors.label, 'left');
+      text(scene, caption.x + Math.ceil(caption.width) + hud.gap, hud.centerY, value, hud.valueSize, colors.value, 'left');
     }
     metric(columns.time, '시간', time);
     metric(columns.kills, '처치 수', count);
+
+    const gem = columns.gems;
+    reserveIcon(g, gem.x + hud.padding, hud.centerY - hud.iconSize / 2, hud.iconSize, colors.reservedIcon);
+    text(scene, gem.x + hud.padding + hud.iconSize + hud.gap, hud.centerY, count, hud.valueSize, colors.value, 'left');
 
     const c = columns.progress;
     text(scene, c.x + hud.padding, hud.centerY, '정원 완성도', hud.labelSize, colors.label, 'left');
@@ -187,9 +192,6 @@
     }
     text(scene, barX + c.barWidth / 2, hud.centerY, progress + '%', hud.valueSize, colors.value, 'center');
 
-    const gem = columns.gems;
-    reserveIcon(g, gem.x + hud.padding, hud.centerY - hud.iconSize / 2, hud.iconSize, colors.reservedIcon);
-    text(scene, gem.x + gem.width - hud.padding, hud.centerY, count, hud.valueSize, colors.value, 'right');
   }
 
   function drawSlotCost(scene, g, x, y, size, value) {
