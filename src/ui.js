@@ -15,6 +15,8 @@
   // One unmodified Regular face for Korean, English and numerals.
   const fontFamily = '"Garden Fusion"';
   const fontSize = Object.freeze({ base: 10, heading: 20, title: 30, menuBase: 20, menuHeading: 40, menuTitle: 60 });
+  // 메뉴 좌표계는 전장 논리 좌표의 2배. 기능적 선은 논리 1px로 통일.
+  const menuStyle = Object.freeze({ strokeWidth: 2, buttonHeight: 48, gap: 8 });
   async function loadFonts() {
     if (!document.fonts || !document.fonts.load) throw new Error('Font Loading API unavailable');
     const loaded = await document.fonts.load('400 20px ' + fontFamily,
@@ -71,7 +73,7 @@
     const rect = scene.add.rectangle(x, y, width, height,
       opts.fill === undefined ? C.panel : opts.fill,
       opts.alpha === undefined ? 1 : opts.alpha);
-    rect.setStrokeStyle(opts.strokeWidth === undefined ? 1 : opts.strokeWidth,
+    rect.setStrokeStyle(opts.strokeWidth === undefined ? menuStyle.strokeWidth : opts.strokeWidth,
       opts.stroke === undefined ? C.border : opts.stroke,
       opts.strokeAlpha === undefined ? 1 : opts.strokeAlpha);
     return rect;
@@ -79,7 +81,7 @@
 
   function rule(scene, x1, y1, x2, y2, color, alpha) {
     const graphics = scene.add.graphics();
-    graphics.lineStyle(1, color || C.border, alpha === undefined ? 1 : alpha);
+    graphics.lineStyle(menuStyle.strokeWidth, color || C.border, alpha === undefined ? 1 : alpha);
     graphics.lineBetween(x1, y1, x2, y2);
     return graphics;
   }
@@ -127,7 +129,7 @@
     scene.add.rectangle(W / 2, H / 2, W, H, C.bg);
     rule(scene, 40, 76, 1240, 76, C.border, 0.8);
     rule(scene, 40, 664, 1240, 664, C.border, 0.8);
-    text(scene, 43, 30, 'GARDEN TEST', fontSize.menuBase, C.greenText);
+    text(scene, 43, 30, 'GARDEN TEST', fontSize.menuBase, C.text);
     text(scene, 1238, 33, label || 'SCENE PROTOTYPE', fontSize.menuBase, C.muted, { originX: 1 });
     text(scene, 43, 680, 'PHASER 3.90.0 / UI SCENES ONLY', fontSize.menuBase, C.muted);
     text(scene, 1238, 680, 'NO GAMEPLAY LOGIC', fontSize.menuBase, C.muted, { originX: 1 });
@@ -135,13 +137,15 @@
 
   function button(scene, x, y, width, label, action, options) {
     const opts = options || {};
-    const height = opts.height || 52;
+    const height = opts.height || menuStyle.buttonHeight;
     const disabled = !!opts.disabled;
-    const border = opts.danger ? C.red : opts.primary ? C.green : C.subtle;
-    const fill = opts.primary ? C.panelAlt : C.panel;
+    const emphasized = !!(opts.primary || opts.selected);
+    const border = opts.danger ? C.red : emphasized ? C.white : C.subtle;
+    const fill = emphasized ? C.panelAlt : C.panel;
+    const hoverBorder = opts.danger ? C.red : C.white;
     const base = scene.add.rectangle(0, 0, width, height,
       disabled ? P.n.ink : fill, 1);
-    base.setStrokeStyle(1, disabled ? C.border : border, 1);
+    base.setStrokeStyle(menuStyle.strokeWidth, disabled ? C.border : border, 1);
     const caption = text(scene, 0, 0, label, opts.fontSize || fontSize.menuBase,
       disabled ? C.disabled : C.text, { originX: 0.5, originY: 0.5 });
     const group = scene.add.container(x, y, [base, caption]);
@@ -149,11 +153,11 @@
       base.setInteractive({ useHandCursor: true });
       base.on('pointerover', function () {
         base.setFillStyle(C.panelAlt);
-        base.setStrokeStyle(2, border);
+        base.setStrokeStyle(menuStyle.strokeWidth, hoverBorder, 1);
       });
       base.on('pointerout', function () {
         base.setFillStyle(fill);
-        base.setStrokeStyle(1, border);
+        base.setStrokeStyle(menuStyle.strokeWidth, border, 1);
       });
       base.on('pointerdown', action);
     }
@@ -191,7 +195,7 @@
   }
 
   window.GardenUI = Object.freeze({
-    W: W, H: H, C: C, fontFamily, fontSize, loadFonts, text: text, panel: panel, rule: rule,
+    W: W, H: H, C: C, fontFamily, fontSize, menuStyle, loadFonts, text: text, panel: panel, rule: rule,
     background: background, button: button, overlay: overlay, fitCamera: fitCamera,
     bindEscape: bindEscape, openSubscene: openSubscene,
     closeSubscene: closeSubscene
