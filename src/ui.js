@@ -128,8 +128,8 @@
 
   function background(scene, label) {
     menuCamera(scene);
-    scene.cameras.main.setBackgroundColor(P.hex.ink);
-    scene.add.rectangle(W / 2, H / 2, W, H, C.bg);
+    scene.cameras.main.setBackgroundColor(P.background.hex);
+    scene.add.rectangle(W / 2, H / 2, W, H, P.background.n);
     rule(scene, 24, 48, 936, 48, C.border, 0.8);
     rule(scene, 24, 492, 936, 492, C.border, 0.8);
     text(scene, 24, 20, 'GARDEN TEST', fontSize.menuBase, C.text);

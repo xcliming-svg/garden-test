@@ -61,7 +61,7 @@
   });
 
   const colors = Object.freeze({
-    field: P.n.ink, hud: P.n.ink, hudBorder: P.n.grid, hudDivider: P.n.edge,
+    field: P.background.n, hud: P.background.n, hudBorder: P.n.grid, hudDivider: P.n.edge,
     label: P.hex.label, value: P.hex.paper,
     gridFill: P.n.soil, gridLine: P.n.grid, gridBorder: P.n.edge,
     normalFill: P.n.grid, normalBorder: P.n.slot,
@@ -918,7 +918,7 @@
   function draw(scene) {
     testSprites.install(scene);
     window.GardenUI.fitCamera(scene, spec.width, spec.height);
-    scene.cameras.main.setBackgroundColor(P.hex.ink);
+    scene.cameras.main.setBackgroundColor(P.background.hex);
     const g = scene.add.graphics().setDepth(-2).setName('battlefield');
     g.fillStyle(colors.field, 1).fillRect(0, spec.top, spec.width, spec.fieldHeight);
     const { cards, flowers } = drawMarkers(scene);

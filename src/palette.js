@@ -38,5 +38,7 @@
   });
   const n = Object.freeze(Object.fromEntries(Object.entries(hex).map(([key, value]) =>
     [key, Number.parseInt(value.slice(1), 16)])));
-  window.GardenPalette = Object.freeze({ hex, n });
+  // 화면 배경 전용 검정. 기존 Garden 32 색상 및 역할은 그대로 보존한다.
+  const background = Object.freeze({ hex: '#000000', n: 0x000000 });
+  window.GardenPalette = Object.freeze({ hex, n, background });
 }());

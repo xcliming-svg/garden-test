@@ -4,8 +4,9 @@
   // Phaser만 생성한다. 게임 상태, 전투 루프, 생성 로직 등은 등록하지 않는다.
   const S = window.GardenScenes;
   const P = window.GardenPalette.hex;
-  document.documentElement.style.backgroundColor = P.ink;
-  document.body.style.backgroundColor = P.ink;
+  const background = window.GardenPalette.background.hex;
+  document.documentElement.style.backgroundColor = background;
+  document.body.style.backgroundColor = background;
   const parent = document.getElementById('game');
 
   // 960×540은 게임 좌표 기준일 뿐 실제 렌더링 버퍼 크기가 아니다.
@@ -37,7 +38,7 @@
     parent: 'game',
     width: initial.width,
     height: initial.height,
-    backgroundColor: P.ink,
+    backgroundColor: background,
     // 배율별 텍스트 래스터화와 전체 렌더러의 안티앨리어싱은 유지한다.
     // 글자 텍스처에만 NEAREST를 적용하며 원본 글리프 픽셀은 보존한다.
     render: { antialias: true, pixelArt: false, roundPixels: false },
