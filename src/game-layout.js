@@ -10,7 +10,7 @@
   const blueprintPadding = spacing.small;
   const blueprintHeader = spacing.large;
   const topHudHeight = 24;
-  const bottomHudHeight = 48;
+  const bottomHudHeight = 36;
   const fieldHeight = 360 - topHudHeight - bottomHudHeight;
   const blueprintY = topHudHeight + spacing.base;
   const spec = Object.freeze({
@@ -23,7 +23,7 @@
       height: blueprintHeader + blueprintGrid + 2 * blueprintPadding,
       gridX: 8 + blueprintPadding, gridY: blueprintY + blueprintHeader + blueprintPadding
     }),
-    slots: Object.freeze({ size: 24, gap: 4, initial: 4, preview: 9, max: 10, y: 324, exampleCost: 999 })
+    slots: Object.freeze({ size: 24, gap: 4, initial: 4, preview: 9, max: 10, y: 330, exampleCost: 999 })
   });
 
   const hud = Object.freeze({
@@ -33,7 +33,7 @@
     // 표시 폭 예약 기준이며 게임 데이터의 최대값이 아니다.
     previewProgress: 30,
   });
-  // Preserve the approved 24px horizontal three-digit cost layout; micro text is the only native-size exception.
+  // Preserve the approved 24px horizontal three-digit cost layout; cost and compact HUD are native-size exceptions.
   const slotCost = Object.freeze({ padding: spacing.micro, gap: spacing.micro, iconSize: 6, fontSize: 7, minFontSize: 6, maxDigits: 3 });
 
   // size = 원본 PNG 및 1배 표시 크기. 파일을 생성하거나 로드하지 않는다.
@@ -274,15 +274,17 @@
     return sumPreviewStats(next);
   }
 
+  const bottomStats = Object.freeze({ fontSize: 7, columnWidth: 42, columns: 3, lineGap: 3, deltaGap: spacing.micro });
+
   function bottomLayout() {
     const s = spec.slots;
     const totalWidth = s.max * s.size + (s.max - 1) * s.gap;
     const slotLeft = (spec.width - totalWidth) / 2;
-    const sideWidth = slotLeft - 2 * spacing.base;
+    const sideWidth = bottomStats.columnWidth * bottomStats.columns;
     const top = spec.top + spec.fieldHeight;
     return {
-      top, slotLeft, totalWidth, sideWidth,
-      left: spacing.base, right: slotLeft + totalWidth + spacing.base,
+      top, centerY: top + spec.bottom / 2, slotLeft, totalWidth, sideWidth,
+      left: spacing.base, right: spec.width - spacing.base - sideWidth,
       slots: Array.from({ length: s.max }, (_, index) => ({
         x: slotLeft + index * (s.size + s.gap), y: s.y, size: s.size
       }))
@@ -384,17 +386,16 @@
     const slotItems = [];
     const slots = layout.slots.slice(0, s.preview);
 
-    // 하단 레이블/증감만 축소하여 숫자와의 시각적 위계를 비교한다.
-    const statLabelFont = 8;
-    // 양쪽 166px을 각각 동일한 3열로 나눈다. 값과 증감은 별도 행에 표시.
+    // 양쪽 바깥 8px부터 동일한 42px 열 3개. 각 텍스트 묶음의 실제 크기로 중앙 정렬.
     const stats = statKeys.map((key, index) => {
-      const left = index < 3 ? layout.left : layout.right;
-      const x = left + layout.sideWidth * ((index % 3) + 0.5) / 3;
+      const left = index < bottomStats.columns ? layout.left : layout.right;
+      const x = left + bottomStats.columnWidth * ((index % bottomStats.columns) + 0.5);
+      const size = bottomStats.fontSize;
       return {
-        key,
-        label: text(scene, x, layout.top + 10, statLabels[key], statLabelFont, colors.label, 'center'),
-        value: text(scene, x, layout.top + 24, '', font, colors.value, 'center'),
-        delta: text(scene, x, layout.top + 38, '', statLabelFont, colors.value, 'center')
+        key, x,
+        label: text(scene, x, layout.centerY, statLabels[key], size, colors.label, 'center').setName('stat-label:' + key),
+        value: text(scene, x, layout.centerY, '', size, colors.value, 'center').setName('stat-value:' + key),
+        delta: text(scene, x, layout.centerY, '', size, colors.value, 'center').setName('stat-delta:' + key)
       };
     });
     const tooltip = scene.add.container(0, 0).setDepth(40).setName('item-preview-tooltip').setVisible(false);
@@ -407,7 +408,22 @@
       stats.forEach(row => {
         const d = next[row.key] - current[row.key];
         row.value.setText(String(next[row.key]));
-        row.delta.setText(d ? signed(d) : '').setColor(d > 0 ? P.hex.growth : d < 0 ? P.hex.red : colors.value);
+        row.delta.setText(d ? signed(d) : '').setColor(d > 0 ? P.hex.growth : d < 0 ? P.hex.red : colors.value)
+          .setVisible(d !== 0);
+        // 라벨과 값 행의 실제 바운딩 크기를 기준으로 3px 행 간격,
+        // 증감이 있을 때는 값과 증감 사이 2px를 두고 전체 행을 중앙 정렬한다.
+        const valueWidth = row.value.width;
+        const deltaWidth = d ? row.delta.width : 0;
+        const gap = d ? bottomStats.deltaGap : 0;
+        const rowWidth = valueWidth + gap + deltaWidth;
+        const rowHeight = Math.max(row.value.height, d ? row.delta.height : 0);
+        const groupHeight = row.label.height + bottomStats.lineGap + rowHeight;
+        const top = layout.centerY - groupHeight / 2;
+        const valueY = top + row.label.height + bottomStats.lineGap + rowHeight / 2;
+        const left = row.x - rowWidth / 2;
+        row.label.setPosition(row.x, top + row.label.height / 2);
+        row.value.setPosition(left + valueWidth / 2, valueY);
+        row.delta.setPosition(left + valueWidth + gap + deltaWidth / 2, valueY);
       });
     }
     function slotAnchor(index) {
@@ -557,10 +573,13 @@
     scene.input.on('pointerdown', dismiss);
     scene.input.on('gameout', cancel);
     scene.events.on('pause', cancel);
+    // fitCamera가 텍스트 해상도를 동기화한 다음 바운딩 크기로 다시 정렬한다.
+    scene.scale.on('resize', renderStats);
     scene.events.once('shutdown', () => {
       scene.input.off('pointerdown', dismiss);
       scene.input.off('gameout', cancel);
       scene.events.off('pause', cancel);
+      scene.scale.off('resize', renderStats);
     });
     refresh();
   }
@@ -578,5 +597,5 @@
     drawItemPreview(scene, layout, cards);
   }
 
-  window.GardenGameLayout = Object.freeze({ spec, assets, colors, spacing, hud, slotCost, formatHudTime, formatHudCount, hudColumns, bottomLayout, sumPreviewStats, getPreviewStats, tooltipPosition, draw });
+  window.GardenGameLayout = Object.freeze({ spec, assets, colors, spacing, hud, slotCost, formatHudTime, formatHudCount, hudColumns, bottomStats, bottomLayout, sumPreviewStats, getPreviewStats, tooltipPosition, draw });
 }());
