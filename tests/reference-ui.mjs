@@ -139,7 +139,37 @@ for(const c of configs){
     await page.setViewportSize({width:w,height:h});
     await page.waitForFunction(([w,h])=>{let s=window.__benchmarkGame.scene.getScene('Game');return s.scale.gameSize.width===w&&s.scale.gameSize.height===h&&Math.abs(s.cameras.main.zoom-w/960)<1e-6},[w,h],{timeout:8000});
     const m=await gameMetrics();inspectGame(m,w+'x'+h);observations.push(m);
-    if(w===1280||w===1920)await page.screenshot({path:join(out,c.id+'-'+w+'.png')});
+    if(w===1280||w===1920){
+      const png=await page.screenshot({path:join(out,c.id+'-'+w+'.png')});
+      if(w===1920){
+        const pixels=await page.evaluate(async data=>{
+          const img=await createImageBitmap(await (await fetch('data:image/png;base64,'+data)).blob());
+          const cv=document.createElement('canvas');cv.width=img.width;cv.height=img.height;
+          const ctx=cv.getContext('2d');ctx.drawImage(img,0,0);
+          const p=ctx.getImageData(0,0,cv.width,cv.height).data;
+          const rgb=(x,y)=>Array.from(p.slice((y*cv.width+x)*4,(y*cv.width+x)*4+3));
+          const bounds=(x0,y0,x1,y1,predicate)=>{
+            let a=Infinity,b=Infinity,c=-1,d=-1,n=0;
+            for(let y=y0;y<y1;y++)for(let x=x0;x<x1;x++)if(predicate(rgb(x,y))){
+              a=Math.min(a,x);b=Math.min(b,y);c=Math.max(c,x);d=Math.max(d,y);n++;
+            }
+            return {left:a,top:b,right:c,bottom:d,width:c-a+1,height:d-b+1,n};
+          };
+          const exact=(r,g,b)=>v=>v[0]===r&&v[1]===g&&v[2]===b;
+          const ink=v=>Math.min(...v)>=145&&Math.max(...v)-Math.min(...v)<=5;
+          const label=bounds(0,0,85,60,ink);
+          const time=bounds(85,0,334,60,ink);
+          const title=bounds(20,83,100,133,ink);
+          const header=bounds(15,65,210,145,exact(103,103,119));
+          const grid=bounds(15,140,210,350,exact(81,81,107));
+          return {image:[cv.width,cv.height],label,time,title,header,grid,
+            timeGap:time.left-label.right-1,hudBottomGap:64-Math.max(label.bottom,time.bottom)-1,
+            headerTopGap:header.top-64,titleLeftGap:title.left-header.left,titleTopGap:title.top-header.top,
+            titleBottomGap:header.bottom-title.bottom,gridGap:grid.top-header.bottom-1};
+        },png.toString('base64'));
+        console.log('PIXEL_REPORT '+JSON.stringify(pixels));
+      }
+    }
   }
   await page.setViewportSize({width:960,height:540});await page.waitForFunction(()=>Math.abs(window.__benchmarkGame.scene.getScene('Game').cameras.main.zoom-1)<1e-6);
   // Exercise the real input path: hover every item, equip, replace, reject locked, plant, toggle, pause/settings.
