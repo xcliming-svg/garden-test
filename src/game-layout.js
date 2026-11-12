@@ -18,14 +18,15 @@
   const bottomHudHeight = tile * 2;
   const fieldHeight = height - topHudHeight - bottomHudHeight;
   const blueprintY = topHudHeight + spacing.section;
-  // 비교 URL의 기존 상대 크기를 보존: ?garden=24는 이 브랜치에서 36px.
-  const gardenCell = new URLSearchParams(window.location.search).get('garden') === '24' ? 36 : tile;
-  const gardenGap = 1, gardenPitch = gardenCell + gardenGap;
+  // 24px 내부 면 + 바깥쪽 1px 테두리. 36px 비교는 명시적인 ?garden=36에서만.
+  const gardenCell = new URLSearchParams(window.location.search).get('garden') === '36' ? 36 : tile;
+  const cellLine = 1, gardenPitch = gardenCell + 2 * cellLine;
+  const iconSize = 16, slotSize = tile + 2 * cellLine;
   const gardenSize = 10 * gardenPitch;
   const spec = Object.freeze({
     width, height,
     top: topHudHeight, fieldHeight, bottom: bottomHudHeight,
-    garden: Object.freeze({ x: (width - gardenSize) / 2, y: topHudHeight + (fieldHeight - gardenSize) / 2, columns: 10, rows: 10, cell: gardenCell, gap: gardenGap, pitch: gardenPitch }),
+    garden: Object.freeze({ x: (width - gardenSize) / 2, y: topHudHeight + (fieldHeight - gardenSize) / 2, columns: 10, rows: 10, cell: gardenCell, line: cellLine, gap: 0, pitch: gardenPitch }),
     blueprint: Object.freeze({
       x: spacing.section, y: blueprintY, padding: blueprintPadding, header: blueprintHeader,
       columns: 10, rows: 10, cell: blueprintCell, line: blueprintLine, pitch: blueprintPitch,
@@ -33,7 +34,7 @@
       height: blueprintHeader + blueprintGrid + 2 * blueprintPadding,
       gridX: spacing.section + blueprintPadding, gridY: blueprintY + blueprintHeader + blueprintPadding
     }),
-    slots: Object.freeze({ size: tile + 2 * spacing.small, gap: spacing.small, initial: 4, preview: 9, max: 10, y: height - bottomHudHeight + spacing.base, exampleCost: 999 })
+    slots: Object.freeze({ size: slotSize, cell: tile, line: cellLine, gap: spacing.small, initial: 4, preview: 9, max: 10, y: height - bottomHudHeight + (bottomHudHeight - slotSize) / 2, exampleCost: 999 })
   });
 
   const hud = Object.freeze({
@@ -43,8 +44,8 @@
     // 표시 폭 예약 기준이며 게임 데이터의 최대값이 아니다.
     previewProgress: 30,
   });
-  // 32px 슬롯 안에 3자리 비용과 보석 아이콘을 한 행으로 정렬한다.
-  const slotCost = Object.freeze({ padding: spacing.micro, gap: spacing.micro, iconSize: 8, fontSize: U.fontSize.compact, minFontSize: 9, maxDigits: 3 });
+  // 24px 내부 면에서 3자리 비용과 보석 아이콘을 한 행으로 표시한다.
+  const slotCost = Object.freeze({ padding: spacing.micro, gap: spacing.micro, iconSize: 6, fontSize: 7, minFontSize: 6, maxDigits: 3 });
 
   // size = 비교 브랜치의 논리 표시 크기. 기존 저해상도 테스트 원본은 그대로 사용한다.
   // assetKey와 suggestedFile은 이후 에셋 작업 시 참조할 식별자이다.
@@ -53,8 +54,8 @@
     guardian: Object.freeze({ size: 24, color: P.n.teal, assetKey: 'guardian', suggestedFile: 'assets/guardian.png' }),
     enemy: Object.freeze({ size: 18, color: P.n.red, assetKey: 'enemy', suggestedFile: 'assets/enemy.png' }),
     gem: Object.freeze({ size: 12, color: P.n.sky, assetKey: 'gem', suggestedFile: 'assets/gem.png' }),
-    flower: Object.freeze({ size: 24, cardSize: spec.slots.size, color: P.n.pink, assetKey: 'flower', suggestedFile: 'assets/flower.png' }),
-    item: Object.freeze({ size: 24, cardSize: spec.slots.size, color: P.n.gold, assetKey: 'item', suggestedFile: 'assets/item.png' })
+    flower: Object.freeze({ size: iconSize, cardSize: spec.slots.size, color: P.n.pink, assetKey: 'flower', suggestedFile: 'assets/flower.png' }),
+    item: Object.freeze({ size: iconSize, cardSize: spec.slots.size, color: P.n.gold, assetKey: 'item', suggestedFile: 'assets/item.png' })
   });
 
   const colors = Object.freeze({
@@ -97,11 +98,10 @@
     g.fillStyle(colors.hudBorder, 1).fillRect(spacing.section, y, spec.width - 2 * spacing.section, 1);
   }
 
-  // 하단 장착 슬롯의 테두리 없는 단색 면.
+  // 24px 내부 면을 침범하지 않는 1px 외부 프레임.
   function slotVisual(g, x, y, size, disabled) {
-    // 평상시 및 드래그 중 동일한 단색 면. 꺾쇠와 별도 테두리는 없다.
-    g.fillStyle(disabled ? colors.disabledFill : colors.normalFill, 1);
-    g.fillRect(x, y, size, size);
+    frame(g, x, y, size, size, disabled ? colors.disabledFill : colors.normalFill,
+      disabled ? colors.disabledBorder : colors.normalBorder);
   }
 
   // 드래그 중 후보에는 1px 두께의 9px 십자, 진입한 대상에는 같은 황록 1px 사각형.
@@ -335,7 +335,7 @@
     const layout = bottomLayout();
     layout.slots.forEach((slot, i) => {
       slotVisual(g, slot.x, slot.y, slot.size, i === s.preview);
-      if (i === s.preview) drawSlotCost(scene, g, slot.x, slot.y, slot.size, s.exampleCost);
+      if (i === s.preview) drawSlotCost(scene, g, slot.x + s.line, slot.y + s.line, s.cell, s.exampleCost);
     });
     // 기존 확장 슬롯은 표시만 하며 드롭/클릭 대상으로 등록하지 않는다.
     return layout;
@@ -611,7 +611,7 @@
       });
       slots.forEach((slot, index) => {
         const focused = dragging ? target === index : focus && focus.slot === index && equipped[index];
-        // 단색 슬롯 면을 유지하고 이동 중에는 +, 진입한 칸만 동일 색 사각형.
+        // 슬롯 면과 외부 프레임을 유지하고 이동 중에는 +, 진입한 칸만 황록 사각형.
         if (dragging) {
           if (focused) dropSquare(accents, slot.x, slot.y, slot.size);
           else dropPlus(accents, slot.x, slot.y, slot.size);
@@ -742,10 +742,10 @@
     const keys = [...occupied];
     const xs = keys.map(k => k % g.columns), ys = keys.map(k => Math.floor(k / g.columns));
     return {
-      left: g.x + (Math.min(...xs) - 2) * g.pitch + g.cell / 2,
-      right: g.x + (Math.max(...xs) + 2) * g.pitch + g.cell / 2,
-      top: g.y + (Math.min(...ys) - 2) * g.pitch + g.cell / 2,
-      bottom: g.y + (Math.max(...ys) + 2) * g.pitch + g.cell / 2
+      left: g.x + (Math.min(...xs) - 2) * g.pitch + g.line + g.cell / 2,
+      right: g.x + (Math.max(...xs) + 2) * g.pitch + g.line + g.cell / 2,
+      top: g.y + (Math.min(...ys) - 2) * g.pitch + g.line + g.cell / 2,
+      bottom: g.y + (Math.max(...ys) + 2) * g.pitch + g.line + g.cell / 2
     };
   }
   function patrolPosition(b, distance) {
@@ -804,24 +804,33 @@
       joining = true;
     }
     scene.events.on('update', updatePatrol);
-    // 10×10 흙 면 + 1px 공백을 단일 텍스처로 합성한다.
-    // 모든 칸의 오른쪽/아래쪽에 1px 공백만 둔다. 별도 내부/외부 테두리는 없다.
+    // 10×10 흙 면과 외부 1px 테두리를 단일 텍스처로 합성한다.
+    // 점유 및 후보만 표시하고 나머지 격자는 투명하게 유지한다.
     const soilKey = 'ui-test:garden-soil:' + garden.cell;
     const soilWidth = garden.columns * garden.pitch, soilHeight = garden.rows * garden.pitch;
     const soilTexture = scene.textures.exists(soilKey) ? scene.textures.get(soilKey) :
       scene.textures.createCanvas(soilKey, soilWidth, soilHeight);
     soilTexture.setFilter(Phaser.Textures.FilterMode.NEAREST);
     const soil = scene.add.image(garden.x + soilWidth / 2, garden.y + soilHeight / 2, soilKey)
-      .setDepth(-1).setAlpha(colors.gardenSoilAlpha).setName('garden-preview-soil');
+      .setDepth(-1).setName('garden-preview-soil');
     function refreshSoil() {
       const ctx = soilTexture.getContext();
       ctx.clearRect(0, 0, soilWidth, soilHeight);
-      ctx.fillStyle = '#' + colors.gardenSoil.toString(16).padStart(6, '0');
-      // 점유 및 후보는 동일한 흙 면 + 1px 공백, 나머지 격자는 투명.
+      // 외곽선만 불투명하게, 흙 면은 기존 bark 30% 투명도를 유지한다.
       for (const key of new Set([...occupied, ...gardenCandidates(occupied)])) {
-        ctx.fillRect((key % garden.columns) * garden.pitch,
-          Math.floor(key / garden.columns) * garden.pitch, garden.cell, garden.cell);
+        const x = (key % garden.columns) * garden.pitch, y = Math.floor(key / garden.columns) * garden.pitch;
+        const l = garden.line, s = garden.pitch;
+        ctx.globalAlpha = 1;
+        ctx.fillStyle = '#' + colors.gridBorder.toString(16).padStart(6, '0');
+        ctx.fillRect(x, y, s, l);
+        ctx.fillRect(x, y + s - l, s, l);
+        ctx.fillRect(x, y + l, l, garden.cell);
+        ctx.fillRect(x + s - l, y + l, l, garden.cell);
+        ctx.globalAlpha = colors.gardenSoilAlpha;
+        ctx.fillStyle = '#' + colors.gardenSoil.toString(16).padStart(6, '0');
+        ctx.fillRect(x + l, y + l, garden.cell, garden.cell);
       }
+      ctx.globalAlpha = 1;
       soilTexture.refresh();
       soilTexture.setFilter(Phaser.Textures.FilterMode.NEAREST);
     }
@@ -836,7 +845,7 @@
     }
     function plant(key, spriteName) {
       const p = origin(key);
-      testSprites.sprite(scene, p.x + garden.cell / 2, p.y + garden.cell / 2, spriteName, assets.flower.size)
+      testSprites.sprite(scene, p.x + garden.line + garden.cell / 2, p.y + garden.line + garden.cell / 2, spriteName, assets.flower.size)
         .setDepth(1).setName('garden-preview-flower:' + key);
     }
     [...occupied].forEach((key, i) => plant(key, testSprites.flowers[i]));
@@ -845,15 +854,15 @@
       const candidates = gardenCandidates(occupied);
       if (dragging) for (const key of candidates) {
         const p = origin(key);
-        // 선택 사각형은 흙 면을 감싼 실제 1px 공백에 위치한다.
-        if (key === target) dropSquare(accents, p.x - garden.gap, p.y - garden.gap, garden.cell + 2 * garden.gap);
-        else dropPlus(accents, p.x, p.y, garden.cell);
+        // 선택 사각형은 기존 외부 1px 프레임 위에 일치한다.
+        if (key === target) dropSquare(accents, p.x, p.y, garden.pitch);
+        else dropPlus(accents, p.x + garden.line, p.y + garden.line, garden.cell);
       }
       ghost.setVisible(false);
       if (dragging && candidates.has(target)) {
         const p = origin(target);
         ghost.setTexture(testSprites.textureKey(dragging.spriteName, assets.flower.size)).setDisplaySize(assets.flower.size, assets.flower.size)
-          .setPosition(p.x + garden.cell / 2, p.y + garden.cell / 2).setVisible(true);
+          .setPosition(p.x + garden.line + garden.cell / 2, p.y + garden.line + garden.cell / 2).setVisible(true);
       }
     }
     function hit(pointer) {
