@@ -4,19 +4,14 @@
   // 공유되는 것은 화면 스타일과 입력용 UI 컴포넌트뿐이다.
   const W = 1280;
   const H = 720;
-  const C = {
-    bg: 0x0b1018,
-    panel: 0x18212d,
-    panelAlt: 0x202d3b,
-    border: 0x3b4b5c,
-    subtle: 0x7e91a3,
-    text: '#eaf0f5',
-    muted: '#9cabb9',
-    gold: 0xe1b875,
-    green: 0x84d0aa,
-    red: 0xe18f91,
-    white: 0xffffff
-  };
+  const P = window.GardenPalette;
+  const C = Object.freeze({
+    bg: P.n.ink, panel: P.n.soil, panelAlt: P.n.grid,
+    border: P.n.edge, subtle: P.n.slot,
+    text: P.hex.paper, muted: P.hex.label, disabled: P.hex.disabled,
+    gold: P.n.gold, goldText: P.hex.gold, green: P.n.growth, greenText: P.hex.growth,
+    red: P.n.red, redText: P.hex.red, white: P.n.paper
+  });
   // One unmodified Regular face for Korean, English and numerals.
   const fontFamily = '"Garden Fusion"';
   const fontSize = Object.freeze({ base: 10, heading: 20, title: 30, menuBase: 20, menuHeading: 40, menuTitle: 60 });
@@ -109,18 +104,11 @@
 
   function background(scene, label) {
     legacyCamera(scene);
-    scene.cameras.main.setBackgroundColor('#0b1018');
+    scene.cameras.main.setBackgroundColor(P.hex.ink);
     scene.add.rectangle(W / 2, H / 2, W, H, C.bg);
-    const decor = scene.add.graphics();
-    decor.lineStyle(1, C.border, 0.14);
-    for (let x = 40; x < W; x += 64) decor.lineBetween(x, 0, x, H);
-    for (let y = 36; y < H; y += 64) decor.lineBetween(0, y, W, y);
-    decor.lineStyle(2, C.gold, 0.22);
-    decor.strokeCircle(1054, 314, 242);
-    decor.strokeCircle(1054, 314, 181);
     rule(scene, 40, 76, 1240, 76, C.border, 0.8);
     rule(scene, 40, 664, 1240, 664, C.border, 0.8);
-    text(scene, 43, 30, 'GARDEN TEST', fontSize.menuBase, '#e1b875');
+    text(scene, 43, 30, 'GARDEN TEST', fontSize.menuBase, C.greenText);
     text(scene, 1238, 33, label || 'SCENE PROTOTYPE', fontSize.menuBase, C.muted, { originX: 1 });
     text(scene, 43, 680, 'PHASER 3.90.0 / UI SCENES ONLY', fontSize.menuBase, C.muted);
     text(scene, 1238, 680, 'NO GAMEPLAY LOGIC', fontSize.menuBase, C.muted, { originX: 1 });
@@ -130,18 +118,18 @@
     const opts = options || {};
     const height = opts.height || 52;
     const disabled = !!opts.disabled;
-    const border = opts.danger ? C.red : opts.primary ? C.gold : C.border;
-    const fill = opts.primary ? 0x38362f : C.panel;
+    const border = opts.danger ? C.red : opts.primary ? C.green : C.subtle;
+    const fill = opts.primary ? C.panelAlt : C.panel;
     const base = scene.add.rectangle(0, 0, width, height,
-      disabled ? 0x151d27 : fill, 1);
-    base.setStrokeStyle(1, disabled ? 0x2b3641 : border, 1);
+      disabled ? P.n.ink : fill, 1);
+    base.setStrokeStyle(1, disabled ? C.border : border, 1);
     const caption = text(scene, 0, 0, label, opts.fontSize || fontSize.menuBase,
-      disabled ? '#738191' : C.text, { originX: 0.5, originY: 0.5 });
+      disabled ? C.disabled : C.text, { originX: 0.5, originY: 0.5 });
     const group = scene.add.container(x, y, [base, caption]);
     if (!disabled && typeof action === 'function') {
       base.setInteractive({ useHandCursor: true });
       base.on('pointerover', function () {
-        base.setFillStyle(opts.danger ? 0x4d3036 : 0x2c3948);
+        base.setFillStyle(C.panelAlt);
         base.setStrokeStyle(2, border);
       });
       base.on('pointerout', function () {
@@ -155,7 +143,7 @@
 
   function overlay(scene) {
     legacyCamera(scene);
-    return scene.add.rectangle(W / 2, H / 2, W, H, 0x05090f, 0.74)
+    return scene.add.rectangle(W / 2, H / 2, W, H, P.n.shadow, 0.74)
       .setInteractive();
   }
 
