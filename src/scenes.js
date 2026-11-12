@@ -2,7 +2,7 @@
   'use strict';
 
   const U = window.GardenUI;
-  // 기존 메뉴 디자인 좌표는 1280×720. 전장 640×360 기준 간격의 2배를 사용한다.
+  // 기존 메뉴 디자인 좌표는 1280×720 유지. 전장 논리 좌표만 960×540으로 비교한다.
   const menu = Object.freeze({ ...U.menuStyle, inset: 32, row: 72 });
   function centered(scene, x, y, label, size, color, options = {}) {
     return U.text(scene, x, y, label, size, color, { ...options, originX: 0.5, originY: 0.5 });

@@ -1,5 +1,8 @@
 # 현재 설계 및 구현 정리
 
+> **960×540 비교 브랜치:** 이 문서의 기존 640×360 수치와 확정 이력은 main 기준으로 보존한다. 현재 브랜치의 실험 규격 및 예외는 [960×540 비교 문서](./resolution-960x540.md)를 우선 참조한다. main 규격 변경 승인 또는 게임플레이 구현을 뜻하지 않는다.
+
+
 - 기준: `feature/item-card-ui`에서 확정·검증한 UI를 main에 통합하는 기준선. 소스 기준 [30dab4f](https://github.com/xcliming-svg/garden-test/commit/30dab4fb9ad43f6472f463442c5a58339a29a9a9). 현행 UI 요약: [ui-spec.md](./ui-spec.md).
 - 최초 정리: 2026-11-12
 - 개발 단계: 화면 구조 및 전장 크기 검토용 프로토타입

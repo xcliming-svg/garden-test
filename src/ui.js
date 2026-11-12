@@ -14,9 +14,9 @@
   });
   // One unmodified Regular face for Korean, English and numerals.
   const fontFamily = '"Garden Fusion"';
-  const fontSize = Object.freeze({ base: 10, heading: 20, title: 30, menuBase: 20, menuHeading: 40, menuTitle: 60 });
-  // 메뉴 좌표계는 전장 논리 좌표의 2배. 기능적 선은 논리 1px로 통일.
-  const menuStyle = Object.freeze({ strokeWidth: 2, buttonHeight: 48, gap: 8 });
+  const fontSize = Object.freeze({ base: 15, heading: 30, title: 45, menuBase: 20, menuHeading: 40, menuTitle: 60 });
+  // 메뉴 좌표는 기존 1280×720 유지; 960×540 기준 기능적 선 1px.
+  const menuStyle = Object.freeze({ strokeWidth: 4 / 3, buttonHeight: 48, gap: 8 });
   async function loadFonts() {
     if (!document.fonts || !document.fonts.load) throw new Error('Font Loading API unavailable');
     const loaded = await document.fonts.load('400 20px ' + fontFamily,
@@ -86,7 +86,7 @@
   }
 
   // 각 씬의 디자인 좌표를 실제 16:9 렌더링 버퍼에 매핑한다.
-  // Game: 640×360, 기존 메뉴/오버레이: 1280×720.
+  // Game: 960×540, 기존 메뉴/오버레이: 1280×720.
   // 일시정지 중인 씬도 resize 이벤트에 맞춰 카메라와 텍스트를 갱신한다.
   function fitCamera(scene, designWidth, designHeight) {
     const tracked = new Set();

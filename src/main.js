@@ -8,7 +8,7 @@
   document.body.style.backgroundColor = P.ink;
   const parent = document.getElementById('game');
 
-  // 640×360은 게임 좌표 기준일 뿐 실제 렌더링 버퍼 크기가 아니다.
+  // 960×540은 게임 좌표 기준일 뿐 실제 렌더링 버퍼 크기가 아니다.
   // 브라우저 가용 영역에 들어가는 최대 16:9 크기를 사용한다.
   // 16×9 단위로 맞추므로 실제 배율은 1.5, 2.125 등 비정수일 수 있다.
   function fitParent() {
