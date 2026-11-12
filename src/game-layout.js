@@ -3,21 +3,31 @@
 
   // UI/정적 크기 비교 시안 전용. 물리, 이동, 스폰, 공격, 획득, 장착 및
   // 슬롯 확장 로직은 없다. 모든 좌표는 640×360 논리 픽셀이다.
+  // Carbon의 2/4/8/12/16 간격 체계 참고. 논리 좌표 기준.
+  const spacing = Object.freeze({ micro: 2, small: 4, base: 8, section: 12, large: 16 });
+  const blueprintGrid = 10 * 8;
+  const blueprintPadding = spacing.small;
+  const blueprintHeader = spacing.large;
   const spec = Object.freeze({
     width: 640, height: 360,
     top: 24, fieldHeight: 300, bottom: 36,
     garden: Object.freeze({ x: 240, y: 94, columns: 10, rows: 10, cell: 16 }),
-    blueprint: Object.freeze({ x: 8, y: 32, width: 96, height: 116, header: 20, gridX: 16, gridY: 60, cell: 8 }),
+    blueprint: Object.freeze({
+      x: 8, y: 32, padding: blueprintPadding, header: blueprintHeader, cell: 8,
+      width: blueprintGrid + 2 * blueprintPadding,
+      height: blueprintHeader + blueprintGrid + 2 * blueprintPadding,
+      gridX: 8 + blueprintPadding, gridY: 32 + blueprintHeader + blueprintPadding
+    }),
     slots: Object.freeze({ size: 24, gap: 4, initial: 4, max: 10, y: 330, exampleCost: 10 })
   });
 
-  // Carbon의 2/4/8/12/16 간격 체계 참고. 논리 좌표 기준.
-  const spacing = Object.freeze({ micro: 2, small: 4, base: 8, section: 12, large: 16 });
   const hud = Object.freeze({
-    padding: spacing.section, gap: spacing.base, labelSize: 10, valueSize: 12,
-    centerY: spec.top / 2, separators: Object.freeze([104, 224, 552]),
-    iconSize: 12, barHeight: 12
+    padding: spacing.base, gap: spacing.small, labelSize: 10, valueSize: 12,
+    centerY: spec.top / 2, iconSize: 12, barHeight: 12,
+    // 표시 폭 예약용 문자열이다. 게임 수치의 최대값을 의미하지 않는다.
+    timeSample: '88:88', counterSample: '88888'
   });
+  const slotCost = Object.freeze({ padding: spacing.micro, gap: spacing.micro, iconSize: 6, fontSize: 8, minFontSize: 6, maxDigits: 3 });
 
   // size = 원본 PNG 및 1배 표시 크기. 파일을 생성하거나 로드하지 않는다.
   // assetKey와 suggestedFile은 이후 에셋 작업 시 참조할 식별자이다.
@@ -83,7 +93,9 @@
   function reserveIcon(g, x, y, size, color) {
     // 실제 보석 이미지를 넣지 않은 점선 자리.
     g.fillStyle(color, 1);
-    for (let i = 0; i < size; i += 2) {
+    for (let i = 0; i < size; i++) {
+      // 양쪽 끝에서 같은 패턴을 시작하여 짝수 크기에서도 대칭을 유지한다.
+      if (Math.min(i, size - 1 - i) % 2 !== 0) continue;
       g.fillRect(x + i, y, 1, 1);
       g.fillRect(x + i, y + size - 1, 1, 1);
       g.fillRect(x, y + i, 1, 1);
@@ -91,37 +103,86 @@
     }
   }
 
-  // 레이블 뒤 실제 측정 폭을 사용해 모든 데이터와 동일 간격을 둔다.
-  function metric(scene, x, label, value) {
-    const labelText = text(scene, x, hud.centerY, label, hud.labelSize, colors.label);
-    return text(scene, x + labelText.width + hud.gap, hud.centerY, value,
-      hud.valueSize, colors.value, 'left', true);
+  // 숫자의 표시 폭은 실제 폰트로 측정한다. 시간/카운터는 예약 폭을 확보하고
+  // 현재 값이 더 길다면 그 폭을 사용한다. 임의의 컬럼 x좌표를 사용하지 않는다.
+  function metricValue(scene, value, reserve) {
+    const item = text(scene, 0, hud.centerY, reserve, hud.valueSize, colors.value, 'left', true);
+    const reservedWidth = item.width;
+    item.setText(value);
+    return { item, width: Math.ceil(Math.max(reservedWidth, item.width)) };
+  }
+
+  function metricLabel(scene, label) {
+    return text(scene, 0, hud.centerY, label, hud.labelSize, colors.label);
+  }
+
+  function metricWidth(labelWidth, valueWidth) {
+    return 2 * hud.padding + Math.ceil(labelWidth) + hud.gap + valueWidth;
   }
 
   function drawHud(scene) {
     const g = scene.add.graphics().setName('top-hud');
     frame(g, 0, 0, spec.width, spec.top, colors.hud, colors.hudBorder);
+
+    const timeLabel = metricLabel(scene, '시간');
+    const time = metricValue(scene, '00:00', hud.timeSample);
+    const killsLabel = metricLabel(scene, '처치 수');
+    const kills = metricValue(scene, '0', hud.counterSample);
+    const progressLabel = metricLabel(scene, '정원 완성도');
+    const gems = metricValue(scene, '0', hud.counterSample);
+
+    // 각 고정 그룹은 내용 폭 + 동일한 좌우 패딩으로 결정한다.
+    // 완성도만 나머지 폭을 사용한다. 구분선 1px은 그룹 간 별도 폭이다.
+    const timeWidth = metricWidth(timeLabel.width, time.width);
+    const killsWidth = metricWidth(killsLabel.width, kills.width);
+    const gemWidth = metricWidth(hud.iconSize, gems.width);
+    const timeEnd = timeWidth;
+    const killsStart = timeEnd + 1;
+    const killsEnd = killsStart + killsWidth;
+    const progressStart = killsEnd + 1;
+    const gemStart = spec.width - gemWidth;
+    const progressEnd = gemStart - 1;
+
     g.fillStyle(0x46515b, 1);
-    hud.separators.forEach(x => g.fillRect(x, spacing.small, 1, spec.top - 2 * spacing.small));
+    [timeEnd, killsEnd, progressEnd].forEach(x => g.fillRect(x, spacing.small, 1, spec.top - 2 * spacing.small));
 
-    const [timeEnd, killsEnd, progressEnd] = hud.separators;
-    metric(scene, hud.padding, '시간', '00:00');
-    metric(scene, timeEnd + hud.padding, '처치 수', '0');
+    function placeMetric(start, label, value) {
+      label.setX(start + hud.padding);
+      value.item.setX(label.x + Math.ceil(label.width) + hud.gap);
+    }
+    placeMetric(0, timeLabel, time);
+    placeMetric(killsStart, killsLabel, kills);
 
-    const label = text(scene, killsEnd + hud.padding, hud.centerY, '정원 완성도',
-      hud.labelSize, colors.label);
-    const barX = label.x + label.width + hud.gap;
+    progressLabel.setX(progressStart + hud.padding);
+    const barX = progressLabel.x + Math.ceil(progressLabel.width) + hud.gap;
     const barW = progressEnd - hud.padding - barX;
     frame(g, barX, hud.centerY - hud.barHeight / 2, barW, hud.barHeight,
       colors.normalFill, colors.normalBorder);
     text(scene, barX + barW / 2, hud.centerY, '0%', 10, '#cad7ce', 'center', true);
 
-    // 아이콘-수치를 한 그룹으로 중앙 정렬하고 아이콘은 예약 공간만 표시한다.
-    const count = text(scene, 0, hud.centerY, '0', hud.valueSize, colors.value, 'left', true);
-    const gemWidth = hud.iconSize + hud.gap + count.width;
-    const gemLeft = (progressEnd + spec.width - gemWidth) / 2;
-    reserveIcon(g, gemLeft, hud.centerY - hud.iconSize / 2, hud.iconSize, colors.reservedIcon);
-    count.setX(gemLeft + hud.iconSize + hud.gap);
+    // 보석도 다른 그룹과 동일한 패딩/간격을 사용한다. 아이콘 위치는
+    // 현재 숫자의 자릿수가 바뀌어도 이동하지 않는다.
+    const iconX = gemStart + hud.padding;
+    reserveIcon(g, iconX, hud.centerY - hud.iconSize / 2, hud.iconSize, colors.reservedIcon);
+    gems.item.setX(iconX + hud.iconSize + hud.gap);
+  }
+
+  function drawSlotCost(scene, g, x, y, size, value) {
+    const c = slotCost;
+    const centerY = y + size / 2;
+    const cost = text(scene, 0, centerY, String(value), c.fontSize, colors.disabledText);
+    const maxTextWidth = size - 2 * c.padding - c.iconSize - c.gap;
+    // 1~3자리 모두 같은 가로 행에 둔다. 3자리일 때만 필요에 따라
+    // 폰트 크기를 줄여 테두리 안쪽 최소 패딩을 보장한다.
+    let fontSize = c.fontSize;
+    while (cost.width > maxTextWidth && fontSize > c.minFontSize) {
+      cost.setFontSize(--fontSize);
+    }
+    const textWidth = Math.ceil(cost.width);
+    const groupWidth = c.iconSize + c.gap + textWidth;
+    const groupX = Math.round(x + (size - groupWidth) / 2);
+    reserveIcon(g, groupX, centerY - c.iconSize / 2, c.iconSize, 0x87958d);
+    cost.setX(groupX + c.iconSize + c.gap);
   }
 
   function drawSlots(scene) {
@@ -136,14 +197,7 @@
     }
     const x = left + s.initial * (s.size + s.gap);
     frame(g, x, s.y, s.size, s.size, colors.disabledFill, colors.disabledBorder);
-    // 24px 정사각형 안에 1~3자리 수가 들어가도록 아이콘/비용을 세로 중앙 정렬.
-    // 아이콘 8px + 2px 간격 + 10px 텍스트 = 20px, 상하 2px.
-    const iconSize = 8;
-    const cost = text(scene, x + s.size / 2, 0, String(s.exampleCost), 9, colors.disabledText, 'center');
-    const groupHeight = iconSize + spacing.micro + cost.height;
-    const groupY = s.y + (s.size - groupHeight) / 2;
-    reserveIcon(g, x + (s.size - iconSize) / 2, groupY, iconSize, 0x87958d);
-    cost.setY(groupY + iconSize + spacing.micro + cost.height / 2);
+    drawSlotCost(scene, g, x, s.y, s.size, s.exampleCost);
     // 확장 칸은 의도적으로 클릭 불가: 재화 획득/소비/확장 로직이 없다.
   }
 
@@ -168,12 +222,12 @@
 
     const header = scene.add.graphics().setDepth(11).setName('blueprint-header');
     frame(header, b.x, b.y, b.width, b.header, colors.hud, colors.hudBorder);
-    text(scene, b.x + spacing.base, b.y + b.header / 2, '도안', 10, '#c7d1d9', 'left', true).setDepth(12);
+    text(scene, b.x + b.padding, b.y + b.header / 2, '도안', 10, '#c7d1d9', 'left', true).setDepth(12);
     const arrow = scene.add.graphics().setDepth(12).setName('blueprint-chevron');
     let expanded = true;
     function drawArrow() {
       arrow.clear().lineStyle(1, 0xa8b5bf, 1);
-      const x = b.x + b.width - spacing.section;
+      const x = b.x + b.width - b.padding - 4;
       const y = b.y + b.header / 2;
       arrow.beginPath();
       arrow.moveTo(x - 4, y + (expanded ? 2 : -2));
@@ -203,5 +257,5 @@
     drawBlueprint(scene);
   }
 
-  window.GardenGameLayout = Object.freeze({ spec, assets, colors, spacing, hud, draw });
+  window.GardenGameLayout = Object.freeze({ spec, assets, colors, spacing, hud, slotCost, draw });
 }());
