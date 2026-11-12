@@ -16,33 +16,23 @@
     constructor() { super('MainMenu'); }
     create() {
       U.background(this, 'MAIN MENU');
-      U.text(this, 87, 142, 'GARDEN', 76, U.C.text, { bold: true });
-      U.text(this, 91, 231, 'TEST', 76, '#e1b875', { bold: true });
-      U.text(this, 94, 326, 'ROGUELIKE / SCENE STRUCTURE', 15, U.C.muted);
+      U.text(this, 640, 131, 'GARDEN', 76, U.C.text, { bold: true, originX: 0.5 });
+      U.text(this, 640, 218, 'TEST', 76, '#e1b875', { bold: true, originX: 0.5 });
+      U.text(this, 640, 305, 'ROGUELIKE / SCENE STRUCTURE', 15, U.C.muted, { originX: 0.5 });
 
-      const x = 270;
-      const w = 358;
-      U.button(this, x, 374, w, '새 게임', () => this.scene.start('Game'), { primary: true });
-      U.button(this, x, 430, w, '이어하기 · 미구현', null, { disabled: true });
-      U.button(this, x, 486, w, '설정', () => U.openSubscene(this, 'Settings'));
-      U.button(this, x, 542, w, '조작법', () => U.openSubscene(this, 'Controls'));
-      U.button(this, x, 598, w, '종료 · 웹 미지원', null, { disabled: true });
+      const x = 640;
+      const w = 390;
+      U.button(this, x, 363, w, '새 게임', () => this.scene.start('Game'), { primary: true });
+      U.button(this, x, 419, w, '이어하기 · 미구현', null, { disabled: true });
+      U.button(this, x, 475, w, '설정', () => U.openSubscene(this, 'Settings'));
+      U.button(this, x, 531, w, '도감', () => U.openSubscene(this, 'Codex'));
+      U.button(this, x, 587, w, '종료 · 웹 미지원', null, { disabled: true });
 
-      U.panel(this, 965, 366, 400, 476, { fill: 0x111a25, alpha: 0.96 });
-      U.text(this, 798, 167, '프로토타입 안내', 23, U.C.text, { bold: true });
-      U.rule(this, 798, 207, 1134, 207, U.C.border, 1);
-      U.text(this, 798, 231, '이 버전은 화면 구성만 포함합니다.', 18, U.C.text);
-      U.text(this, 798, 274, '게임 진행 / 저장 / 승패 판정은\n구현하지 않았습니다.', 17, U.C.muted, { lineSpacing: 12 });
-      U.text(this, 798, 363, '• 마우스로 메뉴 선택\n• 게임 화면에서 ESC 일시정지\n• 설정 / 확인 / 결과 화면', 16, U.C.muted, { lineSpacing: 13 });
-
-      U.button(this, 965, 512, 330, '크레딧', () => U.openSubscene(this, 'Credits'), { height: 46, fontSize: 17 });
-
+      // 결과 씬 미리보기는 명시적인 개발용 URL에서만 나타난다.
       if (previewMode) {
-        U.text(this, 799, 549, '개발용 결과 화면 확인 (?preview=1)', 13, '#e1b875');
-        U.button(this, 880, 595, 157, '성공 화면', () => this.scene.start('Victory'), { height: 40, fontSize: 15 });
-        U.button(this, 1050, 595, 157, '실패 화면', () => this.scene.start('Defeat'), { height: 40, fontSize: 15 });
-      } else {
-        U.text(this, 800, 577, '실제 게임 로직은 후속 단계에서 별도 구현', 13, U.C.muted);
+        U.text(this, 1060, 441, '개발용 결과 화면 확인', 13, '#e1b875', { originX: 0.5 });
+        U.button(this, 1060, 485, 230, '성공 화면', () => this.scene.start('Victory'), { height: 40, fontSize: 15 });
+        U.button(this, 1060, 537, 230, '실패 화면', () => this.scene.start('Defeat'), { height: 40, fontSize: 15 });
       }
     }
   }
@@ -95,7 +85,7 @@
       U.button(this, 640, 268, 392, '계속하기', () => this.resumeGame(), { primary: true });
       U.button(this, 640, 327, 392, '재시작 · 미구현', null, { disabled: true });
       U.button(this, 640, 386, 392, '설정', () => U.openSubscene(this, 'Settings'));
-      U.button(this, 640, 445, 392, '조작법', () => U.openSubscene(this, 'Controls'));
+      U.button(this, 640, 445, 392, '도감', () => U.openSubscene(this, 'Codex'));
       U.button(this, 640, 504, 392, '메인 메뉴로', () => {
         this.scene.pause('Pause');
         this.scene.launch('Confirm', { returnTo: 'Pause', action: 'returnToMenu' });
@@ -175,39 +165,13 @@
     }
   }
 
-  class ControlsScene extends Subscene {
-    constructor() { super('Controls'); }
+  class CodexScene extends Subscene {
+    constructor() { super('Codex'); }
     create() {
-      this.drawShell('조작법', '현재 구현된 UI 입력만 표기합니다. 게임 캐릭터의 조작은 없습니다.');
-      const rows = [
-        ['마우스 왼쪽 클릭', '메뉴 버튼 선택'],
-        ['ESC · 게임 화면', '일시정지 메뉴 열기'],
-        ['ESC · 일시정지', '게임 화면으로 돌아가기'],
-        ['ESC · 하위 메뉴', '이전 화면으로 돌아가기']
-      ];
-      rows.forEach((row, index) => {
-        const y = 265 + index * 69;
-        U.text(this, 262, y, row[0], 20, U.C.text);
-        U.text(this, 1019, y + 2, row[1], 17, U.C.muted, { originX: 1 });
-        U.rule(this, 259, y + 46, 1026, y + 46, U.C.border, 0.7);
-      });
-      U.text(this, 262, 570, '이동·공격·상호작용 단축키는 정의하지 않았습니다.', 14, '#e1b875');
-    }
-  }
-
-  class CreditsScene extends Subscene {
-    constructor() { super('Credits'); }
-    create() {
-      this.drawShell('크레딧', '프로젝트에서 현재 확인 가능한 정보만 표시합니다.');
-      U.text(this, 266, 284, '프로젝트', 17, U.C.muted);
-      U.text(this, 488, 284, 'garden-test', 20, U.C.text);
-      U.rule(this, 262, 326, 1015, 326, U.C.border, 0.7);
-      U.text(this, 266, 363, '게임 엔진', 17, U.C.muted);
-      U.text(this, 488, 363, 'Phaser 3.90.0 (MIT License)', 20, U.C.text);
-      U.rule(this, 262, 405, 1015, 405, U.C.border, 0.7);
-      U.text(this, 266, 443, '제작 크레딧', 17, U.C.muted);
-      U.text(this, 488, 443, '아직 지정되지 않음', 20, U.C.text);
-      U.text(this, 265, 544, '실제 크레딧은 확인된 정보만 추가합니다.', 14, '#e1b875');
+      this.drawShell('도감', '향후 맵 도감이 들어갈 화면입니다.');
+      U.panel(this, 640, 390, 762, 312, { fill: 0x101823 });
+      U.text(this, 640, 349, '맵 도감', 28, U.C.text, { bold: true, originX: 0.5 });
+      U.text(this, 640, 416, '맵 도감 콘텐츠 미구현', 18, U.C.muted, { originX: 0.5 });
     }
   }
 
@@ -272,8 +236,7 @@
     GameScene: GameScene,
     PauseScene: PauseScene,
     SettingsScene: SettingsScene,
-    ControlsScene: ControlsScene,
-    CreditsScene: CreditsScene,
+    CodexScene: CodexScene,
     ConfirmScene: ConfirmScene,
     VictoryScene: VictoryScene,
     DefeatScene: DefeatScene
