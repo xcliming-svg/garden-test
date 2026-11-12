@@ -337,23 +337,27 @@
     return layout;
   }
 
-  // 필드 드롭만 카드 면/테두리를 숨긴다. 장착 슬롯과 스냅 고스트는 기존 카드 표현 유지.
-  // 컨테이너 위치와 26px 히트 영역은 고정하고 이미지 자식만 움직인다.
+  // 필드 드롭은 흰색 24px 사각형과 16px 아이콘을 함께 부유시킨다.
+  // 26px 히트 영역은 고정하고 장착 슬롯/스냅 고스트는 기존 카드 표현 유지.
   function floatingDrop(scene, marker, index) {
     const [border, face, image] = marker.list;
     border.setVisible(false);
-    face.setVisible(false);
-    const shadow = scene.add.ellipse(0, 10, 12, 3, P.n.shadow, 0.25);
+    face.setVisible(true).setFillStyle(P.n.paper, 1);
+    // 기존 카드의 호버 콜백이 흰색 면을 어둡게 변경하지 않도록 드롭만 재정의.
+    marker.setStrokeStyle = () => marker;
+    const shadow = scene.add.ellipse(0, 15, 12, 3, P.n.shadow, 0.25);
     marker.add(shadow);
     const period = 1800, phase = index * 317;
     function update(time) {
       const floating = marker.visible && marker.depth < 30;
       shadow.setVisible(floating);
       if (!floating) {
+        face.setY(0);
         image.setY(0);
         return;
       }
       const lift = (1 - Math.cos((time + phase) * Math.PI * 2 / period)) * 2;
+      face.setY(-Math.round(lift));
       image.setY(-Math.round(lift));
       shadow.setScale(1 - lift * 0.0625, 1);
       shadow.setAlpha(1 - lift * 0.125);
