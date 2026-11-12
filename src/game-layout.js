@@ -164,7 +164,7 @@
   }
 
   function draw(scene) {
-    scene.cameras.main.setZoom(1).setScroll(0, 0);
+    window.GardenUI.fitCamera(scene, spec.width, spec.height);
     scene.cameras.main.setBackgroundColor('#17251e');
     const g = scene.add.graphics().setName('battlefield');
     g.fillStyle(colors.field, 1).fillRect(0, spec.top, spec.width, spec.fieldHeight);

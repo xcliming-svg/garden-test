@@ -22,6 +22,8 @@
   function text(scene, x, y, content, size, color, options) {
     const opts = options || {};
     const item = scene.add.text(x, y, content, {
+      // 텍스트의 논리 크기는 유지하고 현재 렌더 배율에 맞는 텍스처를 만든다.
+      resolution: Math.max(1, Math.ceil(scene.cameras.main.zoom)),
       fontFamily: font,
       fontSize: String(size) + 'px',
       color: color || C.text,
@@ -33,6 +35,11 @@
     item.setOrigin(opts.originX === undefined ? 0 : opts.originX,
       opts.originY === undefined ? 0 : opts.originY);
     if (opts.alpha !== undefined) item.setAlpha(opts.alpha);
+    if (scene.layoutTextObjects) {
+      const tracked = scene.layoutTextObjects;
+      tracked.add(item);
+      item.once('destroy', () => tracked.delete(item));
+    }
     return item;
   }
 
@@ -54,10 +61,36 @@
     return graphics;
   }
 
-  // 기존 메뉴/결과/오버레이의 1280×720 배치를 유지하면서
-  // 640×360 논리 캔버스에 맞춘다. Game 씬은 이 카메라를 사용하지 않는다.
+  // 각 씬의 디자인 좌표를 실제 16:9 렌더링 버퍼에 매핑한다.
+  // Game: 640×360, 기존 메뉴/오버레이: 1280×720.
+  // 일시정지 중인 씬도 resize 이벤트에 맞춰 카메라와 텍스트를 갱신한다.
+  function fitCamera(scene, designWidth, designHeight) {
+    const tracked = new Set();
+    scene.layoutTextObjects = tracked;
+
+    function resize(gameSize) {
+      const width = gameSize.width;
+      const height = gameSize.height;
+      const zoom = Math.min(width / designWidth, height / designHeight);
+      scene.cameras.main.setSize(width, height).setZoom(zoom)
+        .centerOn(designWidth / 2, designHeight / 2);
+      const resolution = Math.max(1, Math.ceil(zoom));
+      tracked.forEach(item => {
+        if (item.style.resolution !== resolution) item.setResolution(resolution);
+      });
+    }
+
+    resize(scene.scale.gameSize);
+    scene.scale.on('resize', resize);
+    scene.events.once('shutdown', () => {
+      scene.scale.off('resize', resize);
+      tracked.clear();
+      scene.layoutTextObjects = null;
+    });
+  }
+
   function legacyCamera(scene) {
-    scene.cameras.main.setZoom(0.5).centerOn(W / 2, H / 2);
+    fitCamera(scene, W, H);
   }
 
   function background(scene, label) {
@@ -138,7 +171,7 @@
 
   window.GardenUI = Object.freeze({
     W: W, H: H, C: C, text: text, panel: panel, rule: rule,
-    background: background, button: button, overlay: overlay,
+    background: background, button: button, overlay: overlay, fitCamera: fitCamera,
     bindEscape: bindEscape, openSubscene: openSubscene,
     closeSubscene: closeSubscene
   });

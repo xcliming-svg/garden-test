@@ -3,30 +3,33 @@
 
   // Phaser만 생성한다. 게임 상태, 전투 루프, 생성 로직 등은 등록하지 않는다.
   const S = window.GardenScenes;
-  const L = window.GardenGameLayout.spec;
   const parent = document.getElementById('game');
 
-  // Canvas는 640×360으로 고정한다. 브라우저의 CSS 픽셀 기준 정수 배율을 우선한다.
-  // 640×360보다 작은 창에 한해 잘리지 않도록 비정수 축소를 허용한다.
+  // 640×360은 게임 좌표 기준일 뿐 실제 렌더링 버퍼 크기가 아니다.
+  // 브라우저 가용 영역에 들어가는 최대 16:9 크기를 사용한다.
+  // 16×9 단위로 맞추므로 실제 배율은 1.5, 2.125 등 비정수일 수 있다.
   function fitParent() {
-    const available = Math.min(window.innerWidth / L.width, window.innerHeight / L.height);
-    const scale = available >= 1 ? Math.floor(available) : available;
-    parent.style.width = Math.max(1, Math.floor(L.width * scale)) + 'px';
-    parent.style.height = Math.max(1, Math.floor(L.height * scale)) + 'px';
+    const unit = Math.max(1, Math.floor(Math.min(window.innerWidth / 16, window.innerHeight / 9)));
+    const width = unit * 16;
+    const height = unit * 9;
+    parent.style.width = width + 'px';
+    parent.style.height = height + 'px';
+    return { width, height };
   }
-  fitParent();
-  window.addEventListener('resize', fitParent);
+  const initial = fitParent();
 
-  new Phaser.Game({
+  const game = new Phaser.Game({
     type: Phaser.AUTO,
     parent: 'game',
-    width: L.width,
-    height: L.height,
+    width: initial.width,
+    height: initial.height,
     backgroundColor: '#0b1018',
-    render: { antialias: false, pixelArt: true, roundPixels: true },
+    // UI 글자는 부드럽게 렌더링한다. 실제 픽셀아트 PNG는 향후
+    // 텍스처별 NEAREST 필터를 지정한다(전체 Canvas를 픽셀화하지 않는다).
+    render: { antialias: true, pixelArt: false, roundPixels: false },
     scale: {
-      mode: Phaser.Scale.FIT,
-      autoCenter: Phaser.Scale.CENTER_BOTH
+      mode: Phaser.Scale.RESIZE,
+      autoCenter: Phaser.Scale.NO_CENTER
     },
     scene: [
       S.BootScene,
@@ -39,5 +42,10 @@
       S.VictoryScene,
       S.DefeatScene
     ]
+  });
+
+  window.addEventListener('resize', () => {
+    const size = fitParent();
+    if (game.isBooted) game.scale.setParentSize(size.width, size.height);
   });
 }());

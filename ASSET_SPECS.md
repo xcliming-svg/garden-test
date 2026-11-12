@@ -1,6 +1,6 @@
 # 전장 UI 및 에셋 규격
 
-사용자가 승인한 `feature/battlefield-layout` 화면 기준. **640×360 논리 픽셀**을 단일 기준으로 사용한다. 720p는 ×2, 1080p는 ×3, 1440p는 ×4, 4K는 ×6. 실제 창의 가용 CSS 픽셀 기준 최대 정수 배율과 여백을 사용하며, 640×360 미만 창에만 비정수 축소를 허용한다. 브라우저 줌 또는 운영체제 배율에 따라 물리 픽셀과 CSS 픽셀은 다를 수 있다.
+사용자가 승인한 `feature/battlefield-layout` 화면 기준. **640×360 논리 픽셀**을 단일 기준으로 사용한다. 720p는 ×2, 1080p는 ×3, 1440p는 ×4, 4K는 ×6. 실제 렌더링 버퍼는 창의 가용 CSS 픽셀에 들어가는 최대 16:9 크기(16×9의 정수 배수)로 조절한다. 논리 좌표에 대한 비정수 배율도 허용한다. 16:9가 아닌 창에는 필요한 방향으로만 여백을 남긴다. 브라우저 줌 또는 운영체제 배율에 따라 물리 픽셀과 CSS 픽셀은 다를 수 있다.
 
 ## 1. 레이아웃
 
@@ -22,7 +22,7 @@
 | 확장 슬롯(1칸) | 364, 330 | 24×24 | 48×48 |
 | 슬롯 간격 | — | 4 | 8 |
 
-정원 외부 전장에는 그리드를 그리지 않는다. 꽃이나 도안 그림을 임의로 제작하지 않는다. 도안 접기는 제목 영역만 유지하며 정원이나 전장의 위치는 바뀌지 않는다. 메인 메뉴 등 기존 1280×720 배치의 씬은 카메라 0.5배로 표시하고, Game 씬만 640×360 좌표를 직접 사용한다.
+정원 외부 전장에는 그리드를 그리지 않는다. 꽃이나 도안 그림을 임의로 제작하지 않는다. 도안 접기는 제목 영역만 유지하며 정원이나 전장의 위치는 바뀌지 않는다. 메인 메뉴 등 기존 1280×720 배치와 Game 씬의 640×360 좌표를 각각 실제 렌더링 버퍼에 맞춰 카메라 배율로 매핑한다. UI 글자는 해당 배율 이상으로 텍스처를 생성하고 안티앨리어싱을 유지한다. 향후 픽셀아트 PNG는 텍스처별 Phaser.Textures.FilterMode.NEAREST를 설정한다. 비정수 배율에서 픽셀의 화면상 폭이 균일하지 않을 수 있다.
 
 ## 2. PNG 출력 크기 및 임시 도형
 
@@ -54,8 +54,10 @@ SVG 원본은 보존한다. 다음은 **PNG 래스터화 목표 크기**이며 �
 
 ## 4. 참고 근거와 한계 (2026-11-12)
 
-- Phaser 3.90.0 ScaleManager: https://docs.phaser.io/api-documentation/3.90.0/class/scale-scalemanager — 고정 캔버스를 부모 영역에 맞춰 표시하는 FIT 방식. 부모 영역을 최대 정수 배율 크기로 제한하는 것은 프로젝트의 구현 결정이다.
-- Phaser 3.90.0 Core types: https://phaser.io/oss/docs/api-documentation/3.90.0/typedef/types-core — pixelArt 옵션, 정수 좌표 렌더링. 실제 디스플레이 물리 픽셀을 보장하지 않는다.
+- Phaser 3.90.0 ScaleManager: https://docs.phaser.io/api-documentation/3.90.0/class/scale-scalemanager — RESIZE 방식으로 실제 Canvas를 부모 영역에 맞춰 변경한다. 부모를 최대 16:9 크기로 제한하는 것은 프로젝트의 구현 결정이다.
+- Phaser 3.90.0 Core types: https://phaser.io/oss/docs/api-documentation/3.90.0/typedef/types-core — pixelArt 옵션, 정수 좌표 렌더링. UI 글자의 가독성을 위해 전역 pixelArt는 사용하지 않고, 실제 픽셀아트 텍스처에 개별 최근접 필터를 적용한다.
+- Phaser Text: https://docs.phaser.io/api-documentation/3.90.0/class/gameobjects-text — setResolution을 이용한 고해상도 글자 텍스처.
+- Phaser Camera: https://docs.phaser.io/api-documentation/3.90.0/class/cameras-scene2d-basecamera — setSize, setZoom, centerOn을 통한 디자인 좌표 매핑.
 - Godot 공식 Multiple resolutions: https://docs.godotengine.org/en/4.5/tutorials/rendering/multiple_resolutions.html — 픽셀아트의 640×360 기준 해상도와 정수배 확대 참고. Godot 엔진을 사용한다는 뜻은 아니다.
 - Terraria 공식 위키 Minimap: https://terraria.wiki.gg/wiki/Minimap — 축소 지도 표시/숨김/줌 사례. 이번 접이식 도안의 정확한 수치는 사용자와 확정한 디자인이다.
 
