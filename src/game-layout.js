@@ -13,8 +13,9 @@
   const blueprintCell = 8, blueprintLine = 1, blueprintPitch = blueprintCell + blueprintLine;
   const blueprintGrid = 10 * blueprintPitch + blueprintLine;
   const hudGap = 5;
-  // 제목 박스의 내용 여백과 그리드 간격은 HUD 레이블 간격을 공유한다.
-  const blueprintPadding = hudGap;
+  // FHD 실제 시간 레이블 끝~수치 시작은 15 물리 px(7.5 논리 px).
+  // HUD의 객체 간격 5px에 포함되지 않는 글리프 여백까지 반영한다.
+  const blueprintPadding = 7.5;
   // FHD(2x) 프레임버퍼의 밝은 글리프 실측: 제목 21px, HUD 그룹 마지막 픽셀 Y=40.
   // 투명한 텍스트 객체 여백을 제외한 가시 영역 기준. 1px=0.5 논리 px.
   const hudCenterY = 15, hudInkBottom = 20.5, blueprintInkHeight = 10.5;
@@ -37,11 +38,11 @@
     top: topHudHeight, fieldHeight, bottom: bottomHudHeight,
     garden: Object.freeze({ x: (width - gardenSize) / 2, y: Math.floor(topHudHeight + (fieldHeight - gardenSize) / 2), columns: 10, rows: 10, cell: gardenCell, line: cellLine, gap: 0, pitch: gardenPitch }),
     blueprint: Object.freeze({
-      x: 10, y: blueprintY, padding: blueprintPadding, gap: hudGap, topGap: blueprintTopGap, header: blueprintHeader,
+      x: 10, y: blueprintY, padding: blueprintPadding, gap: blueprintPadding, topGap: blueprintTopGap, header: blueprintHeader,
       columns: 10, rows: 10, cell: blueprintCell, line: blueprintLine, pitch: blueprintPitch,
       width: blueprintGrid,
-      height: blueprintHeader + hudGap + blueprintGrid,
-      gridX: 10, gridY: blueprintY + blueprintHeader + hudGap
+      height: blueprintHeader + blueprintPadding + blueprintGrid,
+      gridX: 10, gridY: blueprintY + blueprintHeader + blueprintPadding
     }),
     slots: Object.freeze({ size: slotSize, cell: slotSize - 2 * cellLine, line: cellLine, gap: 3, initial: 4, preview: 9, max: 10, y: height - bottomHudHeight + (bottomHudHeight - slotSize) / 2, exampleCost: 999 })
   });

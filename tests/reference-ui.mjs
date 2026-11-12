@@ -10,7 +10,7 @@ mkdirSync(out, {recursive:true});
 const require = createRequire(import.meta.url);
 const phaserPath = require.resolve('phaser/dist/phaser.min.js');
 const originals = Object.fromEntries(['ui.js','game-layout.js','scenes.js','main.js'].map(n=>[n,readFileSync(join(root,'src',n),'utf8').replace(/\r\n/g,'\n')]));
-const configs=[{id:'R',name:'screenshot-matched UI',top:32,bottom:44,margin:10,label:12,value:12,timer:12,body:12,menu:12,navFont:14,navHeight:24,navGap:3,blueCell:8,bluePad:5,blueHead:20.5,slotGap:3,statLabel:12,statValue:16,statCol:74,statGap:3,hudGap:5,bar:14,tipW:240,tipPad:6,tipRow:5,tipLine:4,tipFont:12}];
+const configs=[{id:'R',name:'screenshot-matched UI',top:32,bottom:44,margin:10,label:12,value:12,timer:12,body:12,menu:12,navFont:14,navHeight:24,navGap:3,blueCell:8,bluePad:7.5,blueHead:25.5,slotGap:3,statLabel:12,statValue:16,statCol:74,statGap:3,hudGap:5,bar:14,tipW:240,tipPad:6,tipRow:5,tipLine:4,tipFont:12}];
 function replace(s,a,b){if(!s.includes(a))throw Error('missing anchor '+a);return s.replaceAll(a,b);}
 const variants={R:originals};
 const mime={'.js':'application/javascript','.html':'text/html; charset=utf-8','.css':'text/css; charset=utf-8','.txt':'text/plain; charset=utf-8','.woff2':'font/woff2'};
@@ -108,7 +108,7 @@ for(const c of configs){
     check(label+' fixed sizes',JSON.stringify(m.fixed)===JSON.stringify({garden:22,slot:34,slotOuter:36,flower:16,item:16,card:36,line:1}));
     check(label+' HUD bounds',m.hud.length>=6&&m.hud.every(t=>t.x>=-eps&&t.y>=-eps&&t.x+t.w<=960+eps&&t.y+t.h<=m.top+eps),JSON.stringify(m.hud));
     const bp=m.blueprintMetrics;
-    check(label+' blueprint alignment and shared 5px padding',bp.width===91&&bp.gridX===bp.headerX&&bp.titlePadX===5&&bp.gridGap===5&&m.blueprint.width===91&&m.blueprint.height===m.blueprint.header+5+91&&bp.height===20.5&&bp.topGap===11.5,JSON.stringify(bp));
+    check(label+' blueprint alignment and visible HUD spacing',bp.width===91&&bp.gridX===bp.headerX&&bp.titlePadX===7.5&&bp.gridGap===7.5&&m.blueprint.width===91&&m.blueprint.height===m.blueprint.header+7.5+91&&bp.height===25.5&&bp.topGap===11.5,JSON.stringify(bp));
     check(label+' HUD nonoverlap',m.hud.every((a,i)=>m.hud.every((b,j)=>i===j||!overlap(a,b))));
     check(label+' equal HUD widths, center and labels',m.top===32&&m.hudLayout.centerY===15&&Math.abs(m.hudLayout.timeGap-5)<0.01&&Math.abs(m.hudLayout.barGap-5)<0.01&&m.hudLayout.metricWidth>0&&m.hudLayout.gemX===2*m.hudLayout.metricWidth&&3*m.hudLayout.metricWidth<=m.hudLayout.progressX&&m.hudLayout.labelColors.every(c=>c.toLowerCase()==='#b0b0b0')&&m.hudLayout.valueColors.every(c=>c.toLowerCase()==='#ffffff'),JSON.stringify(m.hudLayout));
     check(label+' stat bounds',m.stats.length>=12&&m.stats.every(t=>t.y>=540-m.bottom-eps&&t.y+t.h<=540+eps&&t.x>=-eps&&t.x+t.w<=960+eps),JSON.stringify(m.stats));
@@ -169,7 +169,7 @@ for(const c of configs){
             titleBottomGap:header.bottom-title.bottom,gridGap:grid.top-header.bottom-1};
         },{data:png.toString('base64'),hud:m.hud,bp:m.blueprint});
         console.log('PIXEL_REPORT '+JSON.stringify(pixels));
-        check('FHD actual screenshot alignment and visible gaps',pixels.header.width===182&&pixels.grid.width===182&&pixels.header.left===pixels.grid.left&&Math.abs(pixels.hudBottomGap-pixels.headerTopGap)<=1&&[pixels.titleLeftGap,pixels.titleTopGap,pixels.titleBottomGap].every(g=>Math.abs(g-pixels.gridGap)<=1)&&pixels.gridGap===10,JSON.stringify(pixels));
+        check('FHD actual screenshot alignment and visible gaps',pixels.header.width===182&&pixels.grid.width===182&&pixels.header.left===pixels.grid.left&&Math.abs(pixels.hudBottomGap-pixels.headerTopGap)<=1&&[pixels.titleLeftGap,pixels.titleTopGap,pixels.titleBottomGap].every(g=>Math.abs(g-pixels.gridGap)<=1)&&pixels.gridGap===pixels.timeGap&&pixels.timeGap===15,JSON.stringify(pixels));
       }
     }
   }
