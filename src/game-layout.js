@@ -12,13 +12,16 @@
   const { unit, tile, spacing } = U;
   const blueprintCell = 8, blueprintLine = 1, blueprintPitch = blueprintCell + blueprintLine;
   const blueprintGrid = 10 * blueprintPitch + blueprintLine;
-  const blueprintPadding = 4;
-  const blueprintHeader = 22;
+  const hudGap = 5;
+  // 제목 박스의 내용 여백과 그리드 간격은 HUD 레이블 간격을 공유한다.
+  const blueprintPadding = hudGap;
+  const blueprintHeader = U.fontSize.base + 2 * blueprintPadding;
   const width = U.W, height = U.H;
   const topHudHeight = 32;
   const bottomHudHeight = 44;
   const fieldHeight = height - topHudHeight - bottomHudHeight;
-  const blueprintY = topHudHeight + 10;
+  const blueprintTopGap = 10;
+  const blueprintY = topHudHeight + blueprintTopGap;
   // 참조 트리 외형 24px = 내부 22px + 1px 프레임. 기존 대형 비교는 내부 32px 유지.
   // 이전 ?garden=36 링크는 대형 비교의 호환 별칭으로 유지한다.
   const gardenMode = new URLSearchParams(window.location.search).get('garden');
@@ -31,17 +34,17 @@
     top: topHudHeight, fieldHeight, bottom: bottomHudHeight,
     garden: Object.freeze({ x: (width - gardenSize) / 2, y: Math.floor(topHudHeight + (fieldHeight - gardenSize) / 2), columns: 10, rows: 10, cell: gardenCell, line: cellLine, gap: 0, pitch: gardenPitch }),
     blueprint: Object.freeze({
-      x: 10, y: blueprintY, padding: blueprintPadding, header: blueprintHeader,
+      x: 10, y: blueprintY, padding: blueprintPadding, gap: hudGap, topGap: blueprintTopGap, header: blueprintHeader,
       columns: 10, rows: 10, cell: blueprintCell, line: blueprintLine, pitch: blueprintPitch,
-      width: blueprintGrid + 2 * blueprintPadding,
-      height: blueprintHeader + blueprintGrid + 2 * blueprintPadding,
-      gridX: 10 + blueprintPadding, gridY: blueprintY + blueprintHeader + blueprintPadding
+      width: blueprintGrid,
+      height: blueprintHeader + hudGap + blueprintGrid,
+      gridX: 10, gridY: blueprintY + blueprintHeader + hudGap
     }),
     slots: Object.freeze({ size: slotSize, cell: slotSize - 2 * cellLine, line: cellLine, gap: 3, initial: 4, preview: 9, max: 10, y: height - bottomHudHeight + (bottomHudHeight - slotSize) / 2, exampleCost: 999 })
   });
 
   const hud = Object.freeze({
-    padding: 10, gap: 5, labelSize: 12, valueSize: 12, timeSize: 12,
+    padding: 10, gap: hudGap, labelSize: 12, valueSize: 12, timeSize: 12,
     centerY: 15, iconSize: 14, barHeight: 14, barWidth: 158, // 외형 14, 이중 프레임 2px
     columnUnit: 1, minMetricWidth: 0, hourDigits: 4, counterDigits: 12, minBarWidth: tile * 4,
     // 표시 폭 예약 기준이며 게임 데이터의 최대값이 아니다.
@@ -402,12 +405,12 @@
 
     const header = scene.add.graphics().setDepth(11).setName('blueprint-header');
     frame(header, b.x, b.y, b.width, b.header, R.n.header, R.n.panelBorder);
-    text(scene, b.x + b.padding, b.y + b.header / 2, '도안', window.GardenUI.fontSize.base, colors.label, 'left').setDepth(12);
+    text(scene, b.x + b.padding, b.y + b.header / 2, '도안', window.GardenUI.fontSize.base, colors.label, 'left').setDepth(12).setName('blueprint-title');
     const arrow = scene.add.graphics().setDepth(12).setName('blueprint-chevron');
     let expanded = true;
     function drawArrow() {
       arrow.clear().lineStyle(1, R.n.label, 1);
-      const x = b.x + b.width - b.padding - spacing.base;
+      const x = b.x + b.width - b.padding - spacing.small;
       const y = b.y + b.header / 2;
       arrow.beginPath();
       arrow.moveTo(x - spacing.small, y + (expanded ? spacing.micro : -spacing.micro));

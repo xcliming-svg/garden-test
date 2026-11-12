@@ -10,7 +10,7 @@ mkdirSync(out, {recursive:true});
 const require = createRequire(import.meta.url);
 const phaserPath = require.resolve('phaser/dist/phaser.min.js');
 const originals = Object.fromEntries(['ui.js','game-layout.js','scenes.js','main.js'].map(n=>[n,readFileSync(join(root,'src',n),'utf8').replace(/\r\n/g,'\n')]));
-const configs=[{id:'R',name:'screenshot-matched UI',top:32,bottom:44,margin:10,label:12,value:12,timer:12,body:12,menu:12,navFont:14,navHeight:24,navGap:3,blueCell:8,bluePad:4,blueHead:22,slotGap:3,statLabel:12,statValue:16,statCol:74,statGap:3,hudGap:5,bar:14,tipW:240,tipPad:6,tipRow:5,tipLine:4,tipFont:12}];
+const configs=[{id:'R',name:'screenshot-matched UI',top:32,bottom:44,margin:10,label:12,value:12,timer:12,body:12,menu:12,navFont:14,navHeight:24,navGap:3,blueCell:8,bluePad:5,blueHead:22,slotGap:3,statLabel:12,statValue:16,statCol:74,statGap:3,hudGap:5,bar:14,tipW:240,tipPad:6,tipRow:5,tipLine:4,tipFont:12}];
 function replace(s,a,b){if(!s.includes(a))throw Error('missing anchor '+a);return s.replaceAll(a,b);}
 const variants={R:originals};
 const mime={'.js':'application/javascript','.html':'text/html; charset=utf-8','.css':'text/css; charset=utf-8','.txt':'text/plain; charset=utf-8','.woff2':'font/woff2'};
@@ -91,8 +91,11 @@ for(const c of configs){
     const context=document.createElement('canvas').getContext('2d');
     const ink=(size,text)=>{context.font=size+'px '+U.fontFamily;let m=context.measureText(text);return m.actualBoundingBoxAscent+m.actualBoundingBoxDescent;};
     const blueprint=L.spec.blueprint,slot=bl.slots[9];
+    const title=visibleText.find(o=>o.name==='blueprint-title'), toggle=s.children.getByName('blueprint-toggle');
+    const hudBottom=L.spec.top-Math.max(clock.y+clock.h,timeValue.y+timeValue.h);
+    const blueprintMetrics={topGap:blueprint.y-L.spec.top,hudBottom,roundedHudBottom:Math.round(hudBottom),titlePadX:title.x-blueprint.x,titlePadTop:title.y-blueprint.y,titlePadBottom:blueprint.y+blueprint.header-title.y-title.h,titleHeight:title.h,gridGap:blueprint.gridY-blueprint.y-blueprint.header,gridX:blueprint.gridX,headerX:toggle.x-toggle.width/2,width:toggle.width,height:toggle.height};
     const enemies=list.filter(o=>o.name?.startsWith('placeholder:'));
-    return {zoom:s.cameras.main.zoom,canvas:[s.scale.gameSize.width,s.scale.gameSize.height],top:L.spec.top,bottom:L.spec.bottom,field:L.spec.fieldHeight,garden:L.spec.garden,blueprint,slots:bl.slots,slotGap:L.spec.slots.gap,stats,side:bl.sideWidth,sideLeft:bl.left,sideRight:bl.right,slotLeft:bl.slotLeft,slotWidth:bl.totalWidth,hud,hudLayout,cost,
+    return {zoom:s.cameras.main.zoom,canvas:[s.scale.gameSize.width,s.scale.gameSize.height],top:L.spec.top,bottom:L.spec.bottom,field:L.spec.fieldHeight,garden:L.spec.garden,blueprint,blueprintMetrics,slots:bl.slots,slotGap:L.spec.slots.gap,stats,side:bl.sideWidth,sideLeft:bl.left,sideRight:bl.right,slotLeft:bl.slotLeft,slotWidth:bl.totalWidth,hud,hudLayout,cost,
       fixed:{garden:L.spec.garden.cell,slot:L.spec.slots.cell,slotOuter:L.spec.slots.size,flower:L.assets.flower.size,item:L.assets.item.size,card:L.assets.item.cardSize,line:L.spec.garden.line},
       markerOverflow:enemies.filter(o=>o.visible&&(o.y-(o.height||o.displayHeight)/2<L.spec.top||o.y+(o.height||o.displayHeight)/2>L.spec.top+L.spec.fieldHeight)).map(o=>o.name),
       ink:{label:ink(L.hud.labelSize,'정원 완성도'),value:ink(L.hud.valueSize,'999,999'),timer:ink(L.hud.timeSize,'00:00:00'),statLabel:ink(L.bottomStats.fontSize,'초당 피해량'),statValue:ink(L.bottomStats.valueSize,'100 +24'),tip:ink(L.itemTooltip.fontSize,'획득 범위가 증가합니다.'),menu:ink(U.fontSize.menuAction,'새 게임')},
@@ -104,6 +107,8 @@ for(const c of configs){
     const eps=0.6;
     check(label+' fixed sizes',JSON.stringify(m.fixed)===JSON.stringify({garden:22,slot:34,slotOuter:36,flower:16,item:16,card:36,line:1}));
     check(label+' HUD bounds',m.hud.length>=6&&m.hud.every(t=>t.x>=-eps&&t.y>=-eps&&t.x+t.w<=960+eps&&t.y+t.h<=m.top+eps),JSON.stringify(m.hud));
+    const bp=m.blueprintMetrics;
+    check(label+' blueprint alignment and shared 5px padding',bp.width===91&&bp.gridX===bp.headerX&&bp.titlePadX===5&&bp.gridGap===5&&m.blueprint.width===91&&m.blueprint.height===m.blueprint.header+5+91&&Math.abs(bp.titlePadTop-5)<=.5&&Math.abs(bp.titlePadBottom-5)<=.5&&bp.topGap===bp.roundedHudBottom,JSON.stringify(bp));
     check(label+' HUD nonoverlap',m.hud.every((a,i)=>m.hud.every((b,j)=>i===j||!overlap(a,b))));
     check(label+' equal HUD widths, center and labels',m.top===32&&m.hudLayout.centerY===15&&Math.abs(m.hudLayout.timeGap-5)<0.01&&Math.abs(m.hudLayout.barGap-5)<0.01&&m.hudLayout.metricWidth>0&&m.hudLayout.gemX===2*m.hudLayout.metricWidth&&3*m.hudLayout.metricWidth<=m.hudLayout.progressX&&m.hudLayout.labelColors.every(c=>c.toLowerCase()==='#b0b0b0')&&m.hudLayout.valueColors.every(c=>c.toLowerCase()==='#ffffff'),JSON.stringify(m.hudLayout));
     check(label+' stat bounds',m.stats.length>=12&&m.stats.every(t=>t.y>=540-m.bottom-eps&&t.y+t.h<=540+eps&&t.x>=-eps&&t.x+t.w<=960+eps),JSON.stringify(m.stats));
@@ -164,6 +169,9 @@ for(const c of configs){
   check('plant',await page.evaluate(()=>!!window.__benchmarkGame.scene.getScene('Game').children.getByName('garden-preview-flower:34')));
   let b=initial.blueprint;await move(b.x+b.width/2,b.y+b.header/2);await page.mouse.click(b.x+b.width/2,b.y+b.header/2);
   check('blueprint toggle',await page.evaluate(()=>!window.__benchmarkGame.scene.getScene('Game').children.getByName('blueprint-body').visible));
+  await page.mouse.click(b.x+b.width/2,b.y+b.header/2);
+  check('blueprint reopens',await page.evaluate(()=>window.__benchmarkGame.scene.getScene('Game').children.getByName('blueprint-body').visible));
+  await page.mouse.click(b.x+b.width/2,b.y+b.header/2);
   await page.keyboard.press('Escape');await page.waitForFunction(()=>window.__benchmarkGame.scene.isActive('Pause'));
   const frozen=await page.evaluate(()=>window.__benchmarkGame.scene.getScene('Game').children.getByName('placeholder:item:1').list[2].y);
   await page.waitForTimeout(250);
@@ -213,7 +221,7 @@ for(const c of configs){
     }
   }
   check('localized runtime errors',errors.length===0,errors.join('; '));
-  results.push({id:c.id,name:c.name,localeResults,passed:checks.filter(x=>x.pass).length,total:checks.length,eligible:checks.every(x=>x.pass),fails:checks.filter(x=>!x.pass),ink:initial.ink,hudLayout:initial.hudLayout,renderer:await page.evaluate(()=>window.__benchmarkGame.renderer.type),observations:observations.map(m=>({canvas:m.canvas,zoom:m.zoom}))});
+  results.push({id:c.id,name:c.name,localeResults,passed:checks.filter(x=>x.pass).length,total:checks.length,eligible:checks.every(x=>x.pass),fails:checks.filter(x=>!x.pass),ink:initial.ink,blueprintMetrics:initial.blueprintMetrics,hudLayout:initial.hudLayout,renderer:await page.evaluate(()=>window.__benchmarkGame.renderer.type),observations:observations.map(m=>({canvas:m.canvas,zoom:m.zoom}))});
  }catch(e){results.push({id:c.id,name:c.name,config:c,score:null,eligible:false,passed:checks.filter(x=>x.pass).length,total:checks.length,fails:[...checks.filter(x=>!x.pass),{name:'exception',detail:String(e)}],errors});}
  finally{await page.close();console.log('RESULT '+JSON.stringify(results.at(-1)));writeFileSync(join(out,'report.json'),JSON.stringify(results,null,2));}
 }
