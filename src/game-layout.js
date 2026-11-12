@@ -6,19 +6,20 @@
   // Carbon의 2/4/8/12/16 간격 체계 참고. 논리 좌표 기준.
   const P = window.GardenPalette;
   const testSprites = window.GardenTestSprites;
-  // 960×540 비교 브랜치: 기존 배치 비율 1.5배, 기능적 선은 1px 유지.
-  const spacing = Object.freeze({ micro: 3, small: 6, base: 12, section: 18, large: 24 });
-  const blueprintCell = 12, blueprintLine = 1, blueprintPitch = blueprintCell + blueprintLine;
+  // 24px 타일 기반 UI: 메뉴와 같은 간격 토큰 및 논리 좌표를 사용한다.
+  const U = window.GardenUI;
+  const { tile, spacing } = U;
+  const blueprintCell = tile / 2, blueprintLine = 1, blueprintPitch = blueprintCell + blueprintLine;
   const blueprintGrid = 10 * blueprintPitch + blueprintLine;
   const blueprintPadding = spacing.small;
-  const blueprintHeader = spacing.large;
-  const width = 960, height = 540;
-  const topHudHeight = 36;
-  const bottomHudHeight = 54;
+  const blueprintHeader = tile;
+  const width = U.W, height = U.H;
+  const topHudHeight = tile + spacing.base;
+  const bottomHudHeight = tile * 2;
   const fieldHeight = height - topHudHeight - bottomHudHeight;
-  const blueprintY = topHudHeight + spacing.base;
+  const blueprintY = topHudHeight + spacing.section;
   // 비교 URL의 기존 상대 크기를 보존: ?garden=24는 이 브랜치에서 36px.
-  const gardenCell = new URLSearchParams(window.location.search).get('garden') === '24' ? 36 : 24;
+  const gardenCell = new URLSearchParams(window.location.search).get('garden') === '24' ? 36 : tile;
   const gardenGap = 1, gardenPitch = gardenCell + gardenGap;
   const gardenSize = 10 * gardenPitch;
   const spec = Object.freeze({
@@ -26,24 +27,24 @@
     top: topHudHeight, fieldHeight, bottom: bottomHudHeight,
     garden: Object.freeze({ x: (width - gardenSize) / 2, y: topHudHeight + (fieldHeight - gardenSize) / 2, columns: 10, rows: 10, cell: gardenCell, gap: gardenGap, pitch: gardenPitch }),
     blueprint: Object.freeze({
-      x: spacing.base, y: blueprintY, padding: blueprintPadding, header: blueprintHeader,
+      x: spacing.section, y: blueprintY, padding: blueprintPadding, header: blueprintHeader,
       columns: 10, rows: 10, cell: blueprintCell, line: blueprintLine, pitch: blueprintPitch,
       width: blueprintGrid + 2 * blueprintPadding,
       height: blueprintHeader + blueprintGrid + 2 * blueprintPadding,
-      gridX: spacing.base + blueprintPadding, gridY: blueprintY + blueprintHeader + blueprintPadding
+      gridX: spacing.section + blueprintPadding, gridY: blueprintY + blueprintHeader + blueprintPadding
     }),
-    slots: Object.freeze({ size: 36, gap: 3, initial: 4, preview: 9, max: 10, y: 495, exampleCost: 999 })
+    slots: Object.freeze({ size: tile + 2 * spacing.small, gap: spacing.small, initial: 4, preview: 9, max: 10, y: height - bottomHudHeight + spacing.base, exampleCost: 999 })
   });
 
   const hud = Object.freeze({
-    padding: spacing.base, gap: spacing.small, labelSize: window.GardenUI.fontSize.base, valueSize: window.GardenUI.fontSize.base,
-    centerY: spec.top / 2, iconSize: 18, barHeight: 14, // 내부 높이 12px + 상하 1px 외곽선
-    columnUnit: spacing.base, minMetricWidth: 216, hourDigits: 4, counterDigits: 12, minBarWidth: 96,
+    padding: spacing.section, gap: spacing.base, labelSize: U.fontSize.compact, valueSize: U.fontSize.base,
+    centerY: spec.top / 2, iconSize: 16, barHeight: 12, // 내부 높이 10px + 상하 1px 외곽선
+    columnUnit: spacing.base, minMetricWidth: tile * 8, hourDigits: 4, counterDigits: 12, minBarWidth: tile * 4,
     // 표시 폭 예약 기준이며 게임 데이터의 최대값이 아니다.
     previewProgress: 30,
   });
-  // Preserve the three-digit cost layout at 36px; cost and compact HUD are native-size exceptions.
-  const slotCost = Object.freeze({ padding: spacing.micro, gap: spacing.micro, iconSize: 9, fontSize: 10, minFontSize: 9, maxDigits: 3 });
+  // 32px 슬롯 안에 3자리 비용과 보석 아이콘을 한 행으로 정렬한다.
+  const slotCost = Object.freeze({ padding: spacing.micro, gap: spacing.micro, iconSize: 8, fontSize: U.fontSize.compact, minFontSize: 9, maxDigits: 3 });
 
   // size = 비교 브랜치의 논리 표시 크기. 기존 저해상도 테스트 원본은 그대로 사용한다.
   // assetKey와 suggestedFile은 이후 에셋 작업 시 참조할 식별자이다.
@@ -93,7 +94,7 @@
 
   // 1px 경계선만 사용하는 HUD와 슬롯의 1px 연속 사각형 표시.
   function hudBoundary(g, y) {
-    g.fillStyle(colors.hudBorder, 1).fillRect(spacing.base, y, spec.width - 2 * spacing.base, 1);
+    g.fillStyle(colors.hudBorder, 1).fillRect(spacing.section, y, spec.width - 2 * spacing.section, 1);
   }
 
   // 하단 장착 슬롯의 테두리 없는 단색 면.
@@ -103,14 +104,14 @@
     g.fillRect(x, y, size, size);
   }
 
-  // 드래그 중 후보에는 1px 두께의 11px 십자, 진입한 대상에는 같은 황록 1px 사각형.
+  // 드래그 중 후보에는 1px 두께의 9px 십자, 진입한 대상에는 같은 황록 1px 사각형.
   // 정수 픽셀 중앙에 맞추고 교차점과 모서리를 중복해서 그리지 않는다.
   function dropPlus(g, x, y, size) {
     const cx = x + Math.floor(size / 2), cy = y + Math.floor(size / 2);
     g.fillStyle(colors.enabledBorder, 1);
-    g.fillRect(cx - 5, cy, 11, 1);
-    g.fillRect(cx, cy - 5, 1, 5);
-    g.fillRect(cx, cy + 1, 1, 5);
+    g.fillRect(cx - 4, cy, 9, 1);
+    g.fillRect(cx, cy - 4, 1, 4);
+    g.fillRect(cx, cy + 1, 1, 4);
   }
   function dropSquare(g, x, y, size) {
     g.fillStyle(colors.enabledBorder, 1);
@@ -166,7 +167,7 @@
     return String(value).replace(/\B(?=(\d{3})+(?!\d))/g, ',');
   }
 
-  function hudColumns(measure, timeValue, killsValue, gemsValue) {
+  function hudColumns(measure, timeValue, killsValue, gemsValue, measureLabel = measure) {
     // 숫자마다 폭이 다를 수 있으므로 0~9 중 가장 넓은 글자를 예약한다.
     const digit = Math.max(...Array.from({ length: 10 }, (_, i) => measure(String(i))));
     const colon = measure(':');
@@ -177,11 +178,11 @@
     const quantize = width => Math.ceil(width / hud.columnUnit) * hud.columnUnit;
     const paddedWidth = (label, value) => quantize(2 * hud.padding + label + hud.gap + value);
     // 세 열 모두 가장 넓은 항목의 예약 폭을 공유한다.
-    // 144px은 합의된 최소 폭이며 실측 결과가 더 넓으면 8px 단위로 늘린다.
-    const metricWidth = Math.max(hud.minMetricWidth, paddedWidth(measure('시간'), timeReserve),
-      paddedWidth(measure('처치 수'), counterReserve), paddedWidth(hud.iconSize, counterReserve));
+    // 192px(8타일)은 비교 브랜치의 최소 폭이며 실측 결과가 더 넓으면 8px 단위로 늘린다.
+    const metricWidth = Math.max(hud.minMetricWidth, paddedWidth(measureLabel('시간'), timeReserve),
+      paddedWidth(measureLabel('처치 수'), counterReserve), paddedWidth(hud.iconSize, counterReserve));
     const progressWidth = spec.width - 3 * metricWidth;
-    const barWidth = progressWidth - 2 * hud.padding - measure('정원 완성도') - hud.gap;
+    const barWidth = progressWidth - 2 * hud.padding - measureLabel('정원 완성도') - hud.gap;
     if (barWidth < hud.minBarWidth) {
       throw new RangeError('HUD values exceed the available display width');
     }
@@ -208,15 +209,21 @@
       probe.setText(value);
       return Math.ceil(probe.width);
     }
-    const columns = hudColumns(measure, time, count, count);
-    const labelWidth = measure('정원 완성도');
+    const labelProbe = text(scene, 0, hud.centerY, '', hud.labelSize, colors.label, 'left');
+    function measureLabel(value) {
+      labelProbe.setText(value);
+      return Math.ceil(labelProbe.width);
+    }
+    const columns = hudColumns(measure, time, count, count, measureLabel);
+    const labelWidth = measureLabel('정원 완성도');
     probe.destroy();
+    labelProbe.destroy();
 
-    // 36px HUD 안에서 상하 6px 여백을 두는 1×24px 구분선.
+    // 32px HUD 안에서 상하 8px 여백을 두는 1×16px 구분선.
     g.fillStyle(colors.hudDivider, 1);
-    [columns.kills.x, columns.gems.x, columns.progress.x].forEach(x => g.fillRect(x, spacing.small, 1, spec.top - 2 * spacing.small));
+    [columns.kills.x, columns.gems.x, columns.progress.x].forEach(x => g.fillRect(x, spacing.base, 1, spec.top - 2 * spacing.base));
 
-    // 레이블과 수치는 같은 그룹의 왼쪽에서 4px 간격으로 이어서 표시한다.
+    // 레이블과 수치는 같은 그룹의 왼쪽에서 8px 간격으로 이어서 표시한다.
     function metric(column, label, value) {
       const caption = text(scene, column.x + hud.padding, hud.centerY, label, hud.labelSize, colors.label, 'left');
       text(scene, caption.x + Math.ceil(caption.width) + hud.gap, hud.centerY, value, hud.valueSize, colors.value, 'left');
@@ -238,7 +245,7 @@
     if (fillWidth > 0) {
       g.fillStyle(colors.progressFill, 1).fillRect(barX + 1, barY + 1, fillWidth, hud.barHeight - 2);
     }
-    const percent = text(scene, barX + c.barWidth / 2, hud.centerY, progress + '%', hud.valueSize, colors.value, 'center');
+    const percent = text(scene, barX + c.barWidth / 2, hud.centerY, progress + '%', U.fontSize.compact, colors.value, 'center');
     // 밝은 채움 위에도 퍼센트가 읽히도록 한다. 채움이 글자 일부에 걸치면
     // 팔레트의 어두운 트랙 색을 글자 배경으로 사용한다.
     const fillEnd = barX + 1 + fillWidth;
@@ -304,18 +311,17 @@
     return sumPreviewStats(next);
   }
 
-  const bottomStats = Object.freeze({ fontSize: 10.5, columnWidth: 63, columns: 3, lineGap: 1.5, deltaGap: spacing.micro });
+  const bottomStats = Object.freeze({ fontSize: U.fontSize.compact, valueSize: U.fontSize.base, columnWidth: tile * 3, columns: 3, lineGap: spacing.small, deltaGap: spacing.micro });
 
   function bottomLayout() {
     const s = spec.slots;
     const totalWidth = s.max * s.size + (s.max - 1) * s.gap;
-    // 387px 폭은 홀수이므로 960px 화면 중앙의 반 픽셀을 정수 좌표로 정렬한다.
-    const slotLeft = Math.round((spec.width - totalWidth) / 2);
+    const slotLeft = (spec.width - totalWidth) / 2;
     const sideWidth = bottomStats.columnWidth * bottomStats.columns;
     const top = spec.top + spec.fieldHeight;
     return {
       top, centerY: top + spec.bottom / 2, slotLeft, totalWidth, sideWidth,
-      left: spacing.base, right: spec.width - spacing.base - sideWidth,
+      left: spacing.section, right: spec.width - spacing.section - sideWidth,
       slots: Array.from({ length: s.max }, (_, index) => ({
         x: slotLeft + index * (s.size + s.gap), y: s.y, size: s.size
       }))
@@ -341,7 +347,7 @@
       const asset = assets[type];
       positions.forEach(([baseX, baseY], i) => {
         const x = Math.round(baseX * 1.5), y = Math.round(baseY * 1.5);
-        // 도형의 바운딩 박스가 정확히 PNG 목표 크기와 같다.
+        // 도형의 바운딩 박스는 논리 표시 크기와 같다.
         // 추후 동일한 x, y, origin(0.5)에서 해당 크기의 이미지로 교체한다.
         const spriteName = type === 'enemy' ? 'snail' : type === 'item' ? 'wheelbarrow' : type === 'flower' ? testSprites.flowers[i % testSprites.flowers.length] : null;
         const marker = (type === 'item' ? testSprites.itemCard(scene, x, y, spriteName, asset.cardSize, asset.size) :
@@ -368,7 +374,7 @@
     let expanded = true;
     function drawArrow() {
       arrow.clear().lineStyle(1, P.n.label, 1);
-      const x = b.x + b.width - b.padding - spacing.small;
+      const x = b.x + b.width - b.padding - spacing.base;
       const y = b.y + b.header / 2;
       arrow.beginPath();
       arrow.moveTo(x - spacing.small, y + (expanded ? spacing.micro : -spacing.micro));
@@ -388,7 +394,7 @@
 
 
   function tooltipPosition(anchor, width, height, fieldBottom) {
-    const margin = spacing.base;
+    const margin = spacing.section;
     const gap = spacing.base;
     const half = anchor.size / 2;
     // 슬롯/하단 카드에서는 위쪽, 전장에서는 좌우를 우선한다.
@@ -400,8 +406,8 @@
     const candidates = anchor.y >= fieldBottom - spacing.base
       ? [[centeredX, above], [right, above], [left, above]]
       : [[right, anchor.y - half], [left, anchor.y - half], [centeredX, above], [centeredX, below]];
-    const top = spec.top + margin;
-    const bottom = fieldBottom - spacing.small;
+    const top = spec.top + spacing.section;
+    const bottom = fieldBottom - spacing.base;
     const clamp = (v, lo, hi) => Math.max(lo, Math.min(v, Math.max(lo, hi)));
     const xFits = x => x >= margin && x + width <= spec.width - margin;
     const yFits = y => y >= top && y + height <= bottom;
@@ -413,8 +419,8 @@
 
   // 기존 카드 선택의 밝은 테두리를 정보창에도 적용한다.
   const itemTooltip = Object.freeze({
-    width: 180, padding: spacing.base, fontSize: bottomStats.fontSize,
-    rowGap: spacing.small, lineSpacing: 3, strokeWidth: 1, accent: P.n.paper,
+    width: tile * 8, padding: spacing.section, fontSize: U.fontSize.base,
+    rowGap: spacing.small, lineSpacing: spacing.micro, strokeWidth: 1, accent: P.n.paper,
     background: P.n.soil, divider: P.n.edge,
     title: colors.value, description: colors.label, hint: colors.disabledText
   });
@@ -470,7 +476,7 @@
     const ghost = testSprites.itemCard(scene, 0, 0, 'wheelbarrow', assets.item.cardSize, assets.item.size)
       .setDepth(22).setAlpha(0.45).setVisible(false).setName('item-preview-ghost');
 
-    // 양쪽 바깥 12px부터 동일한 63px 열 3개. 각 텍스트 묶음의 실제 크기로 중앙 정렬.
+    // 양쪽 바깥 12px부터 동일한 72px 열 3개. 각 텍스트 묶음의 실제 크기로 중앙 정렬.
     const stats = statKeys.map((key, index) => {
       const left = index < bottomStats.columns ? layout.left : layout.right;
       const x = left + bottomStats.columnWidth * ((index % bottomStats.columns) + 0.5);
@@ -478,8 +484,8 @@
       return {
         key, x,
         label: text(scene, x, layout.centerY, statLabels[key], size, colors.label, 'center').setName('stat-label:' + key),
-        value: text(scene, x, layout.centerY, '', size, colors.value, 'center').setName('stat-value:' + key),
-        delta: text(scene, x, layout.centerY, '', size, colors.value, 'center').setName('stat-delta:' + key)
+        value: text(scene, x, layout.centerY, '', bottomStats.valueSize, colors.value, 'center').setName('stat-value:' + key),
+        delta: text(scene, x, layout.centerY, '', bottomStats.valueSize, colors.value, 'center').setName('stat-delta:' + key)
       };
     });
     const tooltip = scene.add.container(0, 0).setDepth(40).setName('item-preview-tooltip').setVisible(false);
@@ -494,7 +500,7 @@
         row.value.setText(String(next[row.key]));
         row.delta.setText(d ? signed(d) : '').setColor(d > 0 ? P.hex.growth : d < 0 ? P.hex.red : colors.value)
           .setVisible(d !== 0);
-        // 라벨과 값 행의 실제 바운딩 크기를 기준으로 1px 행 간격,
+        // 라벨과 값 행의 실제 바운딩 크기를 기준으로 4px 행 간격,
         // 증감이 있을 때는 값과 증감 사이 2px를 두고 전체 행을 중앙 정렬한다.
         const valueWidth = row.value.width;
         const deltaWidth = d ? row.delta.width : 0;
@@ -916,7 +922,7 @@
     drawBlueprint(scene);
     drawItemPreview(scene, layout, cards);
     drawGardenPreview(scene, flowers);
-    text(scene, spec.width - spacing.base, spec.top + 7.5, '테스트 이미지', bottomStats.fontSize, colors.label, 'right').setDepth(16);
+    text(scene, spec.width - spacing.section, spec.top + spacing.base, '테스트 이미지', bottomStats.fontSize, colors.label, 'right').setDepth(16);
   }
 
   window.GardenGameLayout = Object.freeze({ spec, assets, colors, spacing, hud, slotCost, formatHudTime, formatHudCount, hudColumns, bottomStats, itemTooltip, replacementTitle, bottomLayout, sumPreviewStats, getPreviewStats, tooltipPosition, gardenCandidates, patrolBounds, patrolPosition, nearestPatrolDistance, draw });

@@ -97,7 +97,7 @@
     };
     return group;
   }
-  // 게임의 꽃/아이템 카드 36px, 아이콘 표시 24px, 패딩 5px, 프레임 1px.
+  // 게임의 꽃/아이템 카드 32px, 아이콘 표시 24px, 패딩 3px, 프레임 1px.
   // 종류별 외곽색은 고정하고 호버/드래그 활성 상태는 내부 면의 밝기로 구분한다.
   function dropCard(scene, x, y, name, size, iconSize, kind) {
     const P = window.GardenPalette.n;

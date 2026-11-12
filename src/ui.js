@@ -2,8 +2,11 @@
   'use strict';
 
   // 공유되는 것은 화면 스타일과 입력용 UI 컴포넌트뿐이다.
-  const W = 1280;
-  const H = 720;
+  const W = 960;
+  const H = 540;
+  // 24px 타일의 절반·1/3·1/6을 UI 기준 단위로 사용한다.
+  const tile = 24;
+  const spacing = Object.freeze({ micro: 2, small: 4, base: 8, section: 12, large: 24 });
   const P = window.GardenPalette;
   const C = Object.freeze({
     bg: P.n.ink, panel: P.n.soil, panelAlt: P.n.grid,
@@ -14,9 +17,9 @@
   });
   // One unmodified Regular face for Korean, English and numerals.
   const fontFamily = '"Garden Fusion"';
-  const fontSize = Object.freeze({ base: 15, heading: 30, title: 45, menuBase: 20, menuHeading: 40, menuTitle: 60 });
-  // 메뉴 좌표는 기존 1280×720 유지; 960×540 기준 기능적 선 1px.
-  const menuStyle = Object.freeze({ strokeWidth: 4 / 3, buttonHeight: 48, gap: 8 });
+  const fontSize = Object.freeze({ base: 12, compact: 10, heading: 20, title: 40, menuBase: 12, menuHeading: 20, menuTitle: 40 });
+  // 메뉴와 전장 모두 동일한 960×540 좌표, 기능적 선 1px.
+  const menuStyle = Object.freeze({ strokeWidth: 1, buttonHeight: 32, gap: spacing.base });
   async function loadFonts() {
     if (!document.fonts || !document.fonts.load) throw new Error('Font Loading API unavailable');
     const loaded = await document.fonts.load('400 20px ' + fontFamily,
@@ -52,7 +55,7 @@
       // Regular only; no synthetic bold, width compression or letter spacing.
       fontStyle: 'normal',
       align: opts.align || 'left',
-      lineSpacing: opts.lineSpacing || 9,
+      lineSpacing: opts.lineSpacing === undefined ? spacing.small : opts.lineSpacing,
       wordWrap: opts.wrap ? { width: opts.wrap } : undefined
     });
     applyFontFilter(item);
@@ -86,7 +89,7 @@
   }
 
   // 각 씬의 디자인 좌표를 실제 16:9 렌더링 버퍼에 매핑한다.
-  // Game: 960×540, 기존 메뉴/오버레이: 1280×720.
+  // Game, 메뉴 및 오버레이 모두 960×540.
   // 일시정지 중인 씬도 resize 이벤트에 맞춰 카메라와 텍스트를 갱신한다.
   function fitCamera(scene, designWidth, designHeight) {
     const tracked = new Set();
@@ -118,20 +121,20 @@
     });
   }
 
-  function legacyCamera(scene) {
+  function menuCamera(scene) {
     fitCamera(scene, W, H);
   }
 
   function background(scene, label) {
-    legacyCamera(scene);
+    menuCamera(scene);
     scene.cameras.main.setBackgroundColor(P.hex.ink);
     scene.add.rectangle(W / 2, H / 2, W, H, C.bg);
-    rule(scene, 40, 76, 1240, 76, C.border, 0.8);
-    rule(scene, 40, 664, 1240, 664, C.border, 0.8);
-    text(scene, 43, 30, 'GARDEN TEST', fontSize.menuBase, C.text);
-    text(scene, 1238, 33, label || 'SCENE PROTOTYPE', fontSize.menuBase, C.muted, { originX: 1 });
-    text(scene, 43, 680, 'PHASER 3.90.0 / UI SCENES ONLY', fontSize.menuBase, C.muted);
-    text(scene, 1238, 680, 'NO GAMEPLAY LOGIC', fontSize.menuBase, C.muted, { originX: 1 });
+    rule(scene, 24, 48, 936, 48, C.border, 0.8);
+    rule(scene, 24, 492, 936, 492, C.border, 0.8);
+    text(scene, 24, 20, 'GARDEN TEST', fontSize.menuBase, C.text);
+    text(scene, 936, 20, label || 'SCENE PROTOTYPE', fontSize.menuBase, C.muted, { originX: 1 });
+    text(scene, 24, 508, 'PHASER 3.90.0 / UI SCENES ONLY', fontSize.compact, C.muted);
+    text(scene, 936, 508, 'NO GAMEPLAY LOGIC', fontSize.compact, C.muted, { originX: 1 });
   }
 
   function button(scene, x, y, width, label, action, options) {
@@ -164,7 +167,7 @@
   }
 
   function overlay(scene) {
-    legacyCamera(scene);
+    menuCamera(scene);
     return scene.add.rectangle(W / 2, H / 2, W, H, P.n.shadow, 0.74)
       .setInteractive();
   }
@@ -194,7 +197,7 @@
   }
 
   window.GardenUI = Object.freeze({
-    W: W, H: H, C: C, fontFamily, fontSize, menuStyle, loadFonts, text: text, panel: panel, rule: rule,
+    W: W, H: H, C: C, tile, spacing, fontFamily, fontSize, menuStyle, loadFonts, text: text, panel: panel, rule: rule,
     background: background, button: button, overlay: overlay, fitCamera: fitCamera,
     bindEscape: bindEscape, openSubscene: openSubscene,
     closeSubscene: closeSubscene
