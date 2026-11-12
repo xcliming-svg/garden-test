@@ -38,5 +38,7 @@
   });
   const n = Object.freeze(Object.fromEntries(Object.entries(hex).map(([key, value]) =>
     [key, Number.parseInt(value.slice(1), 16)])));
-  window.GardenPalette = Object.freeze({ hex, n });
+  // devel 전장 색상 실험: Garden 32 원본 팔레트와 분리한다.
+  const demo = Object.freeze({ field: 0x405638, garden: 0x503B2D });
+  window.GardenPalette = Object.freeze({ hex, n, demo });
 }());
