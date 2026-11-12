@@ -99,16 +99,18 @@
     };
     return group;
   }
-  // 게임 카드: 24px 내부 + 1px 외부 프레임(26px), 원본 16px 아이콘, 내부 패딩 4px.
-  // 종류별 외곽색은 고정하고 호버/드래그 활성 상태는 내부 면의 밝기로 구분한다.
+  // 드롭 외형 24px, 장착 외형 36px. 1px 프레임, 원본 16px 중앙 배치.
+  // 참조의 보라회색 면 및 회청색 호버 테두리.
   function dropCard(scene, x, y, name, size, iconSize, kind) {
-    const P = window.GardenPalette.n;
-    const border = scene.add.rectangle(0, 0, size, size, kind === 'flower' ? P.growth : P.paper);
-    const face = scene.add.rectangle(0, 0, size - 2, size - 2, P.grid);
+    const R = window.GardenPalette.reference.n;
+    const border = scene.add.rectangle(0, 0, size, size, kind === 'flower' ? R.green : R.tabBorder);
+    const faceColor = kind === 'flower' ? R.button : R.tab;
+    const face = scene.add.rectangle(0, 0, size - 2, size - 2, faceColor);
     const image = sprite(scene, 0, 0, name, iconSize);
     const group = scene.add.container(x, y, [border, face, image]).setSize(size, size);
     group.setStrokeStyle = (_width, _color, alpha) => {
-      face.setFillStyle(alpha ? P.edge : P.grid, 1);
+      face.setFillStyle(alpha ? R.selected : faceColor, 1);
+      border.setFillStyle(alpha ? R.hover : kind === 'flower' ? R.green : R.tabBorder, 1);
       return group;
     };
     return group;

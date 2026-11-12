@@ -1,6 +1,7 @@
 (function () {
   'use strict';
-  const P = window.GardenPalette.hex, sprites = window.GardenTestSprites;
+  const R = window.GardenPalette.reference.hex;
+  const P = { grid: R.tab, paper: R.hover, growth: R.green }, sprites = window.GardenTestSprites;
   const paddings = [1, 2, 3, 4], iconSize = 16, line = 1;
   const sizeFor = padding => iconSize + 2 * (padding + line);
   function frame(ctx, x, y, size, color, method) {

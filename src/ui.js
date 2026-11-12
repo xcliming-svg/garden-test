@@ -8,19 +8,20 @@
   const unit = 8, tile = unit * 3;
   const spacing = Object.freeze({ micro: 2, small: 4, compact: 6, base: unit, inset: 10, medium: 12, section: unit * 2, large: tile });
   const P = window.GardenPalette;
+  const R = P.reference;
   const C = Object.freeze({
-    bg: P.n.ink, panel: P.n.soil, panelAlt: P.n.grid,
-    border: P.n.edge, subtle: P.n.slot,
-    text: P.hex.paper, muted: P.hex.label, disabled: P.hex.disabled,
-    gold: P.n.gold, goldText: P.hex.gold, green: P.n.growth, greenText: P.hex.growth,
-    red: P.n.red, redText: P.hex.red, white: P.n.paper
+    bg: R.n.background, panel: R.n.panel, panelAlt: R.n.selected,
+    border: R.n.panelBorder, subtle: R.n.border, header: R.n.header, button: R.n.button,
+    text: R.hex.text, muted: R.hex.label, disabled: R.hex.disabled,
+    gold: R.n.gold, goldText: R.hex.gold, green: R.n.green, greenText: R.hex.green,
+    red: R.n.red, redText: R.hex.red, white: R.n.hover
   });
   // One unmodified Regular face for Korean, English and numerals.
   const fontFamily = '"Garden Fusion"';
   // Fusion Pixel 원본을 유지하고 가독성 비교 결과에 따라 역할별 크기를 지정한다.
-  const fontSize = Object.freeze({ base: 12, compact: 12, heading: 20, title: 40, timer: 22, menuBase: 12, menuAction: 20, menuHeading: 20, menuTitle: 40 });
+  const fontSize = Object.freeze({ base: 12, compact: 12, heading: 20, title: 40, timer: 12, menuBase: 12, menuAction: 14, menuHeading: 18, menuTitle: 40 });
   // 메뉴와 전장 모두 동일한 960×540 좌표, 기능적 선 1px.
-  const menuStyle = Object.freeze({ strokeWidth: 1, buttonHeight: 32, gap: spacing.base, navHeight: 38, navGap: 6 });
+  const menuStyle = Object.freeze({ strokeWidth: 1, buttonHeight: 24, gap: 4, navHeight: 24, navGap: 3 });
   async function loadFonts() {
     if (!document.fonts || !document.fonts.load) throw new Error('Font Loading API unavailable');
     const loaded = await document.fonts.load('400 20px ' + fontFamily,
@@ -57,6 +58,7 @@
       fontStyle: 'normal',
       align: opts.align || 'left',
       lineSpacing: opts.lineSpacing === undefined ? spacing.small : opts.lineSpacing,
+      shadow: { offsetX: 1, offsetY: 1, color: R.hex.shadow, blur: 0, stroke: false, fill: true },
       wordWrap: opts.wrap ? { width: opts.wrap } : undefined
     });
     applyFontFilter(item);
@@ -80,6 +82,10 @@
       opts.stroke === undefined ? C.border : opts.stroke,
       opts.strokeAlpha === undefined ? 1 : opts.strokeAlpha);
     return rect;
+  }
+
+  function panelHeader(scene, x, top, width, height) {
+    return scene.add.rectangle(x, top + 1 + height / 2, width - 2, height, C.header);
   }
 
   function rule(scene, x1, y1, x2, y2, color, alpha) {
@@ -130,12 +136,15 @@
     menuCamera(scene);
     scene.cameras.main.setBackgroundColor(P.background.hex);
     scene.add.rectangle(W / 2, H / 2, W, H, P.background.n);
-    rule(scene, 24, 48, 936, 48, C.border, 0.8);
-    rule(scene, 24, 492, 936, 492, C.border, 0.8);
-    text(scene, 24, 20, 'GARDEN TEST', fontSize.menuBase, C.text);
-    text(scene, 936, 20, label || 'SCENE PROTOTYPE', fontSize.menuBase, C.muted, { originX: 1 });
-    text(scene, 24, 508, 'PHASER 3.90.0 / UI SCENES ONLY', fontSize.compact, C.muted);
-    text(scene, 936, 508, 'NO GAMEPLAY LOGIC', fontSize.compact, C.muted, { originX: 1 });
+    scene.add.rectangle(W / 2, 15.5, W, 31, R.n.hud);
+    scene.add.rectangle(W / 2, H - 15.5, W, 31, R.n.hud);
+    rule(scene, 0, 29, W, 29, R.n.hudEdge, 1);
+    rule(scene, 0, 30, W, 30, R.n.hudLight, 1);
+    rule(scene, 0, H - 31, W, H - 31, R.n.hudLight, 1);
+    text(scene, 10, 14, 'GARDEN TEST', fontSize.menuBase, C.text, { originY: 0.5 });
+    text(scene, W - 10, 14, label || 'SCENE PROTOTYPE', fontSize.menuBase, C.muted, { originX: 1, originY: 0.5 });
+    text(scene, 10, H - 15, 'PHASER 3.90.0 / UI SCENES ONLY', fontSize.compact, C.muted, { originY: 0.5 });
+    text(scene, W - 10, H - 15, 'NO GAMEPLAY LOGIC', fontSize.compact, C.muted, { originX: 1, originY: 0.5 });
   }
 
   function button(scene, x, y, width, label, action, options) {
@@ -143,14 +152,14 @@
     const height = opts.height || menuStyle.buttonHeight;
     const disabled = !!opts.disabled;
     const emphasized = !!(opts.primary || opts.selected);
-    const border = opts.danger ? C.red : emphasized ? C.white : C.subtle;
-    const fill = emphasized ? C.panelAlt : C.panel;
-    const hoverBorder = opts.danger ? C.red : C.white;
+    const border = emphasized ? C.white : C.subtle;
+    const fill = emphasized ? C.panelAlt : C.button;
+    const hoverBorder = C.white;
     const base = scene.add.rectangle(0, 0, width, height,
-      disabled ? P.n.ink : fill, 1);
+      disabled ? R.n.panel : fill, 1);
     base.setStrokeStyle(menuStyle.strokeWidth, disabled ? C.border : border, 1);
     const caption = text(scene, 0, 0, label, opts.fontSize || fontSize.menuBase,
-      disabled ? C.disabled : C.text, { originX: 0.5, originY: 0.5 });
+      disabled ? C.disabled : opts.danger ? C.redText : C.text, { originX: 0.5, originY: 0.5 });
     const group = scene.add.container(x, y, [base, caption]);
     if (!disabled && typeof action === 'function') {
       base.setInteractive({ useHandCursor: true });
@@ -169,7 +178,7 @@
 
   function overlay(scene) {
     menuCamera(scene);
-    return scene.add.rectangle(W / 2, H / 2, W, H, P.n.shadow, 0.74)
+    return scene.add.rectangle(W / 2, H / 2, W, H, R.n.shadow, 0.74)
       .setInteractive();
   }
 
@@ -198,7 +207,7 @@
   }
 
   window.GardenUI = Object.freeze({
-    W: W, H: H, C: C, unit, tile, spacing, fontFamily, fontSize, menuStyle, loadFonts, text: text, panel: panel, rule: rule,
+    W: W, H: H, C: C, unit, tile, spacing, fontFamily, fontSize, menuStyle, loadFonts, text: text, panel: panel, panelHeader, rule: rule,
     background: background, button: button, overlay: overlay, fitCamera: fitCamera,
     bindEscape: bindEscape, openSubscene: openSubscene,
     closeSubscene: closeSubscene

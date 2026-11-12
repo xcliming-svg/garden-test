@@ -5,6 +5,7 @@
   // 실제 전투, 획득, 재화 소비, 슬롯 확장 및 저장 로직은 없다.
   // 픽셀 로그라이크의 정보 밀도/여백을 참고. 8px 배수는 강제하지 않는다.
   const P = window.GardenPalette;
+  const R = P.reference;
   const testSprites = window.GardenTestSprites;
   // 24px 타일 기반 UI: 메뉴와 같은 간격 토큰 및 논리 좌표를 사용한다.
   const U = window.GardenUI;
@@ -14,21 +15,21 @@
   const blueprintPadding = 4;
   const blueprintHeader = 22;
   const width = U.W, height = U.H;
-  const topHudHeight = 34;
+  const topHudHeight = 31;
   const bottomHudHeight = 44;
   const fieldHeight = height - topHudHeight - bottomHudHeight;
   const blueprintY = topHudHeight + 10;
-  // 24px 기본 내부 면 + 바깥쪽 1px 테두리. 대형 비교는 32px 모듈로 통일.
+  // 참조 트리 외형 24px = 내부 22px + 1px 프레임. 기존 대형 비교는 내부 32px 유지.
   // 이전 ?garden=36 링크는 대형 비교의 호환 별칭으로 유지한다.
   const gardenMode = new URLSearchParams(window.location.search).get('garden');
-  const gardenCell = gardenMode === '32' || gardenMode === '36' ? unit * 4 : tile;
+  const gardenCell = gardenMode === '32' || gardenMode === '36' ? unit * 4 : 22;
   const cellLine = 1, gardenPitch = gardenCell + 2 * cellLine;
-  const iconSize = unit * 2, slotSize = tile + 2 * cellLine;
+  const iconSize = unit * 2, slotSize = 36, dropSize = 24;
   const gardenSize = 10 * gardenPitch;
   const spec = Object.freeze({
     width, height,
     top: topHudHeight, fieldHeight, bottom: bottomHudHeight,
-    garden: Object.freeze({ x: (width - gardenSize) / 2, y: topHudHeight + (fieldHeight - gardenSize) / 2, columns: 10, rows: 10, cell: gardenCell, line: cellLine, gap: 0, pitch: gardenPitch }),
+    garden: Object.freeze({ x: (width - gardenSize) / 2, y: Math.floor(topHudHeight + (fieldHeight - gardenSize) / 2), columns: 10, rows: 10, cell: gardenCell, line: cellLine, gap: 0, pitch: gardenPitch }),
     blueprint: Object.freeze({
       x: 10, y: blueprintY, padding: blueprintPadding, header: blueprintHeader,
       columns: 10, rows: 10, cell: blueprintCell, line: blueprintLine, pitch: blueprintPitch,
@@ -36,17 +37,17 @@
       height: blueprintHeader + blueprintGrid + 2 * blueprintPadding,
       gridX: 10 + blueprintPadding, gridY: blueprintY + blueprintHeader + blueprintPadding
     }),
-    slots: Object.freeze({ size: slotSize, cell: tile, line: cellLine, gap: 4, initial: 4, preview: 9, max: 10, y: height - bottomHudHeight + (bottomHudHeight - slotSize) / 2, exampleCost: 999 })
+    slots: Object.freeze({ size: slotSize, cell: slotSize - 2 * cellLine, line: cellLine, gap: 3, initial: 4, preview: 9, max: 10, y: height - bottomHudHeight + (bottomHudHeight - slotSize) / 2, exampleCost: 999 })
   });
 
   const hud = Object.freeze({
-    padding: 10, gap: 5, labelSize: 12, valueSize: 14, timeSize: 22,
-    centerY: spec.top / 2, iconSize: unit * 2, barHeight: 14, // 게이지 외형 높이 (내부는 2px 제외)
-    columnUnit: spacing.base, minMetricWidth: tile * 8, hourDigits: 4, counterDigits: 12, minBarWidth: tile * 4,
+    padding: 10, gap: 5, labelSize: 12, valueSize: 12, timeSize: 12,
+    centerY: 14, iconSize: 14, barHeight: 14, barWidth: 158, // 외형 14, 이중 프레임 2px
+    columnUnit: 1, minMetricWidth: 0, hourDigits: 4, counterDigits: 12, minBarWidth: tile * 4,
     // 표시 폭 예약 기준이며 게임 데이터의 최대값이 아니다.
     previewProgress: 30,
   });
-  // 24px 내부 면에서 8px 아이콘과 10px 네이티브 숫자를 위아래로 배치한다.
+  // 34px 내부 면에서 비용 아이콘과 숫자를 세로 중앙 배치한다.
   const slotCost = Object.freeze({ padding: 1, gap: spacing.micro, iconSize: unit, fontSize: 10, maxDigits: 3 });
 
   // size = 비교 브랜치의 논리 표시 크기. 기존 저해상도 테스트 원본은 그대로 사용한다.
@@ -56,21 +57,21 @@
     guardian: Object.freeze({ size: 24, color: P.n.teal, assetKey: 'guardian', suggestedFile: 'assets/guardian.png' }),
     enemy: Object.freeze({ size: unit * 2, color: P.n.red, assetKey: 'enemy', suggestedFile: 'assets/enemy.png' }),
     gem: Object.freeze({ size: unit, color: P.n.sky, assetKey: 'gem', suggestedFile: 'assets/gem.png' }),
-    flower: Object.freeze({ size: iconSize, cardSize: spec.slots.size, color: P.n.pink, assetKey: 'flower', suggestedFile: 'assets/flower.png' }),
-    item: Object.freeze({ size: iconSize, cardSize: spec.slots.size, color: P.n.gold, assetKey: 'item', suggestedFile: 'assets/item.png' })
+    flower: Object.freeze({ size: iconSize, cardSize: spec.slots.size, dropSize, color: P.n.pink, assetKey: 'flower', suggestedFile: 'assets/flower.png' }),
+    item: Object.freeze({ size: iconSize, cardSize: spec.slots.size, dropSize, color: P.n.gold, assetKey: 'item', suggestedFile: 'assets/item.png' })
   });
 
   const colors = Object.freeze({
-    field: P.background.n, hud: P.background.n, hudBorder: P.n.grid, hudDivider: P.n.edge,
-    label: P.hex.label, value: P.hex.paper,
-    gridFill: P.n.soil, gridLine: P.n.grid, gridBorder: P.n.edge,
-    normalFill: P.n.grid, normalBorder: P.n.slot,
-    progressTrack: P.n.shadow, progressBorder: P.n.slot, progressFill: P.n.growth,
-    disabledFill: P.n.soil, disabledBorder: P.n.edge, disabledText: P.hex.disabled,
-    enabledFill: P.n.ink, enabledBorder: P.n.growth, enabledText: P.hex.growth,
-    focusBorder: P.n.paper, invalidBorder: P.n.red,
-    gardenSoil: P.demo.garden, gardenSoilAlpha: 1,
-    blueprintLine: P.n.grid, reservedIcon: P.n.steel
+    field: R.n.background, hud: R.n.hud, hudBorder: R.n.hudEdge, hudDivider: R.n.divider,
+    label: R.hex.label, value: R.hex.text,
+    gridFill: R.n.panel, gridLine: R.n.tabBorder, gridBorder: R.n.tabBorder,
+    normalFill: R.n.tab, normalBorder: R.n.tabBorder,
+    progressTrack: R.n.track, progressBorder: R.n.border, progressFill: R.n.progress,
+    disabledFill: R.n.panel, disabledBorder: R.n.tabBorder, disabledText: R.hex.disabled,
+    enabledFill: R.n.background, enabledBorder: R.n.green, enabledText: R.hex.green,
+    focusBorder: R.n.hover, invalidBorder: R.n.red,
+    gardenSoil: R.n.garden, gardenSoilAlpha: 1, gardenBorder: R.n.gardenBorder,
+    blueprintLine: R.n.tabBorder, reservedIcon: R.n.icon
   });
 
   // 고정된 미리보기 좌표일 뿐 실제 스폰 위치나 수량 정책이 아니다.
@@ -97,10 +98,11 @@
 
   // 1px 경계선만 사용하는 HUD와 슬롯의 1px 연속 사각형 표시.
   function hudBoundary(g, y) {
-    g.fillStyle(colors.hudBorder, 1).fillRect(10, y, spec.width - 2 * 10, 1);
+    g.fillStyle(colors.hudBorder, 1).fillRect(0, y, spec.width, 1);
+    g.fillStyle(R.n.hudLight, 1).fillRect(0, y + 1, spec.width, 1);
   }
 
-  // 24px 내부 면을 침범하지 않는 1px 외부 프레임.
+  // 내부 면을 침범하지 않는 1px 외부 프레임.
   function slotVisual(g, x, y, size, disabled) {
     frame(g, x, y, size, size, disabled ? colors.disabledFill : colors.normalFill,
       disabled ? colors.disabledBorder : colors.normalBorder);
@@ -126,7 +128,7 @@
   function grid(g, x, y, b, fill, line) {
     const width = b.columns * b.pitch + b.line;
     const height = b.rows * b.pitch + b.line;
-    // 외곽 및 내부 공유선은 1px, 각 칸의 순수 내부는 12×12.
+    // 외곽 및 내부 공유선은 1px, 각 칸의 순수 내부는 8×8.
     frame(g, x, y, width, height, fill, colors.gridBorder);
     g.fillStyle(line, 1);
     for (let i = 1; i < b.columns; i++) {
@@ -180,26 +182,28 @@
       measure(killsValue), measure(gemsValue));
     const quantize = width => Math.ceil(width / hud.columnUnit) * hud.columnUnit;
     const paddedWidth = (label, value) => quantize(2 * hud.padding + label + hud.gap + value);
-    // 세 열 모두 가장 넓은 항목의 예약 폭을 공유한다.
-    // 192px(8타일)은 비교 브랜치의 최소 폭이며 실측 결과가 더 넓으면 8px 단위로 늘린다.
-    const metricWidth = Math.max(hud.minMetricWidth, paddedWidth(measureLabel('시간'), timeReserve),
-      paddedWidth(measureLabel('처치 수'), counterReserve), paddedWidth(hud.iconSize, counterReserve));
-    const progressWidth = spec.width - 3 * metricWidth;
-    const barWidth = progressWidth - 2 * hud.padding - measureLabel('정원 완성도') - hud.gap;
-    if (barWidth < hud.minBarWidth) {
+    // 참조처럼 왼쪽 수치를 조밀하게 배치하고 오른쪽 게이지는 고정 폭으로 정렬.
+    // 최대 자릿수 예약을 유지하여 스트레스 모드에서도 위치가 흔들리지 않는다.
+    const timeWidth = paddedWidth(measureLabel('시간'), timeReserve);
+    const killsWidth = paddedWidth(measureLabel('처치 수'), counterReserve);
+    const gemsWidth = paddedWidth(hud.iconSize, counterReserve);
+    const progressWidth = 2 * hud.padding + measureLabel('정원 완성도') + hud.gap + hud.barWidth;
+    const progressX = spec.width - progressWidth;
+    if (timeWidth + killsWidth + gemsWidth > progressX) {
       throw new RangeError('HUD values exceed the available display width');
     }
     return {
-      time: { x: 0, width: metricWidth },
-      kills: { x: metricWidth, width: metricWidth },
-      gems: { x: 2 * metricWidth, width: metricWidth },
-      progress: { x: 3 * metricWidth, width: progressWidth, barWidth }
+      time: { x: 0, width: timeWidth },
+      kills: { x: timeWidth, width: killsWidth },
+      gems: { x: timeWidth + killsWidth, width: gemsWidth },
+      progress: { x: progressX, width: progressWidth, barWidth: hud.barWidth }
     };
   }
 
   function drawHud(scene) {
     const g = scene.add.graphics().setName('top-hud');
-    hudBoundary(g, spec.top - 1);
+    g.fillStyle(colors.hud, 1).fillRect(0, 0, spec.width, spec.top);
+    hudBoundary(g, spec.top - 2);
 
     // 개발용 표시 확인 값만 변경한다. 타이머/집계/저장은 구현하지 않는다.
     const stress = new URLSearchParams(window.location.search).get('hud') === 'stress';
@@ -228,11 +232,11 @@
     labelProbe.destroy();
     timeProbe.destroy();
 
-    // HUD 구분선: 1px 두께, 상하 8px 여백.
+    // 참조 상단 구분선: 2px 두께, 20px 높이.
     g.fillStyle(colors.hudDivider, 1);
-    [columns.kills.x, columns.gems.x, columns.progress.x].forEach(x => g.fillRect(x, spacing.base, 1, spec.top - 2 * spacing.base));
+    [columns.kills.x, columns.gems.x, columns.progress.x].forEach(x => g.fillRect(x, 5, 2, 20));
 
-    // 시간은 강조 크기, 일반 레이블과 수치는 역할별 크기. 같은 행에서 중앙 정렬.
+    // 참조처럼 시간·수치·레이블을 같은 12px 크기로 표시.
     function metric(column, label, value, valueSize = hud.valueSize) {
       const caption = text(scene, column.x + hud.padding, hud.centerY, label, hud.labelSize, colors.label, 'left');
       text(scene, caption.x + Math.ceil(caption.width) + hud.gap, hud.centerY, value, valueSize, colors.value, 'left');
@@ -248,21 +252,15 @@
     text(scene, c.x + hud.padding, hud.centerY, '정원 완성도', hud.labelSize, colors.label, 'left');
     const barX = c.x + hud.padding + labelWidth + hud.gap;
     const barY = hud.centerY - hud.barHeight / 2;
-    frame(g, barX, barY, c.barWidth, hud.barHeight, colors.progressTrack, colors.progressBorder);
+    frame(g, barX, barY, c.barWidth, hud.barHeight, R.n.barFrame, colors.progressBorder);
+    g.fillStyle(colors.progressTrack, 1).fillRect(barX + 2, barY + 2, c.barWidth - 4, hud.barHeight - 4);
     const progress = Math.max(0, Math.min(100, hud.previewProgress));
-    const fillWidth = Math.round((c.barWidth - 2) * progress / 100);
+    const fillWidth = Math.round((c.barWidth - 4) * progress / 100);
     if (fillWidth > 0) {
-      g.fillStyle(colors.progressFill, 1).fillRect(barX + 1, barY + 1, fillWidth, hud.barHeight - 2);
+      g.fillStyle(colors.progressFill, 1).fillRect(barX + 2, barY + 2, fillWidth, hud.barHeight - 4);
     }
-    const percent = text(scene, barX + c.barWidth / 2, hud.centerY, progress + '%', U.fontSize.compact, colors.value, 'center');
-    // 밝은 채움 위에도 퍼센트가 읽히도록 한다. 채움이 글자 일부에 걸치면
-    // 팔레트의 어두운 트랙 색을 글자 배경으로 사용한다.
-    const fillEnd = barX + 1 + fillWidth;
-    const textLeft = percent.x - percent.width / 2;
-    const textRight = percent.x + percent.width / 2;
-    if (fillEnd >= textRight) percent.setColor(P.hex.shadow);
-    else if (fillEnd > textLeft) percent.setBackgroundColor(P.hex.shadow);
-
+    text(scene, barX + c.barWidth / 2, hud.centerY, progress + '%', U.fontSize.compact, colors.value, 'center');
+    // 참조처럼 흰 숫자와 검은 1px 그림자를 그대로 유지.
   }
 
   function drawSlotCost(scene, g, x, y, size, value) {
@@ -273,7 +271,7 @@
     const gap = Math.max(0, Math.min(c.gap, size - 2 * c.padding - c.iconSize - textHeight));
     const groupHeight = c.iconSize + gap + textHeight;
     const top = y + Math.floor((size - groupHeight) / 2);
-    reserveIcon(g, x + (size - c.iconSize) / 2, top, c.iconSize, P.n.disabled);
+    reserveIcon(g, x + (size - c.iconSize) / 2, top, c.iconSize, R.n.disabled);
     cost.setPosition(x + size / 2, top + c.iconSize + gap + textHeight / 2);
   }
 
@@ -312,7 +310,7 @@
   function bottomLayout() {
     const s = spec.slots;
     const totalWidth = s.max * s.size + (s.max - 1) * s.gap;
-    const slotLeft = (spec.width - totalWidth) / 2;
+    const slotLeft = Math.floor((spec.width - totalWidth) / 2);
     const sideWidth = bottomStats.columnWidth * bottomStats.columns;
     const top = spec.top + spec.fieldHeight;
     return {
@@ -327,6 +325,7 @@
   function drawSlots(scene) {
     const s = spec.slots;
     const g = scene.add.graphics().setName('item-slots');
+    g.fillStyle(colors.hud, 1).fillRect(0, spec.top + spec.fieldHeight, spec.width, spec.bottom);
     hudBoundary(g, spec.top + spec.fieldHeight);
     const layout = bottomLayout();
     layout.slots.forEach((slot, i) => {
@@ -337,26 +336,26 @@
     return layout;
   }
 
-  // 필드 드롭은 흰색 24px 사각형과 16px 아이콘을 함께 부유시킨다.
+  // 필드 드롭도 참조 노드의 색/테두리를 적용하고 16px 원본과 함께 부유시킨다.
   // 26px 히트 영역은 고정하고 장착 슬롯/스냅 고스트는 기존 카드 표현 유지.
   function floatingDrop(scene, marker, index) {
     const [border, face, image] = marker.list;
-    border.setVisible(false);
-    face.setVisible(true).setFillStyle(P.n.paper, 1);
-    // 기존 카드의 호버 콜백이 흰색 면을 어둡게 변경하지 않도록 드롭만 재정의.
-    marker.setStrokeStyle = () => marker;
-    const shadow = scene.add.ellipse(0, 15, 12, 3, P.n.shadow, 0.25);
+    border.setVisible(true);
+    face.setVisible(true);
+    const shadow = scene.add.ellipse(0, 15, 12, 3, R.n.shadow, 0.25);
     marker.add(shadow);
     const period = 1800, phase = index * 317;
     function update(time) {
       const floating = marker.visible && marker.depth < 30;
       shadow.setVisible(floating);
       if (!floating) {
+        border.setY(0);
         face.setY(0);
         image.setY(0);
         return;
       }
       const lift = (1 - Math.cos((time + phase) * Math.PI * 2 / period)) * 2;
+      border.setY(-Math.round(lift));
       face.setY(-Math.round(lift));
       image.setY(-Math.round(lift));
       shadow.setScale(1 - lift * 0.0625, 1);
@@ -375,8 +374,8 @@
         // 도형의 바운딩 박스는 논리 표시 크기와 같다.
         // 추후 동일한 x, y, origin(0.5)에서 해당 크기의 이미지로 교체한다.
         const spriteName = type === 'enemy' ? 'snail' : type === 'item' ? 'wheelbarrow' : type === 'flower' ? testSprites.flowers[i % testSprites.flowers.length] : null;
-        const marker = (type === 'item' ? testSprites.itemCard(scene, x, y, spriteName, asset.cardSize, asset.size) :
-          type === 'flower' ? testSprites.flowerCard(scene, x, y, spriteName, asset.cardSize, asset.size) :
+        const marker = (type === 'item' ? testSprites.itemCard(scene, x, y, spriteName, asset.dropSize, asset.size) :
+          type === 'flower' ? testSprites.flowerCard(scene, x, y, spriteName, asset.dropSize, asset.size) :
           spriteName ? testSprites.marker(scene, x, y, spriteName, asset.size) : scene.add.rectangle(x, y, asset.size, asset.size, asset.color))
           .setName('placeholder:' + asset.assetKey + ':' + i);
         if (type === 'item' || type === 'flower') animations.push(floatingDrop(scene, marker, animations.length));
@@ -398,12 +397,12 @@
     grid(body, b.gridX, b.gridY, b, colors.gridFill, colors.blueprintLine);
 
     const header = scene.add.graphics().setDepth(11).setName('blueprint-header');
-    header.fillStyle(colors.field, 1).fillRect(b.x, b.y, b.width, b.header);
+    frame(header, b.x, b.y, b.width, b.header, R.n.header, R.n.panelBorder);
     text(scene, b.x + b.padding, b.y + b.header / 2, '도안', window.GardenUI.fontSize.base, colors.label, 'left').setDepth(12);
     const arrow = scene.add.graphics().setDepth(12).setName('blueprint-chevron');
     let expanded = true;
     function drawArrow() {
-      arrow.clear().lineStyle(1, P.n.label, 1);
+      arrow.clear().lineStyle(1, R.n.label, 1);
       const x = b.x + b.width - b.padding - spacing.base;
       const y = b.y + b.header / 2;
       arrow.beginPath();
@@ -425,7 +424,7 @@
 
   function tooltipPosition(anchor, width, height, fieldBottom) {
     const margin = 10;
-    const gap = spacing.base;
+    const gap = itemTooltip.gap;
     const half = anchor.size / 2;
     // 슬롯/하단 카드에서는 위쪽, 전장에서는 좌우를 우선한다.
     const right = anchor.x + half + gap;
@@ -447,12 +446,12 @@
       y: Math.round(clamp(best[1], top, bottom - height)) };
   }
 
-  // 기존 카드 선택의 밝은 테두리를 정보창에도 적용한다.
+  // 참조 정보창의 중성 회색 테두리, 보라색 제목 바와 크림색 본문.
   const itemTooltip = Object.freeze({
-    width: 192, padding: 10, fontSize: 12,
-    rowGap: 4, lineSpacing: 2, strokeWidth: 1, accent: P.n.paper,
-    background: P.n.soil, divider: P.n.edge,
-    title: colors.value, description: colors.label, hint: colors.disabledText
+    width: 240, padding: 6, gap: 8, bottomPadding: 14, fontSize: 12, titleSize: 14,
+    rowGap: 5, lineSpacing: 4, strokeWidth: 1, accent: R.n.panelBorder,
+    background: R.n.tooltip, header: R.n.tooltipHeader, divider: R.n.rule,
+    title: colors.value, description: R.hex.description, hint: colors.disabledText
   });
 
   // 교체 제목은 한 줄 우선, 넘치면 화살표 앞에서 분리한다.
@@ -528,7 +527,7 @@
       stats.forEach(row => {
         const d = next[row.key] - current[row.key];
         row.value.setText(String(next[row.key]));
-        row.delta.setText(d ? signed(d) : '').setColor(d > 0 ? P.hex.growth : d < 0 ? P.hex.red : colors.value)
+        row.delta.setText(d ? signed(d) : '').setColor(d > 0 ? R.hex.green : d < 0 ? R.hex.red : colors.value)
           .setVisible(d !== 0);
         // 라벨과 값 행의 실제 바운딩 크기를 기준으로 지정 행 간격,
         // 증감이 있을 때는 값과 증감 사이 2px를 두고 전체 행을 중앙 정렬한다.
@@ -553,7 +552,7 @@
     function effectRows(item, removed) {
       return statKeys.filter(key => item.stats[key]).map(key => ({
         value: statLabels[key] + ' ' + signed((removed ? -1 : 1) * item.stats[key]),
-        color: removed ? P.hex.red : P.hex.growth
+        color: removed ? R.hex.red : R.hex.green
       }));
     }
     function rebuildTooltip(key, rows) {
@@ -563,15 +562,16 @@
       const t = itemTooltip;
       const w = t.width, pad = t.padding;
       const labels = [];
-      let y = pad, dividerY = 0;
+      let y = pad, headerHeight = 0;
       rows.forEach((row, index) => {
         if (index === 1) {
-          dividerY = y;
+          headerHeight = y;
           y += t.rowGap;
         }
         let value = row.value;
+        const fontSize = index === 0 ? t.titleSize : t.fontSize;
         if (row.replacement) {
-          const probe = U.text(scene, 0, 0, '', t.fontSize, row.color);
+          const probe = U.text(scene, 0, 0, '', fontSize, row.color);
           try {
             value = replacementTitle(row.replacement[0], row.replacement[1], candidate => {
               probe.setText(candidate);
@@ -581,13 +581,13 @@
             probe.destroy();
           }
         }
-        const label = U.text(scene, pad, y, value, t.fontSize, row.color, {
+        const label = U.text(scene, pad, y, value, fontSize, row.color, {
           wrap: row.replacement ? undefined : w - 2 * pad, lineSpacing: t.lineSpacing
         });
         labels.push(label);
-        y += Math.max(t.fontSize, Math.ceil(label.height)) + t.rowGap;
+        y += Math.max(fontSize, Math.ceil(label.height)) + t.rowGap;
       });
-      tooltipSize = { width: w, height: y + pad - t.rowGap };
+      tooltipSize = { width: w, height: y + t.bottomPadding - t.rowGap };
       // 카드와 동일한 Rectangle + setStrokeStyle을 사용한다.
       // 기존 채운 사각형 테두리와 달리 선이 경계 중심에 그려진다.
       const background = scene.add.rectangle(w / 2, tooltipSize.height / 2,
@@ -595,11 +595,14 @@
         .setName('item-tooltip-background')
         .setStrokeStyle(t.strokeWidth, t.accent, 1);
       tooltip.add(background);
-      if (dividerY) {
-        const divider = scene.add.graphics().setName('item-tooltip-divider');
-        divider.fillStyle(t.divider, 1).fillRect(pad, dividerY, w - 2 * pad, 1);
-        tooltip.add(divider);
+      if (headerHeight) {
+        const header = scene.add.rectangle(w / 2, (headerHeight + 1) / 2, w - 2, headerHeight - 1, t.header)
+          .setName('item-tooltip-header');
+        tooltip.add(header);
       }
+      const divider = scene.add.graphics().setName('item-tooltip-divider');
+      divider.fillStyle(t.divider, 1).fillRect(pad, tooltipSize.height - 9, w - 2 * pad, 1);
+      tooltip.add(divider);
       labels.forEach(label => tooltip.add(label));
     }
     function refreshTooltip() {
@@ -614,7 +617,7 @@
       if (!item || (card && card.consumed)) { tooltip.setVisible(false); return; }
       const previous = dragging && target >= 0 ? equipped[target] : null;
       const anchor = Number.isInteger(index) && index >= 0 ? slotAnchor(index) :
-        { x: card.marker.x, y: card.marker.y, size: assets.item.cardSize };
+        { x: card.marker.x, y: card.marker.y, size: assets.item.dropSize };
       let rows;
       if (previous) {
         rows = [{ value: previous.name + ' → ' + item.name, replacement: [previous.name, item.name], color: itemTooltip.title },
@@ -637,7 +640,7 @@
       accents.clear();
       cards.forEach(card => {
         const active = dragging ? dragging === card : focus && focus.card === card;
-        card.marker.setStrokeStyle(active ? itemTooltip.strokeWidth : 0, itemTooltip.accent, active ? 1 : 0);
+        card.marker.setStrokeStyle(active ? 1 : 0, colors.focusBorder, active ? 1 : 0);
       });
       slots.forEach((slot, index) => {
         const focused = dragging ? target === index : focus && focus.slot === index && equipped[index];
@@ -668,7 +671,7 @@
       if (!dragging) return;
       const p = point(pointer);
       target = hitSlot(p);
-      const half = assets.item.cardSize / 2;
+      const half = assets.item.dropSize / 2;
       // 꽃과 동일: 원래 카드는 커서를 계속 따라가고, 미리보기만 슬롯 중심에 붙는다.
       const anchor = {
         x: Math.max(half, Math.min(spec.width - half, p.x)),
@@ -834,7 +837,7 @@
       joining = true;
     }
     scene.events.on('update', updatePatrol);
-    // 10×10 흙 면과 외부 1px 테두리를 단일 텍스처로 합성한다.
+    // 10×10 노드 면과 외부 1px 테두리를 단일 텍스처로 합성한다.
     // 점유 및 후보만 표시하고 나머지 격자는 투명하게 유지한다.
     const soilKey = 'ui-test:garden-soil:' + garden.cell;
     const soilWidth = garden.columns * garden.pitch, soilHeight = garden.rows * garden.pitch;
@@ -846,12 +849,12 @@
     function refreshSoil() {
       const ctx = soilTexture.getContext();
       ctx.clearRect(0, 0, soilWidth, soilHeight);
-      // 기존 1px 외곽선과 24px 내부 면 유지. 단색 흙 면은 불투명.
+      // 참조 트리 노드: 1px 초록 외곽선과 22px 어두운 면.
       for (const key of new Set([...occupied, ...gardenCandidates(occupied)])) {
         const x = (key % garden.columns) * garden.pitch, y = Math.floor(key / garden.columns) * garden.pitch;
         const l = garden.line, s = garden.pitch;
         ctx.globalAlpha = 1;
-        ctx.fillStyle = '#' + colors.gridBorder.toString(16).padStart(6, '0');
+        ctx.fillStyle = '#' + colors.gardenBorder.toString(16).padStart(6, '0');
         ctx.fillRect(x, y, s, l);
         ctx.fillRect(x, y + s - l, s, l);
         ctx.fillRect(x, y + l, l, garden.cell);
