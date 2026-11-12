@@ -22,10 +22,11 @@
 
       const x = 270;
       const w = 358;
-      U.button(this, x, 405, w, '새 게임', () => this.scene.start('Game'), { primary: true });
-      U.button(this, x, 467, w, '이어하기 · 미구현', null, { disabled: true });
-      U.button(this, x, 529, w, '설정', () => U.openSubscene(this, 'Settings'));
-      U.button(this, x, 591, w, '조작법', () => U.openSubscene(this, 'Controls'));
+      U.button(this, x, 374, w, '새 게임', () => this.scene.start('Game'), { primary: true });
+      U.button(this, x, 430, w, '이어하기 · 미구현', null, { disabled: true });
+      U.button(this, x, 486, w, '설정', () => U.openSubscene(this, 'Settings'));
+      U.button(this, x, 542, w, '조작법', () => U.openSubscene(this, 'Controls'));
+      U.button(this, x, 598, w, '종료 · 웹 미지원', null, { disabled: true });
 
       U.panel(this, 965, 366, 400, 476, { fill: 0x111a25, alpha: 0.96 });
       U.text(this, 798, 167, '프로토타입 안내', 23, U.C.text, { bold: true });
@@ -91,14 +92,15 @@
       U.text(this, 640, 140, '일시정지', 39, U.C.text, { bold: true, originX: 0.5 });
       U.text(this, 640, 192, '게임 화면은 중단된 상태입니다.', 16, U.C.muted, { originX: 0.5 });
       U.rule(this, 424, 229, 856, 229, U.C.border, 1);
-      U.button(this, 640, 278, 392, '계속하기', () => this.resumeGame(), { primary: true });
-      U.button(this, 640, 343, 392, '설정', () => U.openSubscene(this, 'Settings'));
-      U.button(this, 640, 408, 392, '조작법', () => U.openSubscene(this, 'Controls'));
-      U.button(this, 640, 473, 392, '메인 메뉴로', () => {
+      U.button(this, 640, 268, 392, '계속하기', () => this.resumeGame(), { primary: true });
+      U.button(this, 640, 327, 392, '재시작 · 미구현', null, { disabled: true });
+      U.button(this, 640, 386, 392, '설정', () => U.openSubscene(this, 'Settings'));
+      U.button(this, 640, 445, 392, '조작법', () => U.openSubscene(this, 'Controls'));
+      U.button(this, 640, 504, 392, '메인 메뉴로', () => {
         this.scene.pause('Pause');
         this.scene.launch('Confirm', { returnTo: 'Pause', action: 'returnToMenu' });
       }, { danger: true });
-      U.text(this, 640, 562, 'ESC  계속하기', 15, U.C.muted, { originX: 0.5 });
+      U.text(this, 640, 575, 'ESC  계속하기', 15, U.C.muted, { originX: 0.5 });
       U.bindEscape(this, () => this.resumeGame());
     }
     resumeGame() {
