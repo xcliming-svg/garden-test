@@ -14,7 +14,7 @@ jobs:
         with:
           node-version: '22'
       - name: Install pinned Chromium test dependencies
-        run: npm install --no-save --package-lock=false playwright@1.51.1 phaser@3.90.0
+        run: npm install --no-save --package-lock=false playwright@1.51.1 phaser@3.90.0 fontkit@2.0.4
         env:
           PLAYWRIGHT_SKIP_BROWSER_DOWNLOAD: '1'
       - name: Run real browser reference UI regression

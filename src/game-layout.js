@@ -66,7 +66,7 @@
     label: R.hex.label, hudLabel: R.hex.hudLabel, value: R.hex.text,
     gridFill: R.n.panel, gridLine: R.n.tabBorder, gridBorder: R.n.tabBorder,
     normalFill: R.n.tab, normalBorder: R.n.tabBorder,
-    progressTrack: R.n.track, progressBorder: R.n.border, progressFill: R.n.progress,
+    progressTrack: R.n.track, progressBorder: R.n.border, progressFill: R.n.green,
     disabledFill: R.n.panel, disabledBorder: R.n.tabBorder, disabledText: R.hex.disabled,
     enabledFill: R.n.background, enabledBorder: R.n.green, enabledText: R.hex.green,
     focusBorder: R.n.hover, invalidBorder: R.n.red,
@@ -184,9 +184,12 @@
     const paddedWidth = (label, value) => quantize(2 * hud.padding + label + hud.gap + value);
     // 시간·처치 수·보석 수 세 영역은 가장 넓은 예약 폭을 공유한다.
     // 최대 자릿수 예약을 유지하여 스트레스 모드에서도 위치가 흔들리지 않는다.
-    const metricWidth = Math.max(paddedWidth(measureLabel('시간'), timeReserve),
-      paddedWidth(measureLabel('처치 수'), counterReserve), paddedWidth(hud.iconSize, counterReserve));
-    const progressWidth = 2 * hud.padding + measureLabel('정원 완성도') + hud.gap + hud.barWidth;
+    // 언어를 바꿔도 열/게이지 경계가 이동하지 않도록 다섯 언어의 최대 레이블 폭을 예약한다.
+    const labelSets = Object.values(U.hudLabels);
+    const maxLabel = key => Math.max(...labelSets.map(labels => measureLabel(labels[key])));
+    const metricWidth = Math.max(paddedWidth(maxLabel('time'), timeReserve),
+      paddedWidth(maxLabel('kills'), counterReserve), paddedWidth(hud.iconSize, counterReserve));
+    const progressWidth = 2 * hud.padding + maxLabel('progress') + hud.gap + hud.barWidth;
     const progressX = spec.width - progressWidth;
     if (3 * metricWidth > progressX) {
       throw new RangeError('HUD values exceed the available display width');
@@ -226,7 +229,8 @@
       return Math.ceil(timeProbe.width);
     }
     const columns = hudColumns(measure, time, count, count, measureLabel, measureTime);
-    const labelWidth = measureLabel('정원 완성도');
+    const labels = U.hudLabels[U.hudLanguage()];
+    const labelWidth = measureLabel(labels.progress);
     probe.destroy();
     labelProbe.destroy();
     timeProbe.destroy();
@@ -240,16 +244,17 @@
       const caption = text(scene, column.x + hud.padding, hud.centerY, label, hud.labelSize, colors.hudLabel, 'left');
       text(scene, caption.x + Math.ceil(caption.width) + hud.gap, hud.centerY, value, valueSize, colors.value, 'left');
     }
-    metric(columns.time, '시간', time, hud.timeSize);
-    metric(columns.kills, '처치 수', count);
+    metric(columns.time, labels.time, time, hud.timeSize);
+    metric(columns.kills, labels.kills, count);
 
     const gem = columns.gems;
     reserveIcon(g, gem.x + hud.padding, hud.centerY - hud.iconSize / 2, hud.iconSize, colors.reservedIcon);
     text(scene, gem.x + hud.padding + hud.iconSize + hud.gap, hud.centerY, count, hud.valueSize, colors.value, 'left');
 
     const c = columns.progress;
-    text(scene, c.x + hud.padding, hud.centerY, '정원 완성도', hud.labelSize, colors.hudLabel, 'left');
-    const barX = c.x + hud.padding + labelWidth + hud.gap;
+    // 게이지 오른쪽 끝은 고정. 짧은 번역도 실제 레이블 끝에서 5px 뒤에 게이지를 표시한다.
+    const barX = c.x + c.width - hud.padding - c.barWidth;
+    text(scene, barX - hud.gap - labelWidth, hud.centerY, labels.progress, hud.labelSize, colors.hudLabel, 'left');
     const barY = hud.centerY - hud.barHeight / 2;
     frame(g, barX, barY, c.barWidth, hud.barHeight, R.n.barFrame, colors.progressBorder);
     g.fillStyle(colors.progressTrack, 1).fillRect(barX + 2, barY + 2, c.barWidth - 4, hud.barHeight - 4);

@@ -3,6 +3,7 @@ import { createServer } from 'node:http';
 import { join, resolve, extname } from 'node:path';
 import { createRequire } from 'node:module';
 import { chromium } from 'playwright';
+import * as fontkit from 'fontkit';
 
 const root = process.cwd(), out = resolve('benchmark-results');
 mkdirSync(out, {recursive:true});
@@ -32,6 +33,9 @@ const server=createServer((req,res)=>{
 });
 await new Promise(r=>server.listen(0,'127.0.0.1',r));
 const origin='http://127.0.0.1:'+server.address().port;
+// Verify the actual bundled font contains every translated glyph; browser fallback must not hide missing glyphs.
+const fontCss=readFileSync(join(root,'assets/fonts/fusion.css'),'utf8');
+const font=fontkit.create(Buffer.from(fontCss.match(/base64,([A-Za-z0-9+/=]+)/)[1],'base64'));
 const browser=await chromium.launch({channel:'chrome',headless:true,args:['--no-sandbox','--disable-dev-shm-usage','--use-gl=angle','--use-angle=swiftshader','--enable-unsafe-swiftshader']});
 const viewportSizes=[[640,360],[960,540],[1280,720],[1600,900],[1920,1080]];
 const clamp=x=>Math.max(0,Math.min(1,x));
@@ -123,7 +127,7 @@ for(const c of configs){
   const positions=[];
   for(let i=0;i<7;i++){positions.push(await dropState());await page.waitForTimeout(150);}
   check('float moves square and icon together, integer 0..4 px, stable hitbox',positions.every(p=>p.every((o,i)=>o.x===drops[i].x&&o.y===drops[i].y&&o.borderY===o.img&&o.faceY===o.img&&Number.isInteger(o.img)&&o.img>=-4&&o.img<=0))&&drops.every((_,i)=>new Set(positions.map(p=>p[i].img)).size>=2));
-  check('reference palette and opaque tree-node garden',await page.evaluate(()=>{const L=window.GardenGameLayout,s=window.__benchmarkGame.scene.getScene('Game'),g=L.spec.garden,t=s.textures.get('ui-test:garden-soil:'+g.cell),px=t.getContext().getImageData(4*g.pitch+3,4*g.pitch+3,1,1).data;const border=t.getContext().getImageData(4*g.pitch,4*g.pitch,1,1).data;return L.colors.field===0x0D0D0D&&L.colors.hud===0x161619&&L.colors.gardenSoil===0x343446&&L.colors.gardenSoilAlpha===1&&Array.from(px).join(',')==='52,52,70,255'&&Array.from(border).join(',')==='106,186,44,255'&&L.colors.progressTrack===0x545454&&L.colors.progressFill===0x968143&&L.colors.progressBorder===0x878796&&L.hud.barHeight===14&&L.hud.barWidth===158&&L.spec.top===32;}));
+  check('reference palette and opaque tree-node garden',await page.evaluate(()=>{const L=window.GardenGameLayout,s=window.__benchmarkGame.scene.getScene('Game'),g=L.spec.garden,t=s.textures.get('ui-test:garden-soil:'+g.cell),px=t.getContext().getImageData(4*g.pitch+3,4*g.pitch+3,1,1).data;const border=t.getContext().getImageData(4*g.pitch,4*g.pitch,1,1).data;return L.colors.field===0x0D0D0D&&L.colors.hud===0x161619&&L.colors.gardenSoil===0x343446&&L.colors.gardenSoilAlpha===1&&Array.from(px).join(',')==='52,52,70,255'&&Array.from(border).join(',')==='106,186,44,255'&&L.colors.progressTrack===0x545454&&L.colors.progressFill===0x6ABA2C&&L.colors.progressBorder===0x878796&&L.hud.barHeight===14&&L.hud.barWidth===158&&L.spec.top===32;}));
 
   // Resize the real browser viewport, then capture the actual canvas at 720p and 1080p.
   for(const [w,h] of viewportSizes){
@@ -176,7 +180,40 @@ for(const c of configs){
   await button('Victory','메인 메뉴');await page.waitForFunction(()=>window.__benchmarkGame.scene.isActive('MainMenu'));await button('MainMenu','실패 화면');await page.waitForFunction(()=>window.__benchmarkGame.scene.isActive('Defeat'));inspectMenu(await menuMetrics('Defeat'),'Defeat');
   check('runtime errors',errors.length===0,errors.join('; '));
   check('tooltip gap and palette role contract',await page.evaluate(()=>{let L=window.GardenGameLayout,T=L.itemTooltip,p=L.tooltipPosition({x:400,y:200,size:24},240,100,L.spec.top+L.spec.fieldHeight);return T.gap===8&&p.x===420&&T.padding===6&&T.bottomPadding===14&&T.rowGap===5&&T.lineSpacing===4&&T.strokeWidth===1}));
-  results.push({id:c.id,name:c.name,passed:checks.filter(x=>x.pass).length,total:checks.length,eligible:checks.every(x=>x.pass),fails:checks.filter(x=>!x.pass),ink:initial.ink,hudLayout:initial.hudLayout,renderer:await page.evaluate(()=>window.__benchmarkGame.renderer.type),observations:observations.map(m=>({canvas:m.canvas,zoom:m.zoom}))});
+  const locales=await page.evaluate(()=>window.GardenUI.hudLabels);
+  const localeResults=[];
+  for(const [lang, labels] of Object.entries(locales)){
+    const missing=[...new Set(Object.values(labels).join(''))].filter(ch=>!font.hasGlyphForCodePoint(ch.codePointAt(0)));
+    check(lang+' bundled font coverage',missing.length===0,JSON.stringify(missing));
+    for(const [w,h] of [[960,540],[1600,900],[1920,1080]]){
+      await page.setViewportSize({width:w,height:h});
+      await page.goto(origin+'/'+c.id+'/index.html?lang='+lang+'&hud=stress',{waitUntil:'load'});
+      await page.waitForFunction(()=>window.__benchmarkGame?.scene.isActive('MainMenu'),{},{timeout:20000});
+      await button('MainMenu','새 게임');
+      await page.waitForFunction(()=>window.__benchmarkGame.scene.isActive('Game'));
+      const m=await page.evaluate(()=>{
+        const U=window.GardenUI,L=window.GardenGameLayout,s=window.__benchmarkGame.scene.getScene('Game');
+        const labels=U.hudLabels[U.hudLanguage()], list=s.children.list.filter(o=>o.type==='Text'&&o.visible&&o.y<L.spec.top&&o.text);
+        const r=o=>({text:o.text,x:o.x-o.displayOriginX,y:o.y-o.displayOriginY,w:o.width,h:o.height,color:o.style.color});
+        const all=list.map(r), get=t=>all.find(o=>o.text===t);
+        const clock=get(labels.time), kills=get(labels.kills), garden=get(labels.progress), time=get('9999:59:59'), percent=get('30%');
+        const counts=all.filter(o=>o.text==='999,999,999,999').sort((a,b)=>a.x-b.x);
+        const metricWidth=kills.x-clock.x, gemX=counts[1].x-L.hud.padding-L.hud.iconSize-L.hud.gap;
+        const barX=percent.x+percent.w/2-L.hud.barWidth/2;
+        const gaps=[time.x-clock.x-Math.ceil(clock.w),counts[0].x-kills.x-Math.ceil(kills.w),barX-garden.x-Math.ceil(garden.w)];
+        return {lang:U.hudLanguage(),metricWidth,gemX,barX,gaps,all,labels,green:L.colors.progressFill===0x6ABA2C,top:L.spec.top};
+      });
+      const key=lang+' '+w+'x'+h;
+      check(key+' labels and bounds',m.lang===lang&&m.all.length===7&&m.all.every(t=>t.x>=0&&t.y>=0&&t.x+t.w<=960.1&&t.y+t.h<=32.1),JSON.stringify(m));
+      check(key+' equal widths and fixed gauge',m.metricWidth===initial.hudLayout.metricWidth&&m.gemX===2*m.metricWidth&&m.barX===792&&m.green,JSON.stringify(m));
+      check(key+' gaps and no overlap',m.gaps.every(g=>Math.abs(g-5)<0.01)&&m.all.every((a,i)=>m.all.every((b,j)=>i===j||!overlap(a,b))),JSON.stringify(m));
+      check(key+' reserved column containment',m.all.filter(t=>t.x<3*m.metricWidth).every(t=>t.x+t.w<=Math.ceil(t.x/m.metricWidth)*m.metricWidth-9)&&m.all.find(t=>t.text===m.labels.progress).x>=3*m.metricWidth,JSON.stringify(m));
+      localeResults.push({lang,viewport:[w,h],width:m.metricWidth,barX:m.barX,gaps:m.gaps,labels:m.labels});
+      if(w===1920)await page.screenshot({path:join(out,'hud-'+lang+'-1920.png')});
+    }
+  }
+  check('localized runtime errors',errors.length===0,errors.join('; '));
+  results.push({id:c.id,name:c.name,localeResults,passed:checks.filter(x=>x.pass).length,total:checks.length,eligible:checks.every(x=>x.pass),fails:checks.filter(x=>!x.pass),ink:initial.ink,hudLayout:initial.hudLayout,renderer:await page.evaluate(()=>window.__benchmarkGame.renderer.type),observations:observations.map(m=>({canvas:m.canvas,zoom:m.zoom}))});
  }catch(e){results.push({id:c.id,name:c.name,config:c,score:null,eligible:false,passed:checks.filter(x=>x.pass).length,total:checks.length,fails:[...checks.filter(x=>!x.pass),{name:'exception',detail:String(e)}],errors});}
  finally{await page.close();console.log('RESULT '+JSON.stringify(results.at(-1)));writeFileSync(join(out,'report.json'),JSON.stringify(results,null,2));}
 }

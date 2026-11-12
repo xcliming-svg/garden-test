@@ -16,7 +16,19 @@
     gold: R.n.gold, goldText: R.hex.gold, green: R.n.green, greenText: R.hex.green,
     red: R.n.red, redText: R.hex.red, white: R.n.hover
   });
-  // One unmodified Regular face for Korean, English and numerals.
+  // HUD 언어 미리보기 전용. 게임 전체 번역/언어 설정 기능과 분리한다.
+  const hudLabels = Object.freeze(Object.fromEntries(Object.entries({
+    ko: { time: '시간', kills: '처치 수', progress: '정원 완성도' },
+    en: { time: 'Time', kills: 'Kills', progress: 'Garden Completion' },
+    ja: { time: '時間', kills: '撃破数', progress: '庭園完成度' },
+    es: { time: 'Tiempo', kills: 'Bajas', progress: 'Progreso del jardín' },
+    zh: { time: '时间', kills: '击杀数', progress: '花园完成度' }
+  }).map(([lang, labels]) => [lang, Object.freeze(labels)])));
+  const hudLanguage = () => {
+    const lang = (new URLSearchParams(window.location.search).get('lang') || 'ko').toLowerCase().split('-')[0];
+    return Object.hasOwn(hudLabels, lang) ? lang : 'ko';
+  };
+  // One unmodified Regular face for HUD labels and numerals.
   const fontFamily = '"Garden Fusion"';
   // Fusion Pixel 원본을 유지하고 가독성 비교 결과에 따라 역할별 크기를 지정한다.
   const fontSize = Object.freeze({ base: 12, compact: 12, heading: 20, title: 40, timer: 12, menuBase: 12, menuAction: 14, menuHeading: 18, menuTitle: 40 });
@@ -25,7 +37,8 @@
   async function loadFonts() {
     if (!document.fonts || !document.fonts.load) throw new Error('Font Loading API unavailable');
     const loaded = await document.fonts.load('400 20px ' + fontFamily,
-      '정원 완성도 시간 처치 수 보석 수량 도안 새 게임 설정 일시정지 GARDEN TEST 0123456789 83%');
+      '보석 수량 도안 새 게임 설정 일시정지 GARDEN TEST 0123456789 83% ' +
+      Object.values(hudLabels).flatMap(labels => Object.values(labels)).join(' '));
     if (!loaded.length || loaded.some(face => face.status !== 'loaded')) {
       throw new Error('Fusion Pixel font failed to load');
     }
@@ -207,7 +220,7 @@
   }
 
   window.GardenUI = Object.freeze({
-    W: W, H: H, C: C, unit, tile, spacing, fontFamily, fontSize, menuStyle, loadFonts, text: text, panel: panel, panelHeader, rule: rule,
+    W: W, H: H, C: C, unit, tile, spacing, fontFamily, fontSize, menuStyle, hudLabels, hudLanguage, loadFonts, text: text, panel: panel, panelHeader, rule: rule,
     background: background, button: button, overlay: overlay, fitCamera: fitCamera,
     bindEscape: bindEscape, openSubscene: openSubscene,
     closeSubscene: closeSubscene
