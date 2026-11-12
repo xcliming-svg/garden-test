@@ -3,7 +3,7 @@
 
   const U = window.GardenUI;
   // 기존 메뉴 디자인 좌표는 1280×720. 전장 640×360 기준 간격의 2배를 사용한다.
-  const menu = Object.freeze({ gap: 8, buttonHeight: 48, inset: 32, row: 72 });
+  const menu = Object.freeze({ ...U.menuStyle, inset: 32, row: 72 });
   function centered(scene, x, y, label, size, color, options = {}) {
     return U.text(scene, x, y, label, size, color, { ...options, originX: 0.5, originY: 0.5 });
   }
@@ -22,7 +22,7 @@
     create() {
       U.background(this, 'MAIN MENU');
       centered(this, 640, 168, 'GARDEN', U.fontSize.menuTitle, U.C.text);
-      centered(this, 640, 248, 'TEST', U.fontSize.menuTitle, U.C.greenText);
+      centered(this, 640, 248, 'TEST', U.fontSize.menuTitle, U.C.text);
       centered(this, 640, 304, 'ROGUELIKE / SCENE STRUCTURE', U.fontSize.menuBase, U.C.muted);
 
       const x = 640;
@@ -37,7 +37,7 @@
 
       // 결과 씬 미리보기는 명시적인 개발용 URL에서만 나타난다.
       if (previewMode) {
-        U.text(this, 1060, 441, '개발용 결과 화면', U.fontSize.menuBase, U.C.goldText, { originX: 0.5 });
+        U.text(this, 1060, 441, '개발용 결과 화면', U.fontSize.menuBase, U.C.muted, { originX: 0.5 });
         U.button(this, 1060, 485, 230, '성공 화면', () => this.scene.start('Victory'), { height: 40, fontSize: U.fontSize.menuBase });
         U.button(this, 1060, 537, 230, '실패 화면', () => this.scene.start('Defeat'), { height: 40, fontSize: U.fontSize.menuBase });
       }
@@ -60,7 +60,7 @@
     constructor() { super('Pause'); }
     create() {
       U.overlay(this);
-      U.panel(this, 640, 360, 528, 520, { fill: U.C.panel, stroke: U.C.green, strokeWidth: 2 });
+      U.panel(this, 640, 360, 528, 520, { fill: U.C.panel, stroke: U.C.white });
       centered(this, 640, 152, '일시정지', U.fontSize.menuHeading, U.C.text);
       centered(this, 640, 192, '게임 화면은 중단된 상태입니다.', U.fontSize.menuBase, U.C.muted);
       U.rule(this, 408, 224, 872, 224, U.C.border, 1);
@@ -120,7 +120,7 @@
         this.tabItems.push(U.button(this, 352 + index * 288, 248, 272, tab.label, () => {
           this.activeTab = tab.id;
           this.renderTab();
-        }, { height: menu.buttonHeight, fontSize: U.fontSize.menuBase, primary: this.activeTab === tab.id }));
+        }, { height: menu.buttonHeight, fontSize: U.fontSize.menuBase, selected: this.activeTab === tab.id }));
       });
       const data = {
         general: [
@@ -145,7 +145,7 @@
         this.tabItems.push(U.text(this, 1056, y, row[1], U.fontSize.menuBase, U.C.muted, { originX: 1, originY: 0.5 }));
         this.tabItems.push(U.rule(this, 224, y + 36, 1056, y + 36, U.C.border, 0.6));
       });
-      this.tabItems.push(U.text(this, 208, 584, '설정값 변경·저장 기능 없음', U.fontSize.menuBase, U.C.goldText, { originY: 0.5 }));
+      this.tabItems.push(U.text(this, 208, 584, '설정값 변경·저장 기능 없음', U.fontSize.menuBase, U.C.muted, { originY: 0.5 }));
     }
   }
 
@@ -167,7 +167,7 @@
     }
     create() {
       U.overlay(this);
-      U.panel(this, 640, 360, 608, 320, { fill: U.C.panel, stroke: U.C.red, strokeWidth: 2 });
+      U.panel(this, 640, 360, 608, 320, { fill: U.C.panel, stroke: U.C.red });
       centered(this, 640, 264, '메인 메뉴로 돌아가시겠습니까?', U.fontSize.menuBase, U.C.text);
       centered(this, 640, 320, '진행 상황 저장은 미구현 상태입니다.', U.fontSize.menuBase, U.C.muted);
       U.button(this, 512, 432, 240, '취소', () => this.cancel(), { height: menu.buttonHeight });
@@ -188,7 +188,7 @@
     create() {
       U.background(this, this.victory ? 'RESULT / VICTORY' : 'RESULT / DEFEAT');
       const accent = this.victory ? U.C.green : U.C.red;
-      U.panel(this, 640, 360, 896, 496, { fill: U.C.panel, stroke: accent, strokeWidth: 2 });
+      U.panel(this, 640, 360, 896, 496, { fill: U.C.panel, stroke: accent });
       centered(this, 640, 184, this.victory ? '성공' : '실패', U.fontSize.menuHeading,
         this.victory ? U.C.greenText : U.C.redText);
       centered(this, 640, 240, '런 결과 화면 · UI 미리보기', U.fontSize.menuBase, U.C.muted);
@@ -201,7 +201,7 @@
         U.text(this, x, y, name, U.fontSize.menuBase, U.C.muted, { originY: 0.5 });
         U.text(this, x, y + 32, '—', U.fontSize.menuBase, U.C.text, { originY: 0.5 });
       });
-      centered(this, 640, 504, '결과 데이터 계산·저장은 미구현 상태입니다.', U.fontSize.menuBase, U.C.goldText);
+      centered(this, 640, 504, '결과 데이터 계산·저장은 미구현 상태입니다.', U.fontSize.menuBase, U.C.muted);
       U.button(this, 496, 560, 272, '새 게임', () => this.scene.start('Game'), { primary: true, height: menu.buttonHeight, fontSize: U.fontSize.menuBase });
       U.button(this, 784, 560, 272, '메인 메뉴', () => this.scene.start('MainMenu'), { height: menu.buttonHeight, fontSize: U.fontSize.menuBase });
     }
