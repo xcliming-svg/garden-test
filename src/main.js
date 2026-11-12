@@ -20,8 +20,7 @@
       S.GameScene,
       S.PauseScene,
       S.SettingsScene,
-      S.ControlsScene,
-      S.CreditsScene,
+      S.CodexScene,
       S.ConfirmScene,
       S.VictoryScene,
       S.DefeatScene
