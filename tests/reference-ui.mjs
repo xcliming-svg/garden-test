@@ -10,7 +10,7 @@ mkdirSync(out, {recursive:true});
 const require = createRequire(import.meta.url);
 const phaserPath = require.resolve('phaser/dist/phaser.min.js');
 const originals = Object.fromEntries(['ui.js','game-layout.js','scenes.js','main.js'].map(n=>[n,readFileSync(join(root,'src',n),'utf8').replace(/\r\n/g,'\n')]));
-const configs=[{id:'R',name:'screenshot-matched UI',top:32,bottom:44,margin:10,label:12,value:12,timer:12,body:12,menu:12,navFont:14,navHeight:24,navGap:3,blueCell:8,bluePad:7.5,blueHead:25.5,slotGap:3,statLabel:12,statValue:16,statCol:74,statGap:3,hudGap:5,bar:14,tipW:240,tipPad:6,tipRow:5,tipLine:4,tipFont:10}];
+const configs=[{id:'R',name:'screenshot-matched UI',top:32,bottom:44,margin:10,label:12,value:12,timer:12,body:12,menu:12,navFont:14,navHeight:24,navGap:3,blueCell:8,bluePad:7.5,blueHead:25.5,slotGap:3,statLabel:12,statValue:16,statCol:74,statGap:3,hudGap:5,bar:14,tipW:158,tipPad:6,tipRow:5,tipLine:4,tipFont:10}];
 function replace(s,a,b){if(!s.includes(a))throw Error('missing anchor '+a);return s.replaceAll(a,b);}
 const variants={R:originals};
 const mime={'.js':'application/javascript','.html':'text/html; charset=utf-8','.css':'text/css; charset=utf-8','.txt':'text/plain; charset=utf-8','.woff2':'font/woff2'};
@@ -191,7 +191,7 @@ for(const c of configs){
   const drag=async(name,x,y,release=true)=>{let a=await coords(name);await move(a.x,a.y);await page.mouse.down();const b=await page.locator('canvas').boundingBox();await page.mouse.move(b.x+x,b.y+y,{steps:8});if(release)await page.mouse.up();};
   const tip=async()=>page.evaluate(()=>{const s=window.__benchmarkGame.scene.getScene('Game'),t=s.children.getByName('item-preview-tooltip'),r=t.list[0];if(!t.visible||!r)return null;return {x:t.x,y:t.y,w:r.width,h:r.height,color:r.fillColor,stroke:r.strokeColor,header:t.list.find(o=>o.name==='item-tooltip-header')?.fillColor,rows:t.list.filter(o=>o.type==='Text').map(o=>({x:o.x,y:o.y,w:o.width,h:o.height,text:o.text,font:parseFloat(o.style.fontSize)}))};});
   let tips=[];
-  const inspectTip=(t,key)=>{check(key+' tooltip bounds',!!t&&t.x>=c.margin-.5&&t.y>=c.top+c.margin-.5&&t.x+t.w<=960-c.margin+.5&&t.y+t.h<=540-c.bottom-8+.5,JSON.stringify(t));if(t){check(key+' tooltip colors and width',t.w===240&&t.color===0x313142&&t.stroke===0x676777&&t.header===0x43435B,JSON.stringify(t));check(key+' tooltip rows',t.rows.every((r,i)=>r.x>=c.tipPad-.5&&r.x+r.w<=t.w-c.tipPad+.5&&r.y>=c.tipPad-.5&&r.y+r.h<=t.h-c.tipPad+.5&&(!i||r.y>=t.rows[i-1].y+t.rows[i-1].h-.5)),JSON.stringify(t.rows));check(key+' tooltip all rows 10px',t.rows.length>0&&t.rows.every(r=>r.font===10),JSON.stringify(t.rows));tips.push(t);}};
+  const inspectTip=(t,key)=>{check(key+' tooltip bounds',!!t&&t.x>=c.margin-.5&&t.y>=c.top+c.margin-.5&&t.x+t.w<=960-c.margin+.5&&t.y+t.h<=540-c.bottom-8+.5,JSON.stringify(t));if(t){check(key+' tooltip colors and width',t.w===c.tipW&&t.color===0x313142&&t.stroke===0x676777&&t.header===0x43435B,JSON.stringify(t));check(key+' tooltip rows',t.rows.every((r,i)=>r.x>=c.tipPad-.5&&r.x+r.w<=t.w-c.tipPad+.5&&r.y>=c.tipPad-.5&&r.y+r.h<=t.h-c.tipPad+.5&&(!i||r.y>=t.rows[i-1].y+t.rows[i-1].h-.5)),JSON.stringify(t.rows));check(key+' tooltip all rows 10px',t.rows.length>0&&t.rows.every(r=>r.font===10),JSON.stringify(t.rows));tips.push(t);}};
   for(let i=0;i<5;i++){const a=await coords('placeholder:item:'+i);await move(a.x,a.y);await page.waitForTimeout(70);inspectTip(await tip(),'hover '+i);await move(5,200);}
   const slot=initial.slots[0],last=initial.slots[9];
   await drag('placeholder:item:0',slot.x+18,slot.y+18);
@@ -230,7 +230,7 @@ for(const c of configs){
   await button('MainMenu','성공 화면');await page.waitForFunction(()=>window.__benchmarkGame.scene.isActive('Victory'));inspectMenu(await menuMetrics('Victory'),'Victory');
   await button('Victory','메인 메뉴');await page.waitForFunction(()=>window.__benchmarkGame.scene.isActive('MainMenu'));await button('MainMenu','실패 화면');await page.waitForFunction(()=>window.__benchmarkGame.scene.isActive('Defeat'));inspectMenu(await menuMetrics('Defeat'),'Defeat');
   check('runtime errors',errors.length===0,errors.join('; '));
-  check('tooltip gap and palette role contract',await page.evaluate(()=>{let L=window.GardenGameLayout,T=L.itemTooltip,p=L.tooltipPosition({x:400,y:200,size:24},240,100,L.spec.top+L.spec.fieldHeight);return T.gap===8&&p.x===420&&T.padding===6&&T.bottomPadding===14&&T.rowGap===5&&T.lineSpacing===4&&T.strokeWidth===1}));
+  check('tooltip gap and palette role contract',await page.evaluate(()=>{let L=window.GardenGameLayout,T=L.itemTooltip,p=L.tooltipPosition({x:400,y:200,size:24},T.width,100,L.spec.top+L.spec.fieldHeight);return T.width===L.hud.barWidth&&T.width===158&&T.gap===8&&p.x===420&&T.padding===6&&T.bottomPadding===14&&T.rowGap===5&&T.lineSpacing===4&&T.strokeWidth===1}));
   const locales=await page.evaluate(()=>window.GardenUI.hudLabels);
   const localeResults=[];
   for(const [lang, labels] of Object.entries(locales)){
