@@ -383,6 +383,44 @@
     title: colors.value, description: colors.label, hint: colors.disabledText
   });
 
+  // 교체 제목은 한 줄 우선, 넘치면 화살표 앞에서 분리한다.
+  // 개별 이름까지 길 경우 공백 우선으로, 필요 시 문자 단위로 줄바꿈한다.
+  function replacementTitle(previous, incoming, measure, maxWidth) {
+    const combined = previous + ' → ' + incoming;
+    if (measure(combined) <= maxWidth) return combined;
+
+    function wrapName(value) {
+      const lines = [];
+      let line = '';
+      for (const char of Array.from(value)) {
+        const next = line + char;
+        if (line && measure(next) > maxWidth) {
+          const space = line.lastIndexOf(' ');
+          if (space > 0) {
+            lines.push(line.slice(0, space));
+            line = (line.slice(space + 1) + char).trimStart();
+          } else {
+            lines.push(line.trimEnd());
+            line = char.trimStart();
+          }
+          // 공백 뒤 남은 문자열과 새 문자가 함께 넘치는 경우도 처리한다.
+          if (line && measure(line) > maxWidth && Array.from(line).length > 1) {
+            const chars = Array.from(line);
+            const last = chars.pop();
+            lines.push(chars.join('').trimEnd());
+            line = last.trimStart();
+          }
+        } else {
+          line = next;
+        }
+      }
+      if (line.trim()) lines.push(line.trimEnd());
+      return lines.join('\n');
+    }
+
+    return wrapName(previous) + '\n' + wrapName('→ ' + incoming);
+  }
+
   function drawItemPreview(scene, layout, cards) {
     const U = window.GardenUI;
     const s = spec.slots;
@@ -456,8 +494,20 @@
           dividerY = y;
           y += t.rowGap;
         }
-        const label = U.text(scene, pad, y, row.value, t.fontSize, row.color, {
-          wrap: w - 2 * pad, lineSpacing: t.lineSpacing
+        let value = row.value;
+        if (row.replacement) {
+          const probe = U.text(scene, 0, 0, '', t.fontSize, row.color);
+          try {
+            value = replacementTitle(row.replacement[0], row.replacement[1], candidate => {
+              probe.setText(candidate);
+              return probe.width;
+            }, w - 2 * pad);
+          } finally {
+            probe.destroy();
+          }
+        }
+        const label = U.text(scene, pad, y, value, t.fontSize, row.color, {
+          wrap: row.replacement ? undefined : w - 2 * pad, lineSpacing: t.lineSpacing
         });
         labels.push(label);
         y += Math.max(t.fontSize, Math.ceil(label.height)) + t.rowGap;
@@ -490,7 +540,7 @@
         { x: card.marker.x, y: card.marker.y, size: assets.item.size };
       let rows;
       if (previous) {
-        rows = [{ value: previous.name + ' → ' + item.name, color: itemTooltip.title },
+        rows = [{ value: previous.name + ' → ' + item.name, replacement: [previous.name, item.name], color: itemTooltip.title },
           { value: item.desc, color: itemTooltip.description }, ...effectRows(item, false),
           ...effectRows(previous, true), { value: '놓으면 기존 아이템 교체', color: itemTooltip.hint }];
       } else {
@@ -620,5 +670,5 @@
     drawItemPreview(scene, layout, cards);
   }
 
-  window.GardenGameLayout = Object.freeze({ spec, assets, colors, spacing, hud, slotCost, formatHudTime, formatHudCount, hudColumns, bottomStats, itemTooltip, bottomLayout, sumPreviewStats, getPreviewStats, tooltipPosition, draw });
+  window.GardenGameLayout = Object.freeze({ spec, assets, colors, spacing, hud, slotCost, formatHudTime, formatHudCount, hudColumns, bottomStats, itemTooltip, replacementTitle, bottomLayout, sumPreviewStats, getPreviewStats, tooltipPosition, draw });
 }());
