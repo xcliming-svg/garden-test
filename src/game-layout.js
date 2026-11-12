@@ -15,7 +15,7 @@
   const blueprintPadding = 4;
   const blueprintHeader = 22;
   const width = U.W, height = U.H;
-  const topHudHeight = 31;
+  const topHudHeight = 32;
   const bottomHudHeight = 44;
   const fieldHeight = height - topHudHeight - bottomHudHeight;
   const blueprintY = topHudHeight + 10;
@@ -42,7 +42,7 @@
 
   const hud = Object.freeze({
     padding: 10, gap: 5, labelSize: 12, valueSize: 12, timeSize: 12,
-    centerY: 14, iconSize: 14, barHeight: 14, barWidth: 158, // 외형 14, 이중 프레임 2px
+    centerY: 15, iconSize: 14, barHeight: 14, barWidth: 158, // 외형 14, 이중 프레임 2px
     columnUnit: 1, minMetricWidth: 0, hourDigits: 4, counterDigits: 12, minBarWidth: tile * 4,
     // 표시 폭 예약 기준이며 게임 데이터의 최대값이 아니다.
     previewProgress: 30,
@@ -63,7 +63,7 @@
 
   const colors = Object.freeze({
     field: R.n.background, hud: R.n.hud, hudBorder: R.n.hudEdge, hudDivider: R.n.divider,
-    label: R.hex.label, value: R.hex.text,
+    label: R.hex.label, hudLabel: R.hex.hudLabel, value: R.hex.text,
     gridFill: R.n.panel, gridLine: R.n.tabBorder, gridBorder: R.n.tabBorder,
     normalFill: R.n.tab, normalBorder: R.n.tabBorder,
     progressTrack: R.n.track, progressBorder: R.n.border, progressFill: R.n.progress,
@@ -182,20 +182,19 @@
       measure(killsValue), measure(gemsValue));
     const quantize = width => Math.ceil(width / hud.columnUnit) * hud.columnUnit;
     const paddedWidth = (label, value) => quantize(2 * hud.padding + label + hud.gap + value);
-    // 참조처럼 왼쪽 수치를 조밀하게 배치하고 오른쪽 게이지는 고정 폭으로 정렬.
+    // 시간·처치 수·보석 수 세 영역은 가장 넓은 예약 폭을 공유한다.
     // 최대 자릿수 예약을 유지하여 스트레스 모드에서도 위치가 흔들리지 않는다.
-    const timeWidth = paddedWidth(measureLabel('시간'), timeReserve);
-    const killsWidth = paddedWidth(measureLabel('처치 수'), counterReserve);
-    const gemsWidth = paddedWidth(hud.iconSize, counterReserve);
+    const metricWidth = Math.max(paddedWidth(measureLabel('시간'), timeReserve),
+      paddedWidth(measureLabel('처치 수'), counterReserve), paddedWidth(hud.iconSize, counterReserve));
     const progressWidth = 2 * hud.padding + measureLabel('정원 완성도') + hud.gap + hud.barWidth;
     const progressX = spec.width - progressWidth;
-    if (timeWidth + killsWidth + gemsWidth > progressX) {
+    if (3 * metricWidth > progressX) {
       throw new RangeError('HUD values exceed the available display width');
     }
     return {
-      time: { x: 0, width: timeWidth },
-      kills: { x: timeWidth, width: killsWidth },
-      gems: { x: timeWidth + killsWidth, width: gemsWidth },
+      time: { x: 0, width: metricWidth },
+      kills: { x: metricWidth, width: metricWidth },
+      gems: { x: 2 * metricWidth, width: metricWidth },
       progress: { x: progressX, width: progressWidth, barWidth: hud.barWidth }
     };
   }
@@ -216,7 +215,7 @@
       probe.setText(value);
       return Math.ceil(probe.width);
     }
-    const labelProbe = text(scene, 0, hud.centerY, '', hud.labelSize, colors.label, 'left');
+    const labelProbe = text(scene, 0, hud.centerY, '', hud.labelSize, colors.hudLabel, 'left');
     function measureLabel(value) {
       labelProbe.setText(value);
       return Math.ceil(labelProbe.width);
@@ -238,7 +237,7 @@
 
     // 참조처럼 시간·수치·레이블을 같은 12px 크기로 표시.
     function metric(column, label, value, valueSize = hud.valueSize) {
-      const caption = text(scene, column.x + hud.padding, hud.centerY, label, hud.labelSize, colors.label, 'left');
+      const caption = text(scene, column.x + hud.padding, hud.centerY, label, hud.labelSize, colors.hudLabel, 'left');
       text(scene, caption.x + Math.ceil(caption.width) + hud.gap, hud.centerY, value, valueSize, colors.value, 'left');
     }
     metric(columns.time, '시간', time, hud.timeSize);
@@ -249,7 +248,7 @@
     text(scene, gem.x + hud.padding + hud.iconSize + hud.gap, hud.centerY, count, hud.valueSize, colors.value, 'left');
 
     const c = columns.progress;
-    text(scene, c.x + hud.padding, hud.centerY, '정원 완성도', hud.labelSize, colors.label, 'left');
+    text(scene, c.x + hud.padding, hud.centerY, '정원 완성도', hud.labelSize, colors.hudLabel, 'left');
     const barX = c.x + hud.padding + labelWidth + hud.gap;
     const barY = hud.centerY - hud.barHeight / 2;
     frame(g, barX, barY, c.barWidth, hud.barHeight, R.n.barFrame, colors.progressBorder);

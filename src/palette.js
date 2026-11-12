@@ -45,7 +45,7 @@
     divider: '#202020', panel: '#302E3A', header: '#44445C', button: '#343446',
     tab: '#3B3B4E', tabBorder: '#51516B', selected: '#4F4F69', hover: '#A4B2CF',
     border: '#878796', panelBorder: '#676777', tooltip: '#313142', tooltipHeader: '#43435B',
-    rule: '#4B4B50', disabled: '#AAAAAA', text: '#FFFFFF', label: '#C8C8C8',
+    rule: '#4B4B50', disabled: '#AAAAAA', text: '#FFFFFF', label: '#C8C8C8', hudLabel: '#B0B0B0',
     description: '#F0E7AD', gold: '#DAA520', green: '#6ABA2C', red: '#FF4040',
     orange: '#FF9664', track: '#545454', barFrame: '#343446', progress: '#968143',
     skillProgress: '#657F95', shadow: '#000000', icon: '#B3DADB', job: '#324056',
