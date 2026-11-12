@@ -375,12 +375,12 @@
       y: Math.round(clamp(best[1], top, bottom - height)) };
   }
 
-  // 카드·슬롯 선택과 정보창의 시각적 연결. 기존 팔레트만 사용한다.
+  // 기존 카드 선택의 밝은 테두리를 정보창에도 적용한다.
   const itemTooltip = Object.freeze({
-    width: 144, padding: spacing.base, fontSize: bottomStats.fontSize,
-    rowGap: spacing.small, lineSpacing: 1, accent: P.n.gold,
-    background: P.n.shadow, tint: P.n.bark, tintAlpha: 0.2,
-    divider: P.n.orange, title: P.hex.paper, description: P.hex.sand, hint: P.hex.label
+    width: 176, padding: spacing.base, fontSize: bottomStats.fontSize,
+    rowGap: spacing.small, lineSpacing: 2, accent: P.n.paper,
+    background: P.n.soil, divider: P.n.edge,
+    title: colors.value, description: colors.label, hint: colors.disabledText
   });
 
   function drawItemPreview(scene, layout, cards) {
@@ -454,7 +454,7 @@
       let y = pad, dividerY = 0;
       rows.forEach((row, index) => {
         if (index === 1) {
-          dividerY = y - 2;
+          dividerY = y;
           y += t.rowGap;
         }
         const label = U.text(scene, pad, y, row.value, t.fontSize, row.color, {
@@ -464,10 +464,7 @@
         y += Math.max(t.fontSize, Math.ceil(label.height)) + t.rowGap;
       });
       tooltipSize = { width: w, height: y + pad - t.rowGap };
-      // 불투명 shadow 위에 bark를 얇게 올려 어두운 갈색 톤을 유지한다.
-      // 골드 1px 외곽선은 카드와 슬롯의 활성 색상과 동일하다.
       frame(background, 0, 0, w, tooltipSize.height, t.background, t.accent);
-      background.fillStyle(t.tint, t.tintAlpha).fillRect(1, 1, w - 2, tooltipSize.height - 2);
       if (dividerY) background.fillStyle(t.divider, 1).fillRect(pad, dividerY, w - 2 * pad, 1);
     }
     function refreshTooltip() {
@@ -503,16 +500,11 @@
       accents.clear();
       cards.forEach(card => {
         const active = dragging ? dragging === card : focus && focus.card === card;
-        if (active && !card.consumed) {
-          // 카드 자체가 금색이므로 1px 빈 간격을 둔 L자 외곽선을 사용한다.
-          const half = assets.item.size / 2;
-          slotCorners(accents, Math.round(card.marker.x - half - 2),
-            Math.round(card.marker.y - half - 2), assets.item.size + 4, itemTooltip.accent);
-        }
+        card.marker.setStrokeStyle(active ? 1 : 0, itemTooltip.accent, active ? 1 : 0);
       });
       slots.forEach((slot, index) => {
         const active = dragging ? target === index : focus && focus.slot === index && equipped[index];
-        if (active) slotCorners(accents, slot.x, slot.y, slot.size, itemTooltip.accent);
+        if (active) slotCorners(accents, slot.x, slot.y, slot.size, dragging ? P.n.growth : P.n.gold);
         slotItems[index].setVisible(!!equipped[index]).setAlpha(dragging && target === index ? 0.45 : 1);
       });
       renderStats();
