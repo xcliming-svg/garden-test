@@ -392,3 +392,8 @@
 ## 2026-11-13 — 상단 HUD 32px 및 동일 폭
 
 - 상단 높이 31→32px, 콘텐츠 중심 Y=15. 시간·처치 수·보석 수 영역의 최대 예약 폭을 동일하게 적용(Chromium 실측 167px씩). 상단 레이블만 #C8C8C8→#B0B0B0, 수치 #FFFFFF 유지. 시간 레이블→수치와 정원 완성도 레이블→게이지는 기존 공통 5px로 동일하므로 변경하지 않는다. 게이지 외형 158×14px, 내부 높이 10px 및 좌우 패딩 10px 유지. 전장 높이 464px, 정원/도안 원점 Y가 1px 이동한다. 실제 Chromium 138/138 검사 통과: https://github.com/xcliming-svg/garden-test/actions/runs/43322787973. 동일 간격 직접 비교 추가 검사: https://github.com/xcliming-svg/garden-test/actions/runs/43322881453. main 변경 없음.
+
+
+## 2026-11-13 — 상단 HUD 다국어 폭 예약 및 초록색 게이지
+
+- ko/en/ja/es/zh HUD 레이블 추가, URL lang 미리보기(기본 한국어). 모든 언어의 최대 실측 레이블 폭과 기존 최대 자릿수 예약으로 공통 열 폭을 계산한다. 실제 167px 유지, 게이지 시작 x=792 고정, 각 레이블-수치/게이지 간격 5px 유지. 게이지 채움 #968143→#6ABA2C, 다른 색/규격과 도안·꽃밭·드롭·슬롯 변경 없음. 전체 번역 및 언어 설정/저장 기능은 범위 외. 기존 폰트 글리프 지원 및 실제 Chromium 5개 언어×3개 해상도 포함 204/204 검사 통과: https://github.com/xcliming-svg/garden-test/actions/runs/43323383914. main 변경 없음.
