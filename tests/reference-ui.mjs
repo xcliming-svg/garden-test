@@ -142,7 +142,7 @@ for(const c of configs){
     zh:proposedStatLabels.zh
   };
   const statWidthReport=await page.evaluate(({full,short})=>{
-    const U=window.GardenUI,L=window.GardenGameLayout,s=window.__benchmarkGame.scene.getScene('Game'),p=U.text(s,0,0,'',L.bottomStats.fontSize,'#FFFFFF');
+    const U=window.GardenUI,L=window.GardenGameLayout,s=window.__benchmarkGame.scene.getScene('Game'),p=U.text(s,0,0,'',10,'#FFFFFF');
     const width=v=>{p.setText(v);return p.width;};
     const measure=labels=>Object.fromEntries(Object.entries(labels).map(([k,arr])=>[k,arr.map(v=>({label:v,width:width(v)}))]));
     const numberRows=[['124','+24'],['100','-24'],['999','+999'],['9,999','+9,999'],['999,999','+999,999'],['999,999,999,999','+999,999,999,999']].map(([value,delta])=>({value,delta,width:width(value)+L.bottomStats.deltaGap+width(delta)}));
@@ -249,8 +249,10 @@ for(const c of configs){
   check('replace',await page.evaluate(()=>window.__benchmarkGame.scene.getScene('Game').children.getByName('preview-equipped:0').visible&&!window.__benchmarkGame.scene.getScene('Game').children.getByName('placeholder:item:3').visible));
   await drag('placeholder:item:1',last.x+18,last.y+18);
   check('locked reject',await page.evaluate(()=>window.__benchmarkGame.scene.getScene('Game').children.getByName('placeholder:item:1').visible));
-  await page.waitForTimeout(100);
-  check('rejected drop resumes float',await page.evaluate(()=>{const o=window.__benchmarkGame.scene.getScene('Game').children.getByName('placeholder:item:1');return o.visible&&o.depth===0&&o.list[3].visible&&o.list[0].visible&&o.list[1].visible&&o.list[1].fillColor===0x3B3B4E;}));
+  // Wait for the next actual update frame after dragend, rather than a fixed wall-clock delay.
+  const rejectedDropState=()=>{const o=window.__benchmarkGame.scene.getScene('Game').children.getByName('placeholder:item:1');return o.visible&&o.depth===0&&o.list[3].visible&&o.list[0].visible&&o.list[1].visible&&o.list[1].fillColor===0x3B3B4E;};
+  const resumed=await page.waitForFunction(rejectedDropState,{}, {timeout:3000}).then(()=>true,()=>false);
+  check('rejected drop resumes float',resumed,JSON.stringify(await page.evaluate(()=>{const o=window.__benchmarkGame.scene.getScene('Game').children.getByName('placeholder:item:1');return {visible:o.visible,depth:o.depth,shadow:o.list[3].visible,border:o.list[0].visible,face:o.list[1].visible,fillColor:o.list[1].fillColor};})));
   let g=initial.garden;await drag('placeholder:flower:0',g.x+4*g.pitch+12,g.y+3*g.pitch+12);
   check('plant',await page.evaluate(()=>!!window.__benchmarkGame.scene.getScene('Game').children.getByName('garden-preview-flower:34')));
   let b=initial.blueprint;await move(b.x+b.width/2,b.y+b.header/2);await page.mouse.click(b.x+b.width/2,b.y+b.header/2);
