@@ -30,7 +30,9 @@
   const gardenMode = new URLSearchParams(window.location.search).get('garden');
   const gardenCell = gardenMode === '32' || gardenMode === '36' ? unit * 4 : 22;
   const cellLine = 1, gardenPitch = gardenCell + 2 * cellLine;
-  const iconSize = unit * 2, slotSize = 36, dropSize = 24;
+  // 슬롯 크기 비교용 URL 옵션. 기본 36px 및 기존 전장 드롭 24px는 유지한다.
+  const slotMode = new URLSearchParams(window.location.search).get('slots');
+  const iconSize = unit * 2, slotSize = slotMode === '24' ? 24 : slotMode === '32' ? 32 : 36, dropSize = 24;
   const gardenSize = 10 * gardenPitch;
   const spec = Object.freeze({
     width, height,
@@ -282,6 +284,15 @@
     const iconTop = valueY - textHeight / 2 - c.gap - c.iconSize;
     reserveIcon(g, x + (size - c.iconSize) / 2, iconTop, c.iconSize, R.n.disabled);
     cost.setPosition(x + size / 2, valueY);
+    // 24px 비교 슬롯은 글자의 투명 텍스처/그림자 일부가 테두리까지 닿는다.
+    // 숫자 기준선과 5px 객체 간격을 유지하면서 슬롯 내부에서만 그린다.
+    if (size === 22) {
+      const clip = scene.make.graphics({ x: 0, y: 0, add: false });
+      clip.fillStyle(0xffffff, 1).fillRect(x, y, size, size);
+      const mask = clip.createGeometryMask();
+      cost.setMask(mask);
+      cost.once('destroy', () => { mask.destroy(); clip.destroy(); });
+    }
   }
 
   // 9개 일반 + 마지막 확장 슬롯을 최대 폭에서 검토한다. 실제 초기 슬롯 정책은 4개로 유지.
