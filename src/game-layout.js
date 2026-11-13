@@ -1065,12 +1065,12 @@
     scene.cameras.main.setBackgroundColor(P.background.hex);
     const g = scene.add.graphics().setDepth(-2).setName('battlefield');
     g.fillStyle(colors.field, 1).fillRect(0, spec.top, spec.width, spec.fieldHeight);
-    const { cards, flowers } = drawMarkers(scene);
+    // Isolated visual comparison: no field drops, enemies, or gems.
     drawHud(scene);
     const layout = drawSlots(scene);
     drawBlueprint(scene);
-    drawItemPreview(scene, layout, cards);
-    drawGardenPreview(scene, flowers);
+    drawItemPreview(scene, layout, []);
+    window.GardenFlowerHeadPreview.draw(scene, spec, colors, gardenRaster, patrolBounds, patrolPosition);
     text(scene, spec.width - 10, spec.top + spacing.base, '테스트 이미지', bottomStats.fontSize, colors.label, 'right').setDepth(16);
   }
 

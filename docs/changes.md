@@ -2,6 +2,10 @@
 
 각 구현 변경의 결과를 시스템 단위로 기록한다. 대화 원문 또는 코드 diff의 복제가 아니라 **어떤 시스템에 무엇이 적용되었으며, 무엇이 아직 구현되지 않았는지**를 설명한다. 최신 구현 상태는 [implementation.md](./implementation.md)를 참조한다.
 
+## 2026-11-14 — 꽃 머리 가득 채운 정원 비교 (독립 브랜치)
+
+- main c811115 기준 feature/flower-head-preview. SVG 꽃 머리 4종 및 사람 1종을 추출하여 기존 22px 정원 내부를 최대 크기로 채우고 100칸을 미리 배치한다. 적·보석·드롭은 생성하지 않는다. 기존 HUD 및 정원 규격 유지. [실험 규격 및 검증](./flower-head-preview.md). main/devel 미병합.
+
 ## 2026-11-13 — 검증된 devel의 main 승격
 
 - 사용자 승인에 따라 devel `32cbd05`를 main `bdc4e7c`에 fast-forward 병합했다. 색상 비교 제거, 정원·999 잠김 슬롯 색상 통일 및 누적 UI 개선을 포함한다. [Chromium 956/956](https://github.com/xcliming-svg/garden-test/actions/runs/43401947938) 검증본의 소스 변경 없이 승격한다. main/devel에 이 기록을 동기화하여 기존 devel push 기반 Pages 배포를 실행한다. 다른 브라우저·OS는 미검증이며 실제 게임플레이 구현 범위는 변경하지 않는다.
