@@ -100,7 +100,7 @@ for(const c of configs){
     const blueprint=L.spec.blueprint,slot=bl.slots[9];
     const title=visibleText.find(o=>o.name==='blueprint-title'), toggle=s.children.getByName('blueprint-toggle');
     const hudBottom=L.spec.top-Math.max(clock.y+clock.h,timeValue.y+timeValue.h);
-    const blueprintMetrics={topGap:blueprint.y-L.spec.top,hudBottom,roundedHudBottom:Math.round(hudBottom),titlePadX:title.x-blueprint.x,titlePadTop:title.y-blueprint.y,titlePadBottom:blueprint.y+blueprint.header-title.y-title.h,titleHeight:title.h,titleFont:title.font,gridGap:blueprint.gridY-blueprint.y-blueprint.header,gridX:blueprint.gridX,headerX:toggle.x-toggle.width/2,width:toggle.width,height:toggle.height};
+    const blueprintMetrics={topGap:blueprint.y-L.spec.top,hudBottom,roundedHudBottom:Math.round(hudBottom),titlePadX:title.x-blueprint.x,titlePadTop:title.y-blueprint.y,titlePadBottom:blueprint.y+blueprint.header-title.y-title.h,titleHeight:title.h,titleFont:title.font,titleColor:title.color,gridGap:blueprint.gridY-blueprint.y-blueprint.header,gridX:blueprint.gridX,headerX:toggle.x-toggle.width/2,width:toggle.width,height:toggle.height};
     const enemies=list.filter(o=>o.name?.startsWith('placeholder:'));
     return {zoom:s.cameras.main.zoom,canvas:[s.scale.gameSize.width,s.scale.gameSize.height],top:L.spec.top,bottom:L.spec.bottom,field:L.spec.fieldHeight,garden:L.spec.garden,blueprint,blueprintMetrics,slots:bl.slots,slotGap:L.spec.slots.gap,stats,statSpec:L.bottomStats,costSpec:L.slotCost,side:bl.sideWidth,sideLeft:bl.left,sideRight:bl.right,slotLeft:bl.slotLeft,slotWidth:bl.totalWidth,hud,hudLayout,cost,
       fixed:{garden:L.spec.garden.cell,slot:L.spec.slots.cell,slotOuter:L.spec.slots.size,flower:L.assets.flower.size,item:L.assets.item.size,card:L.assets.item.cardSize,line:L.spec.garden.line},
@@ -115,7 +115,7 @@ for(const c of configs){
     check(label+' fixed sizes',JSON.stringify(m.fixed)===JSON.stringify({garden:22,slot:30,slotOuter:32,flower:16,item:16,card:32,line:1}));
     check(label+' HUD bounds',m.hud.length>=6&&m.hud.every(t=>t.x>=-eps&&t.y>=-eps&&t.x+t.w<=960+eps&&t.y+t.h<=m.top+eps),JSON.stringify(m.hud));
     const bp=m.blueprintMetrics;
-    check(label+' blueprint alignment and visible HUD spacing',bp.width===91&&bp.gridX===bp.headerX&&bp.headerX===m.hudLayout.leftPadding&&bp.titlePadX===5&&bp.gridGap===3&&m.blueprint.gap===3&&bp.titleFont===10&&m.blueprint.cell===8&&m.blueprint.line===1&&m.blueprint.width===91&&m.blueprint.height===m.blueprint.header+3+91&&bp.height===19&&bp.topGap===m.hudLayout.textPadTop,JSON.stringify(bp));
+    check(label+' blueprint alignment and visible HUD spacing',bp.width===91&&bp.gridX===bp.headerX&&bp.headerX===m.hudLayout.leftPadding&&bp.titlePadX===5&&bp.gridGap===3&&m.blueprint.gap===3&&bp.titleFont===10&&bp.titleColor.toLowerCase()==='#b0b0b0'&&m.blueprint.cell===8&&m.blueprint.line===1&&m.blueprint.width===91&&m.blueprint.height===m.blueprint.header+3+91&&bp.height===19&&bp.topGap===m.hudLayout.textPadTop,JSON.stringify(bp));
     check(label+' HUD nonoverlap',m.hud.every((a,i)=>m.hud.every((b,j)=>i===j||!overlap(a,b))));
     check(label+' equal HUD widths, center and labels',m.top===32&&m.hudLayout.centerY===15&&m.hudLayout.leftPadding===7.5&&m.hudLayout.rightPadding===7.5&&m.hudLayout.textPadTop===7.5&&m.hudLayout.textPadBottom===7.5&&m.hudLayout.barHeight===12&&Math.abs(m.hudLayout.timeGap-5)<0.01&&Math.abs(m.hudLayout.barGap-5)<0.01&&m.hudLayout.metricWidth>0&&m.hudLayout.gemX===2*m.hudLayout.metricWidth&&3*m.hudLayout.metricWidth<=m.hudLayout.progressX&&m.hudLayout.labelColors.every(c=>c.toLowerCase()==='#b0b0b0')&&m.hudLayout.valueColors.every(c=>c.toLowerCase()==='#ffffff'),JSON.stringify(m.hudLayout));
     check(label+' bottom HUD 40px and equal 3px clear gaps',m.bottom===40&&m.field===468&&m.slotWidth===347&&m.slots.every((s,i)=>s.y-(540-m.bottom+2)===3&&540-(s.y+s.size)===3&&(!i||s.x-m.slots[i-1].x-m.slots[i-1].size===3)),JSON.stringify(m.slots));
@@ -300,15 +300,36 @@ for(const c of configs){
   const coords=async name=>page.evaluate(name=>{const s=window.__benchmarkGame.scene.getScene('Game'),o=s.children.getByName(name);return {x:o.x,y:o.y}},name);
   const move=async(x,y)=>{const b=await page.locator('canvas').boundingBox();await page.mouse.move(b.x+x,b.y+y);};
   const drag=async(name,x,y,release=true)=>{let a=await coords(name);await move(a.x,a.y);await page.mouse.down();const b=await page.locator('canvas').boundingBox();await page.mouse.move(b.x+x,b.y+y,{steps:8});if(release)await page.mouse.up();};
-  const tip=async()=>page.evaluate(()=>{const s=window.__benchmarkGame.scene.getScene('Game'),t=s.children.getByName('item-preview-tooltip'),r=t.list[0];if(!t.visible||!r)return null;return {x:t.x,y:t.y,w:r.width,h:r.height,color:r.fillColor,stroke:r.strokeColor,header:t.list.find(o=>o.name==='item-tooltip-header')?.fillColor,rows:t.list.filter(o=>o.type==='Text').map(o=>({x:o.x,y:o.y,w:o.width,h:o.height,text:o.text,font:parseFloat(o.style.fontSize)}))};});
+  const tip=async()=>page.evaluate(()=>{const s=window.__benchmarkGame.scene.getScene('Game'),t=s.children.getByName('item-preview-tooltip'),r=t.list[0];if(!t.visible||!r)return null;return {x:t.x,y:t.y,w:r.width,h:r.height,color:r.fillColor,stroke:r.strokeColor,header:t.list.find(o=>o.name==='item-tooltip-header')?.fillColor,divider:!!t.getByName('item-tooltip-divider'),rows:t.list.filter(o=>o.type==='Text').map(o=>({x:o.x,y:o.y,w:o.width,h:o.height,text:o.text,color:o.style.color,font:parseFloat(o.style.fontSize)}))};});
   let tips=[];
-  const inspectTip=(t,key)=>{check(key+' tooltip bounds',!!t&&t.x>=c.margin-.5&&t.y>=c.top+c.margin-.5&&t.x+t.w<=960-c.margin+.5&&t.y+t.h<=540-c.bottom-8+.5,JSON.stringify(t));if(t){check(key+' tooltip colors and width',t.w===c.tipW&&t.color===0x313142&&t.stroke===0x676777&&t.header===0x43435B,JSON.stringify(t));check(key+' tooltip rows',t.rows.every((r,i)=>r.x>=c.tipPad-.5&&r.x+r.w<=t.w-c.tipPad+.5&&r.y>=c.tipPad-.5&&r.y+r.h<=t.h-c.tipPad+.5&&(!i||r.y>=t.rows[i-1].y+t.rows[i-1].h-.5)),JSON.stringify(t.rows));check(key+' tooltip all rows 10px',t.rows.length>0&&t.rows.every(r=>r.font===10),JSON.stringify(t.rows));tips.push(t);}};
+  const inspectTip=(t,key)=>{check(key+' tooltip bounds',!!t&&t.x>=c.margin-.5&&t.y>=c.top+c.margin-.5&&t.x+t.w<=960-c.margin+.5&&t.y+t.h<=540-c.bottom-8+.5,JSON.stringify(t));if(t){check(key+' tooltip colors and width',t.w===c.tipW&&t.color===0x313142&&t.stroke===0x676777&&t.header===0x43435B&&!t.divider&&t.rows[1]?.color.toLowerCase()==='#b0b0b0',JSON.stringify(t));check(key+' tooltip rows',t.rows.every((r,i)=>r.x>=c.tipPad-.5&&r.x+r.w<=t.w-c.tipPad+.5&&r.y>=c.tipPad-.5&&r.y+r.h<=t.h-c.tipPad+.5&&(!i||r.y>=t.rows[i-1].y+t.rows[i-1].h-.5)),JSON.stringify(t.rows));check(key+' tooltip all rows 10px',t.rows.length>0&&t.rows.every(r=>r.font===10),JSON.stringify(t.rows));tips.push(t);}};
   for(let i=0;i<5;i++){const a=await coords('placeholder:item:'+i);await move(a.x,a.y);await page.waitForTimeout(70);inspectTip(await tip(),'hover '+i);await move(5,200);}
   const slot=initial.slots[0],last=initial.slots[9];
   await drag('placeholder:item:0',slot.x+slot.size/2,slot.y+slot.size/2);
   check('equip',await page.evaluate(()=>window.__benchmarkGame.scene.getScene('Game').children.getByName('preview-equipped:0').visible));
   await drag('placeholder:item:3',slot.x+slot.size/2,slot.y+slot.size/2,false);await page.waitForTimeout(100);inspectTip(await tip(),'replace');
-  await page.screenshot({path:join(out,c.id+'-replace.png')});
+  const replacement=await tip();
+  const replacementPng=await page.screenshot({path:join(out,c.id+'-replace.png')});
+  const tipPixels=await page.evaluate(async ({data,t})=>{
+    const img=await createImageBitmap(await (await fetch('data:image/png;base64,'+data)).blob()),cv=document.createElement('canvas');
+    cv.width=img.width;cv.height=img.height;const ctx=cv.getContext('2d');ctx.drawImage(img,0,0);
+    const px=ctx.getImageData(0,0,cv.width,cv.height).data;
+    const rgb=(x,y)=>Array.from(px.slice((y*cv.width+x)*4,(y*cv.width+x)*4+3));
+    const edges=t.rows.map((r,i)=>{
+      const bg=i===0?91:66,fg=parseInt(r.color.slice(1),16),f=Math.max((fg>>16)&255,(fg>>8)&255,fg&255),threshold=Math.ceil(bg+(f-bg)*0.25);
+      let left=Infinity,right=-1,top=Infinity,bottom=-1,n=0,exact=0;
+      for(let y=Math.floor(t.y+r.y);y<Math.ceil(t.y+r.y+r.h);y++)for(let x=Math.floor(t.x+r.x);x<Math.ceil(t.x+r.x+r.w);x++){
+        const v=rgb(x,y);if(Math.max(...v)<threshold)continue;
+        left=Math.min(left,x);right=Math.max(right,x);top=Math.min(top,y);bottom=Math.max(bottom,y);n++;
+        if(v.join(',')==='176,176,176')exact++;
+      }
+      return {text:r.text,left:left-t.x,right:t.x+t.w-right-1,top:top-t.y,bottom:t.y+t.h-bottom-1,n,exact};
+    });
+    let divider=0;for(let x=t.x+6;x<t.x+t.w-6;x++)if(rgb(x,t.y+t.h-9).join(',')==='75,75,80')divider++;
+    return {edges,divider};
+  },{data:replacementPng.toString('base64'),t:replacement});
+  check('replacement actual gray description and no bottom divider',tipPixels.edges[1].exact>0&&tipPixels.divider===0,JSON.stringify(tipPixels));
+  console.log('TOOLTIP_PADDING_REPORT '+JSON.stringify(tipPixels));
   const delta=await gameMetrics();inspectGame(delta,'replacement stats');
   check('dragged item follows target',await page.evaluate(({x,y})=>{const s=window.__benchmarkGame.scene.getScene('Game'),o=s.children.getByName('placeholder:item:3'),ghost=s.children.getByName('item-preview-ghost');return Math.abs(o.x-x)<1&&Math.abs(o.y-y)<1&&Math.abs(o.alpha-.25)<.001&&ghost.visible&&Math.abs(ghost.x-x)<1&&Math.abs(ghost.y-y)<1;},{x:slot.x+slot.size/2,y:slot.y+slot.size/2}));
   check('dragging image centered and shadow hidden',await page.evaluate(()=>{const o=window.__benchmarkGame.scene.getScene('Game').children.getByName('placeholder:item:3');return o.list[2].y===0&&o.list[1].y===0&&!o.list[3].visible&&o.list[0].visible&&o.list[0].y===0&&o.list[1].visible&&o.list[1].fillColor===0x4F4F69;}));
@@ -343,7 +364,7 @@ for(const c of configs){
   await button('MainMenu','성공 화면');await page.waitForFunction(()=>window.__benchmarkGame.scene.isActive('Victory'));inspectMenu(await menuMetrics('Victory'),'Victory');
   await button('Victory','메인 메뉴');await page.waitForFunction(()=>window.__benchmarkGame.scene.isActive('MainMenu'));await button('MainMenu','실패 화면');await page.waitForFunction(()=>window.__benchmarkGame.scene.isActive('Defeat'));inspectMenu(await menuMetrics('Defeat'),'Defeat');
   check('runtime errors',errors.length===0,errors.join('; '));
-  check('tooltip gap and palette role contract',await page.evaluate(()=>{let L=window.GardenGameLayout,T=L.itemTooltip,p=L.tooltipPosition({x:400,y:200,size:24},T.width,100,L.spec.top+L.spec.fieldHeight);return T.width===L.hud.barWidth&&T.width===158&&T.gap===8&&p.x===420&&T.padding===6&&T.bottomPadding===14&&T.rowGap===5&&T.lineSpacing===4&&T.strokeWidth===1}));
+  check('tooltip gap and palette role contract',await page.evaluate(()=>{let L=window.GardenGameLayout,T=L.itemTooltip,p=L.tooltipPosition({x:400,y:200,size:24},T.width,100,L.spec.top+L.spec.fieldHeight);return T.width===L.hud.barWidth&&T.width===158&&T.gap===8&&p.x===420&&T.padding===6&&T.bottomPadding===14&&T.rowGap===5&&T.lineSpacing===4&&T.strokeWidth===1&&T.description===L.colors.hudLabel&&!('divider' in T)}));
   const locales=await page.evaluate(()=>window.GardenUI.hudLabels);
   const localeResults=[];
   for(const [lang, labels] of Object.entries(locales)){

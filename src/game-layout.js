@@ -478,7 +478,7 @@
     grid(body, b.gridX, b.gridY, b, colors.gridFill, colors.blueprintLine, R.n.panelBorder);
 
     const header = U.pixelGraphics(scene).setDepth(11).setName('blueprint-header');
-    text(scene, b.x + b.padding, b.y + b.header / 2 - 0.75, '도안', b.fontSize, colors.label, 'left').setDepth(12).setName('blueprint-title');
+    text(scene, b.x + b.padding, b.y + b.header / 2 - 0.75, '도안', b.fontSize, colors.hudLabel, 'left').setDepth(12).setName('blueprint-title');
     const arrow = scene.add.graphics().setDepth(12).setName('blueprint-chevron');
     let expanded = true;
     function drawArrow() {
@@ -528,12 +528,12 @@
       y: Math.round(clamp(best[1], top, bottom - height)) };
   }
 
-  // 참조 정보창의 중성 회색 테두리, 보라색 제목 바와 크림색 본문.
+  // 정보창의 중성 회색 테두리, 보라색 제목 바와 HUD 공통 회색 본문.
   const itemTooltip = Object.freeze({
     width: hud.barWidth, padding: 6, gap: 8, bottomPadding: 14, fontSize: 10, titleSize: 10,
     rowGap: 5, lineSpacing: 4, strokeWidth: 1, accent: R.n.panelBorder,
-    background: R.n.tooltip, header: R.n.tooltipHeader, divider: R.n.rule,
-    title: colors.value, description: R.hex.description, hint: colors.disabledText
+    background: R.n.tooltip, header: R.n.tooltipHeader,
+    title: colors.value, description: colors.hudLabel, hint: colors.disabledText
   });
 
   // 교체 제목은 한 줄 우선, 넘치면 화살표 앞에서 분리한다.
@@ -678,9 +678,6 @@
           .setName('item-tooltip-header');
         tooltip.add(header);
       }
-      const divider = U.pixelGraphics(scene).setName('item-tooltip-divider');
-      divider.fillStyle(t.divider, 1).fillRect(pad, tooltipSize.height - 9, w - 2 * pad, 1);
-      tooltip.add(divider);
       labels.forEach(label => tooltip.add(label));
     }
     function refreshTooltip() {
