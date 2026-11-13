@@ -1,25 +1,23 @@
 (function () {
   'use strict';
-  // Garden 16: 단일 게임 공통 팔레트. 역할과 소재를 같은 색 원본에 연결한다.
-  // 색 선정/사용 규칙: docs/ui-color-guide.md. 원본 에셋 픽셀 데이터는 별도 보존.
+  // Garden 16: 기존 참조 화면의 저채도 보라회색 UI와 원본 자연색을 우선한다.
+  // 디자인 기준: docs/ui-color-guide.md. 역할별 별칭은 추가 HEX를 만들지 않는다.
   const hex = Object.freeze({
-    ink: '#151A1F', panel: '#2C343D', slate: '#485662',
-    stone: '#929DA6', silver: '#C8D0D4', paper: '#F5F3EB',
-    bark: '#754A35', clay: '#BB704D', sand: '#D8B48C', gold: '#F3C449',
-    red: '#F0787C', leaf: '#4B8842', growth: '#94CC6D',
-    teal: '#328F8B', sky: '#70B3E0', lavender: '#B59CD4'
+    ink: '#0D0D0D', hud: '#161619', panel: '#3B3B4E', header: '#44445C',
+    slate: '#51516B', stone: '#676777', silver: '#B0ACBD', paper: '#FFFFFF',
+    bark: '#7C4C24', clay: '#A46444', sand: '#E9D0AB', gold: '#F4B404',
+    red: '#F46C7C', growth: '#6ABA2C', teal: '#0C9484', sky: '#67A3EE'
   });
   const numeric = colors => Object.freeze(Object.fromEntries(Object.entries(colors).map(([key,value]) => [key,Number.parseInt(value.slice(1),16)])));
   const n = numeric(hex);
-  // 같은 색을 사용하더라도 의미별 역할 이름을 유지한다. 신규 HEX를 선언하지 않는다.
   const referenceHex = Object.freeze({
-    background: hex.ink, hud: hex.panel, panel: hex.panel, tab: hex.panel,
-    header: hex.slate, selected: hex.slate, button: hex.panel,
-    disabledFill: hex.ink, divider: hex.ink, hudEdge: hex.panel, hudLight: hex.slate,
-    tabBorder: hex.stone, gridLine: hex.slate, panelBorder: hex.stone, border: hex.stone,
-    disabledBorder: hex.slate, hover: hex.sky, text: hex.paper, label: hex.silver,
-    hudLabel: hex.silver, disabled: hex.stone, green: hex.growth, red: hex.red,
-    warning: hex.gold, icon: hex.sky, shadow: hex.ink, track: hex.ink,
+    background: hex.ink, hud: hex.hud, panel: hex.panel, tab: hex.panel,
+    header: hex.header, selected: hex.slate, button: hex.panel,
+    disabledFill: hex.hud, divider: hex.ink, hudEdge: hex.panel, hudLight: hex.slate,
+    tabBorder: hex.slate, gridLine: hex.slate, panelBorder: hex.stone, border: hex.stone,
+    disabledBorder: hex.slate, hover: hex.silver, text: hex.paper, label: hex.silver,
+    hudLabel: hex.silver, disabled: hex.silver, green: hex.growth, red: hex.red,
+    warning: hex.gold, icon: hex.silver, shadow: hex.ink, track: hex.hud,
     barFrame: hex.panel, garden: hex.panel, gardenBorder: hex.growth
   });
   const reference = Object.freeze({ baseHex: hex, hex: referenceHex, n: numeric(referenceHex) });
