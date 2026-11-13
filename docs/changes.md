@@ -4,7 +4,7 @@
 
 ## 2026-11-14 — 꽃 머리 가득 채운 정원 비교 (독립 브랜치)
 
-- main c811115 기준 feature/flower-head-preview. SVG 꽃 머리 4종 및 사람 1종을 추출하여 기존 22px 정원 내부를 최대 크기로 채우고 100칸을 미리 배치한다. 적·보석·드롭은 생성하지 않는다. 기존 HUD 및 정원 규격 유지. [실험 규격 및 검증](./flower-head-preview.md). main/devel 미병합.
+- main c811115 기준 feature/flower-head-preview. SVG 꽃 머리 4종 및 사람 1종을 추출하여 기존 22px 정원 내부를 최대 크기로 채우고 100칸을 미리 배치한다. 적·보석·드롭은 생성하지 않는다. 기존 HUD 및 정원 규격 유지. [실험 규격 및 검증](./flower-head-preview.md). [Chromium 9/9 구성 통과 및 래스터 해시 9/9 일치](https://github.com/xcliming-svg/garden-test/actions/runs/43521350619), 코드 a7738d0. main/devel 미병합.
 
 ## 2026-11-13 — 검증된 devel의 main 승격
 
