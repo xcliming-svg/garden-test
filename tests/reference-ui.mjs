@@ -284,7 +284,8 @@ for(const c of configs){
       const split=Math.round((slot.y+slot.size/2+1.5)*z);
       const box=(o,upper,bg=61)=>scan(o.x*z,upper?o.y*z:Math.max(split,o.y*z),(o.x+o.w)*z,upper?Math.min(split,(o.y+o.h)*z):(o.y+o.h)*z,inkFor(o,bg));
       const number=box(cost,false,31);
-      const gem=scan((slot.x+1)*z,(slot.y+1)*z,(slot.x+slot.size-1)*z,split,(r,g,b)=>r===146&&g===157&&b===166);
+      const gemLeft=Math.round((slot.x+(slot.size-8)/2)*z),gemRight=gemLeft+Math.max(1,Math.round(8*z));
+      const gem=scan(gemLeft,Math.round((slot.y+1)*z),gemRight,split,(r,g,b)=>r===146&&g===157&&b===166);
       return {number,gem,labels:stats.filter(t=>t.name.startsWith('stat-label:')).map(t=>box(t,true)),values:stats.filter(t=>t.name.startsWith('stat-value:')).map(t=>box(t,false))};
     },{data:bottomPng.toString('base64'),stats:m.stats,cost:m.cost,slot:m.slots[9],z:m.zoom});
     const expectedGap=Math.round(3*m.zoom);
@@ -303,7 +304,7 @@ for(const c of configs){
       const slotRuns=runs(R((first.x-2)*z),R((last.x+last.size+2)*z),x=>any(R(first.y*z),R((first.y+first.size)*z),y=>rgb(x,y)!==hud));
       const slotY=runs(R((first.y-2)*z),R((first.y+first.size+2)*z),y=>any(R(first.x*z),R((first.x+first.size)*z),x=>rgb(x,y)!==hud));
       const bpY=runs(R((bp.y-2)*z),R((bp.gridY+91+2)*z),y=>rgb(R((bp.x+bp.width/2)*z),y)!==field);
-      const bpX=[bp.y+bp.header/2,bp.gridY+45].map(y=>runs(R((bp.x-2)*z),R((bp.x+bp.width+2)*z),x=>rgb(x,R(y*z))!==field));
+      const bpX=[[bp.y,bp.header],[bp.gridY,91]].map(([y,h])=>runs(R((bp.x-2)*z),R((bp.x+bp.width+2)*z),x=>any(R(y*z),R((y+h)*z),py=>rgb(x,py)!==field)));
       const barX=960-7.5-158,barY=15-6;
       const gaugeX=runs(R((barX-1)*z),cv.width,x=>any(R(barY*z),R((barY+12)*z),y=>rgb(x,y)!==hud));
       const gaugeY=runs(R((barY-2)*z),R((barY+14)*z),y=>any(R(barX*z),R((barX+158)*z),x=>rgb(x,y)!==hud));
