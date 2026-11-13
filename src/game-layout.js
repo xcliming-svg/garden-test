@@ -728,13 +728,13 @@
       const p = point(pointer);
       target = hitSlot(p);
       const half = assets.item.dropSize / 2;
-      // 꽃과 동일: 원래 카드는 커서를 계속 따라가고, 미리보기만 슬롯 중심에 붙는다.
-      const anchor = {
+      // 유효 목적지에서는 슬롯 중앙에 맞추고 원본 카드의 중복 렌더링을 숨긴다.
+      const anchor = target >= 0 ? slotAnchor(target) : {
         x: Math.max(half, Math.min(spec.width - half, p.x)),
         y: Math.max(spec.top + half, Math.min(spec.height - half, p.y))
       };
       refresh();
-      dragging.marker.setPosition(anchor.x, anchor.y).setAlpha(target >= 0 ? 0.25 : 1);
+      dragging.marker.setPosition(anchor.x, anchor.y).setAlpha(target >= 0 ? 0 : 1);
     }
     function finishDrag(pointer, accept) {
       if (!dragging) return;
@@ -1006,10 +1006,10 @@
       target = hit(pointer);
       const p = scene.cameras.main.getWorldPoint(pointer.x, pointer.y);
       const valid = gardenCandidates(occupied).has(target);
-      // 카드 위치는 유효 여부와 무관하게 커서를 추적한다.
-      // 유효 칸에서는 카드 알파 0.25, 중심에 별도 알파 0.45 미리보기만 스냅.
+      // 유효 칸의 외곽선은 정원 텍스처 하나만 담당하고 아이콘만 중앙에 스냅한다.
+      const anchor = valid ? origin(target) : null;
       refresh();
-      dragging.marker.setPosition(p.x, p.y).setAlpha(valid ? 0.25 : 1);
+      dragging.marker.setPosition(valid ? anchor.x + garden.outer/2 : p.x, valid ? anchor.y + garden.outer/2 : p.y).setAlpha(valid ? 0 : 1);
     }
     function finish(pointer, accept) {
       if (!dragging) return;
