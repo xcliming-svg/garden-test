@@ -1,12 +1,32 @@
 # 현재 설계 및 구현 정리
 
-> **960×540 비교 브랜치:** 이 문서의 기존 640×360 수치와 확정 이력은 main 기준으로 보존한다. 현재 브랜치의 실험 규격 및 예외는 [960×540 비교 문서](./resolution-960x540.md)를 우선 참조한다. main 규격 변경 승인 또는 게임플레이 구현을 뜻하지 않는다.
+> **현재 devel 기준:** 현재 단일 디자인 좌표계와 세부 UI 규격은 [960×540 현행 규격](./resolution-960x540.md)이 우선한다. 아래 640×360 및 1280×720 수치·확정 이력은 과거 main 기준 기록이며 현재 devel에 적용하지 않는다. main 변경이나 게임플레이 구현을 승인하는 문서가 아니다.
 
 
-- 기준: `feature/item-card-ui`에서 확정·검증한 UI를 main에 통합하는 기준선. 소스 기준 [30dab4f](https://github.com/xcliming-svg/garden-test/commit/30dab4fb9ad43f6472f463442c5a58339a29a9a9). 현행 UI 요약: [ui-spec.md](./ui-spec.md).
+- 과거 기준선: `feature/item-card-ui`에서 확정한 main UI [30dab4f](https://github.com/xcliming-svg/garden-test/commit/30dab4fb9ad43f6472f463442c5a58339a29a9a9). 현재 devel 화면 규격은 [resolution-960x540.md](./resolution-960x540.md), 검증 결과는 [ui-scale-audit.md](./ui-scale-audit.md)를 참조한다.
 - 최초 정리: 2026-11-12
 - 개발 단계: 화면 구조 및 전장 크기 검토용 프로토타입
 - 판정 기준: 사용자와 확정한 내용 및 실제 저장소 소스. 실행 테스트 완료를 의미하지 않는다.
+
+## 현행 개발 범위 및 모듈 책임 (devel)
+
+- 현재 단계는 화면 구조 검증용 프로토타입이다. 허용된 기능은 씬 등록·전환, 브라우저 렌더링, 메뉴, ESC 일시정지·복귀, 개발 미리보기, 뒤로가기/확인 대화상자 및 승인된 전장 UI 테스트뿐이다.
+- 실제 플레이어 이동, 전투, HP 계산, 적 스폰·충돌, 맵 생성, 아이템 획득·장착·해금 로직, 진행, 승패, 보상·점수, 저장·재개·세이브 슬롯 및 음향 제어는 미구현이며 별도 요청 전 구현하지 않는다. 카드 드래그·임시 장착/교체·능력치 미리보기, 중앙 2×2 꽃 배치·인접 확장·수호자 순찰은 승인된 화면 검토용 예외로 씬 내 임시 상태만 사용한다.
+- 실행할 수 없는 동작은 비활성화하고 미구현 수치는 대시로 표시한다. 설정은 탭 전환 UI만, 도감은 맵 도감의 자리만 확보한다. 결과 씬은 개발 전용 미리보기로만 접근한다.
+- 현재 기준 화면의 크기, 색, 글꼴 및 좌표는 [960×540 현행 규격](./resolution-960x540.md)을 따른다. 과거 main 규격과 혼용하지 않는다.
+
+| 모듈 | 현행 책임 |
+| --- | --- |
+| `index.html` | 빌드 도구 없는 정적 실행 페이지, Phaser 3.90.0 CDN 접근 필요 |
+| `src/palette.js` | Garden 32 원본과 현행 참조 역할 색상 관리; 최초 로딩 및 실행 배경은 `GardenPalette.background` |
+| `src/ui.js` | 공통 UI, 텍스트·글꼴 로드, 픽셀 프레임, ESC 및 오버레이. 게임 상태 없음 |
+| `src/scenes.js` | 씬별 화면 및 전환. 실제 게임 결과·전투·입력 이동 로직 없음 |
+| `src/main.js` | Phaser 인스턴스 설정, 씬 등록, 단일 960×540 좌표계 및 실제 화면·입력 배율 동기화 |
+| `src/game-layout.js` | 전장 UI·도안·정원·슬롯·정보창·카드 조작 및 미리보기. 실제 게임 상태나 최종 에셋 로딩 없음 |
+| `src/test-sprites.js` | 사용자 제공 원본의 화면 테스트 전용 텍스처 |
+| `ASSET_SPECS.md` | 에셋 규격 인수인계; 원본 SVG 보존 및 PNG 출력은 문서와 `GardenGameLayout.assets`에 따름 |
+
+글꼴은 승인된 단일 원본을 사전 로드하며 합성 굵기/자폭 변경을 금지한다. 로드 실패 시 다른 글꼴로 조용히 실행하지 않는다. 원본 WOFF2 내장 CSS와 OFL 라이선스를 함께 배포한다. 세부 글자 크기 및 텍스처 필터는 현행 규격 문서에 있다. 엔진 선정 및 초기 화면 근거는 [project-foundations.md](./project-foundations.md) 참조.
 
 ## 1. 게임 구성 시스템
 
@@ -74,7 +94,28 @@ Phaser Scene으로 화면을 분리하고, 메뉴에서 하위 화면을 열 때
 
 메뉴 버튼은 기존 1280×720 좌표 기준 높이 48px, 주요 버튼 사이 간격 8px을 적용한다. 설정 행의 레이블과 값은 같은 세로 중심선을 사용한다. 공통 버튼, 패널, 텍스트, ESC 처리, 오버레이 유틸리티는 `GardenUI`에 분리했다. `menuStyle`에 기존 1280×720 기준 테두리 2px(논리 1px), 버튼 높이 48px, 간격 8px을 정의한다. 버튼 호버는 두께를 바꾸지 않으며 일반/주요/선택/위험/비활성 상태를 구분한다. 주요 버튼과 활성 탭은 각각 primary/selected로 표현하되 둘 다 paper 강조, 위험 red, 일반 slot, 비활성 edge/disabled를 사용한다. 일시정지와 게임 제목은 paper, 개발용 안내는 label, 성공/실패는 growth/red를 유지한다.
 
-**코드:** [src/scenes.js](../src/scenes.js), [src/ui.js](../src/ui.js). 상세 전환 계약은 [AGENTS.md](../AGENTS.md)의 씬 전환 계약을 참조한다.
+**코드:** [src/scenes.js](../src/scenes.js), [src/ui.js](../src/ui.js).
+
+### 씬 전환 계약
+
+| 시작 | UI 입력 | 도착 / 효과 |
+| --- | --- | --- |
+| Boot | 자동 | MainMenu |
+| MainMenu | 새 게임 | Game (정적 전장 시안) |
+| MainMenu | 설정·도감 | 부모 씬 일시정지, 하위 씬 오버레이 |
+| 하위 씬 | 돌아가기 또는 ESC | 하위 씬 종료, 원래 부모 씬 재개 |
+| Game | ESC | Game 일시정지, Pause 오버레이 |
+| Pause | 계속하기 또는 ESC | Pause 종료, Game 재개 |
+| Pause | 설정·도감 | Pause 일시정지, 하위 씬 오버레이 |
+| Pause | 메인 메뉴로 | Confirm 오버레이 |
+| Confirm | 취소 또는 ESC | Pause 재개 |
+| Confirm | 돌아가기 | Game·Pause 종료, MainMenu |
+| MainMenu (?preview=1) | 성공/실패 화면 | Victory/Defeat 직접 이동 (개발 전용) |
+| Victory/Defeat | 새 게임 / 메인 메뉴 | Game / MainMenu |
+
+아직 정의되지 않은 **게임 사건**을 씬 전환의 조건으로 만들지 않는다.
+
+위 전환 계약은 기존 AGENTS.md에서 이관한 현재 UI 전환 규격이다. 장래 게임 사건이나 승패 판정을 구현하도록 허가하는 문서가 아니다.
 
 ## 4. 전장 및 정원 시스템
 

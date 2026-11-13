@@ -2,6 +2,14 @@
 
 각 구현 변경의 결과를 시스템 단위로 기록한다. 대화 원문 또는 코드 diff의 복제가 아니라 **어떤 시스템에 무엇이 적용되었으며, 무엇이 아직 구현되지 않았는지**를 설명한다. 최신 구현 상태는 [implementation.md](./implementation.md)를 참조한다.
 
+## 2026-11-13 — 개발 공통 지침과 시스템 문서 분리
+
+- AGENTS.md 변경 이력 조사: 최초 생성 [81e2ea9](https://github.com/xcliming-svg/garden-test/commit/81e2ea9e3) (2026-11-12 09:06 KST)부터 엔진 버전·외부 참고 근거·씬 전환표가 포함되었다. [af814cb](https://github.com/xcliming-svg/garden-test/commit/af814cbc6) (2026-11-12 10:17 KST)에서 전장·정원·도안과 좌표 및 에셋 세부 규격이 추가되었고, [f8f736b](https://github.com/xcliming-svg/garden-test/commit/f8f736b50)에서 슬롯 비용 표시 규격까지 누적되었다. [fdc2298](https://github.com/xcliming-svg/garden-test/commit/fdc229874) (2026-11-13 12:12 KST)에서 배율·가시 간격 측정 계약, [f4ac4cb](https://github.com/xcliming-svg/garden-test/commit/f4ac4cb4e) (12:33 KST)에서 배경색 코드 및 5px 패딩까지 포함되었다.
+- AGENTS.md에는 저장소 전체에 적용되는 작업 승인·모듈 분리·UI 일관성·구현/검증 절차·Git/배포·문서 관리 원칙만 유지한다. 개별 시스템의 수치와 결정 이력을 중복 기입하지 않는다.
+- 엔진 선정과 초기 화면 참고 자료는 [project-foundations.md](./project-foundations.md), 현재 구현 범위·모듈 책임·씬 전환표는 [implementation.md](./implementation.md), 세부 색·크기·정렬·간격은 [resolution-960x540.md](./resolution-960x540.md), 화면 배율 및 검사 기준은 [ui-scale-audit.md](./ui-scale-audit.md)에 이관·정리했다. 문서 목차 및 기존 main 기반 기록과 현행 devel 규격의 우선순위도 갱신했다.
+- 정보창 설명→첫 효과 수치의 가시 공백은 현행 본문 행 간격과 동일한 5논리 px임을 명시했다. 기존 구현을 변경하지 않는다.
+- 검증: 문서 8개와 상대 경로 19개 확인(누락 0), 변경 범위는 Markdown만이며 실행 코드·에셋·테스트 변경 없음. 문서만 수정하는 작업이므로 브라우저 회귀를 새로 실행하지 않았다. 직전 UI 검증 323/323 결과는 아래에 보존한다.
+
 ## 2026-11-13 — 일반 배경·제목 배경·정보창 가시 패딩 통일
 
 - 현재 devel `25c65d0` 기준. 도안 그리드, 정보창 본문, 꽃 드롭/정원 노드, 아이템 드롭/장착, 일반 슬롯은 기존 일반 슬롯 색 #3B3B4E 공통. 도안/정보창 제목 #44445C 공통. 비활성·호버·선택·외곽선 및 원본 스프라이트는 유지.
