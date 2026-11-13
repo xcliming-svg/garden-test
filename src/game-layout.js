@@ -76,7 +76,8 @@
   });
 
   // URL 비교 실험 전용. 파라미터가 없거나 잘못되면 확정된 일반 슬롯의 면을 사용한다.
-  const soilTypes = Object.freeze({ '1': P.n.bark, '2': P.n.clay, '3': P.n.teal });
+  // type=1: 사용자 첨부 빈 슬롯 내부 실측색. 정식 16색 팔레트에는 추가하지 않는다.
+  const soilTypes = Object.freeze({ '1': 0x493A34, '2': P.n.clay, '3': P.n.teal, '4': P.n.bark });
   const soilType = new URLSearchParams(window.location.search).get('type');
   const soilComparison = Object.hasOwn(soilTypes,soilType);
   const soilColor = soilComparison ? soilTypes[soilType] : R.n.tab;

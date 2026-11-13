@@ -797,7 +797,7 @@ for(const c of configs){
   }
   // URL-only soil variants: verify the exact palette color, transparent cut corners,
   // unchanged non-garden UI, and real placement/resize rendering.
-  const soilVariants=[['default',0x3B3B4E],['1',0x7C4C24],['2',0xA46444],['3',0x0C9484],['invalid',0x3B3B4E]];
+  const soilVariants=[['default',0x3B3B4E],['1',0x493A34],['2',0xA46444],['3',0x0C9484],['4',0x7C4C24],['invalid',0x3B3B4E]];
   const inspectSoilTexture=async(expected,dragging=false,target=-1)=>page.evaluate(({expected,dragging,target})=>{
     const L=window.GardenGameLayout,g=L.spec.garden,s=window.__benchmarkGame.scene.getScene('Game');
     const occupied=new Set(s.children.list.filter(o=>o.name?.startsWith('garden-preview-flower:')).map(o=>Number(o.name.split(':').at(-1))));
