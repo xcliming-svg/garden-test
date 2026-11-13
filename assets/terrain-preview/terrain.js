@@ -2,6 +2,10 @@
 (function () {
   'use strict';
   const original=window.GardenGameLayout;
+  const theme=window.TerrainPreviewTheme;
+  const color=n=>parseInt(n.slice(1),16);
+  const grassColors=theme?.grass??['#416D38','#3C6533','#46743B','#4B783E','#39612F','#32582C','#568444'];
+  const soilColors=(theme?.soil??['#845537','#A5754B','#71482F','#92613F','#573922']).map(color);
   const textureKey='temporary:grass-preview';
   const rgb = n => [n>>16&255,n>>8&255,n&255];
   function rng(seed) {return () => {seed=(Math.imul(seed,1664525)+1013904223)>>>0;return seed/4294967296;};}
@@ -11,17 +15,17 @@
     const ctx=t.getContext(),tile=document.createElement('canvas');
     tile.width=tile.height=128;
     const c=tile.getContext('2d'),r=rng(4121);
-    c.fillStyle='#416D38';c.fillRect(0,0,128,128);
+    c.fillStyle=grassColors[0];c.fillRect(0,0,128,128);
     // Restrained 1–3 px pixel speckles and short grass tufts; no high-frequency grid.
-    const colors=['#3C6533','#46743B','#4B783E','#39612F'];
+    const colors=grassColors.slice(1,5);
     for(let i=0;i<420;i++){
       c.fillStyle=colors[Math.floor(r()*colors.length)];
       c.fillRect(Math.floor(r()*128),Math.floor(r()*128),1+Math.floor(r()*3),1+Math.floor(r()*2));
     }
     for(let i=0;i<21;i++){
       const x=3+Math.floor(r()*122),y=3+Math.floor(r()*122);
-      c.fillStyle='#32582C';c.fillRect(x,y+1,4,1);
-      c.fillStyle='#568444';c.fillRect(x+1,y-2,1,3);c.fillRect(x,y-1,1,1);c.fillRect(x+2,y,1,1);c.fillRect(x+3,y-1,1,2);
+      c.fillStyle=grassColors[5];c.fillRect(x,y+1,4,1);
+      c.fillStyle=grassColors[6];c.fillRect(x+1,y-2,1,3);c.fillRect(x,y-1,1,1);c.fillRect(x+2,y,1,1);c.fillRect(x+3,y-1,1,2);
     }
     ctx.fillStyle=ctx.createPattern(tile,'repeat');ctx.fillRect(0,0,spec.width,spec.fieldHeight);
     t.refresh();t.setFilter(Phaser.Textures.FilterMode.NEAREST);
@@ -46,8 +50,8 @@
           const gx=Math.floor((x+x0)/z)-g.x,gy=Math.floor((y+y0)/z)-g.y;
           const h=(Math.imul(gx+11,73856093)^Math.imul(gy+17,19349663))>>>0;
           const n=h%37;
-          v=n===0?0xA5754B:n===1?0x71482F:n<5?0x92613F:0x845537;
-        }else if(p[i]===edge[0]&&p[i+1]===edge[1]&&p[i+2]===edge[2])v=0x573922;
+          v=n===0?soilColors[1]:n===1?soilColors[2]:n<5?soilColors[3]:soilColors[0];
+        }else if(p[i]===edge[0]&&p[i+1]===edge[1]&&p[i+2]===edge[2])v=soilColors[4];
         else continue;
         p[i]=v>>16&255;p[i+1]=v>>8&255;p[i+2]=v&255;
       }
