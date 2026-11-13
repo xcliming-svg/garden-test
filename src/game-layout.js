@@ -13,8 +13,8 @@
   const blueprintCell = 8, blueprintLine = 1, blueprintPitch = blueprintCell + blueprintLine;
   const blueprintGrid = 10 * blueprintPitch + blueprintLine;
   const hudGap = 5;
-  // 제목의 가시 여백은 5px. 분리된 제목 박스와 그리드 사이는 3px.
-  const blueprintPadding = hudGap, blueprintFontSize = 10, blueprintGap = 3;
+  // 제목의 가시 여백은 5px. 분리된 제목 박스와 그리드 사이는 1px.
+  const blueprintPadding = hudGap, blueprintFontSize = 10, blueprintGap = 1;
   const hudCenterY = 15, blueprintInkHeight = 9;
   // 30px 콘텐츠 영역, 15px 실제 텍스트 객체 높이: 상하/좌우 여백 7.5px.
   const hudTextHeight = 15, hudPadding = hudCenterY - hudTextHeight / 2;
