@@ -99,13 +99,14 @@
     };
     return group;
   }
-  // 드롭 외형 24px, 장착 외형 36px. 1px 프레임, 원본 16px 중앙 배치.
+  // 꽃 24px, 아이템 및 기본 장착 32px. 1px 컷 프레임, 원본 16px 중앙 배치.
   // 참조의 보라회색 면 및 회청색 호버 테두리.
   function dropCard(scene, x, y, name, size, iconSize, kind) {
     const R = window.GardenPalette.reference.n;
-    const border = scene.add.rectangle(0, 0, size, size, kind === 'flower' ? R.green : R.tabBorder);
+    const U = window.GardenUI;
+    const border = U.pixelBox(scene,0,0,size,size,kind === 'flower' ? R.green : R.tabBorder);
     const faceColor = kind === 'flower' ? R.button : R.tab;
-    const face = scene.add.rectangle(0, 0, size - 2, size - 2, faceColor);
+    const face = U.pixelBox(scene,0,0,size-2,size-2,faceColor,{cut:false});
     const image = sprite(scene, 0, 0, name, iconSize);
     const group = scene.add.container(x, y, [border, face, image]).setSize(size, size);
     group.setStrokeStyle = (_width, _color, alpha) => {

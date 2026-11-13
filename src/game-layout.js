@@ -116,7 +116,7 @@
 
   // 내부 면을 침범하지 않는 1px 외부 프레임.
   function slotVisual(g, x, y, size, disabled) {
-    frame(g, x, y, size, size, disabled ? colors.disabledFill : colors.normalFill,
+    U.pixelFrame(g, x, y, size, size, disabled ? colors.disabledFill : colors.normalFill,
       disabled ? colors.disabledBorder : colors.normalBorder);
   }
 
@@ -131,8 +131,8 @@
   }
   function dropSquare(g, x, y, size) {
     g.fillStyle(colors.enabledBorder, 1);
-    g.fillRect(x, y, size, 1);
-    g.fillRect(x, y + size - 1, size, 1);
+    g.fillRect(x + 1, y, size - 2, 1);
+    g.fillRect(x + 1, y + size - 1, size - 2, 1);
     g.fillRect(x, y + 1, 1, size - 2);
     g.fillRect(x + size - 1, y + 1, 1, size - 2);
   }
@@ -141,7 +141,7 @@
     const width = b.columns * b.pitch + b.line;
     const height = b.rows * b.pitch + b.line;
     // 외곽 및 내부 공유선은 1px, 각 칸의 순수 내부는 8×8.
-    frame(g, x, y, width, height, fill, outerBorder);
+    U.pixelFrame(g, x, y, width, height, fill, outerBorder, false, true);
     g.fillStyle(line, 1);
     for (let i = 1; i < b.columns; i++) {
       g.fillRect(x + i * b.pitch, y + b.line, b.line, height - 2 * b.line);
@@ -215,7 +215,7 @@
   }
 
   function drawHud(scene) {
-    const g = scene.add.graphics().setName('top-hud');
+    const g = U.pixelGraphics(scene).setName('top-hud');
     g.fillStyle(colors.hud, 1).fillRect(0, 0, spec.width, spec.top);
     hudBoundary(g, spec.top - 2);
 
@@ -268,7 +268,7 @@
     const barX = spec.width - hud.padding - c.barWidth;
     text(scene, barX - hud.gap - labelWidth, hud.centerY, labels.progress, hud.labelSize, colors.hudLabel, 'left');
     const barY = hud.centerY - hud.barHeight / 2;
-    frame(g, barX, barY, c.barWidth, hud.barHeight, R.n.barFrame, colors.progressBorder);
+    U.pixelFrame(g, barX, barY, c.barWidth, hud.barHeight, R.n.barFrame, colors.progressBorder);
     g.fillStyle(colors.progressTrack, 1).fillRect(barX + 2, barY + 2, c.barWidth - 4, hud.barHeight - 4);
     const progress = Math.max(0, Math.min(100, hud.previewProgress));
     const fillWidth = Math.round((c.barWidth - 4) * progress / 100);
@@ -349,7 +349,7 @@
 
   function drawSlots(scene) {
     const s = spec.slots;
-    const g = scene.add.graphics().setName('item-slots');
+    const g = U.pixelGraphics(scene).setName('item-slots');
     g.fillStyle(colors.hud, 1).fillRect(0, spec.top + spec.fieldHeight, spec.width, spec.bottom);
     hudBoundary(g, spec.top + spec.fieldHeight);
     const layout = bottomLayout();
@@ -418,16 +418,17 @@
   function drawBlueprint(scene) {
     const b = spec.blueprint;
     // 패널 접기는 화면 UI 상태만 변경한다.
-    const body = scene.add.graphics().setDepth(10).setName('blueprint-body');
+    const body = U.pixelGraphics(scene).setDepth(10).setName('blueprint-body');
     // 헤더 하단과 그리드 상단을 같은 1px 위치에 겹쳐 하나의 연속 외곽으로 표시.
     grid(body, b.gridX, b.gridY, b, colors.gridFill, colors.blueprintLine, R.n.panelBorder);
 
-    const header = scene.add.graphics().setDepth(11).setName('blueprint-header');
-    frame(header, b.x, b.y, b.width, b.header, R.n.header, R.n.panelBorder);
+    const header = U.pixelGraphics(scene).setDepth(11).setName('blueprint-header');
     text(scene, b.x + b.padding, b.y + b.header / 2 - 0.75, '도안', b.fontSize, colors.label, 'left').setDepth(12).setName('blueprint-title');
     const arrow = scene.add.graphics().setDepth(12).setName('blueprint-chevron');
     let expanded = true;
     function drawArrow() {
+      header.clear();
+      U.pixelFrame(header,b.x,b.y,b.width,b.header,R.n.header,R.n.panelBorder,true,!expanded);
       arrow.clear().lineStyle(1, R.n.label, 1);
       const x = b.x + b.width - b.padding - spacing.small;
       const y = b.y + b.header / 2;
@@ -524,7 +525,7 @@
     const equipped = Array(s.preview).fill(null);
     let hovered = null, pinned = null, dragging = null, target = -1;
     const clickable = new Set();
-    const accents = scene.add.graphics().setDepth(31).setName('preview-slot-highlight');
+    const accents = U.pixelGraphics(scene).setDepth(31).setName('preview-slot-highlight');
     const slotItems = [];
     const slots = layout.slots.slice(0, s.preview);
     // 꽃과 같은 드래그 카드/스냅 미리보기 분리. 장착 결과와 동일한 카드 외형.
@@ -614,19 +615,14 @@
         y += Math.max(fontSize, Math.ceil(label.height)) + t.rowGap;
       });
       tooltipSize = { width: w, height: y + t.bottomPadding - t.rowGap };
-      // 카드와 동일한 Rectangle + setStrokeStyle을 사용한다.
-      // 기존 채운 사각형 테두리와 달리 선이 경계 중심에 그려진다.
-      const background = scene.add.rectangle(w / 2, tooltipSize.height / 2,
-        w, tooltipSize.height, t.background)
-        .setName('item-tooltip-background')
-        .setStrokeStyle(t.strokeWidth, t.accent, 1);
+      const background = U.pixelBox(scene,w/2,tooltipSize.height/2,w,tooltipSize.height,t.background,{strokeWidth:t.strokeWidth,border:t.accent}).setName('item-tooltip-background');
       tooltip.add(background);
       if (headerHeight) {
-        const header = scene.add.rectangle(w / 2, (headerHeight + 1) / 2, w - 2, headerHeight - 1, t.header)
+        const header = U.pixelBox(scene,w/2,(headerHeight+1)/2,w-2,headerHeight-1,t.header,{cut:false})
           .setName('item-tooltip-header');
         tooltip.add(header);
       }
-      const divider = scene.add.graphics().setName('item-tooltip-divider');
+      const divider = U.pixelGraphics(scene).setName('item-tooltip-divider');
       divider.fillStyle(t.divider, 1).fillRect(pad, tooltipSize.height - 9, w - 2 * pad, 1);
       tooltip.add(divider);
       labels.forEach(label => tooltip.add(label));
