@@ -1,14 +1,5 @@
 # 시스템별 변경 이력
 
-## 2026-11-13 — SVG 애니메이션 devel 통합
-
-- 사용자 승인에 따라 검증된 `feature/animated-svg-assets`(6d5fe6d)를 `devel`(0752949)에 병합(567f075). devel의 병합 전 파일 내용은 main c811115와 동일함을 확인했다. 기존 961/961 Chromium 검증본의 실행 코드 및 SVG를 수정하지 않고 통합한다. main은 변경하지 않는다. Pages는 기존 devel push 배포를 사용한다.
-
-## 2026-11-13 — 독립 SVG 애니메이션 미리보기
-
-- main c811115에서 feature/animated-svg-assets 분기. 사용자 제공 SVG 102개를 보존하고 15종의 60프레임을 적용한다. 기존 정원 꽃·드롭 꽃 및 고스트를 16px SVG로 교체, 24px 수호자 두 명의 순찰, 62개 동물의 9종 무작위 배치와 제자리 애니메이션. 기존 네모 아이템·보석·UI 및 동작 유지. 원본 SVG 색 유지, 기존 UI Garden 16 유지. [상세 규격](./animated-assets.md).
-- 실제 게임플레이, 성장 단계 전환 및 대체 걷기 애니메이션은 미구현. [실제 Chromium 961/961 통과](https://github.com/xcliming-svg/garden-test/actions/runs/43424399319), 코드 20cd7ad. 기존 956개 및 신규 SVG 5개 검사, 5개 해상도·5개 언어·DPR2·실제 프레임과 크롭·순찰·정지·일시정지. 결과 스크린샷과 report.json은 실행 아티팩트에 보존. 다른 브라우저·OS 및 실제 게임플레이는 미검증.
-
 각 구현 변경의 결과를 시스템 단위로 기록한다. 대화 원문 또는 코드 diff의 복제가 아니라 **어떤 시스템에 무엇이 적용되었으며, 무엇이 아직 구현되지 않았는지**를 설명한다. 최신 구현 상태는 [implementation.md](./implementation.md)를 참조한다.
 
 ## 2026-11-13 — 검증된 devel의 main 승격
