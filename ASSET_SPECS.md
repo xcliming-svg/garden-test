@@ -1,5 +1,7 @@
 # 전장 UI 및 에셋 규격
 
+> **devel 직선 공·드롭 실험:** [현행 규격](./docs/flower-head-preview.md) 우선. 기존 꽃/사람/애벌레 외곽선 유지. 공 8×8px gold/slate 픽셀 텍스처, 공 카드 32px 및 중앙 공 아이콘 16px, 꽃 카드 24px 및 꽃 머리 16px, 보석 8px sky/slate. 정원 점유 면만 표시, 내부/외부 보더 없음. main 유지.
+
 > **devel 전투 테스트:** [규격](./docs/flower-head-preview.md) 우선. 수호자 몸체 44px에 가시 slate 외곽선 1px(전체 높이 46px), 애벌레 기존 32×18px 및 slate 외곽선, 꽃 기존 ink 외곽선. 정원 면 유지, 외곽 보더 없음. 금색 원형 충격파는 ink 테두리. main은 이전 정적 비교 규격 유지.
 
 > **main/devel 꽃·수호자·애벌레 비교 화면:** [현행 실험 규격](./docs/flower-head-preview.md)이 아래 기존 테스트 에셋 설명보다 우선한다. 꽃 최대 22px, 사람 기본 44px, 애벌레 32×18px(몸체 30×16 및 ink 외곽선), 원본 비율 유지. 전투 규격 확정이 아니다.

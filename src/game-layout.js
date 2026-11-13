@@ -197,7 +197,7 @@
     g.fillStyle(colors.hud, 1).fillRect(0, 0, spec.width, spec.top);
     hudBoundary(g, spec.top - 2);
 
-    // 전투 테스트의 시간·처치 수만 연동하며 보석·완성도는 표시용 값을 유지한다.
+    // 테스트 시간·처치·보석·점유율을 실제 상태와 연동한다.
     const stress = new URLSearchParams(window.location.search).get('hud') === 'stress';
     const time = stress ? formatHudTime(9999, 59, 59) : formatHudTime(0, 0, 0);
     const count = stress ? formatHudCount('9'.repeat(hud.counterDigits)) : '0';
@@ -239,7 +239,7 @@
 
     const gem = columns.gems, iconX = gem.x + hud.padding, iconY = hud.centerY - hud.iconSize / 2;
     const icon = U.pixelGraphics(scene).setName('hud-gem-icon');
-    const gemNumber = text(scene, iconX + hud.iconSize + hud.gap, hud.centerY, count, hud.valueSize, colors.value, 'left');
+    const gemNumber = text(scene, iconX + hud.iconSize + hud.gap, hud.centerY, count, hud.valueSize, colors.value, 'left').setName('hud-gems-value');
 
     const c = columns.progress;
     // 게이지 오른쪽 끝은 고정. 짧은 번역도 실제 레이블 끝에서 5px 뒤에 게이지를 표시한다.
@@ -247,13 +247,15 @@
     const progressLabel = text(scene, 0, hud.centerY, labels.progress, hud.labelSize, colors.hudLabel, 'left');
     const barY = hud.centerY - hud.barHeight / 2;
     U.pixelFrame(g, barX, barY, c.barWidth, hud.barHeight, R.n.barFrame, colors.progressBorder);
-    g.fillStyle(colors.progressTrack, 1).fillRect(barX + 2, barY + 2, c.barWidth - 4, hud.barHeight - 4);
-    const progress = Math.max(0, Math.min(100, hud.previewProgress));
-    const fillWidth = Math.round((c.barWidth - 4) * progress / 100);
-    if (fillWidth > 0) {
-      g.fillStyle(colors.progressFill, 1).fillRect(barX + 2, barY + 2, fillWidth, hud.barHeight - 4);
+    const progressGraphics=U.pixelGraphics(scene).setName('hud-progress-fill');
+    const progressText=text(scene,barX+c.barWidth/2,hud.centerY,'4%',U.fontSize.compact,colors.value,'center').setName('hud-progress-value');
+    function setProgress(progress){
+      progressGraphics.clear().fillStyle(colors.progressTrack,1).fillRect(barX+2,barY+2,c.barWidth-4,hud.barHeight-4);
+      const fillWidth=Math.round((c.barWidth-4)*progress/100);
+      if(fillWidth>0)progressGraphics.fillStyle(colors.progressFill,1).fillRect(barX+2,barY+2,fillWidth,hud.barHeight-4);
+      progressText.setText(progress+'%');
     }
-    text(scene, barX + c.barWidth / 2, hud.centerY, progress + '%', U.fontSize.compact, colors.value, 'center');
+    setProgress(stress?hud.previewProgress:4);
     // Actual glyph/outline gaps on the native output grid, with fixed column and gauge anchors.
     const align = () => {
       const z = scene.cameras.main.zoom, gap = Math.round(hud.gap * z);
@@ -284,14 +286,16 @@
     align();
     scene.scale.on('resize',align);
     scene.events.once('shutdown',()=>scene.scale.off('resize',align));
-    let lastSecond=-1,lastKills=-1;
-    return (elapsed,kills)=>{
+    let lastSecond=-1,lastKills=-1,lastGems=-1,lastOccupied=-1;
+    return (elapsed,kills,gems,occupied)=>{
       if(stress)return;
       const seconds=Math.floor(elapsed);
-      if(seconds===lastSecond&&kills===lastKills)return;
+      if(seconds===lastSecond&&kills===lastKills&&gems===lastGems&&occupied===lastOccupied)return;
       pairs[0].number.setText(formatHudTime(Math.floor(seconds/3600),Math.floor(seconds/60)%60,seconds%60));
       pairs[1].number.setText(formatHudCount(kills));
-      lastSecond=seconds;lastKills=kills;align();
+      gemNumber.setText(formatHudCount(gems));
+      if(occupied!==lastOccupied)setProgress(Math.round(100*occupied/(spec.garden.columns*spec.garden.rows)));
+      lastSecond=seconds;lastKills=kills;lastGems=gems;lastOccupied=occupied;align();
     };
   }
 
@@ -569,7 +573,7 @@
     return wrapName(previous) + '\n' + wrapName('→ ' + incoming);
   }
 
-  function drawItemPreview(scene, layout, cards, combatSpeed) {
+  function drawItemPreview(scene, layout, cards, combatSpeed, ballMode=false) {
     const U = window.GardenUI;
     const s = spec.slots;
     const equipped = Array(s.preview).fill(null);
@@ -578,7 +582,8 @@
     const slotItems = [];
     const slots = layout.slots.slice(0, s.preview);
     // 꽃과 동일하게 스냅 미리보기는 아이콘만 표시한다. 외곽선과 면은 슬롯이 담당한다.
-    const ghost = testSprites.itemCard(scene, 0, 0, 'wheelbarrow', assets.item.cardSize, assets.item.size)
+    const makeCard=(x,y)=>ballMode?window.GardenLootPreview.card(scene,x,y,assets.item.cardSize,assets.item.size):testSprites.itemCard(scene,x,y,'wheelbarrow',assets.item.cardSize,assets.item.size);
+    const ghost = makeCard(0,0)
       .setDepth(22).setAlpha(0.45).setVisible(false).setName('item-preview-ghost');
     ghost.list[0].setVisible(false);
     ghost.list[1].setVisible(false);
@@ -741,6 +746,7 @@
       if (!dragging) return;
       const p = point(pointer);
       target = hitSlot(p);
+      if(ballMode&&target>=0&&equipped[target])target=-1;
       const half = assets.item.dropSize / 2;
       // 원본 카드는 계속 커서를 따라가고, 목적지 미리보기만 중앙에 붙는다.
       const anchor = {
@@ -755,9 +761,10 @@
       const card = dragging;
       const index = accept && pointer ? hitSlot(point(pointer)) : -1;
       dragging = null; target = -1; hovered = null; pinned = null;
-      card.marker.setDepth(0).setPosition(card.x, card.y).setAlpha(1);
-      if (index >= 0) {
-        equipped[index] = card.item; // UI 테스트용 대체. 기존 임시 아이템은 제거.
+      card.marker.setDepth(ballMode?5:0).setPosition(card.x, card.y).setAlpha(1);
+      if(card.drop)card.drop.dragging=false;
+      if (index >= 0&&(!ballMode||(!equipped[index]&&scene.combatPreview.model.equip(card.id,index)))) {
+        equipped[index] = card.item; // 테스트 장착 상태.
         card.consumed = true;
         card.marker.disableInteractive().setVisible(false);
       }
@@ -778,13 +785,13 @@
     }
     slots.forEach((slot, index) => {
       const center = slotAnchor(index);
-      slotItems.push(testSprites.itemCard(scene, center.x, center.y, 'wheelbarrow', assets.item.cardSize, assets.item.size)
+      slotItems.push(makeCard(center.x,center.y)
         .setDepth(20).setName('preview-equipped:' + index).setVisible(false));
       const zone = scene.add.zone(center.x, center.y, slot.size, slot.size).setDepth(21)
         .setName('preview-slot:' + index).setInteractive({ useHandCursor: true });
       bindFocus(zone, { slot: index });
     });
-    cards.forEach(card => {
+    function bindCard(card){
       const marker = card.marker;
       marker.setInteractive({ useHandCursor: true, draggable: true });
       scene.input.setDraggable(marker);
@@ -792,12 +799,21 @@
       marker.on('dragstart', pointer => {
         if (card.consumed || dragging) return;
         dragging = card; pinned = null; hovered = null;
+        if(card.drop)card.drop.dragging=true;
         marker.setDepth(30);
         dragTo(pointer);
       });
       marker.on('drag', pointer => { if (dragging === card) dragTo(pointer); });
       marker.on('dragend', pointer => { if (dragging === card) finishDrag(pointer, true); });
-    });
+    }
+    cards.forEach(bindCard);
+    function register(card){cards.push(card);bindCard(card);}
+    function unregister(card){
+      const i=cards.indexOf(card);if(i>=0)cards.splice(i,1);
+      clickable.delete(card.marker);
+      if(hovered?.card===card)hovered=null;if(pinned?.card===card)pinned=null;
+      if(dragging===card){dragging=null;target=-1;}
+    }
     const dismiss = (pointer, over) => {
       if (!dragging && !(over || []).some(obj => clickable.has(obj))) {
         pinned = null; hovered = null; refresh();
@@ -821,6 +837,7 @@
       scene.scale.off('resize', resizePreview);
     });
     refresh();
+    return {register,unregister};
   }
 
   // 정원 UI 검토 전용: 중앙 2×2에서 시작하고 테스트 꽃 이미지만 배치한다.
@@ -1076,13 +1093,17 @@
     scene.cameras.main.setBackgroundColor(P.background.hex);
     const g = scene.add.graphics().setDepth(-2).setName('battlefield');
     g.fillStyle(colors.field, 1).fillRect(0, spec.top, spec.width, spec.fieldHeight);
-    // Temporary combat preview; item and gem systems remain unimplemented.
     const updateHud=drawHud(scene);
-    const layout = drawSlots(scene);
+    const layout=drawSlots(scene);
     drawBlueprint(scene);
-    drawItemPreview(scene, layout, [],window.GardenCombatPreview.tuning.walkSpeed);
-    window.GardenFlowerHeadPreview.draw(scene, spec, colors, gardenRaster, patrolBounds, patrolPosition,updateHud);
-    text(scene, spec.width - 10, spec.top + spacing.base, '테스트 전투', bottomStats.fontSize, colors.label, 'right').setDepth(16);
+    const itemPreview=drawItemPreview(scene,layout,[],window.GardenCombatPreview.tuning.walkSpeed,true);
+    const status=text(scene,spec.width-10,spec.top+spacing.base,'테스트 전투 · 공 1개',bottomStats.fontSize,colors.label,'right').setDepth(16).setName('combat-ball-count');
+    window.GardenFlowerHeadPreview.draw(scene,spec,colors,gardenRaster,patrolBounds,patrolPosition,(elapsed,kills,gems,occupied)=>{
+      updateHud(elapsed,kills,gems,occupied);
+      const count=scene.combatPreview.state.ballCount;
+      const label='테스트 전투 · 공 '+count+'개';
+      if(status.text!==label)status.setText(label);
+    },itemPreview);
   }
 
   window.GardenGameLayout = Object.freeze({ spec, assets, colors, spacing, hud, slotCost, formatHudTime, formatHudCount, hudColumns, bottomStats, itemTooltip, replacementTitle, bottomLayout, sumPreviewStats, getPreviewStats, tooltipPosition, gardenCandidates, gardenGridRects, gardenRaster, gardenHit, patrolBounds, patrolPosition, nearestPatrolDistance, draw });

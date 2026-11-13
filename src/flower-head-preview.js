@@ -95,47 +95,63 @@
     ctx.putImageData(image,0,0);texture.refresh();
     texture.setFilter(Phaser.Textures.FilterMode.NEAREST);
   }
-  function draw(scene, spec, colors, gardenRaster, patrolBounds, patrolPosition, updateHud) {
-    install(scene);
-    installEnemy(scene);
-    const g=spec.garden;
-    const occupied=new Set(Array.from({length:g.columns*g.rows},(_,i)=>i));
+  function draw(scene, spec, colors, gardenRaster, patrolBounds, patrolPosition, updateHud, itemPreview) {
+    install(scene);installEnemy(scene);
+    const g=spec.garden,occupied=new Set([44,45,54,55]);
     const textureKey='flower-head-preview:soil:'+g.cell;
     const texture=scene.textures.exists(textureKey)?scene.textures.get(textureKey):
       scene.textures.createCanvas(textureKey,g.size,g.size);
     const soil=scene.add.image(g.x+g.size/2,g.y+g.size/2,textureKey)
       .setDepth(-1).setName('garden-preview-soil');
-    function refreshSoil() {
-      const z=scene.cameras.main.zoom, raster=gardenRaster(occupied,g,z);
+    let hover=null;
+    function refreshSoil(target=hover){
+      hover=target;
+      const z=scene.cameras.main.zoom,raster=gardenRaster(occupied,g,z);
       if(texture.width!==raster.width||texture.height!==raster.height)texture.setSize(raster.width,raster.height);
       soil.setTexture(textureKey).setDisplaySize(raster.width/z,raster.height/z)
         .setPosition((raster.x+raster.width/2)/z,(raster.y+raster.height/2)/z);
       const ctx=texture.getContext();
       ctx.clearRect(0,0,raster.width,raster.height);
-      // Continuous soil; neither outer frame nor interior grid is drawn.
-      ctx.fillStyle='#'+colors.gardenSoil.toString(16).padStart(6,'0');
-      ctx.fillRect(0,0,raster.width,raster.height);
-      texture.refresh(); texture.setFilter(Phaser.Textures.FilterMode.NEAREST);
+      function fill(index,color,alpha){
+        const x=g.x+index%g.columns*g.pitch,y=g.y+Math.floor(index/g.columns)*g.pitch;
+        const x0=Math.round(x*z)-raster.x,y0=Math.round(y*z)-raster.y;
+        const x1=Math.round((x+g.outer)*z)-raster.x,y1=Math.round((y+g.outer)*z)-raster.y;
+        ctx.fillStyle='#'+color.toString(16).padStart(6,'0');ctx.globalAlpha=alpha;
+        ctx.fillRect(x0,y0,x1-x0,y1-y0);
+      }
+      for(const i of occupied)fill(i,colors.gardenSoil,1);
+      if(hover!==null){
+        const candidates=window.GardenGameLayout.gardenCandidates(occupied);
+        if(candidates.has(hover))fill(hover,colors.flowerBorder,0.4);
+        else for(const i of candidates)fill(i,colors.flowerBorder,0.22);
+      }
+      ctx.globalAlpha=1;texture.refresh();texture.setFilter(Phaser.Textures.FilterMode.NEAREST);
     }
-    for(const index of occupied){
-      const col=index%g.columns,row=Math.floor(index/g.columns);
-      const name=flowers[(col+row)%flowers.length];
-      scene.add.image(g.x+col*g.pitch+g.line+g.cell/2,g.y+row*g.pitch+g.line+g.cell/2,key(name,g.cell))
-        .setDisplaySize(g.cell,g.cell).setDepth(1).setName('garden-preview-flower:'+index);
+    function center(i){return {x:g.x+(i%g.columns)*g.pitch+g.line+g.cell/2,y:g.y+Math.floor(i/g.columns)*g.pitch+g.line+g.cell/2};}
+    function addFlower(i,name){
+      const p=center(i);
+      scene.add.image(p.x,p.y,key(name,g.cell)).setDisplaySize(g.cell,g.cell).setDepth(1).setName('garden-preview-flower:'+i);
     }
-    const bounds=patrolBounds(occupied);
-    // Keep larger comparison sprites inside the battlefield, including ?garden=32.
-    // Default garden patrol coordinates remain unchanged at every comparison size.
-    const half=(guardianSize+2)/2;
-    bounds.top=Math.max(bounds.top,spec.top+half);
-    bounds.bottom=Math.min(bounds.bottom,spec.height-spec.bottom-half);
-    const start=patrolPosition(bounds,(bounds.right-bounds.left)/2);
+    [...occupied].forEach((i,n)=>addFlower(i,flowers[n]));
+    function clampedBounds(keys){
+      const b=patrolBounds(keys),half=(guardianSize+2)/2;
+      b.top=Math.max(b.top,spec.top+half);b.bottom=Math.min(b.bottom,spec.height-spec.bottom-half);
+      return b;
+    }
+    function plant(model,drop,index){
+      const next=new Set(occupied);next.add(index);
+      if(!model.plant(drop.id,index,clampedBounds(next)))return false;
+      occupied.add(index);addFlower(index,drop.name);refreshSoil(null);return true;
+    }
+    const bounds=clampedBounds(occupied),start=patrolPosition(bounds,(bounds.right-bounds.left)/2);
     const guardian=scene.add.image(start.x,start.y,installGuardian(scene))
       .setDisplaySize(guardianSize+2,guardianSize+2).setDepth(2).setName('placeholder:guardian:0');
-    refreshSoil();
-    scene.scale.on('resize',refreshSoil);
-    scene.events.once('shutdown',()=>scene.scale.off('resize',refreshSoil));
-    window.GardenCombatPreview.attach(scene,spec,bounds,patrolPosition,guardian,key('caterpillar',enemySize),enemySize,updateHud);
+    const loot=window.GardenLootPreview.attach(scene,spec,{occupied,refresh:refreshSoil,center,plant},itemPreview);
+    refreshSoil(null);
+    const resize=()=>refreshSoil();
+    scene.scale.on('resize',resize);
+    scene.events.once('shutdown',()=>scene.scale.off('resize',resize));
+    window.GardenCombatPreview.attach(scene,spec,bounds,patrolPosition,guardian,key('caterpillar',enemySize),enemySize,updateHud,loot);
   }
   window.GardenFlowerHeadPreview=Object.freeze({draw,install,flowers,key,guardianSize,outlinedPixels,enemySize});
 }());
