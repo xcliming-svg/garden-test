@@ -2,6 +2,10 @@
 
 각 구현 변경의 결과를 시스템 단위로 기록한다. 대화 원문 또는 코드 diff의 복제가 아니라 **어떤 시스템에 무엇이 적용되었으며, 무엇이 아직 구현되지 않았는지**를 설명한다. 최신 구현 상태는 [implementation.md](./implementation.md)를 참조한다.
 
+## 2026-11-14 — 꽃·수호자·애벌레 비교 화면 main 승격
+
+- 사용자 요청에 따라 검증된 devel `07f144c`를 main `c811115`에 fast-forward 병합한다. 꽃 100개(최대 22px, 1px 외곽선), 내부 정원 격자 제거, 수호자 44px 기본과 크기 비교 옵션, 애벌레 32×18px 세 마리를 포함한다. [Chromium 18/18 검증](https://github.com/xcliming-svg/garden-test/actions/runs/43523756200) 이후 실행 소스 변경 없음. main/devel 문서를 동기화하고 기존 Pages 워크플로로 배포한다. 적은 정적 크기 비교 표본이며 전투·이동 AI·충돌은 미구현이다. 기타 브라우저 미검증.
+
 ## 2026-11-14 — 애벌레 적 크기 비교
 
 - devel 5128394 기반 feature/devel-caterpillar-preview. 사용자 제공 애벌레 SVG의 원본 비율을 유지한 30×16px 몸체 및 1px 외곽선(전체 32×18px), 정원 양옆 비교용 적 세 마리. 선호한 수호자 44px 기본 적용, 기존 URL 옵션 유지. 꽃·정원·HUD는 유지. 전투·이동 AI 미구현. [Chromium 18/18 통과](https://github.com/xcliming-svg/garden-test/actions/runs/43523756200), 코드 5afd198. [규격](./flower-head-preview.md). 검증본을 devel에 통합, main 변경 없음.
