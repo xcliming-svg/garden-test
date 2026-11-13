@@ -75,7 +75,7 @@
     item: Object.freeze({ size: iconSize, cardSize: spec.slots.size, dropSize: itemDropSize, color: P.n.gold, assetKey: 'item', suggestedFile: 'assets/item.png' })
   });
 
-  // URL 비교 실험 전용. 파라미터가 없거나 잘못되면 현행 devel과 동일하다.
+  // URL 비교 실험 전용. 파라미터가 없거나 잘못되면 확정된 일반 슬롯의 면을 사용한다.
   const soilTypes = Object.freeze({ '1': P.n.bark, '2': P.n.clay, '3': P.n.teal });
   const soilType = new URLSearchParams(window.location.search).get('type');
   const soilComparison = Object.hasOwn(soilTypes,soilType);
@@ -87,7 +87,7 @@
     normalFill: R.n.tab, normalBorder: R.n.tabBorder,
     progressTrack: R.n.track, progressBorder: R.n.border, progressFill: R.n.green,
     disabledFill: R.n.disabledFill, disabledBorder: R.n.tabBorder, disabledText: R.hex.disabled,
-    gardenSoil: soilColor, gardenSoilAlpha: 1, gardenBorder: soilColor,
+    gardenSoil: soilColor, gardenSoilAlpha: 1, gardenBorder: R.n.gardenBorder,
     flowerBorder: R.n.flowerBorder, itemBorder: R.n.itemBorder,
     blueprintLine: R.n.gridLine, reservedIcon: R.n.icon
   });
@@ -137,15 +137,11 @@
     for(let row=0;row<b.rows;row++)for(let col=0;col<b.columns;col++){
       g.fillStyle(fill,1).fillRect(x+b.frame+b.line+col*b.pitch,y+b.frame+b.line+row*b.pitch,b.cell,b.cell);
     }
-    // 비교 모드에서는 정원과 동일하게 내부 격자의 교차점을 1×1px 비운다.
-    // 외부 2px 프레임과 기본 화면은 그대로 보존한다.
+    // 정원과 동일하게 내부 격자의 교차점을 1×1px 비운다.
+    // 외부 2px 프레임과 8px 셀 규격은 보존한다.
     for(let i=1;i<b.columns;i++){
       g.fillStyle(line,1);
-      if (soilComparison) {
-        for(let row=0;row<b.rows;row++)g.fillRect(x+b.frame+i*b.pitch,y+b.frame+b.line+row*b.pitch,b.line,b.cell);
-      } else {
-        g.fillRect(x+b.frame+i*b.pitch,y+b.frame+b.line,b.line,height-2*(b.frame+b.line));
-      }
+      for(let row=0;row<b.rows;row++)g.fillRect(x+b.frame+i*b.pitch,y+b.frame+b.line+row*b.pitch,b.line,b.cell);
     }
     for(let row=1;row<b.rows;row++)for(let col=0;col<b.columns;col++){
       g.fillStyle(line,1).fillRect(x+b.frame+b.line+col*b.pitch,y+b.frame+row*b.pitch,b.cell,b.line);
@@ -740,13 +736,13 @@
       const p = point(pointer);
       target = hitSlot(p);
       const half = assets.item.dropSize / 2;
-      // 유효 목적지에서는 슬롯 중앙에 맞추고 원본 카드의 중복 렌더링을 숨긴다.
-      const anchor = target >= 0 ? slotAnchor(target) : {
+      // 원본 카드는 계속 커서를 따라가고, 목적지 미리보기만 중앙에 붙는다.
+      const anchor = {
         x: Math.max(half, Math.min(spec.width - half, p.x)),
         y: Math.max(spec.top + half, Math.min(spec.height - half, p.y))
       };
       refresh();
-      dragging.marker.setPosition(anchor.x, anchor.y).setAlpha(target >= 0 ? 0 : 1);
+      dragging.marker.setPosition(anchor.x, anchor.y).setAlpha(target >= 0 ? 0.25 : 1);
     }
     function finishDrag(pointer, accept) {
       if (!dragging) return;
@@ -1018,10 +1014,9 @@
       target = hit(pointer);
       const p = scene.cameras.main.getWorldPoint(pointer.x, pointer.y);
       const valid = gardenCandidates(occupied).has(target);
-      // 유효 칸의 외곽선은 정원 텍스처 하나만 담당하고 아이콘만 중앙에 스냅한다.
-      const anchor = valid ? origin(target) : null;
+      // 유효 칸에서는 원본 카드가 커서를 따라가고 중앙에 별도 미리보기를 표시한다.
       refresh();
-      dragging.marker.setPosition(valid ? anchor.x + garden.outer/2 : p.x, valid ? anchor.y + garden.outer/2 : p.y).setAlpha(valid ? 0 : 1);
+      dragging.marker.setPosition(p.x, p.y).setAlpha(valid ? 0.25 : 1);
     }
     function finish(pointer, accept) {
       if (!dragging) return;

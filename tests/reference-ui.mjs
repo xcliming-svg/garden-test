@@ -228,7 +228,7 @@ for(const c of configs){
     let textureMismatch=0;
     for(let y=0;y<h;y++)for(let x=0;x<w;x++){
       const type=expected(visible,x,y),i=(y*w+x)*4,v=Array.from(pixels.slice(i,i+4)).join(',');
-      if(v!==(type>=1?'59,59,78,255':'0,0,0,0'))textureMismatch++;
+      if(v!==(type===2?'81,81,107,255':type===1?'59,59,78,255':'0,0,0,0'))textureMismatch++;
     }
     const center=key=>({x:g.x+key%g.columns*g.pitch+g.line+g.cell/2,y:g.y+Math.floor(key/g.columns)*g.pitch+g.line+g.cell/2});
     const centers=[...occupied].every(key=>{const o=s.children.getByName('garden-preview-flower:'+key),p=center(key);return o.x===p.x&&o.y===p.y;});
@@ -250,15 +250,15 @@ for(const c of configs){
     cv.width=img.width;cv.height=img.height;const ctx=cv.getContext('2d');ctx.drawImage(img,0,0);
     const p=ctx.getImageData(0,0,cv.width,cv.height).data,R=Math.round;
     const rgb=(x,y)=>Array.from(p.slice((y*cv.width+x)*4,(y*cv.width+x)*4+3)).join(',');
-    const green='106,186,44',face='59,59,78';
+    const green='106,186,44',face='59,59,78',slate='81,81,107';
     const x=(g.x+5*g.pitch)*z,y=(g.y+5*g.pitch)*z;
     // Scan the shared lines in an unoccupied strip, away from the 16px flower icons.
     const scan=(vertical,at,fixed)=>{
       const lo=Math.floor(at)-3,hi=Math.ceil(at+z)+3,values=[];
       for(let v=lo;v<=hi;v++)values.push(rgb(vertical?v:fixed,vertical?fixed:v));
-      const hits=values.map((v,i)=>v===green?i:-1).filter(v=>v>=0);
+      const hits=values.map((v,i)=>v===green?i:-1).filter(v=>v>=0),idleHits=values.map((v,i)=>v===slate?i:-1).filter(v=>v>=0);
       const width=hits.length,contiguous=width>0&&hits.at(-1)-hits[0]+1===width;
-      return {width,contiguous,uniform:values.every(v=>v===face),flanks:width>0&&values[hits[0]-1]===face&&values[hits.at(-1)+1]===face,values};
+      return {width,contiguous,idleWidth:idleHits.length,idleContiguous:idleHits.length>0&&idleHits.at(-1)-idleHits[0]+1===idleHits.length,idleFlanks:idleHits.length>0&&values[idleHits[0]-1]===face&&values[idleHits.at(-1)+1]===face,flanks:width>0&&values[hits[0]-1]===face&&values[hits.at(-1)+1]===face,values};
     };
     const corners=[[4,4],[5,4],[6,4],[4,5],[5,5],[6,5],[4,6],[5,6],[6,6]].map(([col,row])=>{
       const px=R((g.x+col*g.pitch)*z),py=R((g.y+row*g.pitch)*z);
@@ -268,7 +268,8 @@ for(const c of configs){
     });
     return {vertical:scan(true,x,R((g.y+4*g.pitch+3)*z)),horizontal:scan(false,y,R((g.x+4*g.pitch+3)*z)),candidateVertical:scan(true,x,R((g.y+3*g.pitch+3)*z)),candidateHorizontal:scan(false,(g.y+4*g.pitch)*z,R((g.x+5*g.pitch+3)*z)),corners,expected:z};
   },{data:png.toString('base64'),g,z});
-  const validSeams=(a,z)=>[a.vertical,a.horizontal,a.candidateVertical,a.candidateHorizontal].every(v=>v.uniform)&&a.corners.every(v=>v.clear&&v.w>=1&&v.h>=1&&(Number.isInteger(z)?v.w===z&&v.h===z:v.w<=Math.ceil(z)&&v.h<=Math.ceil(z)));
+  const idleSeam=(v,z)=>v.idleContiguous&&v.idleFlanks&&v.idleWidth>=1&&(Number.isInteger(z)?v.idleWidth===z:v.idleWidth<=Math.ceil(z));
+  const validSeams=(a,z)=>[a.vertical,a.horizontal,a.candidateVertical,a.candidateHorizontal].every(v=>idleSeam(v,z))&&a.corners.every(v=>v.clear&&v.w>=1&&v.h>=1&&(Number.isInteger(z)?v.w===z&&v.h===z:v.w<=Math.ceil(z)&&v.h<=Math.ceil(z)));
   const activeSeams=(a,z)=>[a.candidateVertical,a.candidateHorizontal].every(v=>v.contiguous&&v.flanks&&v.width>=1&&(Number.isInteger(z)?v.width===z:v.width<=Math.ceil(z)));
 
   // Read-only sizing probe: proposed translation labels, no game localization changes.
@@ -343,7 +344,7 @@ for(const c of configs){
       return true;
     });
   }));
-  check('reference palette and opaque tree-node garden',await page.evaluate(()=>{const L=window.GardenGameLayout,s=window.__benchmarkGame.scene.getScene('Game'),g=L.spec.garden,t=s.textures.get('ui-test:garden-soil:'+g.cell),px=t.getContext().getImageData(4*g.pitch+3,4*g.pitch+3,1,1).data;const border=t.getContext().getImageData(4*g.pitch+3,4*g.pitch,1,1).data;return L.colors.field===0x0D0D0D&&L.colors.hud===0x161619&&L.colors.gardenSoil===0x3B3B4E&&L.colors.gridFill===L.colors.normalFill&&L.colors.normalFill===L.colors.gardenSoil&&L.itemTooltip.background===L.colors.normalFill&&L.colors.gardenSoilAlpha===1&&Array.from(px).join(',')==='59,59,78,255'&&Array.from(border).join(',')==='59,59,78,255'&&L.colors.progressTrack===0x161619&&L.colors.progressFill===0x6ABA2C&&L.colors.progressBorder===0x676777&&L.hud.barHeight===12&&L.hud.barWidth===158&&L.spec.top===32;}));
+  check('reference palette and opaque tree-node garden',await page.evaluate(()=>{const L=window.GardenGameLayout,s=window.__benchmarkGame.scene.getScene('Game'),g=L.spec.garden,t=s.textures.get('ui-test:garden-soil:'+g.cell),px=t.getContext().getImageData(4*g.pitch+3,4*g.pitch+3,1,1).data;const border=t.getContext().getImageData(4*g.pitch+3,4*g.pitch,1,1).data;return L.colors.field===0x0D0D0D&&L.colors.hud===0x161619&&L.colors.gardenSoil===0x3B3B4E&&L.colors.gridFill===L.colors.normalFill&&L.colors.normalFill===L.colors.gardenSoil&&L.itemTooltip.background===L.colors.normalFill&&L.colors.gardenSoilAlpha===1&&Array.from(px).join(',')==='59,59,78,255'&&Array.from(border).join(',')==='81,81,107,255'&&L.colors.progressTrack===0x161619&&L.colors.progressFill===0x6ABA2C&&L.colors.progressBorder===0x676777&&L.hud.barHeight===12&&L.hud.barWidth===158&&L.spec.top===32;}));
 
   const captureHudGaps=async(png,all,z,labels)=>{
     return page.evaluate(async ({data,all,z,labels})=>{
@@ -367,7 +368,7 @@ for(const c of configs){
     // Inspect real output pixels at every viewport, not transparent text object bounds.
     const bottomPng=await page.screenshot({path:join(out,'scale-'+w+'x'+h+'.png')});
     const seams=await captureGardenSeams(page,bottomPng,m.garden,m.zoom);
-    check(w+' garden idle lines match soil and cut corners',validSeams(seams,m.zoom),JSON.stringify(seams));
+    check(w+' garden idle slate lines match ordinary slots and cut corners',validSeams(seams,m.zoom),JSON.stringify(seams));
     console.log('GARDEN_SEAMS '+w+' '+JSON.stringify(seams));
     const hudPixels=await captureHudGaps(bottomPng,m.hud,m.zoom,{time:'시간',kills:'처치 수',progress:'정원 완성도'});
     check(w+' actual visible HUD 5px gaps',Object.values(hudPixels.edges).every(e=>e.n>0)&&hudPixels.gaps.every(g=>g===Math.round(5*m.zoom)),JSON.stringify(hudPixels));
@@ -582,7 +583,7 @@ for(const c of configs){
   await page.screenshot({path:join(out,'item-drag-borders.png')});
   await move(slot.x+3,slot.y+3);
   check('item target sky with one slot border and ghost icon',await page.evaluate(()=>{const s=window.__benchmarkGame.scene.getScene('Game'),g=s.children.getByName('item-preview-ghost');return g.visible&&!g.list[0].visible&&!g.list[1].visible&&s.children.getByName('slot-frame:0').strokeColor===0x67A3EE&&!s.children.getByName('preview-slot-highlight');}));
-  check('item off-center pointer snaps exact 32px target center without second card',await page.evaluate(({x,y,size})=>{const s=window.__benchmarkGame.scene.getScene('Game'),o=s.children.getByName('placeholder:item:0'),f=s.children.getByName('slot-frame:0'),g=s.children.getByName('item-preview-ghost');return o.width===size&&o.height===size&&f.width===size&&f.height===size&&o.x===x+size/2&&o.y===y+size/2&&g.x===o.x&&g.y===o.y&&o.alpha===0&&g.list[2].displayWidth===16;},slot));
+  check('item off-center pointer retains translucent cursor card and centered ghost',await page.evaluate(({x,y,size})=>{const s=window.__benchmarkGame.scene.getScene('Game'),o=s.children.getByName('placeholder:item:0'),f=s.children.getByName('slot-frame:0'),g=s.children.getByName('item-preview-ghost');return o.width===size&&o.height===size&&f.width===size&&f.height===size&&o.x===x+3&&o.y===y+3&&g.x===x+size/2&&g.y===y+size/2&&o.alpha===0.25&&g.list[2].displayWidth===16;},slot));
   await page.screenshot({path:join(out,'item-snap-exact.png')});
   await move(10,200);
   check('item leaves target restores card',await cardState('placeholder:item:0').then(v=>v.alpha===1&&v.border===sky));
@@ -610,7 +611,7 @@ for(const c of configs){
   check('replacement visible 5px padding and rows',exactTipPadding(tipPixels,1),JSON.stringify(tipPixels));
   console.log('TOOLTIP_PADDING_REPORT '+JSON.stringify(tipPixels));
   const delta=await gameMetrics();inspectGame(delta,'replacement stats');
-  check('dragged item follows target',await page.evaluate(({x,y})=>{const s=window.__benchmarkGame.scene.getScene('Game'),o=s.children.getByName('placeholder:item:3'),ghost=s.children.getByName('item-preview-ghost');return Math.abs(o.x-x)<1&&Math.abs(o.y-y)<1&&o.alpha===0&&ghost.visible&&Math.abs(ghost.x-x)<1&&Math.abs(ghost.y-y)<1;},{x:slot.x+slot.size/2,y:slot.y+slot.size/2}));
+  check('dragged item follows target',await page.evaluate(({x,y})=>{const s=window.__benchmarkGame.scene.getScene('Game'),o=s.children.getByName('placeholder:item:3'),ghost=s.children.getByName('item-preview-ghost');return Math.abs(o.x-x)<1&&Math.abs(o.y-y)<1&&o.alpha===0.25&&ghost.visible&&Math.abs(ghost.x-x)<1&&Math.abs(ghost.y-y)<1;},{x:slot.x+slot.size/2,y:slot.y+slot.size/2}));
   check('dragging image centered and shadow hidden',await page.evaluate(()=>{const o=window.__benchmarkGame.scene.getScene('Game').children.getByName('placeholder:item:3');return o.list[2].y===0&&o.list[1].y===0&&!o.list[3].visible&&o.list[0].visible&&o.list[0].y===0&&o.list[1].visible&&o.list[1].fillColor===0x3B3B4E&&o.list[0].fillColor===0x67A3EE;}));
   await page.mouse.up();
   check('equipped item keeps original slot frame',await page.evaluate(()=>{const o=window.__benchmarkGame.scene.getScene('Game').children.getByName('preview-equipped:0');return o.visible&&o.list.length===3&&o.list[0].visible&&o.list[1].visible&&o.list[2].y===0;}));
@@ -641,7 +642,7 @@ for(const c of configs){
       const i=(y*g.size+x)*4,v=Array.from(pixels.slice(i,i+4)).join(',');
       if(type===3)expectedGreen++;
       if(v==='106,186,44,255')green++;
-      if(v!==(type===3?'106,186,44,255':type>=1?'59,59,78,255':'0,0,0,0'))mismatch++;
+      if(v!==(type===3?'106,186,44,255':type===2?'81,81,107,255':type===1?'59,59,78,255':'0,0,0,0'))mismatch++;
     }
     return {mismatch,green,expectedGreen,noOverlay:!s.children.getByName('garden-preview-highlight')};
   });
@@ -650,13 +651,13 @@ for(const c of configs){
   check('flower drag card green border and neutral face',JSON.stringify(await cardState('placeholder:flower:0'))===JSON.stringify({border:0x6ABA2C,face:panel,alpha:1}));
   const activeGardenPng=await page.screenshot({path:join(out,'flower-drag-borders.png')});
   const activeGardenSeams=await captureGardenSeams(page,activeGardenPng,g,1);
-  check('flower drag visible single green candidate borders',activeSeams(activeGardenSeams,1)&&activeGardenSeams.vertical.uniform&&activeGardenSeams.horizontal.uniform,JSON.stringify(activeGardenSeams));
+  check('flower drag visible single green candidate borders',activeSeams(activeGardenSeams,1)&&idleSeam(activeGardenSeams.vertical,1)&&idleSeam(activeGardenSeams.horizontal,1),JSON.stringify(activeGardenSeams));
   await move(targetFlower.x-5,targetFlower.y-5);
   check('flower target retains single green grid and no pluses',await flowerGridState().then(a=>a.mismatch===0&&a.noOverlay));
   const gardenDragPng=await page.screenshot({path:join(out,'garden-drag-cut-corners.png')});
   const gardenDragSeams=await captureGardenSeams(page,gardenDragPng,g,1);
-  check('flower target preserves cut corner pixels during drag',gardenDragSeams.corners.filter(v=>v.row===4&&(v.col===4||v.col===5)).every(v=>v.clear),JSON.stringify(gardenDragSeams.corners));
-  check('flower ghost centered on shared grid',await page.evaluate(p=>{const s=window.__benchmarkGame.scene.getScene('Game'),o=s.children.getByName('garden-preview-ghost');return o.visible&&o.x===p.x&&o.y===p.y&&o.displayWidth===16&&s.children.getByName('placeholder:flower:0').alpha===0&&s.children.getByName('placeholder:flower:0').x===p.x&&s.children.getByName('placeholder:flower:0').y===p.y&&s.children.getByName('placeholder:flower:0').width===window.GardenGameLayout.spec.garden.outer;},targetFlower));
+  check('flower target leaves unaffected grid corners clear during drag',gardenDragSeams.corners.filter(v=>v.row>=5).every(v=>v.clear),JSON.stringify(gardenDragSeams.corners));
+  check('flower ghost centered on shared grid',await page.evaluate(p=>{const s=window.__benchmarkGame.scene.getScene('Game'),o=s.children.getByName('garden-preview-ghost');return o.visible&&o.x===p.x&&o.y===p.y&&o.displayWidth===16&&s.children.getByName('placeholder:flower:0').alpha===0.25&&s.children.getByName('placeholder:flower:0').x===p.x-5&&s.children.getByName('placeholder:flower:0').y===p.y-5&&s.children.getByName('placeholder:flower:0').width===window.GardenGameLayout.spec.garden.outer;},targetFlower));
   await page.mouse.up();
   check('plant',await page.evaluate(()=>!!window.__benchmarkGame.scene.getScene('Game').children.getByName('garden-preview-flower:34')));
   const afterPlant=await inspectGarden('after plant');
@@ -778,7 +779,7 @@ for(const c of configs){
   }
   // URL-only soil variants: verify the exact palette color, transparent cut corners,
   // unchanged non-garden UI, and real placement/resize rendering.
-  const soilVariants=[['1',0x7C4C24],['2',0xA46444],['3',0x0C9484],['invalid',0x3B3B4E]];
+  const soilVariants=[['default',0x3B3B4E],['1',0x7C4C24],['2',0xA46444],['3',0x0C9484],['invalid',0x3B3B4E]];
   const inspectSoilTexture=async(expected,dragging=false)=>page.evaluate(({expected,dragging})=>{
     const L=window.GardenGameLayout,g=L.spec.garden,s=window.__benchmarkGame.scene.getScene('Game');
     const occupied=new Set(s.children.list.filter(o=>o.name?.startsWith('garden-preview-flower:')).map(o=>Number(o.name.split(':').at(-1))));
@@ -792,15 +793,15 @@ for(const c of configs){
         if(u<0||v<0||u>=g.outer||v>=g.outer)continue;
         const ex=u===0||u===g.outer-1,ey=v===0||v===g.outer-1;
         if(ex&&ey)continue;
-        type=Math.max(type,dragging&&(ex||ey)&&candidates.has(k)?2:1);
+        type=Math.max(type,ex||ey?(dragging&&candidates.has(k)?3:2):1);
       }
-      const color=type===2?0x6ABA2C:expected,i=(y*w+x)*4;
+      const color=type===3?0x6ABA2C:type===2?0x51516B:expected,i=(y*w+x)*4;
       const actual=(p[i]<<16)|(p[i+1]<<8)|p[i+2];
-      if(type===2)activeCount++;if(type===1)faceCount++;
+      if(type===3)activeCount++;if(type===1)faceCount++;
       if(type===0?(p[i+3]!==0):(p[i+3]!==255||actual!==color))mismatch++;
     }
     return {mismatch,activeCount,faceCount,occupied:occupied.size,candidates:candidates.size,
-      roles:L.colors.gardenSoil===expected&&L.colors.gardenBorder===expected&&L.colors.normalFill===0x3B3B4E&&L.colors.gridFill===0x3B3B4E&&L.colors.flowerBorder===0x6ABA2C&&L.colors.itemBorder===0x67A3EE&&L.itemTooltip.accent===0x51516B};
+      roles:L.colors.gardenSoil===expected&&L.colors.gardenBorder===L.colors.normalBorder&&L.colors.normalBorder===0x51516B&&L.colors.normalFill===0x3B3B4E&&L.colors.gridFill===0x3B3B4E&&L.colors.flowerBorder===0x6ABA2C&&L.colors.itemBorder===0x67A3EE&&L.itemTooltip.accent===0x51516B};
   },{expected,dragging});
   const inspectSoilPixels=async(png,expected,cut,z)=>page.evaluate(async ({data,expected,cut,z})=>{
     const L=window.GardenGameLayout,g=L.spec.garden,b=L.spec.blueprint;
@@ -821,11 +822,11 @@ for(const c of configs){
     const line=rgb(R((b.gridX+b.frame+b.pitch)*z),R((b.gridY+b.frame+b.line+3)*z));
     const outer=rgb(R((b.gridX+4)*z),R(b.gridY*z));
     const inner=rgb(R((b.gridX+4)*z),R((b.gridY+1)*z));
-    return {intersections,wrong,soil,pass:soil.every(v=>v===expected)&&cell===0x3B3B4E&&line===0x51516B&&outer===0x3B3B4E&&inner===0x51516B};
+    return {intersections,wrong,soil,pass:soil.slice(0,-1).every(v=>v===expected)&&soil.at(-1)===0x51516B&&cell===0x3B3B4E&&line===0x51516B&&outer===0x3B3B4E&&inner===0x51516B};
   },{data:png.toString('base64'),expected,cut,z});
   for(const [mode,color] of soilVariants){
     await page.setViewportSize({width:960,height:540});
-    await page.goto(origin+'/'+c.id+'/index.html?type='+mode+'&preview=1',{waitUntil:'load'});
+    await page.goto(origin+'/'+c.id+'/index.html?preview=1'+(mode==='default'?'':'&type='+mode),{waitUntil:'load'});
     await page.waitForFunction(()=>window.__benchmarkGame?.scene.isActive('MainMenu'),{},{timeout:20000});
     await button('MainMenu','새 게임');
     await page.waitForFunction(()=>window.__benchmarkGame.scene.isActive('Game'));
@@ -835,7 +836,7 @@ for(const c of configs){
       await page.setViewportSize({width:w,height:h});
       await page.waitForFunction(w=>window.__benchmarkGame.scene.getScene('Game').cameras.main.zoom===w/960,w);
       const png=await page.screenshot({path:join(out,'soil-type-'+mode+'-'+w+'.png')});
-      const v=await inspectSoilPixels(png,color,mode!=='invalid',w/960);
+      const v=await inspectSoilPixels(png,color,true,w/960);
       check('soil type '+mode+' '+w+' actual soil and 81 blueprint intersections',v.pass&&v.wrong===0&&v.intersections===81*(w/960)**2,JSON.stringify(v));
     }
     await page.setViewportSize({width:960,height:540});
@@ -896,7 +897,7 @@ for(const c of configs){
     const nativeGap=await captureTipGap(hi,png,nativeTip,marker,'right');
     const nativeGarden=await hi.evaluate(()=>window.GardenGameLayout.spec.garden);
     const nativeSeams=await captureGardenSeams(hi,png,nativeGarden,nativeTip.zoom);
-    check('DPR2 fractional garden hidden grid and corners',validSeams(nativeSeams,nativeTip.zoom),JSON.stringify(nativeSeams));
+    check('DPR2 fractional garden slate grid and corners',validSeams(nativeSeams,nativeTip.zoom),JSON.stringify(nativeSeams));
     check('DPR 2 fractional actual 5px border gap',validTipGap(nativeGap),JSON.stringify(nativeGap));
     check('fractional native output slot/tooltip cuts and exact text frames',nativePixels.slot.every(v=>v==='22,22,25')&&nativePixels.tooltip.every(v=>v==='13,13,13')&&nativePixels.nativeText,JSON.stringify(nativePixels));
     console.log('NATIVE_REPORT '+JSON.stringify({before,after,nativeReport,nativePixels}));

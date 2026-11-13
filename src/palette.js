@@ -18,7 +18,7 @@
     disabledBorder: hex.slate, hover: hex.silver, text: hex.paper, label: hex.silver,
     hudLabel: hex.silver, disabled: hex.silver, green: hex.growth, red: hex.red,
     warning: hex.gold, icon: hex.silver, shadow: hex.ink, track: hex.hud,
-    barFrame: hex.panel, garden: hex.panel, gardenBorder: hex.panel,
+    barFrame: hex.panel, garden: hex.panel, gardenBorder: hex.slate,
     flowerBorder: hex.growth, itemBorder: hex.sky
   });
   const reference = Object.freeze({ baseHex: hex, hex: referenceHex, n: numeric(referenceHex) });
