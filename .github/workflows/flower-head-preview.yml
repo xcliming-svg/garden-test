@@ -1,7 +1,7 @@
 name: Flower head preview verification
 on:
   push:
-    branches: [feature/flower-head-preview]
+    branches: [feature/flower-head-preview, feature/devel-flower-outline]
 permissions:
   contents: read
 jobs:

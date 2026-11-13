@@ -17,6 +17,23 @@
 };
   const flowers = Object.freeze(['daisy','tulip','sunflower','hydrangea']);
   const key = (name,size) => 'flower-head-preview:'+name+':'+size;
+  const guardianMode = new URLSearchParams(window.location.search).get('person');
+  const guardianSize = guardianMode === '24' ? 24 : guardianMode === '28' ? 28 : 32;
+  // Keep the outline inside the cell, so adjacent flowers never overlap.
+  function outlinedPixels(pixels, size) {
+    const inner = size - 2, result = new Uint8Array(size * size);
+    for (let y=0;y<inner;y++) for (let x=0;x<inner;x++) {
+      const sx=Math.floor((x+0.5)*size/inner), sy=Math.floor((y+0.5)*size/inner);
+      result[(y+1)*size+x+1]=Number(pixels[sy*size+sx]);
+    }
+    const core=result.slice();
+    for(let y=0;y<size;y++) for(let x=0;x<size;x++) {
+      const i=y*size+x;
+      if(core[i]) continue;
+      if([[x-1,y],[x+1,y],[x,y-1],[x,y+1]].some(([a,b])=>a>=0&&a<size&&b>=0&&b<size&&core[b*size+a])) result[i]=9;
+    }
+    return result;
+  }
   function install(scene) {
     for (const [id,packed] of Object.entries(runs)) {
       const [name,sizeText] = id.split(':'), size = Number(sizeText), k = key(name,size);
@@ -25,10 +42,11 @@
       if (pixels.length !== size * size) throw new Error('Invalid preview sprite: '+id);
       const texture = scene.textures.createCanvas(k,size,size);
       const ctx = texture.getContext(), image = ctx.createImageData(size,size);
-      for (let i=0;i<pixels.length;i++) {
-        const index=Number(pixels[i]);
+      const display=name==='guardian'?pixels:outlinedPixels(pixels,size);
+      for (let i=0;i<display.length;i++) {
+        const index=Number(display[i]);
         if (!index) continue;
-        const color = window.GardenPalette.n[roles[index]];
+        const color = window.GardenPalette.n[index===9?'ink':roles[index]];
         if (color===undefined) throw new Error('Invalid palette role: '+index);
         image.data.set([(color>>16)&255,(color>>8)&255,color&255,255],i*4);
       }
@@ -52,10 +70,20 @@
         .setPosition((raster.x+raster.width/2)/z,(raster.y+raster.height/2)/z);
       const ctx=texture.getContext();
       ctx.clearRect(0,0,raster.width,raster.height);
-      for(const r of raster.rects){
-        ctx.fillStyle='#'+(r.border?colors.gardenBorder:colors.gardenSoil).toString(16).padStart(6,'0');
-        ctx.fillRect(r.x,r.y,r.w,r.h);
-      }
+      // Continuous soil, no internal seams. Preserve only the existing outer frame
+      // and its four cut corners, snapped to native output pixels.
+      const w=raster.width,h=raster.height;
+      const left=Math.max(1,Math.round((g.x+g.line)*z)-raster.x);
+      const top=Math.max(1,Math.round((g.y+g.line)*z)-raster.y);
+      const right=Math.max(1,raster.x+w-Math.round((g.x+g.size-g.line)*z));
+      const bottom=Math.max(1,raster.y+h-Math.round((g.y+g.size-g.line)*z));
+      ctx.fillStyle='#'+colors.gardenBorder.toString(16).padStart(6,'0');
+      ctx.fillRect(left,0,w-left-right,top);
+      ctx.fillRect(left,h-bottom,w-left-right,bottom);
+      ctx.fillRect(0,top,left,h-top-bottom);
+      ctx.fillRect(w-right,top,right,h-top-bottom);
+      ctx.fillStyle='#'+colors.gardenSoil.toString(16).padStart(6,'0');
+      ctx.fillRect(left,top,w-left-right,h-top-bottom);
       texture.refresh(); texture.setFilter(Phaser.Textures.FilterMode.NEAREST);
     }
     for(const index of occupied){
@@ -68,7 +96,7 @@
     let distance=(bounds.right-bounds.left)/2;
     const start=patrolPosition(bounds,distance);
     const guardian=scene.add.image(start.x,start.y,key('guardian',24))
-      .setDisplaySize(24,24).setDepth(2).setName('placeholder:guardian:0');
+      .setDisplaySize(guardianSize,guardianSize).setDepth(2).setName('placeholder:guardian:0');
     const update=(_time,delta)=>{
       distance+=Math.max(0,Math.min(delta,100))*0.072;
       const p=patrolPosition(bounds,distance);guardian.setPosition(p.x,p.y);
@@ -81,5 +109,5 @@
       scene.scale.off('resize',refreshSoil);
     });
   }
-  window.GardenFlowerHeadPreview=Object.freeze({draw,install,flowers,key});
+  window.GardenFlowerHeadPreview=Object.freeze({draw,install,flowers,key,guardianSize,outlinedPixels});
 }());

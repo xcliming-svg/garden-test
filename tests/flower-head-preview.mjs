@@ -41,7 +41,7 @@ const url='http://127.0.0.1:'+server.address().port;
 const browser=await chromium.launch({channel:'chrome',headless:true,args:['--no-sandbox','--disable-dev-shm-usage','--use-gl=angle','--use-angle=swiftshader','--enable-unsafe-swiftshader']});
 const report=[];
 try{
- for(const [w,h,dpr,cell,query] of [[640,360,1,22,''],[960,540,1,22,''],[1280,720,1,22,''],[1600,900,1,22,''],[1920,1080,1,22,''],[960,540,2,22,''],[960,540,1,32,'?garden=32'],[960,540,1,22,'?slots=24'],[960,540,1,22,'?slots=36']]){
+ for(const [w,h,dpr,cell,query] of [[640,360,1,22,''],[960,540,1,22,''],[1280,720,1,22,''],[1600,900,1,22,''],[1920,1080,1,22,''],[960,540,2,22,''],[960,540,1,32,'?garden=32'],[960,540,1,22,'?slots=24'],[960,540,1,22,'?slots=36'],[1920,1080,1,22,'?person=24'],[1920,1080,1,22,'?person=28']]){
   const page=await browser.newPage({viewport:{width:w,height:h},deviceScaleFactor:dpr});
   const errors=[];page.on('pageerror',e=>errors.push(String(e)));
   try {
@@ -57,17 +57,26 @@ try{
     const allowed=new Set(Object.values(window.GardenPalette.n));
     const sprites=[...new Set(flowers.map(o=>o.texture.key)),guardian.texture.key].map(key=>{
      const t=s.textures.get(key),w=t.width,h=t.height,p=t.getContext().getImageData(0,0,w,h).data;
-     let left=w,right=-1,top=h,bottom=-1,valid=true;
+     let left=w,right=-1,top=h,bottom=-1,valid=true,outline=0,unoutlined=0;
+     const ink=window.GardenPalette.n.ink;
+     const pixel=(x,y)=>{const i=(y*w+x)*4;return x<0||y<0||x>=w||y>=h||!p[i+3]?-1:(p[i]<<16)|(p[i+1]<<8)|p[i+2];};
      for(let y=0;y<h;y++)for(let x=0;x<w;x++){
       const i=(y*w+x)*4,a=p[i+3]; if(a!==0&&a!==255)valid=false;
       if(a){left=Math.min(left,x);right=Math.max(right,x);top=Math.min(top,y);bottom=Math.max(bottom,y);if(!allowed.has((p[i]<<16)|(p[i+1]<<8)|p[i+2]))valid=false;}
      }
-     return {key,w,h,valid,extent:Math.max(right-left+1,bottom-top+1)};
+     if(!key.includes('guardian'))for(let y=0;y<h;y++)for(let x=0;x<w;x++){
+      const c=pixel(x,y);if(c===ink)outline++;
+      if(c!==-1&&c!==ink&&[[x-1,y],[x+1,y],[x,y-1],[x,y+1]].some(([a,b])=>pixel(a,b)===-1))unoutlined++;
+     }
+     return {key,w,h,valid,outline,unoutlined,extent:Math.max(right-left+1,bottom-top+1)};
     });
     const soil=list.find(o=>o.name==='garden-preview-soil');
     const grid=soil.texture.getContext().getImageData(0,0,soil.texture.width,soil.texture.height).data;
     const colorAt=(x,y)=>Array.from(grid.slice((y*soil.texture.width+x)*4,(y*soil.texture.width+x)*4+4));
-    return {g,z,count:flowers.length,markers:list.filter(o=>o.name?.startsWith('placeholder:')).map(o=>o.name),
+    const seamColors=[];
+    for(let i=1;i<g.columns;i++) seamColors.push(colorAt(Math.round((g.x+i*g.pitch)*z)-Math.round(g.x*z),Math.floor(soil.texture.height/2)));
+    for(let i=1;i<g.rows;i++) seamColors.push(colorAt(Math.floor(soil.texture.width/2),Math.round((g.y+i*g.pitch)*z)-Math.round(g.y*z)));
+    return {g,z,seamColors,count:flowers.length,markers:list.filter(o=>o.name?.startsWith('placeholder:')).map(o=>o.name),
       centers:flowers.every(o=>{const i=Number(o.name.split(':').at(-1));return o.x===g.x+(i%g.columns)*g.pitch+g.line+g.cell/2&&o.y===g.y+Math.floor(i/g.columns)*g.pitch+g.line+g.cell/2&&o.displayWidth===g.cell&&o.displayHeight===g.cell;}),
       guardian:{x:guardian.x,y:guardian.y,w:guardian.displayWidth,h:guardian.displayHeight},sprites,
       grid:[soil.texture.width,soil.texture.height],corner:colorAt(0,0),canvas:[game.canvas.width,game.canvas.height],
@@ -75,11 +84,40 @@ try{
    });
    assert.equal(state.count,100);assert.deepEqual(state.markers,['placeholder:guardian:0']);
    assert.equal(state.g.cell,cell);assert.ok(state.centers);assert.equal(state.sprites.length,5);
-   assert.ok(state.sprites.every(t=>t.valid&&t.extent===t.w&&t.w===t.h));
-   assert.deepEqual(state.corner,[0,0,0,0]);assert.equal(state.guardian.w,24);assert.equal(state.guardian.h,24);
+   assert.ok(state.sprites.every(t=>t.valid&&t.extent<=t.w&&t.extent>=t.w-2&&t.w===t.h),JSON.stringify(state.sprites));
+   assert.ok(state.sprites.filter(t=>!t.key.includes('guardian')).every(t=>t.outline>0&&t.unoutlined===0),JSON.stringify(state.sprites));
+   assert.ok(state.seamColors.every(c=>c.join(',')==='22,22,25,255'),JSON.stringify(state.seamColors));
+   const person=Number(new URLSearchParams(query).get('person')||32);
+   assert.deepEqual(state.corner,[0,0,0,0]);assert.equal(state.guardian.w,person);assert.equal(state.guardian.h,person);
    assert.ok(state.hud);assert.equal(state.slots,10);assert.deepEqual(state.canvas,[w*dpr,h*dpr]);
    await page.waitForFunction(({x,y})=>{const o=window.__previewGame.scene.getScene('Game').children.getByName('placeholder:guardian:0');return Math.hypot(o.x-x,o.y-y)>2;},state.guardian);
-   await page.screenshot({path:join(out,'flower-head-'+w+'-'+dpr+'-'+cell+'-'+(query.replace(/[^0-9]/g,'')||'default')+'.png'),scale:'device'});
+   const png=await page.screenshot({path:join(out,'flower-head-'+w+'-'+dpr+'-'+cell+'-'+(query.replace(/[^0-9]/g,'')||'default')+'.png'),scale:'device'});
+   if(w*dpr===1920){
+    const actual=await page.evaluate(async data=>{
+     const img=await createImageBitmap(await(await fetch('data:image/png;base64,'+data)).blob()),cv=document.createElement('canvas');
+     cv.width=img.width;cv.height=img.height;const ctx=cv.getContext('2d');ctx.drawImage(img,0,0);
+     const p=ctx.getImageData(0,0,cv.width,cv.height).data;
+     const g=window.GardenGameLayout.spec.garden,z=2,s=window.__previewGame.scene.getScene('Game');
+     const pixel=(x,y)=>{const i=(y*cv.width+x)*4;return (p[i]<<16)|(p[i+1]<<8)|p[i+2];};
+     let seams=0,wrongSeams=0,outline=0,wrongOutline=0;
+     for(let i=1;i<g.columns;i++)for(let y=(g.y+1)*z;y<(g.y+g.size-1)*z;y++){
+      const x=(g.x+i*g.pitch)*z;seams++;if(pixel(x,y)!==0x161619)wrongSeams++;
+     }
+     for(let i=1;i<g.rows;i++)for(let x=(g.x+1)*z;x<(g.x+g.size-1)*z;x++){
+      const y=(g.y+i*g.pitch)*z;seams++;if(pixel(x,y)!==0x161619)wrongSeams++;
+     }
+     for(const o of s.children.list.filter(o=>o.name?.startsWith('garden-preview-flower:'))){
+      const t=o.texture,n=t.width,bytes=t.getContext().getImageData(0,0,n,n).data;
+      for(let y=0;y<n;y++)for(let x=0;x<n;x++){
+       const i=(y*n+x)*4;if(bytes[i+3]!==255||((bytes[i]<<16)|(bytes[i+1]<<8)|bytes[i+2])!==0x0d0d0d)continue;
+       outline++;if(pixel(Math.round((o.x-n/2+x)*z),Math.round((o.y-n/2+y)*z))!==0x0d0d0d)wrongOutline++;
+      }
+     }
+     return {seams,wrongSeams,outline,wrongOutline};
+    },png.toString('base64'));
+    assert.ok(actual.seams>0&&actual.wrongSeams===0&&actual.outline>0&&actual.wrongOutline===0,JSON.stringify(actual));
+    state.actual=actual;
+   }
    await page.keyboard.press('Escape');await page.waitForFunction(()=>window.__previewGame.scene.isActive('Pause'));
    await page.keyboard.press('Escape');await page.waitForFunction(()=>window.__previewGame.scene.isActive('Game'));
    assert.deepEqual(errors,[]);

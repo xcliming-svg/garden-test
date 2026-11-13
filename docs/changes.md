@@ -2,6 +2,10 @@
 
 각 구현 변경의 결과를 시스템 단위로 기록한다. 대화 원문 또는 코드 diff의 복제가 아니라 **어떤 시스템에 무엇이 적용되었으며, 무엇이 아직 구현되지 않았는지**를 설명한다. 최신 구현 상태는 [implementation.md](./implementation.md)를 참조한다.
 
+## 2026-11-14 — 꽃 외곽선 및 정원 내부 그리드 제거, 수호자 크기 비교
+
+- devel c24e104 기반 feature/devel-flower-outline. 꽃 셀 안쪽 1px ink 외곽선, 정원 내부 공유선 제거(외곽 프레임 유지), 수호자 32px 기본 및 person=24/28 비교. 원본 래스터·HUD·도안·순찰 경로 유지. [규격](./flower-head-preview.md). 전용 Chromium 검사에서 실제 화면 픽셀을 포함해 검증한다.
+
 ## 2026-11-14 — 꽃 머리 비교 화면 devel 배포
 
 - 사용자 요청에 따라 검증된 feature/flower-head-preview fe947b9를 devel에 병합한다. 실행 소스의 추가 변경 없음. main 유지. [비교 화면 규격](./flower-head-preview.md), [devel 실행](https://xcliming-svg.github.io/garden-test/devel/).
