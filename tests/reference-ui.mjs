@@ -403,7 +403,7 @@ for(const c of configs){
       const any=(start,end,pred)=>{for(let i=start;i<end;i++)if(pred(i))return true;return false;};
       const slotRuns=runs(R((first.x-2)*z),R((last.x+last.size+2)*z),x=>any(R(first.y*z),R((first.y+first.size)*z),y=>rgb(x,y)!==hud));
       const slotY=runs(R((first.y-2)*z),R((first.y+first.size+2)*z),y=>any(R(first.x*z),R((first.x+first.size)*z),x=>rgb(x,y)!==hud));
-      // 도안의 중앙 세로선은 교차점 컷으로 끊긴다. 외형 높이는 행 전체 투영으로 검사한다.
+      // 도안 외형 높이는 행 전체 투영으로 검사한다.
       const bpY=runs(R((bp.y-2)*z),R((bp.gridY+bp.width+2)*z),y=>any(R(bp.x*z),R((bp.x+bp.width)*z),x=>rgb(x,y)!==field));
       const bpX=[[bp.y,bp.header],[bp.gridY,bp.width]].map(([y,h])=>runs(R((bp.x-2)*z),R((bp.x+bp.width+2)*z),x=>any(R(y*z),R((y+h)*z),py=>rgb(x,py)!==field)));
       const barX=960-7.5-158,barY=15-6;
@@ -821,7 +821,7 @@ for(const c of configs){
     return {mismatch,activeCount,faceCount,occupied:occupied.size,candidates:candidates.size,
       roles:L.colors.gardenSoil===expected&&L.colors.gardenBorder===L.colors.normalBorder&&L.colors.normalBorder===0x51516B&&L.colors.normalFill===0x3B3B4E&&L.colors.gridFill===0x3B3B4E&&L.colors.flowerBorder===0x6ABA2C&&L.colors.itemBorder===0x67A3EE&&L.itemTooltip.accent===0x51516B};
   },{expected,dragging,target});
-  const inspectSoilPixels=async(png,expected,cut,z)=>page.evaluate(async ({data,expected,cut,z})=>{
+  const inspectSoilPixels=async(png,expected,z)=>page.evaluate(async ({data,expected,z})=>{
     const L=window.GardenGameLayout,g=L.spec.garden,b=L.spec.blueprint;
     const img=await createImageBitmap(await(await fetch('data:image/png;base64,'+data)).blob()),cv=document.createElement('canvas');
     cv.width=img.width;cv.height=img.height;const ctx=cv.getContext('2d');ctx.drawImage(img,0,0);
@@ -831,7 +831,7 @@ for(const c of configs){
     for(let row=1;row<b.rows;row++)for(let col=1;col<b.columns;col++){
       const x=b.gridX+b.frame+col*b.pitch,y=b.gridY+b.frame+row*b.pitch;
       for(let py=R(y*z);py<R((y+b.line)*z);py++)for(let px=R(x*z);px<R((x+b.line)*z);px++){
-        intersections++;if(rgb(px,py)!==(cut?0x0D0D0D:0x51516B))wrong++;
+        intersections++;if(rgb(px,py)!==0x51516B)wrong++;
       }
     }
     const points=[[4,4,3,3],[4,3,3,3],[5,3,3,3],[5,5,3,3],[5,4,0,3]];
@@ -841,7 +841,7 @@ for(const c of configs){
     const outer=rgb(R((b.gridX+4)*z),R(b.gridY*z));
     const inner=rgb(R((b.gridX+4)*z),R((b.gridY+1)*z));
     return {intersections,wrong,soil,pass:soil.slice(0,-1).every(v=>v===expected)&&soil.at(-1)===0x51516B&&cell===0x3B3B4E&&line===0x51516B&&outer===0x3B3B4E&&inner===0x51516B};
-  },{data:png.toString('base64'),expected,cut,z});
+  },{data:png.toString('base64'),expected,z});
   for(const [mode,color] of soilVariants){
     await page.setViewportSize({width:960,height:540});
     await page.goto(origin+'/'+c.id+'/index.html?preview=1'+(mode==='default'?'':'&type='+mode),{waitUntil:'load'});
@@ -854,8 +854,8 @@ for(const c of configs){
       await page.setViewportSize({width:w,height:h});
       await page.waitForFunction(w=>window.__benchmarkGame.scene.getScene('Game').cameras.main.zoom===w/960,w);
       const png=await page.screenshot({path:join(out,'soil-type-'+mode+'-'+w+'.png')});
-      const v=await inspectSoilPixels(png,color,true,w/960);
-      check('soil type '+mode+' '+w+' actual soil and 81 blueprint intersections',v.pass&&v.wrong===0&&v.intersections===81*(w/960)**2,JSON.stringify(v));
+      const v=await inspectSoilPixels(png,color,w/960);
+      check('soil type '+mode+' '+w+' actual soil and 81 solid slate blueprint intersections',v.pass&&v.wrong===0&&v.intersections===81*(w/960)**2,JSON.stringify(v));
     }
     await page.setViewportSize({width:960,height:540});
     await page.waitForFunction(()=>window.__benchmarkGame.scene.getScene('Game').cameras.main.zoom===1);

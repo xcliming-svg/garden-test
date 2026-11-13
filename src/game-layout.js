@@ -137,11 +137,10 @@
     for(let row=0;row<b.rows;row++)for(let col=0;col<b.columns;col++){
       g.fillStyle(fill,1).fillRect(x+b.frame+b.line+col*b.pitch,y+b.frame+b.line+row*b.pitch,b.cell,b.cell);
     }
-    // 정원과 동일하게 내부 격자의 교차점을 1×1px 비운다.
+    // 도안 내부 공유선은 교차점까지 이어진다. 교차점은 세로선에서 한 번만 그린다.
     // 외부 2px 프레임과 8px 셀 규격은 보존한다.
     for(let i=1;i<b.columns;i++){
-      g.fillStyle(line,1);
-      for(let row=0;row<b.rows;row++)g.fillRect(x+b.frame+i*b.pitch,y+b.frame+b.line+row*b.pitch,b.line,b.cell);
+      g.fillStyle(line,1).fillRect(x+b.frame+i*b.pitch,y+b.frame+b.line,b.line,height-2*(b.frame+b.line));
     }
     for(let row=1;row<b.rows;row++)for(let col=0;col<b.columns;col++){
       g.fillStyle(line,1).fillRect(x+b.frame+b.line+col*b.pitch,y+b.frame+row*b.pitch,b.cell,b.line);
