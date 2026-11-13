@@ -105,7 +105,7 @@
     const R = window.GardenPalette.reference.n;
     const U = window.GardenUI;
     const border = U.pixelBox(scene,0,0,size,size,kind === 'flower' ? R.green : R.tabBorder);
-    const faceColor = kind === 'flower' ? R.button : R.tab;
+    const faceColor = R.tab;
     const face = U.pixelBox(scene,0,0,size-2,size-2,faceColor,{cut:false});
     const image = sprite(scene, 0, 0, name, iconSize);
     const group = scene.add.container(x, y, [border, face, image]).setSize(size, size);

@@ -76,13 +76,13 @@
   const colors = Object.freeze({
     field: R.n.background, hud: R.n.hud, hudBorder: R.n.hudEdge, hudDivider: R.n.divider,
     label: R.hex.label, hudLabel: R.hex.hudLabel, value: R.hex.text,
-    gridFill: R.n.panel, gridLine: R.n.tabBorder, gridBorder: R.n.tabBorder,
+    gridFill: R.n.tab, gridLine: R.n.tabBorder, gridBorder: R.n.tabBorder,
     normalFill: R.n.tab, normalBorder: R.n.tabBorder,
     progressTrack: R.n.track, progressBorder: R.n.border, progressFill: R.n.green,
     disabledFill: R.n.panel, disabledBorder: R.n.tabBorder, disabledText: R.hex.disabled,
     enabledFill: R.n.background, enabledBorder: R.n.green, enabledText: R.hex.green,
     focusBorder: R.n.hover, invalidBorder: R.n.red,
-    gardenSoil: R.n.garden, gardenSoilAlpha: 1, gardenBorder: R.n.gardenBorder,
+    gardenSoil: R.n.tab, gardenSoilAlpha: 1, gardenBorder: R.n.gardenBorder,
     blueprintLine: R.n.tabBorder, reservedIcon: R.n.icon
   });
 
@@ -279,7 +279,7 @@
     // 참조처럼 흰 숫자와 검은 1px 그림자를 그대로 유지.
   }
 
-  // 글자 그림자는 제외하고 실제 전경 픽셀의 세로 범위를 측정한다.
+  // 글자 그림자는 제외하고 실제 전경 픽셀의 가로·세로 범위를 측정한다.
   // 네이티브 텍스처 해상도가 바뀌면 다시 측정하며 원본 글리프는 수정하지 않는다.
   const bottomInkCache = new WeakMap();
   function bottomInk(item, background) {
@@ -294,18 +294,22 @@
     // Measure foreground at 25% contrast relative to its own color and surface.
     // A fixed brightness cutoff would miss antialiased gray 999 pixels when scaled down.
     const threshold = Math.ceil(bg + (foreground - bg) * 0.25);
-    let top = height, bottom = 0, fallbackTop = height, fallbackBottom = 0;
+    let top = height, bottom = 0, left = width, right = 0, fallbackTop = height, fallbackBottom = 0, fallbackLeft = width, fallbackRight = 0;
     for (let y = 0; y < height; y++) for (let x = 0; x < width; x++) {
       const i = (y * width + x) * 4, alpha = data[i + 3] / 255;
       const color = Math.max(data[i], data[i + 1], data[i + 2]);
       if (!alpha || !color) continue;
       fallbackTop = Math.min(fallbackTop, y);
       fallbackBottom = Math.max(fallbackBottom, y + 1);
+      fallbackLeft = Math.min(fallbackLeft, x);
+      fallbackRight = Math.max(fallbackRight, x + 1);
       if (Math.round(color * alpha + bg * (1 - alpha)) < threshold) continue;
       top = Math.min(top, y);
       bottom = Math.max(bottom, y + 1);
+      left = Math.min(left, x);
+      right = Math.max(right, x + 1);
     }
-    const ink = bottom > top ? { top, bottom } : { top: fallbackTop, bottom: fallbackBottom };
+    const ink = bottom > top ? { top, bottom, left, right } : { top: fallbackTop, bottom: fallbackBottom, left: fallbackLeft, right: fallbackRight }; 
     bottomInkCache.set(item, { key, ink });
     return ink;
   }
@@ -530,9 +534,9 @@
 
   // 정보창의 중성 회색 테두리, 보라색 제목 바와 HUD 공통 회색 본문.
   const itemTooltip = Object.freeze({
-    width: hud.barWidth, padding: 6, gap: 8, bottomPadding: 14, fontSize: 10, titleSize: 10,
-    rowGap: 5, lineSpacing: 4, strokeWidth: 1, accent: R.n.panelBorder,
-    background: R.n.tooltip, header: R.n.tooltipHeader,
+    width: hud.barWidth, padding: blueprintPadding, gap: 8, bottomPadding: blueprintPadding, fontSize: 10, titleSize: 10,
+    rowGap: hudGap, lineSpacing: 4, strokeWidth: 1, accent: R.n.panelBorder,
+    background: R.n.tab, header: R.n.header,
     title: colors.value, description: colors.hudLabel, hint: colors.disabledText
   });
 
@@ -645,11 +649,13 @@
       const t = itemTooltip;
       const w = t.width, pad = t.padding;
       const labels = [];
-      let y = pad, headerHeight = 0;
+      // 도안과 같은 가시 5px: 글꼴의 투명 여백이 아닌 전경 경계 기준.
+      const zoom = scene.cameras.main.zoom, paddingPx = Math.round(pad * zoom), rowGapPx = Math.round(t.rowGap * zoom);
+      let y = paddingPx, headerHeight = 0;
       rows.forEach((row, index) => {
         if (index === 1) {
-          headerHeight = y;
-          y += t.rowGap;
+          headerHeight = y / zoom;
+          y += paddingPx;
         }
         let value = row.value;
         const fontSize = index === 0 ? t.titleSize : t.fontSize;
@@ -664,13 +670,15 @@
             probe.destroy();
           }
         }
-        const label = U.text(scene, pad, y, value, fontSize, row.color, {
+        const label = U.text(scene, 0, 0, value, fontSize, row.color, {
           wrap: row.replacement ? undefined : w - 2 * pad, lineSpacing: t.lineSpacing
         });
+        const ink = bottomInk(label, index === 0 ? t.header : t.background);
+        label.setPosition((paddingPx - ink.left) / zoom, (y - ink.top) / zoom);
         labels.push(label);
-        y += Math.max(fontSize, Math.ceil(label.height)) + t.rowGap;
+        y += ink.bottom - ink.top + rowGapPx;
       });
-      tooltipSize = { width: w, height: y + t.bottomPadding - t.rowGap };
+      tooltipSize = { width: w, height: (y - rowGapPx + Math.round(t.bottomPadding * zoom)) / zoom };
       const background = U.pixelBox(scene,w/2,tooltipSize.height/2,w,tooltipSize.height,t.background,{strokeWidth:t.strokeWidth,border:t.accent}).setName('item-tooltip-background');
       tooltip.add(background);
       if (headerHeight) {

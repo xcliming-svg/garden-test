@@ -10,7 +10,7 @@ mkdirSync(out, {recursive:true});
 const require = createRequire(import.meta.url);
 const phaserPath = require.resolve('phaser/dist/phaser.min.js');
 const originals = Object.fromEntries(['ui.js','game-layout.js','scenes.js','main.js'].map(n=>[n,readFileSync(join(root,'src',n),'utf8').replace(/\r\n/g,'\n')]));
-const configs=[{id:'R',name:'screenshot-matched UI',top:32,bottom:40,margin:10,label:12,value:12,timer:12,body:12,menu:12,navFont:14,navHeight:24,navGap:3,blueCell:8,bluePad:5,blueHead:19,slotGap:3,statLabel:8,statValue:8,statCol:70,statGap:3,hudGap:5,bar:12,tipW:158,tipPad:6,tipRow:5,tipLine:4,tipFont:10}];
+const configs=[{id:'R',name:'screenshot-matched UI',top:32,bottom:40,margin:10,label:12,value:12,timer:12,body:12,menu:12,navFont:14,navHeight:24,navGap:3,blueCell:8,bluePad:5,blueHead:19,slotGap:3,statLabel:8,statValue:8,statCol:70,statGap:3,hudGap:5,bar:12,tipW:158,tipPad:5,tipRow:5,tipLine:4,tipFont:10}];
 function replace(s,a,b){if(!s.includes(a))throw Error('missing anchor '+a);return s.replaceAll(a,b);}
 const variants={R:originals};
 const mime={'.js':'application/javascript','.html':'text/html; charset=utf-8','.css':'text/css; charset=utf-8','.txt':'text/plain; charset=utf-8','.woff2':'font/woff2'};
@@ -178,11 +178,11 @@ for(const c of configs){
     return s.children.list.filter(o=>/^placeholder:(item|flower):/.test(o.name||'')).map(o=>({name:o.name,x:o.x,y:o.y,w:o.width,h:o.height,hitW:o.input.hitArea.width,hitH:o.input.hitArea.height,border:o.list[0].visible,borderY:o.list[0].y,borderColor:o.list[0].fillColor,face:o.list[1].visible,faceColor:o.list[1].fillColor,faceW:o.list[1].width,faceH:o.list[1].height,faceY:o.list[1].y,img:o.list[2].y,imgW:o.list[2].displayWidth,shadow:o.list[3].visible,shadowW:o.list[3].width,shadowH:o.list[3].height}));
   });
   const drops=await dropState();
-  check('all eight drops have 24px flower or 32px item frames, 16px icons and matching hit boxes',drops.length===8&&drops.every(o=>o.w===(o.name.includes(':flower:')?24:32)&&o.h===o.w&&o.hitW===o.w&&o.hitH===o.w&&o.border&&o.face&&o.faceColor===(o.name.includes(':flower:')?0x343446:0x3B3B4E)&&o.borderColor===(o.name.includes(':flower:')?0x6ABA2C:0x51516B)&&o.faceW===o.w-2&&o.faceH===o.h-2&&o.borderY===o.img&&o.faceY===o.img&&o.imgW===16&&o.shadow&&o.shadowW===12&&o.shadowH===3),JSON.stringify(drops));
+  check('all eight drops have 24px flower or 32px item frames, 16px icons and matching hit boxes',drops.length===8&&drops.every(o=>o.w===(o.name.includes(':flower:')?24:32)&&o.h===o.w&&o.hitW===o.w&&o.hitH===o.w&&o.border&&o.face&&o.faceColor===0x3B3B4E&&o.borderColor===(o.name.includes(':flower:')?0x6ABA2C:0x51516B)&&o.faceW===o.w-2&&o.faceH===o.h-2&&o.borderY===o.img&&o.faceY===o.img&&o.imgW===16&&o.shadow&&o.shadowW===12&&o.shadowH===3),JSON.stringify(drops));
   const positions=[];
   for(let i=0;i<7;i++){positions.push(await dropState());await page.waitForTimeout(150);}
   check('float moves square and icon together, integer 0..4 px, stable hitbox',positions.every(p=>p.every((o,i)=>o.x===drops[i].x&&o.y===drops[i].y&&o.borderY===o.img&&o.faceY===o.img&&Number.isInteger(o.img)&&o.img>=-4&&o.img<=0))&&drops.every((_,i)=>new Set(positions.map(p=>p[i].img)).size>=2));
-  check('reference palette and opaque tree-node garden',await page.evaluate(()=>{const L=window.GardenGameLayout,s=window.__benchmarkGame.scene.getScene('Game'),g=L.spec.garden,t=s.textures.get('ui-test:garden-soil:'+g.cell),px=t.getContext().getImageData(4*g.pitch+3,4*g.pitch+3,1,1).data;const border=t.getContext().getImageData(4*g.pitch,4*g.pitch,1,1).data;return L.colors.field===0x0D0D0D&&L.colors.hud===0x161619&&L.colors.gardenSoil===0x343446&&L.colors.gardenSoilAlpha===1&&Array.from(px).join(',')==='52,52,70,255'&&Array.from(border).join(',')==='106,186,44,255'&&L.colors.progressTrack===0x545454&&L.colors.progressFill===0x6ABA2C&&L.colors.progressBorder===0x878796&&L.hud.barHeight===12&&L.hud.barWidth===158&&L.spec.top===32;}));
+  check('reference palette and opaque tree-node garden',await page.evaluate(()=>{const L=window.GardenGameLayout,s=window.__benchmarkGame.scene.getScene('Game'),g=L.spec.garden,t=s.textures.get('ui-test:garden-soil:'+g.cell),px=t.getContext().getImageData(4*g.pitch+3,4*g.pitch+3,1,1).data;const border=t.getContext().getImageData(4*g.pitch,4*g.pitch,1,1).data;return L.colors.field===0x0D0D0D&&L.colors.hud===0x161619&&L.colors.gardenSoil===0x3B3B4E&&L.colors.gridFill===L.colors.normalFill&&L.colors.normalFill===L.colors.gardenSoil&&L.itemTooltip.background===L.colors.normalFill&&L.colors.gardenSoilAlpha===1&&Array.from(px).join(',')==='59,59,78,255'&&Array.from(border).join(',')==='106,186,44,255'&&L.colors.progressTrack===0x545454&&L.colors.progressFill===0x6ABA2C&&L.colors.progressBorder===0x878796&&L.hud.barHeight===12&&L.hud.barWidth===158&&L.spec.top===32;}));
 
   // Resize the real browser viewport, then capture the actual canvas at 720p and 1080p.
   for(const [w,h] of viewportSizes){
@@ -300,35 +300,54 @@ for(const c of configs){
   const coords=async name=>page.evaluate(name=>{const s=window.__benchmarkGame.scene.getScene('Game'),o=s.children.getByName(name);return {x:o.x,y:o.y}},name);
   const move=async(x,y)=>{const b=await page.locator('canvas').boundingBox();await page.mouse.move(b.x+x,b.y+y);};
   const drag=async(name,x,y,release=true)=>{let a=await coords(name);await move(a.x,a.y);await page.mouse.down();const b=await page.locator('canvas').boundingBox();await page.mouse.move(b.x+x,b.y+y,{steps:8});if(release)await page.mouse.up();};
-  const tip=async()=>page.evaluate(()=>{const s=window.__benchmarkGame.scene.getScene('Game'),t=s.children.getByName('item-preview-tooltip'),r=t.list[0];if(!t.visible||!r)return null;return {x:t.x,y:t.y,w:r.width,h:r.height,color:r.fillColor,stroke:r.strokeColor,header:t.list.find(o=>o.name==='item-tooltip-header')?.fillColor,divider:!!t.getByName('item-tooltip-divider'),rows:t.list.filter(o=>o.type==='Text').map(o=>({x:o.x,y:o.y,w:o.width,h:o.height,text:o.text,color:o.style.color,font:parseFloat(o.style.fontSize)}))};});
+  const tip=async()=>page.evaluate(()=>{const s=window.__benchmarkGame.scene.getScene('Game'),t=s.children.getByName('item-preview-tooltip'),r=t.list[0];if(!t.visible||!r)return null;return {x:t.x,y:t.y,w:r.width,h:r.height,color:r.fillColor,stroke:r.strokeColor,header:t.list.find(o=>o.name==='item-tooltip-header')?.fillColor,headerHeight:t.list.find(o=>o.name==='item-tooltip-header')?.height+1,zoom:s.cameras.main.zoom,divider:!!t.getByName('item-tooltip-divider'),rows:t.list.filter(o=>o.type==='Text').map(o=>({x:o.x,y:o.y,w:o.width,h:o.height,text:o.text,color:o.style.color,font:parseFloat(o.style.fontSize)}))};});
   let tips=[];
-  const inspectTip=(t,key)=>{check(key+' tooltip bounds',!!t&&t.x>=c.margin-.5&&t.y>=c.top+c.margin-.5&&t.x+t.w<=960-c.margin+.5&&t.y+t.h<=540-c.bottom-8+.5,JSON.stringify(t));if(t){check(key+' tooltip colors and width',t.w===c.tipW&&t.color===0x313142&&t.stroke===0x676777&&t.header===0x43435B&&!t.divider&&t.rows[1]?.color.toLowerCase()==='#b0b0b0',JSON.stringify(t));check(key+' tooltip rows',t.rows.every((r,i)=>r.x>=c.tipPad-.5&&r.x+r.w<=t.w-c.tipPad+.5&&r.y>=c.tipPad-.5&&r.y+r.h<=t.h-c.tipPad+.5&&(!i||r.y>=t.rows[i-1].y+t.rows[i-1].h-.5)),JSON.stringify(t.rows));check(key+' tooltip all rows 10px',t.rows.length>0&&t.rows.every(r=>r.font===10),JSON.stringify(t.rows));tips.push(t);}};
+  const inspectTip=(t,key)=>{check(key+' tooltip bounds',!!t&&t.x>=c.margin-.5&&t.y>=c.top+c.margin-.5&&t.x+t.w<=960-c.margin+.5&&t.y+t.h<=540-c.bottom-8+.5,JSON.stringify(t));if(t){check(key+' tooltip colors and width',t.w===c.tipW&&t.color===0x3B3B4E&&t.stroke===0x676777&&t.header===0x44445C&&!t.divider&&t.rows[1]?.color.toLowerCase()==='#b0b0b0',JSON.stringify(t));check(key+' tooltip rows',t.rows.every((r,i)=>r.x>=1&&r.x+r.w<=t.w+1&&r.y>=1&&r.y+r.h<=t.h+1&&(!i||r.y>t.rows[i-1].y)),JSON.stringify(t.rows));check(key+' tooltip all rows 10px',t.rows.length>0&&t.rows.every(r=>r.font===10),JSON.stringify(t.rows));tips.push(t);}};
+  const captureTipPixels=async(t,png)=>page.evaluate(async ({data,t})=>{
+    const img=await createImageBitmap(await (await fetch('data:image/png;base64,'+data)).blob()),cv=document.createElement('canvas');
+    cv.width=img.width;cv.height=img.height;const ctx=cv.getContext('2d');ctx.drawImage(img,0,0);
+    const px=ctx.getImageData(0,0,cv.width,cv.height).data,z=t.zoom,R=Math.round;
+    const x0=R(t.x*z),y0=R(t.y*z),x1=R((t.x+t.w)*z),y1=R((t.y+t.h)*z),headerEnd=R((t.y+t.headerHeight)*z);
+    const rgb=(x,y)=>Array.from(px.slice((y*cv.width+x)*4,(y*cv.width+x)*4+3));
+    const edges=t.rows.map((r,i)=>{
+      const bg=i===0?92:78,fg=parseInt(r.color.slice(1),16),f=Math.max((fg>>16)&255,(fg>>8)&255,fg&255),threshold=Math.ceil(bg+(f-bg)*0.25);
+      let left=Infinity,right=-1,top=Infinity,bottom=-1,n=0,exact=0;
+      const startX=R((t.x+r.x)*z),startY=R((t.y+r.y)*z);
+      for(let y=Math.max(startY,y0+1);y<Math.min(y1-1,startY+Math.ceil(r.h*z));y++)for(let x=Math.max(startX,x0+1);x<Math.min(x1-1,startX+Math.ceil(r.w*z));x++){
+        const v=rgb(x,y);if(Math.max(...v)<threshold)continue;
+        left=Math.min(left,x);right=Math.max(right,x);top=Math.min(top,y);bottom=Math.max(bottom,y);n++;
+        if(v.join(',')==='176,176,176')exact++;
+      }
+      return {text:r.text,left:left-x0,right:x1-right-1,top:top-y0,bottom:y1-bottom-1,n,exact,inkBottom:bottom-y0};
+    });
+    let divider=0;for(let x=x0+R(6*z);x<x1-R(6*z);x++)if(rgb(x,y1-R(9*z)).join(',')==='75,75,80')divider++;
+    return {edges,divider,headerHeight:headerEnd-y0,headerColor:rgb(x1-R(3*z),y0+R(3*z)),bodyColor:rgb(x1-R(3*z),y1-R(3*z))};
+  },{data:png.toString('base64'),t});
+  const exactTipPadding=(p,z)=>{
+    const gap=Math.round(5*z),tol=Number.isInteger(z)?0:1,near=(a,b)=>Math.abs(a-b)<=tol;
+    return p.edges.every(e=>e.n>0&&near(e.left,gap)&&e.right>=gap-tol)&&near(p.edges[0].top,gap)&&near(p.edges.at(-1).bottom,gap)&&near(p.headerHeight-p.edges[0].inkBottom-1,gap)&&near(p.edges[1].top-p.headerHeight,gap)&&p.edges.slice(2).every((e,i)=>near(e.top-p.edges[i+1].inkBottom-1,gap));
+  };
   for(let i=0;i<5;i++){const a=await coords('placeholder:item:'+i);await move(a.x,a.y);await page.waitForTimeout(70);inspectTip(await tip(),'hover '+i);await move(5,200);}
+  for(const [w,h] of viewportSizes){
+    await page.setViewportSize({width:w,height:h});await page.waitForFunction(w=>Math.abs(window.__benchmarkGame.scene.getScene('Game').cameras.main.zoom-w/960)<1e-6,w);
+    const a=await coords('placeholder:item:0'),z=w/960;
+    await move(5*z,200*z);await move(a.x*z,a.y*z);await page.waitForTimeout(90);
+    const t=await tip();const png=await page.screenshot({path:join(out,'tooltip-scale-'+w+'.png')});
+    const p=t?await captureTipPixels(t,png):null;
+    check(w+' tooltip visible 5px scaled padding and row gaps',!!p&&exactTipPadding(p,z),JSON.stringify(p));
+    console.log('TOOLTIP_SCALE '+w+' '+JSON.stringify(p));
+    await move(5*z,200*z);
+  }
+  await page.setViewportSize({width:960,height:540});await page.waitForFunction(()=>window.__benchmarkGame.scene.getScene('Game').cameras.main.zoom===1);
   const slot=initial.slots[0],last=initial.slots[9];
   await drag('placeholder:item:0',slot.x+slot.size/2,slot.y+slot.size/2);
   check('equip',await page.evaluate(()=>window.__benchmarkGame.scene.getScene('Game').children.getByName('preview-equipped:0').visible));
   await drag('placeholder:item:3',slot.x+slot.size/2,slot.y+slot.size/2,false);await page.waitForTimeout(100);inspectTip(await tip(),'replace');
   const replacement=await tip();
   const replacementPng=await page.screenshot({path:join(out,c.id+'-replace.png')});
-  const tipPixels=await page.evaluate(async ({data,t})=>{
-    const img=await createImageBitmap(await (await fetch('data:image/png;base64,'+data)).blob()),cv=document.createElement('canvas');
-    cv.width=img.width;cv.height=img.height;const ctx=cv.getContext('2d');ctx.drawImage(img,0,0);
-    const px=ctx.getImageData(0,0,cv.width,cv.height).data;
-    const rgb=(x,y)=>Array.from(px.slice((y*cv.width+x)*4,(y*cv.width+x)*4+3));
-    const edges=t.rows.map((r,i)=>{
-      const bg=i===0?91:66,fg=parseInt(r.color.slice(1),16),f=Math.max((fg>>16)&255,(fg>>8)&255,fg&255),threshold=Math.ceil(bg+(f-bg)*0.25);
-      let left=Infinity,right=-1,top=Infinity,bottom=-1,n=0,exact=0;
-      for(let y=Math.floor(t.y+r.y);y<Math.ceil(t.y+r.y+r.h);y++)for(let x=Math.floor(t.x+r.x);x<Math.ceil(t.x+r.x+r.w);x++){
-        const v=rgb(x,y);if(Math.max(...v)<threshold)continue;
-        left=Math.min(left,x);right=Math.max(right,x);top=Math.min(top,y);bottom=Math.max(bottom,y);n++;
-        if(v.join(',')==='176,176,176')exact++;
-      }
-      return {text:r.text,left:left-t.x,right:t.x+t.w-right-1,top:top-t.y,bottom:t.y+t.h-bottom-1,n,exact};
-    });
-    let divider=0;for(let x=t.x+6;x<t.x+t.w-6;x++)if(rgb(x,t.y+t.h-9).join(',')==='75,75,80')divider++;
-    return {edges,divider};
-  },{data:replacementPng.toString('base64'),t:replacement});
-  check('replacement actual gray description and no bottom divider',tipPixels.edges[1].exact>0&&tipPixels.divider===0,JSON.stringify(tipPixels));
+  const tipPixels=await captureTipPixels(replacement,replacementPng);
+  check('replacement actual gray description and no bottom divider',tipPixels.edges[1].exact>0&&tipPixels.divider===0&&tipPixels.headerColor.join(',')==='68,68,92'&&tipPixels.bodyColor.join(',')==='59,59,78',JSON.stringify(tipPixels));
+  check('replacement visible 5px padding and rows',exactTipPadding(tipPixels,1),JSON.stringify(tipPixels));
   console.log('TOOLTIP_PADDING_REPORT '+JSON.stringify(tipPixels));
   const delta=await gameMetrics();inspectGame(delta,'replacement stats');
   check('dragged item follows target',await page.evaluate(({x,y})=>{const s=window.__benchmarkGame.scene.getScene('Game'),o=s.children.getByName('placeholder:item:3'),ghost=s.children.getByName('item-preview-ghost');return Math.abs(o.x-x)<1&&Math.abs(o.y-y)<1&&Math.abs(o.alpha-.25)<.001&&ghost.visible&&Math.abs(ghost.x-x)<1&&Math.abs(ghost.y-y)<1;},{x:slot.x+slot.size/2,y:slot.y+slot.size/2}));
@@ -364,7 +383,7 @@ for(const c of configs){
   await button('MainMenu','성공 화면');await page.waitForFunction(()=>window.__benchmarkGame.scene.isActive('Victory'));inspectMenu(await menuMetrics('Victory'),'Victory');
   await button('Victory','메인 메뉴');await page.waitForFunction(()=>window.__benchmarkGame.scene.isActive('MainMenu'));await button('MainMenu','실패 화면');await page.waitForFunction(()=>window.__benchmarkGame.scene.isActive('Defeat'));inspectMenu(await menuMetrics('Defeat'),'Defeat');
   check('runtime errors',errors.length===0,errors.join('; '));
-  check('tooltip gap and palette role contract',await page.evaluate(()=>{let L=window.GardenGameLayout,T=L.itemTooltip,p=L.tooltipPosition({x:400,y:200,size:24},T.width,100,L.spec.top+L.spec.fieldHeight);return T.width===L.hud.barWidth&&T.width===158&&T.gap===8&&p.x===420&&T.padding===6&&T.bottomPadding===14&&T.rowGap===5&&T.lineSpacing===4&&T.strokeWidth===1&&T.description===L.colors.hudLabel&&!('divider' in T)}));
+  check('tooltip gap and palette role contract',await page.evaluate(()=>{let L=window.GardenGameLayout,T=L.itemTooltip,p=L.tooltipPosition({x:400,y:200,size:24},T.width,100,L.spec.top+L.spec.fieldHeight);return T.width===L.hud.barWidth&&T.width===158&&T.gap===8&&p.x===420&&T.padding===5&&T.padding===L.spec.blueprint.padding&&T.bottomPadding===T.padding&&T.rowGap===5&&T.lineSpacing===4&&T.strokeWidth===1&&T.background===L.colors.normalFill&&T.header===window.GardenPalette.reference.n.header&&T.description===L.colors.hudLabel&&!('divider' in T)}));
   const locales=await page.evaluate(()=>window.GardenUI.hudLabels);
   const localeResults=[];
   for(const [lang, labels] of Object.entries(locales)){
