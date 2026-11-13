@@ -55,9 +55,9 @@ for(const c of configs){
   };
   const menuMetrics=async key=>page.evaluate(key=>{
     const s=window.__benchmarkGame.scene.getScene(key), list=s.children.list;
-    const buttons=list.filter(o=>o.type==='Container'&&o.list?.length===2&&o.list[0].type==='Rectangle'&&o.list[1].type==='Text').map(o=>{let [r,t]=o.list;return {text:t.text,x:o.x-r.width/2,y:o.y-r.height/2,w:r.width,h:r.height,px:(r.width-t.width)/2,py:(r.height-t.height)/2,font:parseFloat(t.style.fontSize)}});
+    const buttons=list.filter(o=>o.type==='Container'&&o.list?.length===2&&o.list[0].pixelBox&&o.list[1].type==='Text').map(o=>{let [r,t]=o.list;return {text:t.text,x:o.x-r.width/2,y:o.y-r.height/2,w:r.width,h:r.height,px:(r.width-t.width)/2,py:(r.height-t.height)/2,font:parseFloat(t.style.fontSize)}});
     const texts=list.filter(o=>o.type==='Text'&&o.visible).map(o=>({text:o.text,x:o.x-o.displayOriginX,y:o.y-o.displayOriginY,w:o.width,h:o.height}));
-    const panels=list.filter(o=>o.type==='Rectangle'&&o.width<960&&o.height>100).map(o=>({x:o.x-o.width/2,y:o.y-o.height/2,w:o.width,h:o.height}));
+    const panels=list.filter(o=>o.pixelBox&&o.width<960&&o.height>100).map(o=>({x:o.x-o.width/2,y:o.y-o.height/2,w:o.width,h:o.height}));
     return {buttons,texts,panels,zoom:s.cameras.main.zoom};
   },key);
   function inspectMenu(m,key){
@@ -76,7 +76,7 @@ for(const c of configs){
   // Actual Phaser object dimensions / text bounding boxes and Canvas font metrics.
   const gameMetrics=async()=>page.evaluate(()=>{
     const L=window.GardenGameLayout,U=window.GardenUI,s=window.__benchmarkGame.scene.getScene('Game'),bl=L.bottomLayout(), list=s.children.list;
-    const textRect=o=>({name:o.name,text:o.text,x:o.x-o.displayOriginX,y:o.y-o.displayOriginY,w:o.width,h:o.height,font:parseFloat(o.style.fontSize),color:o.style.color,resolution:o.style.resolution});
+    const textRect=o=>({name:o.name,text:o.text,x:o.x-o.displayOriginX,y:o.y-o.displayOriginY,w:o.width,h:o.height,font:parseFloat(o.style.fontSize),color:o.style.color,resolution:o.style.resolution,frame:[o.frame.width,o.frame.height],buffer:[o.canvas.width,o.canvas.height],uv:[o.frame.u1,o.frame.v1]});
     const visibleText=list.filter(o=>o.type==='Text'&&o.visible&&o.text).map(textRect);
     const hud=visibleText.filter(o=>o.y<L.spec.top&&o.y+o.h>0);
     const clock=hud.find(o=>o.text==='시간'), kills=hud.find(o=>o.text==='처치 수'), gardenLabel=hud.find(o=>o.text==='정원 완성도');
@@ -123,7 +123,7 @@ for(const c of configs){
     const overflow=m.markerOverflow.filter(n=>label!=='replacement stats'||n!=='placeholder:item:3');
     check(label+' field marker bounds',overflow.length===0,JSON.stringify(overflow));
     check(label+' font loaded',m.fontLoaded);
-    check(label+' zoom',Math.abs(m.zoom-Math.min(m.canvas[0]/960,m.canvas[1]/540))<1e-6&&m.hud.every(t=>Math.abs(t.resolution-Math.max(1,m.zoom))<1e-6));
+    check(label+' zoom',Math.abs(m.zoom-Math.min(m.canvas[0]/960,m.canvas[1]/540))<1e-6&&[...m.hud,...m.stats,m.cost].every(t=>Math.abs(t.resolution-m.zoom)<1e-6&&t.frame[0]===t.buffer[0]&&t.frame[1]===t.buffer[1]&&t.uv.every(v=>v===1)));
   };
   const initial=await gameMetrics();inspectGame(initial,'initial');
 
@@ -211,6 +211,7 @@ for(const c of configs){
           const labelInk=stats.filter(t=>t.name.startsWith('stat-label:')).map(t=>({text:t.text,...box(t)}));
           const gemInk=bounds(slot.x*2+2,slot.y*2+2,(slot.x+slot.size)*2-2,Math.floor(cost.y*2),exact(170,170,170));
           const bar=bounds(1500,10,1920,54,exact(135,135,150));
+          const corners={bar:[rgb(bar.left,bar.top),rgb(bar.right,bar.top),rgb(bar.left,bar.bottom),rgb(bar.right,bar.bottom)],slot:[rgb(slot.x*2,slot.y*2),rgb((slot.x+slot.size)*2-1,slot.y*2),rgb(slot.x*2,(slot.y+slot.size)*2-1),rgb((slot.x+slot.size)*2-1,(slot.y+slot.size)*2-1)]};
           const dividers=bounds(0,10,1920,50,exact(32,32,32));
           const dividerRuns=[];
           for(let x=0;x<1920;x++){
@@ -219,7 +220,7 @@ for(const c of configs){
             while(x+1<1920&&exact(32,32,32)(rgb(x+1,12)))x++;
             dividerRuns.push([left,x]);
           }
-          return {image:[cv.width,cv.height],label,time,title,header,grid,bar,dividerRuns,seam,costInk,numberInk,labelInk,gemInk,costVisibleGap:costInk.top-gemInk.bottom-1,
+          return {image:[cv.width,cv.height],label,time,title,header,grid,bar,dividerRuns,seam,costInk,numberInk,labelInk,gemInk,corners,costVisibleGap:costInk.top-gemInk.bottom-1,
             leftPadding:label.left,rightPadding:cv.width-bar.right-1,
             timeGap:time.left-label.right-1,hudBottomGap:64-Math.max(label.bottom,time.bottom)-1,
             headerTopGap:header.top-64,titleLeftGap:title.left-header.left,titleTopGap:title.top-header.top,
@@ -227,6 +228,7 @@ for(const c of configs){
         },{data:png.toString('base64'),hud:m.hud,bp:m.blueprint,stats:m.stats,cost:m.cost,slot:m.slots[9]});
         console.log('PIXEL_REPORT '+JSON.stringify(pixels));
         check('FHD right-aligned gauge and two left dividers',pixels.leftPadding===15&&pixels.rightPadding===pixels.leftPadding&&pixels.bar.width===316&&pixels.bar.height===24&&JSON.stringify(pixels.dividerRuns)===JSON.stringify([[324,327],[648,651]]),JSON.stringify(pixels));
+        check('FHD one logical pixel cut corners on gauge and slot',Object.values(pixels.corners).flat().every(v=>v.join(',')==='22,22,25'),JSON.stringify(pixels.corners));
         check('FHD slot cost and stat digits share visible baseline',pixels.costInk.n>0&&pixels.gemInk.n>0&&pixels.numberInk.every(t=>t.n>0&&t.top===pixels.costInk.top&&t.bottom===pixels.costInk.bottom)&&pixels.labelInk.every(t=>t.n>0&&Math.abs((t.top+t.bottom)/2-(pixels.gemInk.top+pixels.gemInk.bottom)/2)<=2),JSON.stringify({cost:pixels.costInk,numbers:pixels.numberInk,labels:pixels.labelInk,gem:pixels.gemInk,gap:pixels.costVisibleGap}));
         check('FHD actual screenshot alignment and visible gaps',pixels.header.width===182&&pixels.grid.width===182&&pixels.header.left===pixels.grid.left&&pixels.header.left===pixels.label.left&&pixels.headerTopGap===15&&[pixels.titleLeftGap,pixels.titleTopGap,pixels.titleBottomGap].every(g=>g===10)&&pixels.gridGap===-2&&pixels.grid.height===182&&JSON.stringify(pixels.seam)===JSON.stringify([[68,68,92],[103,103,119],[103,103,119],[48,46,58]]),JSON.stringify(pixels));
       }
@@ -342,7 +344,7 @@ for(const c of configs){
       const number=scan(Math.floor(cost.x*2),Math.floor(cost.y*2),Math.ceil((cost.x+cost.w)*2),Math.ceil((cost.y+cost.h)*2),ink);
       const gem=scan(last.x*2+2,last.y*2+2,(last.x+last.size)*2-2,Math.floor(cost.y*2),v=>v.every(x=>x===170));
       const digitRows=stats.filter(t=>t.name.startsWith('stat-value:')).map(t=>scan(Math.floor(t.x*2),Math.floor(t.y*2),Math.ceil((t.x+t.w)*2),Math.ceil((t.y+t.h)*2),ink));
-      const frame=Array.from({length:last.size*2},(_,i)=>rgb(last.x*2+i,(last.y+last.size)*2-1).join(',')).every(v=>v==='81,81,107');
+      const frame=Array.from({length:last.size*2},(_,i)=>rgb(last.x*2+i,(last.y+last.size)*2-1).join(',')).every((v,i)=>v===(i<2||i>=last.size*2-2?'22,22,25':'81,81,107'));
       return {number,gem,digitRows,frame};
     },{data:screenshot.toString('base64'),last,cost:m.cost,stats:m.stats});
     check(key+' actual FHD digits, gem, intact bottom border',pixel.number.n>0&&pixel.gem.n>0&&pixel.digitRows.every(t=>t.top===pixel.number.top&&t.bottom===pixel.number.bottom)&&pixel.number.bottom<(last.y+size)*2-2&&pixel.gem.top>=last.y*2+2&&pixel.gem.bottom<pixel.number.top&&pixel.frame,JSON.stringify(pixel));
@@ -358,6 +360,52 @@ for(const c of configs){
     slotVariants.push({size,width:m.slotWidth,slot,detail,pixel});
   }
   console.log('SLOT_VARIANTS '+JSON.stringify(slotVariants));
+  // The displayed CSS size and the native backing store must differ at DPR 2.
+  const hi=await browser.newPage({viewport:{width:960,height:540},deviceScaleFactor:2});
+  const nativeErrors=[];hi.on('pageerror',e=>nativeErrors.push(String(e)));
+  try {
+    await hi.goto(origin+'/'+c.id+'/index.html?hud=stress',{waitUntil:'load'});
+    await hi.waitForFunction(()=>window.__benchmarkGame?.scene.isActive('MainMenu'),{},{timeout:20000});
+    const nativeMetrics=()=>hi.evaluate(()=>{
+      const game=window.__benchmarkGame,cv=game.canvas,r=cv.getBoundingClientRect();
+      return {buffer:[cv.width,cv.height],css:[r.width,r.height],dpr:devicePixelRatio,scale:[game.scale.displayScale.x,game.scale.displayScale.y],game:[game.scale.gameSize.width,game.scale.gameSize.height]};
+    });
+    const before=await nativeMetrics();
+    check('DPR 2 native backing buffer and input scale',JSON.stringify(before.buffer)==='[1920,1080]'&&JSON.stringify(before.css)==='[960,540]'&&before.dpr===2&&before.scale.every(v=>v===2)&&JSON.stringify(before.game)===JSON.stringify(before.buffer),JSON.stringify(before));
+    // CSS-coordinate click at DPR 2: verifies ScaleManager input mapping.
+    await hi.mouse.click(480,252);
+    await hi.waitForFunction(()=>window.__benchmarkGame.scene.isActive('Game'),{},{timeout:5000});
+    const nativeReport=await hi.evaluate(()=>{
+      const s=window.__benchmarkGame.scene.getScene('Game'),z=s.cameras.main.zoom;
+      const texts=s.children.list.filter(o=>o.type==='Text'&&o.visible);
+      return {zoom:z,texts:texts.length,native:texts.every(t=>t.style.resolution===z&&t.frame.width===t.canvas.width&&t.frame.height===t.canvas.height&&t.frame.u1===1&&t.frame.v1===1)};
+    });
+    check('DPR 2 text texture maps 1:1 to device pixels',nativeReport.zoom===2&&nativeReport.texts>=20&&nativeReport.native,JSON.stringify(nativeReport));
+    await hi.screenshot({path:join(out,'native-dpr2-1920.png'),scale:'device'});
+    await hi.setViewportSize({width:800,height:450});
+    await hi.waitForFunction(()=>window.__benchmarkGame.canvas.width===1600&&window.__benchmarkGame.scene.getScene('Game').cameras.main.zoom===1600/960);
+    const after=await nativeMetrics();
+    check('DPR 2 resize retains native backing buffer and CSS input mapping',JSON.stringify(after.buffer)==='[1600,900]'&&JSON.stringify(after.css)==='[800,450]'&&after.scale.every(v=>v===2),JSON.stringify(after));
+    const marker=await hi.evaluate(()=>{const o=window.__benchmarkGame.scene.getScene('Game').children.getByName('placeholder:item:0');return {x:o.x,y:o.y};});
+    await hi.mouse.move(marker.x*800/960,marker.y*450/540);
+    await hi.waitForFunction(()=>window.__benchmarkGame.scene.getScene('Game').children.getByName('item-preview-tooltip').visible,{},{timeout:5000});
+    const png=await hi.screenshot({path:join(out,'native-dpr2-fractional-tooltip.png'),scale:'device'});
+    const nativePixels=await hi.evaluate(async ({data})=>{
+      const game=window.__benchmarkGame,s=game.scene.getScene('Game'),z=s.cameras.main.zoom;
+      const img=await createImageBitmap(await (await fetch('data:image/png;base64,'+data)).blob());
+      const cv=document.createElement('canvas');cv.width=img.width;cv.height=img.height;
+      const ctx=cv.getContext('2d');ctx.drawImage(img,0,0);const pixels=ctx.getImageData(0,0,cv.width,cv.height).data;
+      const rgb=(x,y)=>Array.from(pixels.slice((y*cv.width+x)*4,(y*cv.width+x)*4+3)).join(',');
+      const corners=(x,y,w,h)=>{const l=Math.round(x*z),t=Math.round(y*z),r=Math.round((x+w)*z)-1,b=Math.round((y+h)*z)-1;return [rgb(l,t),rgb(r,t),rgb(l,b),rgb(r,b)];};
+      const tip=s.children.getByName('item-preview-tooltip'),bg=tip.getByName('item-tooltip-background');
+      const slot=window.GardenGameLayout.bottomLayout().slots[9];
+      const textObjects=[...s.children.list.filter(o=>o.type==='Text'&&o.visible),...tip.list.filter(o=>o.type==='Text')];
+      return {buffer:[cv.width,cv.height],slot:corners(slot.x,slot.y,slot.size,slot.size),tooltip:corners(tip.x,tip.y,bg.width,bg.height),nativeText:textObjects.every(t=>t.style.resolution===z&&t.frame.width===t.canvas.width&&t.frame.height===t.canvas.height&&t.frame.u1===1&&t.frame.v1===1)};
+    },{data:png.toString('base64')});
+    check('fractional native output slot/tooltip cuts and exact text frames',nativePixels.slot.every(v=>v==='22,22,25')&&nativePixels.tooltip.every(v=>v==='13,13,13')&&nativePixels.nativeText,JSON.stringify(nativePixels));
+    console.log('NATIVE_REPORT '+JSON.stringify({before,after,nativeReport,nativePixels}));
+    check('native DPR runtime errors',nativeErrors.length===0,nativeErrors.join('; '));
+  } finally { await hi.close(); }
   check('localized runtime errors',errors.length===0,errors.join('; '));
   results.push({id:c.id,name:c.name,localeResults,passed:checks.filter(x=>x.pass).length,total:checks.length,eligible:checks.every(x=>x.pass),fails:checks.filter(x=>!x.pass),ink:initial.ink,blueprintMetrics:initial.blueprintMetrics,hudLayout:initial.hudLayout,renderer:await page.evaluate(()=>window.__benchmarkGame.renderer.type),observations:observations.map(m=>({canvas:m.canvas,zoom:m.zoom}))});
  }catch(e){results.push({id:c.id,name:c.name,config:c,score:null,eligible:false,passed:checks.filter(x=>x.pass).length,total:checks.length,fails:[...checks.filter(x=>!x.pass),{name:'exception',detail:String(e)}],errors});}

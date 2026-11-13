@@ -43,20 +43,118 @@
       throw new Error('Fusion Pixel font failed to load');
     }
   }
-  // Rasterize at the actual zoom (at least 1), not a rounded-up zoom that
-  // would require shrinking the texture at common fractional menu scales.
-  function textResolution(scene) { return Math.max(1, scene.cameras.main.zoom); }
+  // Final-output UI: the logical layout is independent of the renderer's physical pixel grid.
+  function textResolution(scene) { return scene.cameras.main.zoom; }
 
-  // 사용자 비교 결과로 확정한 고해상도 NEAREST.
-  // 글리프의 반투명 픽셀을 보존하고 텍스처 필터만 복원한다.
+  function renderAtPixelOrigin(item) {
+    for (const name of ['renderWebGL', 'renderCanvas']) {
+      const render = item[name];
+      item[name] = function (renderer, src, camera, parentMatrix, ...rest) {
+        const m = Phaser.GameObjects.GetCalcMatrix(src, camera, parentMatrix).calc;
+        if (m.b !== 0 || m.c !== 0 || m.a <= 0 || m.d <= 0) return render.call(this, renderer, src, camera, parentMatrix, ...rest);
+        const left = m.e - src.displayOriginX * m.a;
+        const top = m.f - src.displayOriginY * m.d;
+        const x = src.x, y = src.y;
+        // Render only: do not alter the layout coordinates, wrapping, or hit areas.
+        src.x += (Math.round(left) - left) / m.a;
+        src.y += (Math.round(top) - top) / m.d;
+        try { return render.call(this, renderer, src, camera, parentMatrix, ...rest); }
+        finally { src.x = x; src.y = y; }
+      };
+    }
+  }
+
+  // Use the actual integer canvas dimensions, not the fractional requested frame.
+  // Phaser 3.90 computes width*resolution before the canvas coerces it to an integer.
+  // Matching the texture frame to its backing store eliminates accidental resampling.
   function applyFontFilter(item) {
+    const syncFrame = () => {
+      const { canvas, frame } = item;
+      frame.source.width = canvas.width;
+      frame.source.height = canvas.height;
+      frame.source.resolution = item.style.resolution;
+      frame.setSize(canvas.width, canvas.height);
+      item.texture.setFilter(Phaser.Textures.FilterMode.NEAREST);
+    };
     const update = item.updateText;
     item.updateText = function () {
       const result = update.apply(this, arguments);
-      this.texture.setFilter(Phaser.Textures.FilterMode.NEAREST);
+      syncFrame();
       return result;
     };
-    item.texture.setFilter(Phaser.Textures.FilterMode.NEAREST);
+    syncFrame();
+    renderAtPixelOrigin(item);
+  }
+
+  // Filled rectangles are submitted on exact output-pixel boundaries, including
+  // nested/moving cards. Logical coordinates and the Graphics hit geometry stay unchanged.
+  function pixelGraphics(scene) {
+    const g = scene.add.graphics(), rects = [];
+    const fillRect = g.fillRect, clear = g.clear;
+    g.fillRect = function (x, y, w, h) {
+      const index = this.commandBuffer.length;
+      fillRect.call(this, x, y, w, h);
+      rects.push(index + 1);
+      return this;
+    };
+    g.clear = function () { rects.length = 0; return clear.call(this); };
+    for (const name of ['renderWebGL', 'renderCanvas']) {
+      const render = g[name];
+      g[name] = function (renderer, src, camera, parentMatrix, ...rest) {
+        const m = Phaser.GameObjects.GetCalcMatrix(src, camera, parentMatrix).calc;
+        if (!rects.length || m.b !== 0 || m.c !== 0 || m.a <= 0 || m.d <= 0) return render.call(this, renderer, src, camera, parentMatrix, ...rest);
+        const { a, d, e, f } = m, original = src.commandBuffer, snapped = original.slice();
+        for (const i of rects) {
+          const x = original[i], y = original[i+1], w = original[i+2], h = original[i+3];
+          const left = Math.round(a*x+e), right = Math.round(a*(x+w)+e);
+          const top = Math.round(d*y+f), bottom = Math.round(d*(y+h)+f);
+          snapped[i] = (left-e)/a; snapped[i+1] = (top-f)/d;
+          snapped[i+2] = (right-left)/a; snapped[i+3] = (bottom-top)/d;
+        }
+        src.commandBuffer = snapped;
+        try { return render.call(this, renderer, src, camera, parentMatrix, ...rest); }
+        finally { src.commandBuffer = original; }
+      };
+    }
+    return g;
+  }
+
+  // One logical pixel removed at each outer corner; no diagonal/AA wedge.
+  function cutFill(g, x, y, w, h, color, alpha = 1, top = true, bottom = true) {
+    g.fillStyle(color, alpha);
+    if (top) g.fillRect(x+1, y, w-2, 1);
+    else g.fillRect(x, y, w, 1);
+    g.fillRect(x, y+1, w, h-2);
+    if (bottom) g.fillRect(x+1, y+h-1, w-2, 1);
+    else g.fillRect(x, y+h-1, w, 1);
+    return g;
+  }
+  function pixelFrame(g, x, y, w, h, fill, border, top = true, bottom = true) {
+    cutFill(g,x,y,w,h,border,1,top,bottom);
+    g.fillStyle(fill,1).fillRect(x+1,y+1,w-2,h-2);
+    return g;
+  }
+  function pixelBox(scene, x, y, w, h, fill, options = {}) {
+    const g = pixelGraphics(scene).setPosition(x,y);
+    g.width = w; g.height = h; g.pixelBox = true;
+    g.fillColor = fill; g.fillAlpha = options.alpha ?? 1;
+    g.strokeColor = options.border ?? fill; g.strokeWidth = options.strokeWidth ?? 0;
+    g.strokeAlpha = options.strokeAlpha ?? 1;
+    const cut = options.cut !== false;
+    const redraw = () => {
+      g.clear();
+      if (g.strokeWidth && g.strokeAlpha) {
+        if (cut) cutFill(g,-w/2,-h/2,w,h,g.strokeColor,g.strokeAlpha);
+        else g.fillStyle(g.strokeColor,g.strokeAlpha).fillRect(-w/2,-h/2,w,h);
+        const t = g.strokeWidth;
+        g.fillStyle(g.fillColor,g.fillAlpha).fillRect(-w/2+t,-h/2+t,w-2*t,h-2*t);
+      } else if (cut) cutFill(g,-w/2,-h/2,w,h,g.fillColor,g.fillAlpha);
+      else g.fillStyle(g.fillColor,g.fillAlpha).fillRect(-w/2,-h/2,w,h);
+    };
+    g.setFillStyle = (color, alpha = 1) => { g.fillColor=color; g.fillAlpha=alpha; redraw(); return g; };
+    g.setStrokeStyle = (width, color, alpha = 1) => { g.strokeWidth=width; g.strokeColor=color; g.strokeAlpha=alpha; redraw(); return g; };
+    redraw();
+    return g;
   }
 
   function text(scene, x, y, content, size, color, options) {
@@ -88,17 +186,11 @@
 
   function panel(scene, x, y, width, height, options) {
     const opts = options || {};
-    const rect = scene.add.rectangle(x, y, width, height,
-      opts.fill === undefined ? C.panel : opts.fill,
-      opts.alpha === undefined ? 1 : opts.alpha);
-    rect.setStrokeStyle(opts.strokeWidth === undefined ? menuStyle.strokeWidth : opts.strokeWidth,
-      opts.stroke === undefined ? C.border : opts.stroke,
-      opts.strokeAlpha === undefined ? 1 : opts.strokeAlpha);
-    return rect;
+    return pixelBox(scene,x,y,width,height,opts.fill ?? C.panel,{alpha:opts.alpha ?? 1,border:opts.stroke ?? C.border,strokeWidth:opts.strokeWidth ?? menuStyle.strokeWidth,strokeAlpha:opts.strokeAlpha ?? 1});
   }
 
   function panelHeader(scene, x, top, width, height) {
-    return scene.add.rectangle(x, top + 1 + height / 2, width - 2, height, C.header);
+    return pixelBox(scene,x,top+1+height/2,width-2,height,C.header,{cut:false});
   }
 
   function rule(scene, x1, y1, x2, y2, color, alpha) {
@@ -168,14 +260,13 @@
     const border = emphasized ? C.white : C.subtle;
     const fill = emphasized ? C.panelAlt : C.button;
     const hoverBorder = C.white;
-    const base = scene.add.rectangle(0, 0, width, height,
-      disabled ? R.n.panel : fill, 1);
-    base.setStrokeStyle(menuStyle.strokeWidth, disabled ? C.border : border, 1);
+    const base = pixelBox(scene,0,0,width,height,disabled ? R.n.panel : fill,{border:disabled ? C.border : border,strokeWidth:menuStyle.strokeWidth});
     const caption = text(scene, 0, 0, label, opts.fontSize || fontSize.menuBase,
       disabled ? C.disabled : opts.danger ? C.redText : C.text, { originX: 0.5, originY: 0.5 });
     const group = scene.add.container(x, y, [base, caption]);
     if (!disabled && typeof action === 'function') {
-      base.setInteractive({ useHandCursor: true });
+      base.setInteractive(new Phaser.Geom.Rectangle(-width/2,-height/2,width,height),Phaser.Geom.Rectangle.Contains);
+      base.input.cursor = 'pointer';
       base.on('pointerover', function () {
         base.setFillStyle(C.panelAlt);
         base.setStrokeStyle(menuStyle.strokeWidth, hoverBorder, 1);
@@ -220,7 +311,7 @@
   }
 
   window.GardenUI = Object.freeze({
-    W: W, H: H, C: C, unit, tile, spacing, fontFamily, fontSize, menuStyle, hudLabels, hudLanguage, loadFonts, text: text, panel: panel, panelHeader, rule: rule,
+    W: W, H: H, C: C, unit, tile, spacing, pixelGraphics, cutFill, pixelFrame, pixelBox, fontFamily, fontSize, menuStyle, hudLabels, hudLanguage, loadFonts, text: text, panel: panel, panelHeader, rule: rule,
     background: background, button: button, overlay: overlay, fitCamera: fitCamera,
     bindEscape: bindEscape, openSubscene: openSubscene,
     closeSubscene: closeSubscene
