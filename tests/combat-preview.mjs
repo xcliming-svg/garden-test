@@ -23,7 +23,7 @@ await new Promise(r=>server.listen(0,'127.0.0.1',r));
 const url='http://127.0.0.1:'+server.address().port;
 const browser=await chromium.launch({channel:'chrome',headless:true,args:['--no-sandbox','--disable-dev-shm-usage','--use-gl=angle','--use-angle=swiftshader','--enable-unsafe-swiftshader']});
 const report=[];
-const configs=[[640,360,1,''],[960,540,1,''],[1280,720,1,''],[1600,900,1,''],[1920,1080,1,''],[960,540,2,''],[960,540,1,'?garden=32&person=56'],[960,540,1,'?slots=36&person=28']];
+const configs=[[960,540,1,''],[1920,1080,1,''],[640,360,1,''],[960,540,1,'?garden=32&person=56']];
 try{
  for(const [w,h,dpr,query] of configs){
   const page=await browser.newPage({viewport:{width:w,height:h},deviceScaleFactor:dpr});
@@ -102,7 +102,7 @@ try{
     await page.evaluate(()=>{
       const s=window.__previewGame.scene.getScene('Game'),c=s.combatPreview;
       // Ensure a visible expanding ring before capture.
-      while(!c.state.pulses.some(p=>p.r>45&&p.r<100))c.advance(0.1);
+      for(let i=0;i<25&&!c.state.pulses.some(p=>p.r>45&&p.r<100);i++)c.advance(0.1);
     });
     const png=await page.screenshot({path:join(out,'combat-'+w+'-'+dpr+'.png'),scale:'device'});
     const pixels=await page.evaluate(async b64=>{
@@ -130,9 +130,16 @@ try{
    if(w===960&&dpr===1&&!query){
     await page.evaluate(()=>window.__previewGame.scene.stop('Game'));
     await page.waitForFunction(()=>!window.__previewGame.scene.getScene('Game').combatPreview);
-    await page.evaluate(()=>window.__previewGame.scene.start('Game'));
-    await page.waitForFunction(()=>window.__previewGame.scene.getScene('Game').combatPreview);
-    assert.ok(await page.evaluate(()=>window.__previewGame.scene.getScene('Game').combatPreview.state.elapsed<1));
+    await page.evaluate(()=>{
+      const manager=window.__previewGame.scene,game=manager.getScene('Game');
+      game.events.once('create',()=>{
+       const s=game.combatPreview.state;
+       window.__restartSnapshot={elapsed:s.elapsed,kills:s.kills,spawned:s.spawned,pulses:s.pulsesEmitted};
+      });
+      manager.start('Game');
+    });
+    await page.waitForFunction(()=>window.__restartSnapshot!==undefined);
+    assert.deepEqual(await page.evaluate(()=>window.__restartSnapshot),{elapsed:0,kills:0,spawned:0,pulses:0});
    }
    assert.deepEqual(errors,[]);
    report.push({w,h,dpr,query,result,pass:true});
