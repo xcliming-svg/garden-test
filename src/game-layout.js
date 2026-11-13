@@ -843,8 +843,8 @@
     return result;
   }
 
-  // 셀 내부, 가로/세로 공유선, 교차점은 서로 겹치지 않는 영역이다.
-  // 가시 셀을 기준으로 각 격자 경계 및 교차점을 한 번만 생성한다.
+  // 셀 내부와 가로/세로 공유선은 서로 겹치지 않는 영역이다.
+  // 각 셀의 네 1×1px 모서리(공유선 교차점 포함)는 투명하게 남긴다.
   function gardenGridRects(visible, g = spec.garden) {
     const { columns, rows, pitch, cell, line } = g;
     const rects = [];
@@ -852,11 +852,11 @@
     const add = (x,y,w,h,border) => rects.push({ x,y,w,h,border });
     for (let y = 0; y <= rows; y++) for (let x = 0; x <= columns; x++) {
       const px = x * pitch, py = y * pitch;
-      const a = has(x,y), b = has(x-1,y), c = has(x,y-1), d = has(x-1,y-1);
+      const a = has(x,y), b = has(x-1,y), c = has(x,y-1);
       if (a) add(px+line,py+line,cell,cell,false);
       if (a || c) add(px+line,py,cell,line,true);
       if (a || b) add(px,py+line,line,cell,true);
-      if (a || b || c || d) add(px,py,line,line,true);
+      // 교차점은 그리지 않는다. 인접 셀도 동일한 모서리 컷을 공유한다.
     }
     return rects;
   }
@@ -1010,10 +1010,10 @@
       accents.clear();
       const candidates = gardenCandidates(occupied);
       if (dragging) for (const key of candidates) {
+        // 기존 초록 공유선이 선택 외곽선 역할도 한다. 덧그리지 않는다.
+        if (key === target) continue;
         const p = origin(key);
-        // 선택 사각형은 기존 외부 1px 프레임 위에 일치한다.
-        if (key === target) dropSquare(accents, p.x, p.y, garden.outer);
-        else dropPlus(accents, p.x + garden.line, p.y + garden.line, garden.cell);
+        dropPlus(accents, p.x + garden.line, p.y + garden.line, garden.cell);
       }
       ghost.setVisible(false);
       if (dragging && candidates.has(target)) {

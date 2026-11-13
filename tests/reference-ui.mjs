@@ -187,11 +187,14 @@ for(const c of configs){
     const w=g.columns*g.pitch+g.line,h=g.rows*g.pitch+g.line;
     const pixels=ctx.getImageData(0,0,w,h).data;
     const expected=(set,x,y)=>{
-      // Independently classify a pixel from every cell's closed outer square.
+      // Independently classify every cell's cut-corner square.
       let value=0;
       for(const key of set){
         const a=x-key%g.columns*g.pitch,b=y-Math.floor(key/g.columns)*g.pitch;
-        if(a>=0&&a<g.outer&&b>=0&&b<g.outer)value=Math.max(value,a===0||b===0||a===g.outer-1||b===g.outer-1?2:1);
+        if(a>=0&&a<g.outer&&b>=0&&b<g.outer){
+          const edgeX=a===0||a===g.outer-1,edgeY=b===0||b===g.outer-1;
+          if(!(edgeX&&edgeY))value=Math.max(value,edgeX||edgeY?2:1);
+        }
       }
       return value;
     };
@@ -214,7 +217,13 @@ for(const c of configs){
         if(x<0||x>=r.width||y<0||y>=r.height){outOfBounds++;continue;}
         if(++counts[y*r.width+x]>1)overdraw++;
       }
-      return {z,cells:set.size,overdraw,outOfBounds};
+      let cornerOverdraw=0;
+      for(let row=0;row<=g.rows;row++)for(let col=0;col<=g.columns;col++){
+        const a=Math.round((g.x+col*g.pitch)*z)-r.x,b=Math.round((g.y+row*g.pitch)*z)-r.y;
+        const endX=Math.max(a+1,Math.round((g.x+col*g.pitch+g.line)*z)-r.x),endY=Math.max(b+1,Math.round((g.y+row*g.pitch+g.line)*z)-r.y);
+        for(let y=b;y<endY;y++)for(let x=a;x<endX;x++)if(counts[y*r.width+x])cornerOverdraw++;
+      }
+      return {z,cells:set.size,overdraw,outOfBounds,cornerOverdraw};
     }));
     let textureMismatch=0;
     for(let y=0;y<h;y++)for(let x=0;x<w;x++){
@@ -231,7 +240,7 @@ for(const c of configs){
   const inspectGarden=async(label,cell=22)=>{
     const a=await gardenAudit(),outer=cell+2,pitch=cell+1,size=10*pitch+1;
     check(label+' garden shared geometry',a.g.cell===cell&&a.g.outer===outer&&a.g.pitch===pitch&&a.g.size===size&&a.g.line===1&&a.texture.every(v=>v===size)&&a.centers&&a.hit,JSON.stringify(a));
-    check(label+' garden each pixel drawn once and correct texture',a.coverage.every(v=>v.mismatch===0&&v.overdraw===0&&v.outOfBounds===0)&&a.nativeCoverage.every(v=>v.overdraw===0&&v.outOfBounds===0)&&a.textureMismatch===0,JSON.stringify(a));
+    check(label+' garden each pixel drawn once and correct texture',a.coverage.every(v=>v.mismatch===0&&v.overdraw===0&&v.outOfBounds===0)&&a.nativeCoverage.every(v=>v.overdraw===0&&v.outOfBounds===0&&v.cornerOverdraw===0)&&a.textureMismatch===0,JSON.stringify(a));
     console.log('GARDEN_GRID '+label+' '+JSON.stringify(a));
     return a;
   };
@@ -251,9 +260,15 @@ for(const c of configs){
       const width=hits.length,contiguous=width>0&&hits.at(-1)-hits[0]+1===width;
       return {width,contiguous,flanks:width>0&&values[hits[0]-1]===face&&values[hits.at(-1)+1]===face,values};
     };
-    return {vertical:scan(true,x,R((g.y+4*g.pitch+3)*z)),horizontal:scan(false,y,R((g.x+4*g.pitch+3)*z)),expected:z};
+    const corners=[[4,4],[5,4],[6,4],[4,5],[5,5],[6,5],[4,6],[5,6],[6,6]].map(([col,row])=>{
+      const px=R((g.x+col*g.pitch)*z),py=R((g.y+row*g.pitch)*z);
+      const right=Math.max(px+1,R((g.x+col*g.pitch+g.line)*z)),bottom=Math.max(py+1,R((g.y+row*g.pitch+g.line)*z));
+      const values=[];for(let y=py;y<bottom;y++)for(let x=px;x<right;x++)values.push(rgb(x,y));
+      return {col,row,w:right-px,h:bottom-py,clear:values.every(v=>v==='13,13,13'),values};
+    });
+    return {vertical:scan(true,x,R((g.y+4*g.pitch+3)*z)),horizontal:scan(false,y,R((g.x+4*g.pitch+3)*z)),corners,expected:z};
   },{data:png.toString('base64'),g,z});
-  const validSeams=(a,z)=>[a.vertical,a.horizontal].every(v=>v.contiguous&&v.flanks&&v.width>=1&&(Number.isInteger(z)?v.width===z:v.width<=Math.ceil(z)));
+  const validSeams=(a,z)=>[a.vertical,a.horizontal].every(v=>v.contiguous&&v.flanks&&v.width>=1&&(Number.isInteger(z)?v.width===z:v.width<=Math.ceil(z)))&&a.corners.every(v=>v.clear&&v.w>=1&&v.h>=1&&(Number.isInteger(z)?v.w===z&&v.h===z:v.w<=Math.ceil(z)&&v.h<=Math.ceil(z)));
 
   // Read-only sizing probe: proposed translation labels, no game localization changes.
   const proposedStatLabels={
@@ -327,7 +342,7 @@ for(const c of configs){
       return true;
     });
   }));
-  check('reference palette and opaque tree-node garden',await page.evaluate(()=>{const L=window.GardenGameLayout,s=window.__benchmarkGame.scene.getScene('Game'),g=L.spec.garden,t=s.textures.get('ui-test:garden-soil:'+g.cell),px=t.getContext().getImageData(4*g.pitch+3,4*g.pitch+3,1,1).data;const border=t.getContext().getImageData(4*g.pitch,4*g.pitch,1,1).data;return L.colors.field===0x0D0D0D&&L.colors.hud===0x161619&&L.colors.gardenSoil===0x3B3B4E&&L.colors.gridFill===L.colors.normalFill&&L.colors.normalFill===L.colors.gardenSoil&&L.itemTooltip.background===L.colors.normalFill&&L.colors.gardenSoilAlpha===1&&Array.from(px).join(',')==='59,59,78,255'&&Array.from(border).join(',')==='106,186,44,255'&&L.colors.progressTrack===0x161619&&L.colors.progressFill===0x6ABA2C&&L.colors.progressBorder===0x676777&&L.hud.barHeight===12&&L.hud.barWidth===158&&L.spec.top===32;}));
+  check('reference palette and opaque tree-node garden',await page.evaluate(()=>{const L=window.GardenGameLayout,s=window.__benchmarkGame.scene.getScene('Game'),g=L.spec.garden,t=s.textures.get('ui-test:garden-soil:'+g.cell),px=t.getContext().getImageData(4*g.pitch+3,4*g.pitch+3,1,1).data;const border=t.getContext().getImageData(4*g.pitch+3,4*g.pitch,1,1).data;return L.colors.field===0x0D0D0D&&L.colors.hud===0x161619&&L.colors.gardenSoil===0x3B3B4E&&L.colors.gridFill===L.colors.normalFill&&L.colors.normalFill===L.colors.gardenSoil&&L.itemTooltip.background===L.colors.normalFill&&L.colors.gardenSoilAlpha===1&&Array.from(px).join(',')==='59,59,78,255'&&Array.from(border).join(',')==='106,186,44,255'&&L.colors.progressTrack===0x161619&&L.colors.progressFill===0x6ABA2C&&L.colors.progressBorder===0x676777&&L.hud.barHeight===12&&L.hud.barWidth===158&&L.spec.top===32;}));
 
   const captureHudGaps=async(png,all,z,labels)=>{
     return page.evaluate(async ({data,all,z,labels})=>{
@@ -589,7 +604,24 @@ for(const c of configs){
   check('rejected drop resumes float',resumed,JSON.stringify(await page.evaluate(()=>{const o=window.__benchmarkGame.scene.getScene('Game').children.getByName('placeholder:item:1');return {visible:o.visible,depth:o.depth,shadow:o.list[3].visible,border:o.list[0].visible,face:o.list[1].visible,fillColor:o.list[1].fillColor};})));
   let g=initial.garden;
   const targetFlower={x:g.x+4*g.pitch+g.line+g.cell/2,y:g.y+3*g.pitch+g.line+g.cell/2};
+  await page.evaluate(()=>{
+    const g=window.__benchmarkGame.scene.getScene('Game').children.getByName('garden-preview-highlight'),fill=g.fillRect,clear=g.clear;
+    g.auditRects=[];
+    g.fillRect=function(x,y,w,h){this.auditRects.push({x,y,w,h});return fill.call(this,x,y,w,h);};
+    g.clear=function(){this.auditRects=[];return clear.call(this);};
+  });
   await drag('placeholder:flower:0',targetFlower.x,targetFlower.y,false);
+  check('flower target has no duplicate border draw, only other candidate pluses',await page.evaluate(()=>{
+    const s=window.__benchmarkGame.scene.getScene('Game'),a=s.children.getByName('garden-preview-highlight').auditRects;
+    const L=window.GardenGameLayout,g=L.spec.garden,occupied=new Set([44,45,54,55]),candidates=L.gardenCandidates(occupied);
+    return a.length===(candidates.size-1)*3&&a.every(r=>[4,9].includes(Math.max(r.w,r.h))&&Math.min(r.w,r.h)===1&&[...candidates].filter(k=>k!==34).some(k=>{
+      const x=g.x+k%g.columns*g.pitch+g.line,y=g.y+Math.floor(k/g.columns)*g.pitch+g.line;
+      return r.x>=x&&r.y>=y&&r.x+r.w<=x+g.cell&&r.y+r.h<=y+g.cell;
+    }));
+  }));
+  const gardenDragPng=await page.screenshot({path:join(out,'garden-drag-cut-corners.png')});
+  const gardenDragSeams=await captureGardenSeams(page,gardenDragPng,g,1);
+  check('flower target preserves cut corner pixels during drag',gardenDragSeams.corners.filter(v=>v.row===4&&(v.col===4||v.col===5)).every(v=>v.clear),JSON.stringify(gardenDragSeams.corners));
   check('flower ghost centered on shared grid',await page.evaluate(p=>{const s=window.__benchmarkGame.scene.getScene('Game'),o=s.children.getByName('garden-preview-ghost');return o.visible&&o.x===p.x&&o.y===p.y&&s.children.getByName('placeholder:flower:0').alpha===.25;},targetFlower));
   await page.mouse.up();
   check('plant',await page.evaluate(()=>!!window.__benchmarkGame.scene.getScene('Game').children.getByName('garden-preview-flower:34')));
