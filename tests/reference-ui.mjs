@@ -403,7 +403,8 @@ for(const c of configs){
       const any=(start,end,pred)=>{for(let i=start;i<end;i++)if(pred(i))return true;return false;};
       const slotRuns=runs(R((first.x-2)*z),R((last.x+last.size+2)*z),x=>any(R(first.y*z),R((first.y+first.size)*z),y=>rgb(x,y)!==hud));
       const slotY=runs(R((first.y-2)*z),R((first.y+first.size+2)*z),y=>any(R(first.x*z),R((first.x+first.size)*z),x=>rgb(x,y)!==hud));
-      const bpY=runs(R((bp.y-2)*z),R((bp.gridY+bp.width+2)*z),y=>rgb(R((bp.x+bp.width/2)*z),y)!==field);
+      // 도안의 중앙 세로선은 교차점 컷으로 끊긴다. 외형 높이는 행 전체 투영으로 검사한다.
+      const bpY=runs(R((bp.y-2)*z),R((bp.gridY+bp.width+2)*z),y=>any(R(bp.x*z),R((bp.x+bp.width)*z),x=>rgb(x,y)!==field));
       const bpX=[[bp.y,bp.header],[bp.gridY,bp.width]].map(([y,h])=>runs(R((bp.x-2)*z),R((bp.x+bp.width+2)*z),x=>any(R(y*z),R((y+h)*z),py=>rgb(x,py)!==field)));
       const barX=960-7.5-158,barY=15-6;
       const gaugeX=runs(R((barX-1)*z),cv.width,x=>any(R(barY*z),R((barY+12)*z),y=>rgb(x,y)!==hud));
