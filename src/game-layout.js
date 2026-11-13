@@ -315,7 +315,7 @@
     return sumPreviewStats(next);
   }
 
-  const bottomStats = Object.freeze({ fontSize: 12, valueSize: 16, columnWidth: 74, columns: 3, lineGap: 3, deltaGap: spacing.micro });
+  const bottomStats = Object.freeze({ fontSize: 10, valueSize: 10, columnWidth: 74, columns: 3, lineGap: 3, deltaGap: spacing.micro });
 
   function bottomLayout() {
     const s = spec.slots;
