@@ -1,7 +1,7 @@
 name: Reference UI browser regression
 on:
   push:
-    branches: [feature/reference-ui, feature/blueprint-gap-3px, feature/bottom-visible-gap-3px, feature/devel-blueprint-gap-1px, feature/devel-blueprint-gap-restore-3px, feature/devel-unify-panel-style]
+    branches: [feature/reference-ui, feature/blueprint-gap-3px, feature/bottom-visible-gap-3px, feature/devel-blueprint-gap-1px, feature/devel-blueprint-gap-restore-3px, feature/devel-unify-panel-style, audit/devel-ui-consistency]
 permissions:
   contents: read
 jobs:

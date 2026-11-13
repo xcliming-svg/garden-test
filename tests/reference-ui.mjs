@@ -77,7 +77,26 @@ for(const c of configs){
       const panel=m.panels[0];check(key+' panel contains buttons',!!panel&&m.buttons.every(b=>b.x>=panel.x&&b.y>=panel.y&&b.x+b.w<=panel.x+panel.w&&b.y+b.h<=panel.y+panel.h));
     }
   }
+  // Audit-only: screenshots and real pixel/text metadata across viewport sizes for all menu scenes.
+  const menuAudit=async(key,suffix=key)=>{
+    for(const [w,h] of viewportSizes){
+      await page.setViewportSize({width:w,height:h});
+      await page.waitForFunction(({key,w})=>Math.abs(window.__benchmarkGame.scene.getScene(key).cameras.main.zoom-w/960)<1e-6,{key,w},{timeout:5000});
+      await page.waitForTimeout(100);
+      const m=await menuMetrics(key);inspectMenu(m,key);
+      const meta=await page.evaluate(key=>{
+        const s=window.__benchmarkGame.scene.getScene(key),z=s.cameras.main.zoom;
+        const text=(o,parent=null)=>({text:o.text,x:(parent?.x||0)+o.x-o.displayOriginX,y:(parent?.y||0)+o.y-o.displayOriginY,w:o.width,h:o.height,font:parseFloat(o.style.fontSize),color:o.style.color,res:o.style.resolution});
+        return {zoom:z,texts:s.children.list.filter(o=>o.type==='Text'&&o.visible).map(o=>text(o)),buttons:s.children.list.filter(o=>o.type==='Container'&&o.list?.length===2&&o.list[0].pixelBox&&o.list[1].type==='Text').map(o=>({x:o.x,y:o.y,w:o.list[0].width,h:o.list[0].height,fill:o.list[0].fillColor,stroke:o.list[0].strokeColor,label:text(o.list[1],o)}))};
+      },key);
+      await page.screenshot({path:join(out,'audit-'+suffix+'-'+w+'.png')});
+      if(w===960)console.log('MENU_AUDIT '+suffix+' '+JSON.stringify(meta));
+      check(suffix+' '+w+' text resolution matches camera',meta.texts.concat(meta.buttons.map(b=>b.label)).every(t=>Math.abs(t.res-w/960)<1e-6),JSON.stringify(meta));
+    }
+    await page.setViewportSize({width:960,height:540});await page.waitForFunction(key=>window.__benchmarkGame.scene.getScene(key).cameras.main.zoom===1,key);
+  };
   let menu=await menuMetrics('MainMenu');inspectMenu(menu,'MainMenu');
+  await menuAudit('MainMenu');
   await page.screenshot({path:join(out,c.id+'-menu.png')});
   await button('MainMenu','새 게임');await page.waitForFunction(()=>window.__benchmarkGame.scene.isActive('Game'));
   // Actual Phaser object dimensions / text bounding boxes and Canvas font metrics.
@@ -372,16 +391,17 @@ for(const c of configs){
   const frozen=await page.evaluate(()=>window.__benchmarkGame.scene.getScene('Game').children.getByName('placeholder:item:1').list[2].y);
   await page.waitForTimeout(250);
   check('pause freezes float',await page.evaluate(v=>window.__benchmarkGame.scene.getScene('Game').children.getByName('placeholder:item:1').list[2].y===v,frozen));
-  let pause=await menuMetrics('Pause');inspectMenu(pause,'Pause');
-  await button('Pause','설정');await page.waitForFunction(()=>window.__benchmarkGame.scene.isActive('Settings'));inspectMenu(await menuMetrics('Settings'),'Settings');
-  await button('Settings','사운드');check('settings audio',await page.evaluate(()=>window.__benchmarkGame.scene.getScene('Settings').activeTab==='audio'));
+  let pause=await menuMetrics('Pause');inspectMenu(pause,'Pause');await menuAudit('Pause');
+  await button('Pause','설정');await page.waitForFunction(()=>window.__benchmarkGame.scene.isActive('Settings'));inspectMenu(await menuMetrics('Settings'),'Settings');await menuAudit('Settings');
+  await button('Settings','사운드');check('settings audio',await page.evaluate(()=>window.__benchmarkGame.scene.getScene('Settings').activeTab==='audio'));await menuAudit('Settings','SettingsAudio');
+  await button('Settings','화면');await menuAudit('Settings','SettingsVideo');
   await page.keyboard.press('Escape');await page.waitForFunction(()=>window.__benchmarkGame.scene.isActive('Pause'));
-  await button('Pause','도감');await page.waitForFunction(()=>window.__benchmarkGame.scene.isActive('Codex'));inspectMenu(await menuMetrics('Codex'),'Codex');
+  await button('Pause','도감');await page.waitForFunction(()=>window.__benchmarkGame.scene.isActive('Codex'));inspectMenu(await menuMetrics('Codex'),'Codex');await menuAudit('Codex');
   await page.keyboard.press('Escape');await page.waitForFunction(()=>window.__benchmarkGame.scene.isActive('Pause'));
-  await button('Pause','메인 메뉴로');await page.waitForFunction(()=>window.__benchmarkGame.scene.isActive('Confirm'));inspectMenu(await menuMetrics('Confirm'),'Confirm');
+  await button('Pause','메인 메뉴로');await page.waitForFunction(()=>window.__benchmarkGame.scene.isActive('Confirm'));inspectMenu(await menuMetrics('Confirm'),'Confirm');await menuAudit('Confirm');
   await button('Confirm','돌아가기');await page.waitForFunction(()=>window.__benchmarkGame.scene.isActive('MainMenu'));
-  await button('MainMenu','성공 화면');await page.waitForFunction(()=>window.__benchmarkGame.scene.isActive('Victory'));inspectMenu(await menuMetrics('Victory'),'Victory');
-  await button('Victory','메인 메뉴');await page.waitForFunction(()=>window.__benchmarkGame.scene.isActive('MainMenu'));await button('MainMenu','실패 화면');await page.waitForFunction(()=>window.__benchmarkGame.scene.isActive('Defeat'));inspectMenu(await menuMetrics('Defeat'),'Defeat');
+  await button('MainMenu','성공 화면');await page.waitForFunction(()=>window.__benchmarkGame.scene.isActive('Victory'));inspectMenu(await menuMetrics('Victory'),'Victory');await menuAudit('Victory');
+  await button('Victory','메인 메뉴');await page.waitForFunction(()=>window.__benchmarkGame.scene.isActive('MainMenu'));await button('MainMenu','실패 화면');await page.waitForFunction(()=>window.__benchmarkGame.scene.isActive('Defeat'));inspectMenu(await menuMetrics('Defeat'),'Defeat');await menuAudit('Defeat');
   check('runtime errors',errors.length===0,errors.join('; '));
   check('tooltip gap and palette role contract',await page.evaluate(()=>{let L=window.GardenGameLayout,T=L.itemTooltip,p=L.tooltipPosition({x:400,y:200,size:24},T.width,100,L.spec.top+L.spec.fieldHeight);return T.width===L.hud.barWidth&&T.width===158&&T.gap===8&&p.x===420&&T.padding===5&&T.padding===L.spec.blueprint.padding&&T.bottomPadding===T.padding&&T.rowGap===5&&T.lineSpacing===4&&T.strokeWidth===1&&T.background===L.colors.normalFill&&T.header===window.GardenPalette.reference.n.header&&T.description===L.colors.hudLabel&&!('divider' in T)}));
   const locales=await page.evaluate(()=>window.GardenUI.hudLabels);
