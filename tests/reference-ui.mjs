@@ -813,13 +813,13 @@ for(const c of configs){
         if(ex&&ey)continue;
         type=Math.max(type,ex||ey?(dragging&&candidates.has(k)&&(target===-1||target===k)?3:2):1);
       }
-      const color=type===3?0x6ABA2C:type===2?(style?.gardenBorder??0x51516B):expected,i=(y*w+x)*4;
+      const color=type===3?(style?.gardenHighlight??0x6ABA2C):type===2?(style?.gardenBorder??0x51516B):expected,i=(y*w+x)*4;
       const actual=(p[i]<<16)|(p[i+1]<<8)|p[i+2];
       if(type===3)activeCount++;if(type===1)faceCount++;
       if(type===0?(p[i+3]!==0):(p[i+3]!==255||actual!==color))mismatch++;
     }
     return {mismatch,activeCount,faceCount,occupied:occupied.size,candidates:candidates.size,
-      roles:L.colors.gardenSoil===expected&&L.colors.gardenBorder===(style?.gardenBorder??0x51516B)&&L.colors.normalBorder===(style?.itemBorder??0x51516B)&&L.colors.normalFill===(style?.itemFill??0x3B3B4E)&&L.colors.flowerCardFill===(style?.flowerCardFill??(style?expected:0x3B3B4E))&&L.colors.itemCardFill===(style?.itemCardFill??style?.itemFill??0x3B3B4E)&&L.colors.flowerCardBorder===(style?.gardenBorder??0x51516B)&&L.colors.gridFill===0x3B3B4E&&L.colors.flowerBorder===0x6ABA2C&&L.colors.itemBorder===0x67A3EE&&L.itemTooltip.accent===0x51516B};
+      roles:L.colors.field===(style?.field??0x0D0D0D)&&L.colors.gardenHighlight===(style?.gardenHighlight??0x6ABA2C)&&L.colors.gardenSoil===expected&&L.colors.gardenBorder===(style?.gardenBorder??0x51516B)&&L.colors.normalBorder===(style?.itemBorder??0x51516B)&&L.colors.normalFill===(style?.itemFill??0x3B3B4E)&&L.colors.flowerCardFill===(style?.flowerCardFill??(style?expected:0x3B3B4E))&&L.colors.itemCardFill===(style?.itemCardFill??style?.itemFill??0x3B3B4E)&&L.colors.flowerCardBorder===(style?.gardenBorder??0x51516B)&&L.colors.gridFill===0x3B3B4E&&L.colors.flowerBorder===0x6ABA2C&&L.colors.itemBorder===0x67A3EE&&L.itemTooltip.accent===0x51516B};
   },{expected,dragging,target,style});
   const inspectSoilPixels=async(png,expected,z,style=null)=>page.evaluate(async ({data,expected,z,style})=>{
     const L=window.GardenGameLayout,g=L.spec.garden,b=L.spec.blueprint;
@@ -840,7 +840,8 @@ for(const c of configs){
     const line=rgb(R((b.gridX+b.frame+b.pitch)*z),R((b.gridY+b.frame+b.line+3)*z));
     const outer=rgb(R((b.gridX+4)*z),R(b.gridY*z));
     const inner=rgb(R((b.gridX+4)*z),R((b.gridY+1)*z));
-    return {intersections,wrong,soil,pass:soil.slice(0,-1).every(v=>v===expected)&&soil.at(-1)===(style?.gardenBorder??0x51516B)&&cell===0x3B3B4E&&line===0x51516B&&outer===0x3B3B4E&&inner===0x51516B};
+    const field=rgb(R(10*z),R(400*z)),top=rgb(R(2*z),R(2*z)),bottom=rgb(R(2*z),R(520*z));
+    return {intersections,wrong,soil,field,pass:field===(style?.field??0x0D0D0D)&&top===0x161619&&bottom===0x161619&&soil.slice(0,-1).every(v=>v===expected)&&soil.at(-1)===(style?.gardenBorder??0x51516B)&&cell===0x3B3B4E&&line===0x51516B&&outer===0x3B3B4E&&inner===0x51516B};
   },{data:png.toString('base64'),expected,z,style});
   for(const [mode,color] of soilVariants){
     await page.setViewportSize({width:960,height:540});
@@ -877,7 +878,7 @@ for(const c of configs){
     ['6',0xA46444,0xE9D0AB,0x0C9484,0xB0ACBD],
     ['7',0x51516B,0xF46C7C,0x676777,0xF4B404],
     ['8',0x0C9484,0xE9D0AB,0x44445C,0xA46444],
-    ['9',0x3B3B4E,0x51516B,0x3B3B4E,0x51516B,0xFFFFFF,0xFFFFFF]
+    ['9',0x6ABA2C,0x51516B,0x3B3B4E,0x51516B,0xFFFFFF,0xFFFFFF,0x6ABA2C,0x0D0D0D]
   ];
   const inspectThemePixels=async(png,style,z)=>page.evaluate(async ({data,style,z})=>{
     const img=await createImageBitmap(await(await fetch('data:image/png;base64,'+data)).blob()),cv=document.createElement('canvas');
@@ -892,8 +893,8 @@ for(const c of configs){
       return {name,actual,expected:[face,border],pass:actual[0]===face&&actual[1]===border};
     });
   },{data:png.toString('base64'),style,z});
-  for(const [mode,gardenFill,gardenBorder,itemFill,itemBorder,flowerCardFill=gardenFill,itemCardFill=itemFill] of themeVariants){
-    const style={gardenFill,gardenBorder,itemFill,itemBorder,flowerCardFill,itemCardFill};
+  for(const [mode,gardenFill,gardenBorder,itemFill,itemBorder,flowerCardFill=gardenFill,itemCardFill=itemFill,field=0x0D0D0D,gardenHighlight=0x6ABA2C] of themeVariants){
+    const style={gardenFill,gardenBorder,itemFill,itemBorder,flowerCardFill,itemCardFill,field,gardenHighlight};
     await page.setViewportSize({width:960,height:540});
     await page.goto(origin+'/'+c.id+'/index.html?preview=1&type='+mode,{waitUntil:'load'});
     await page.waitForFunction(()=>window.__benchmarkGame?.scene.isActive('MainMenu'),{},{timeout:20000});

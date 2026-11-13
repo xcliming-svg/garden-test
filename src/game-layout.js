@@ -90,19 +90,20 @@
     '8': theme(P.n.teal,P.n.sand,P.n.header,P.n.clay)
   });
   const comparisonTheme = Object.hasOwn(cardThemes,soilType) ? cardThemes[soilType] : null;
-  // type=9는 드롭/장착 카드의 면만 흰색으로 비교한다. 빈 슬롯과 정원은 기본색.
+  // type=9는 흰색 드롭/장착 카드와 초록색 전장·정원 비교안이다. 빈 슬롯은 기본색.
   const whiteCards = soilType === '9';
   const flowerCardStyle = Object.freeze({fill:whiteCards ? P.n.paper : comparisonTheme?.gardenFill ?? R.n.tab,border:comparisonTheme?.gardenBorder ?? R.n.tabBorder});
   const itemCardStyle = Object.freeze({fill:whiteCards ? P.n.paper : comparisonTheme?.itemFill ?? R.n.tab,border:comparisonTheme?.itemBorder ?? R.n.tabBorder});
   const colors = Object.freeze({
-    field: R.n.background, hud: R.n.hud, hudBorder: R.n.hudEdge, hudDivider: R.n.divider,
+    field: whiteCards ? P.n.growth : R.n.background, hud: R.n.hud, hudBorder: R.n.hudEdge, hudDivider: R.n.divider,
     label: R.hex.label, hudLabel: R.hex.hudLabel, value: R.hex.text,
     gridFill: R.n.tab, gridLine: R.n.gridLine, gridBorder: R.n.tabBorder,
     normalFill: comparisonTheme?.itemFill ?? R.n.tab, normalBorder: itemCardStyle.border,
     flowerCardFill: flowerCardStyle.fill, flowerCardBorder: flowerCardStyle.border, itemCardFill: itemCardStyle.fill,
     progressTrack: R.n.track, progressBorder: R.n.border, progressFill: R.n.green,
     disabledFill: R.n.disabledFill, disabledBorder: R.n.tabBorder, disabledText: R.hex.disabled,
-    gardenSoil: comparisonTheme?.gardenFill ?? soilColor, gardenSoilAlpha: 1, gardenBorder: comparisonTheme?.gardenBorder ?? R.n.gardenBorder,
+    gardenSoil: whiteCards ? P.n.growth : comparisonTheme?.gardenFill ?? soilColor, gardenSoilAlpha: 1, gardenBorder: comparisonTheme?.gardenBorder ?? R.n.gardenBorder,
+    gardenHighlight: whiteCards ? P.n.ink : R.n.flowerBorder,
     flowerBorder: R.n.flowerBorder, itemBorder: R.n.itemBorder,
     blueprintLine: R.n.gridLine, reservedIcon: R.n.icon
   });
@@ -990,7 +991,7 @@
       ctx.clearRect(0, 0, w, h);
       const border = '#' + colors.gardenBorder.toString(16).padStart(6, '0');
       const face = '#' + colors.gardenSoil.toString(16).padStart(6, '0');
-      const highlight = '#' + colors.flowerBorder.toString(16).padStart(6,'0');
+      const highlight = '#' + colors.gardenHighlight.toString(16).padStart(6,'0');
       for (const r of raster.rects) {
         ctx.globalAlpha = r.border ? 1 : colors.gardenSoilAlpha;
         ctx.fillStyle = r.highlight ? highlight : r.border ? border : face;
