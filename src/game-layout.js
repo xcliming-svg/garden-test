@@ -54,7 +54,7 @@
     previewProgress: 30,
   });
   // 34px 내부 면에서 비용 아이콘과 숫자를 세로 중앙 배치한다.
-  const slotCost = Object.freeze({ padding: 1, gap: spacing.micro, iconSize: unit, fontSize: 10, maxDigits: 3 });
+  const slotCost = Object.freeze({ padding: 1, gap: hudGap, iconSize: unit, fontSize: 8, maxDigits: 3 });
 
   // size = 비교 브랜치의 논리 표시 크기. 기존 저해상도 테스트 원본은 그대로 사용한다.
   // assetKey와 suggestedFile은 이후 에셋 작업 시 참조할 식별자이다.
@@ -275,14 +275,13 @@
 
   function drawSlotCost(scene, g, x, y, size, value) {
     const c = slotCost;
-    // 10px 네이티브 글꼴을 유지하고 실측 높이에 따라 세로 묶음만 중앙 정렬한다.
-    const cost = text(scene, x + size / 2, 0, String(value), c.fontSize, colors.disabledText, 'center');
-    const textHeight = Math.ceil(cost.height);
-    const gap = Math.max(0, Math.min(c.gap, size - 2 * c.padding - c.iconSize - textHeight));
-    const groupHeight = c.iconSize + gap + textHeight;
-    const top = y + Math.floor((size - groupHeight) / 2);
-    reserveIcon(g, x + (size - c.iconSize) / 2, top, c.iconSize, R.n.disabled);
-    cost.setPosition(x + size / 2, top + c.iconSize + gap + textHeight / 2);
+    // 능력치와 동일한 8px 단일 행 높이/간격으로 수치 행을 맞춘다.
+    const cost = text(scene, x + size / 2, 0, String(value), c.fontSize, colors.disabledText, 'center').setName('slot-cost-value');
+    const textHeight = cost.height;
+    const valueY = y + size / 2 + (textHeight + bottomStats.lineGap) / 2;
+    const iconTop = valueY - textHeight / 2 - c.gap - c.iconSize;
+    reserveIcon(g, x + (size - c.iconSize) / 2, iconTop, c.iconSize, R.n.disabled);
+    cost.setPosition(x + size / 2, valueY);
   }
 
   // 9개 일반 + 마지막 확장 슬롯을 최대 폭에서 검토한다. 실제 초기 슬롯 정책은 4개로 유지.
@@ -315,7 +314,7 @@
     return sumPreviewStats(next);
   }
 
-  const bottomStats = Object.freeze({ fontSize: 10, valueSize: 10, columnWidth: 74, columns: 3, lineGap: 3, deltaGap: spacing.micro });
+  const bottomStats = Object.freeze({ fontSize: 8, valueSize: 8, columnWidth: 70, columns: 3, lineGap: hudGap, deltaGap: spacing.micro });
 
   function bottomLayout() {
     const s = spec.slots;

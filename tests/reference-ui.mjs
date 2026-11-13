@@ -10,7 +10,7 @@ mkdirSync(out, {recursive:true});
 const require = createRequire(import.meta.url);
 const phaserPath = require.resolve('phaser/dist/phaser.min.js');
 const originals = Object.fromEntries(['ui.js','game-layout.js','scenes.js','main.js'].map(n=>[n,readFileSync(join(root,'src',n),'utf8').replace(/\r\n/g,'\n')]));
-const configs=[{id:'R',name:'screenshot-matched UI',top:32,bottom:44,margin:10,label:12,value:12,timer:12,body:12,menu:12,navFont:14,navHeight:24,navGap:3,blueCell:8,bluePad:5,blueHead:19,slotGap:3,statLabel:10,statValue:10,statCol:74,statGap:3,hudGap:5,bar:12,tipW:158,tipPad:6,tipRow:5,tipLine:4,tipFont:10}];
+const configs=[{id:'R',name:'screenshot-matched UI',top:32,bottom:44,margin:10,label:12,value:12,timer:12,body:12,menu:12,navFont:14,navHeight:24,navGap:3,blueCell:8,bluePad:5,blueHead:19,slotGap:3,statLabel:8,statValue:8,statCol:70,statGap:5,hudGap:5,bar:12,tipW:158,tipPad:6,tipRow:5,tipLine:4,tipFont:10}];
 function replace(s,a,b){if(!s.includes(a))throw Error('missing anchor '+a);return s.replaceAll(a,b);}
 const variants={R:originals};
 const mime={'.js':'application/javascript','.html':'text/html; charset=utf-8','.css':'text/css; charset=utf-8','.txt':'text/plain; charset=utf-8','.woff2':'font/woff2'};
@@ -95,7 +95,7 @@ for(const c of configs){
     const hudBottom=L.spec.top-Math.max(clock.y+clock.h,timeValue.y+timeValue.h);
     const blueprintMetrics={topGap:blueprint.y-L.spec.top,hudBottom,roundedHudBottom:Math.round(hudBottom),titlePadX:title.x-blueprint.x,titlePadTop:title.y-blueprint.y,titlePadBottom:blueprint.y+blueprint.header-title.y-title.h,titleHeight:title.h,titleFont:title.font,gridGap:blueprint.gridY-blueprint.y-blueprint.header,gridX:blueprint.gridX,headerX:toggle.x-toggle.width/2,width:toggle.width,height:toggle.height};
     const enemies=list.filter(o=>o.name?.startsWith('placeholder:'));
-    return {zoom:s.cameras.main.zoom,canvas:[s.scale.gameSize.width,s.scale.gameSize.height],top:L.spec.top,bottom:L.spec.bottom,field:L.spec.fieldHeight,garden:L.spec.garden,blueprint,blueprintMetrics,slots:bl.slots,slotGap:L.spec.slots.gap,stats,side:bl.sideWidth,sideLeft:bl.left,sideRight:bl.right,slotLeft:bl.slotLeft,slotWidth:bl.totalWidth,hud,hudLayout,cost,
+    return {zoom:s.cameras.main.zoom,canvas:[s.scale.gameSize.width,s.scale.gameSize.height],top:L.spec.top,bottom:L.spec.bottom,field:L.spec.fieldHeight,garden:L.spec.garden,blueprint,blueprintMetrics,slots:bl.slots,slotGap:L.spec.slots.gap,stats,statSpec:L.bottomStats,costSpec:L.slotCost,side:bl.sideWidth,sideLeft:bl.left,sideRight:bl.right,slotLeft:bl.slotLeft,slotWidth:bl.totalWidth,hud,hudLayout,cost,
       fixed:{garden:L.spec.garden.cell,slot:L.spec.slots.cell,slotOuter:L.spec.slots.size,flower:L.assets.flower.size,item:L.assets.item.size,card:L.assets.item.cardSize,line:L.spec.garden.line},
       markerOverflow:enemies.filter(o=>o.visible&&(o.y-(o.height||o.displayHeight)/2<L.spec.top||o.y+(o.height||o.displayHeight)/2>L.spec.top+L.spec.fieldHeight)).map(o=>o.name),
       ink:{label:ink(L.hud.labelSize,'정원 완성도'),value:ink(L.hud.valueSize,'999,999'),timer:ink(L.hud.timeSize,'00:00:00'),statLabel:ink(L.bottomStats.fontSize,'초당 피해량'),statValue:ink(L.bottomStats.valueSize,'100 +24'),tip:ink(L.itemTooltip.fontSize,'획득 범위가 증가합니다.'),menu:ink(U.fontSize.menuAction,'새 게임')},
@@ -111,10 +111,12 @@ for(const c of configs){
     check(label+' blueprint alignment and visible HUD spacing',bp.width===91&&bp.gridX===bp.headerX&&bp.headerX===m.hudLayout.leftPadding&&bp.titlePadX===5&&bp.gridGap===-1&&m.blueprint.gap===0&&bp.titleFont===10&&m.blueprint.cell===8&&m.blueprint.line===1&&m.blueprint.width===91&&m.blueprint.height===m.blueprint.header+91-1&&bp.height===19&&bp.topGap===m.hudLayout.textPadTop,JSON.stringify(bp));
     check(label+' HUD nonoverlap',m.hud.every((a,i)=>m.hud.every((b,j)=>i===j||!overlap(a,b))));
     check(label+' equal HUD widths, center and labels',m.top===32&&m.hudLayout.centerY===15&&m.hudLayout.leftPadding===7.5&&m.hudLayout.rightPadding===7.5&&m.hudLayout.textPadTop===7.5&&m.hudLayout.textPadBottom===7.5&&m.hudLayout.barHeight===12&&Math.abs(m.hudLayout.timeGap-5)<0.01&&Math.abs(m.hudLayout.barGap-5)<0.01&&m.hudLayout.metricWidth>0&&m.hudLayout.gemX===2*m.hudLayout.metricWidth&&3*m.hudLayout.metricWidth<=m.hudLayout.progressX&&m.hudLayout.labelColors.every(c=>c.toLowerCase()==='#b0b0b0')&&m.hudLayout.valueColors.every(c=>c.toLowerCase()==='#ffffff'),JSON.stringify(m.hudLayout));
-    check(label+' stat bounds',m.stats.length>=12&&m.stats.every(t=>t.font===10&&t.y>=540-m.bottom-eps&&t.y+t.h<=540+eps&&t.x>=-eps&&t.x+t.w<=960+eps),JSON.stringify(m.stats));
+    check(label+' stat bounds',m.stats.length>=12&&m.stats.every(t=>t.font===8&&t.y>=540-m.bottom-eps&&t.y+t.h<=540+eps&&t.x>=-eps&&t.x+t.w<=960+eps),JSON.stringify(m.stats));
+    const statGroups=['defense','hp','luck','moveSpeed','pickupRange','dps'].map((key,i)=>{const a=m.stats.find(t=>t.name==='stat-label:'+key), v=m.stats.find(t=>t.name==='stat-value:'+key),d=m.stats.find(t=>t.name==='stat-delta:'+key);const center=(i<3?m.sideLeft:m.sideRight)+(i%3+0.5)*70;const left=Math.min(v.x,d?.x??v.x),right=Math.max(v.x+v.w,d?d.x+d.w:v.x+v.w);return !!a&&!!v&&Math.abs(a.x+a.w/2-center)<0.01&&Math.abs((left+right)/2-center)<0.01&&left>=center-35&&right<=center+35&&a.x>=center-35&&a.x+a.w<=center+35&&Math.abs(v.y-a.y-a.h-5)<0.01&&Math.abs((a.y+v.y+v.h)/2-(540-m.bottom/2))<0.01&&(!d||Math.abs(d.x-v.x-v.w-2)<0.01&&d.y===v.y);});
+    check(label+' 70px columns, 5px row gap and centered groups',m.side===210&&m.statSpec.columnWidth===70&&m.statSpec.lineGap===5&&statGroups.every(Boolean),JSON.stringify(m.stats));
     check(label+' stat nonoverlap',m.stats.every((a,i)=>m.stats.every((b,j)=>i===j||!overlap(a,b))));
     check(label+' stats/slots separation',m.stats.every(t=>m.slots.every(b=>!overlap(t,{x:b.x,y:b.y,w:b.size,h:b.size}))));
-    let cost=m.cost,b=m.slots[9];check(label+' cost bounds',!!cost&&cost.x>=b.x+1-eps&&cost.y>=b.y+1-eps&&cost.x+cost.w<=b.x+b.size-1+eps&&cost.y+cost.h<=b.y+b.size-1+eps,JSON.stringify(cost));
+    let cost=m.cost,b=m.slots[9];check(label+' cost bounds',!!cost&&cost.font===8&&m.costSpec.gap===5&&m.stats.filter(t=>t.name.startsWith('stat-value:')).every(t=>t.y===cost.y&&t.h===cost.h)&&cost.y-5-m.costSpec.iconSize>=b.y+1&&Math.abs(cost.x+cost.w/2-(b.x+b.size/2))<0.01&&cost.x>=b.x+1-eps&&cost.y>=b.y+1-eps&&cost.x+cost.w<=b.x+b.size-1+eps&&cost.y+cost.h<=b.y+b.size-1+eps,JSON.stringify(cost));
     // A dragged item intentionally follows the pointer into the HUD/slot. Only this specific card
     // is exempt during replacement; independently verify its exact target/alpha below.
     const overflow=m.markerOverflow.filter(n=>label!=='replacement stats'||n!=='placeholder:item:3');
@@ -123,6 +125,45 @@ for(const c of configs){
     check(label+' zoom',Math.abs(m.zoom-Math.min(m.canvas[0]/960,m.canvas[1]/540))<1e-6&&m.hud.every(t=>Math.abs(t.resolution-Math.max(1,m.zoom))<1e-6));
   };
   const initial=await gameMetrics();inspectGame(initial,'initial');
+
+  // Read-only sizing probe: proposed translation labels, no game localization changes.
+  const proposedStatLabels={
+    ko:['방어력','최대 체력','행운','이동 속도','획득 범위','초당 피해량'],
+    en:['Defense','Max Health','Luck','Movement Speed','Pickup Range','Damage per Second'],
+    ja:['防御力','最大体力','運','移動速度','拾得範囲','毎秒ダメージ'],
+    es:['Defensa','Salud máxima','Suerte','Velocidad de movimiento','Alcance de recogida','Daño por segundo'],
+    zh:['防御力','最大生命值','幸运','移动速度','拾取范围','每秒伤害']
+  };
+  const shortStatLabels={
+    ko:proposedStatLabels.ko,
+    en:['Defense','Max Health','Luck','Move Speed','Pickup Range','DPS'],
+    ja:proposedStatLabels.ja,
+    es:['Defensa','Salud máx.','Suerte','Vel. movimiento','Rango recogida','DPS'],
+    zh:proposedStatLabels.zh
+  };
+  const statWidthReport=await page.evaluate(({full,short})=>{
+    const U=window.GardenUI,L=window.GardenGameLayout,s=window.__benchmarkGame.scene.getScene('Game'),p=U.text(s,0,0,'',10,'#FFFFFF');
+    const width=v=>{p.setText(v);return p.width;};
+    const measure=labels=>Object.fromEntries(Object.entries(labels).map(([k,arr])=>[k,arr.map(v=>({label:v,width:width(v)}))]));
+    const numberRows=[['124','+24'],['100','-24'],['999','+999'],['9,999','+9,999'],['999,999','+999,999'],['999,999,999,999','+999,999,999,999']].map(([value,delta])=>({value,delta,width:width(value)+L.bottomStats.deltaGap+width(delta)}));
+    const b=L.bottomLayout(), maxColumnWidth=Math.floor(Math.min(b.slotLeft-b.left,L.spec.width-b.left-(b.slotLeft+b.totalWidth))/L.bottomStats.columns);
+    const result={full:measure(full),short:measure(short),numberRows,currentColumnWidth:L.bottomStats.columnWidth,maxColumnWidth,slotCostFont:L.slotCost.fontSize};
+    p.destroy();return result;
+  },{full:proposedStatLabels,short:shortStatLabels});
+  const missingStatGlyphs=[...new Set([...Object.values(proposedStatLabels).flat(),...Object.values(shortStatLabels).flat()].join(''))].filter(c=>!font.hasGlyphForCodePoint(c.codePointAt(0)));
+  console.log('STAT_WIDTH_REPORT '+JSON.stringify({...statWidthReport,missingStatGlyphs}));
+  const statWidth8=await page.evaluate(({full,short})=>{
+    const U=window.GardenUI,L=window.GardenGameLayout,s=window.__benchmarkGame.scene.getScene('Game'),p=U.text(s,0,0,'',8,'#FFFFFF');
+    const width=v=>{p.setText(v);return p.width;};
+    const measure=labels=>Object.fromEntries(Object.entries(labels).map(([k,arr])=>[k,arr.map(v=>({label:v,width:width(v)}))]));
+    const numberRows=[['124','+24'],['999','+999'],['9,999','+9,999'],['999,999','+999,999'],['999,999,999,999','+999,999,999,999']].map(([value,delta])=>({value,delta,width:width(value)+L.bottomStats.deltaGap+width(delta)}));
+    const result={full:measure(full),short:measure(short),numberRows,slotCostWidth:width('999')};
+    p.destroy();return result;
+  },{full:proposedStatLabels,short:shortStatLabels});
+  console.log('STAT_WIDTH_8_REPORT '+JSON.stringify(statWidth8));
+  check('70px column fits proposed short labels and four-digit value/delta with 5px side allowance',missingStatGlyphs.length===0&&Object.values(statWidth8.short).flat().every(v=>v.width+10<=70)&&statWidth8.numberRows.find(v=>v.value==='9,999').width+10<=70);
+
+
   const dropState=()=>page.evaluate(()=>{
     const s=window.__benchmarkGame.scene.getScene('Game');
     return s.children.list.filter(o=>/^placeholder:(item|flower):/.test(o.name||'')).map(o=>({name:o.name,x:o.x,y:o.y,w:o.width,h:o.height,hitW:o.input.hitArea.width,hitH:o.input.hitArea.height,border:o.list[0].visible,borderY:o.list[0].y,borderColor:o.list[0].fillColor,face:o.list[1].visible,faceColor:o.list[1].fillColor,faceW:o.list[1].width,faceH:o.list[1].height,faceY:o.list[1].y,img:o.list[2].y,imgW:o.list[2].displayWidth,shadow:o.list[3].visible,shadowW:o.list[3].width,shadowH:o.list[3].height}));
@@ -142,7 +183,7 @@ for(const c of configs){
     if(w===1280||w===1920){
       const png=await page.screenshot({path:join(out,c.id+'-'+w+'.png')});
       if(w===1920){
-        const pixels=await page.evaluate(async ({data,hud,bp})=>{
+        const pixels=await page.evaluate(async ({data,hud,bp,stats,cost,slot})=>{
           const img=await createImageBitmap(await (await fetch('data:image/png;base64,'+data)).blob());
           const cv=document.createElement('canvas');cv.width=img.width;cv.height=img.height;
           const ctx=cv.getContext('2d');ctx.drawImage(img,0,0);
@@ -165,6 +206,8 @@ for(const c of configs){
           const grid=bounds(bp.x*2,Math.floor(bp.gridY*2),(bp.x+bp.width)*2,Math.ceil((bp.gridY+91)*2),exact(103,103,119));
           const seamY=bp.gridY*2, seamX=bp.x*2+8;
           const seam=[-1,0,1,2].map(d=>rgb(seamX,seamY+d));
+          const costInk=box(cost), numberInk=stats.filter(t=>t.name.startsWith('stat-value:')).map(t=>({text:t.text,...box(t)}));
+          const gemInk=bounds(slot.x*2+2,slot.y*2+2,(slot.x+slot.size)*2-2,Math.floor(cost.y*2),exact(170,170,170));
           const bar=bounds(1500,10,1920,54,exact(135,135,150));
           const dividers=bounds(0,10,1920,50,exact(32,32,32));
           const dividerRuns=[];
@@ -174,14 +217,15 @@ for(const c of configs){
             while(x+1<1920&&exact(32,32,32)(rgb(x+1,12)))x++;
             dividerRuns.push([left,x]);
           }
-          return {image:[cv.width,cv.height],label,time,title,header,grid,bar,dividerRuns,seam,
+          return {image:[cv.width,cv.height],label,time,title,header,grid,bar,dividerRuns,seam,costInk,numberInk,gemInk,costVisibleGap:costInk.top-gemInk.bottom-1,
             leftPadding:label.left,rightPadding:cv.width-bar.right-1,
             timeGap:time.left-label.right-1,hudBottomGap:64-Math.max(label.bottom,time.bottom)-1,
             headerTopGap:header.top-64,titleLeftGap:title.left-header.left,titleTopGap:title.top-header.top,
             titleBottomGap:header.bottom-title.bottom,gridGap:grid.top-header.bottom-1};
-        },{data:png.toString('base64'),hud:m.hud,bp:m.blueprint});
+        },{data:png.toString('base64'),hud:m.hud,bp:m.blueprint,stats:m.stats,cost:m.cost,slot:m.slots[9]});
         console.log('PIXEL_REPORT '+JSON.stringify(pixels));
         check('FHD right-aligned gauge and two left dividers',pixels.leftPadding===15&&pixels.rightPadding===pixels.leftPadding&&pixels.bar.width===316&&pixels.bar.height===24&&JSON.stringify(pixels.dividerRuns)===JSON.stringify([[324,327],[648,651]]),JSON.stringify(pixels));
+        check('FHD slot cost and stat digits share visible baseline',pixels.costInk.n>0&&pixels.gemInk.n>0&&pixels.numberInk.every(t=>t.n>0&&Math.abs(t.bottom-pixels.costInk.bottom)<=1),JSON.stringify({cost:pixels.costInk,numbers:pixels.numberInk,gem:pixels.gemInk,gap:pixels.costVisibleGap}));
         check('FHD actual screenshot alignment and visible gaps',pixels.header.width===182&&pixels.grid.width===182&&pixels.header.left===pixels.grid.left&&pixels.header.left===pixels.label.left&&pixels.headerTopGap===15&&[pixels.titleLeftGap,pixels.titleTopGap,pixels.titleBottomGap].every(g=>g===10)&&pixels.gridGap===-2&&pixels.grid.height===182&&JSON.stringify(pixels.seam)===JSON.stringify([[68,68,92],[103,103,119],[103,103,119],[48,46,58]]),JSON.stringify(pixels));
       }
     }
@@ -208,8 +252,10 @@ for(const c of configs){
   check('replace',await page.evaluate(()=>window.__benchmarkGame.scene.getScene('Game').children.getByName('preview-equipped:0').visible&&!window.__benchmarkGame.scene.getScene('Game').children.getByName('placeholder:item:3').visible));
   await drag('placeholder:item:1',last.x+18,last.y+18);
   check('locked reject',await page.evaluate(()=>window.__benchmarkGame.scene.getScene('Game').children.getByName('placeholder:item:1').visible));
-  await page.waitForTimeout(100);
-  check('rejected drop resumes float',await page.evaluate(()=>{const o=window.__benchmarkGame.scene.getScene('Game').children.getByName('placeholder:item:1');return o.visible&&o.depth===0&&o.list[3].visible&&o.list[0].visible&&o.list[1].visible&&o.list[1].fillColor===0x3B3B4E;}));
+  // Wait for the next actual update frame after dragend, rather than a fixed wall-clock delay.
+  const rejectedDropState=()=>{const o=window.__benchmarkGame.scene.getScene('Game').children.getByName('placeholder:item:1');return o.visible&&o.depth===0&&o.list[3].visible&&o.list[0].visible&&o.list[1].visible&&o.list[1].fillColor===0x3B3B4E;};
+  const resumed=await page.waitForFunction(rejectedDropState,{}, {timeout:3000}).then(()=>true,()=>false);
+  check('rejected drop resumes float',resumed,JSON.stringify(await page.evaluate(()=>{const o=window.__benchmarkGame.scene.getScene('Game').children.getByName('placeholder:item:1');return {visible:o.visible,depth:o.depth,shadow:o.list[3].visible,border:o.list[0].visible,face:o.list[1].visible,fillColor:o.list[1].fillColor};})));
   let g=initial.garden;await drag('placeholder:flower:0',g.x+4*g.pitch+12,g.y+3*g.pitch+12);
   check('plant',await page.evaluate(()=>!!window.__benchmarkGame.scene.getScene('Game').children.getByName('garden-preview-flower:34')));
   let b=initial.blueprint;await move(b.x+b.width/2,b.y+b.header/2);await page.mouse.click(b.x+b.width/2,b.y+b.header/2);
