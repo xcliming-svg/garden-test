@@ -7,7 +7,6 @@
   const P = window.GardenPalette;
   const R = P.reference;
   const testSprites = window.GardenTestSprites;
-  const animated = window.GardenAnimatedAssets;
   // 24px 타일 기반 UI: 메뉴와 같은 간격 토큰 및 논리 좌표를 사용한다.
   const U = window.GardenUI;
   const { unit, tile, spacing } = U;
@@ -55,29 +54,6 @@
     slots: Object.freeze({ size: slotSize, cell: slotSize - 2 * cellLine, line: cellLine, gap: bottomGap, initial: 4, preview: 9, max: 10, y: height - bottomHudHeight + bottomBoundary + bottomGap, exampleCost: 999 })
   });
 
-  // Optional world-only zoom. UI and input remain in the 960×540 screen space.
-  const fieldMode = new URLSearchParams(window.location.search).get('type');
-  const fieldZoom = fieldMode === '1' ? 1.5 : fieldMode === '2' ? 2 : 1;
-  const fieldCenter = Object.freeze({x:spec.width/2,y:spec.top+spec.fieldHeight/2});
-  const fieldPoint = (x,y) => ({x:fieldCenter.x+(x-fieldCenter.x)*fieldZoom,y:fieldCenter.y+(y-fieldCenter.y)*fieldZoom});
-  const fieldWorld = (x,y) => ({x:fieldCenter.x+(x-fieldCenter.x)/fieldZoom,y:fieldCenter.y+(y-fieldCenter.y)/fieldZoom});
-  // In enlarged modes, all world objects render beneath the fixed HUD/blueprint.
-  const fieldDepth = depth => fieldZoom === 1 ? depth : depth-20;
-  function fieldPlace(obj,x,y) {
-    const p=fieldPoint(x,y);
-    return obj.setPosition(p.x,p.y);
-  }
-  function fieldSize(obj,size) {
-    return obj.setDisplaySize(size*fieldZoom,size*fieldZoom);
-  }
-  function fieldVisible(x,y,radius) {
-    const p=fieldPoint(x,y), r=radius*fieldZoom;
-    const b=spec.blueprint;
-    return p.x-r>=0 && p.x+r<=spec.width && p.y-r>=spec.top && p.y+r<=spec.top+spec.fieldHeight &&
-      !(p.x-r<b.x+b.width && p.y-r<b.y+b.height && p.x+r>b.x && p.y+r>b.y);
-  }
-  if(fieldZoom!==1) document.title='Garden Test | 전장 '+fieldZoom+'x';
-
   const hud = Object.freeze({
     padding: hudPadding, gap: hudGap, labelSize: 12, valueSize: 12, timeSize: 12,
     centerY: hudCenterY, iconSize: 14, barHeight: 12, barWidth: 158, // 외형 12, 내부 8, 이중 프레임 2px
@@ -112,7 +88,7 @@
     blueprintLine: R.n.gridLine, reservedIcon: R.n.icon
   });
 
-  // 기존 안전한 미리보기 배치 앵커. 동물 종류와 소폭 위치만 무작위화한다.
+  // 고정된 미리보기 좌표일 뿐 실제 스폰 위치나 수량 정책이 아니다.
   const samples = Object.freeze({
     enemy: Object.freeze([
       [136,46],[156,54],[178,45],[198,61],[223,48],[250,55],[278,45],
@@ -450,52 +426,17 @@
 
   function drawMarkers(scene) {
     const cards = [], flowers = [], animations = [];
-    const enemyOrder = animated.enemyOrder(samples.enemy.length);
-    // 2x cropping hides the original flower drops and most item cards.
-    // Keep the existing anchor distribution, with a few preview-only replacements
-    // so that every enemy species and both drag operations remain inspectable.
-    const override = fieldZoom === 2 ? {
-      'flower:0':[349,174], 'flower:1':[589,186], 'flower:2':[361,330],
-      'item:0':[625,246], 'item:3':[625,330], 'enemy:0':[373,258], 'enemy:1':[589,306]
-    } : fieldZoom === 1.5 ? {'item:0':[349,174]} : {};
-    const anchor=(type,i,baseX,baseY)=>override[type+':'+i] || [Math.round(baseX*1.5),Math.round(baseY*1.5)];
-    if(fieldZoom!==1) {
-      const visible=samples.enemy.map(([x,y],i)=>i).filter(i=>{
-        const [x,y]=anchor('enemy',i,...samples.enemy[i]);return fieldVisible(x,y,15);
-      });
-      const kinds=new Set();
-      for(const i of visible) {
-        if(kinds.has(enemyOrder[i])) {
-          const j=enemyOrder.findIndex((name,j)=>!visible.includes(j)&&!kinds.has(name));
-          if(j!==-1) [enemyOrder[i],enemyOrder[j]]=[enemyOrder[j],enemyOrder[i]];
-        }
-        kinds.add(enemyOrder[i]);
-      }
-    }
-    const fixed = ['item','flower','gem'].flatMap(type=>samples[type].map(([x,y],i)=>anchor(type,i,x,y)));
-    const placed = [];
     Object.entries(samples).forEach(([type, positions]) => {
       const asset = assets[type];
       positions.forEach(([baseX, baseY], i) => {
-        let [x,y] = anchor(type,i,baseX,baseY);
-        const spriteName = type === 'enemy' ? enemyOrder[i] : type === 'item' ? 'wheelbarrow' : type === 'flower' ? testSprites.flowers[i % testSprites.flowers.length] : null;
-        if (type === 'enemy') {
-          const px=x+Math.floor(Math.random()*7)-3, py=y+Math.floor(Math.random()*7)-3;
-          // Retain existing distribution and avoid nudging enemies closer to drops/each other.
-          if (fixed.every(([a,b])=>Math.hypot(px-a,py-b)>=Math.min(30,Math.hypot(x-a,y-b))) &&
-              placed.every(([a,b])=>Math.hypot(px-a,py-b)>=28)) { x=px; y=py; }
-          placed.push([x,y]);
-        }
+        const x = Math.round(baseX * 1.5), y = Math.round(baseY * 1.5);
+        // 도형의 바운딩 박스는 논리 표시 크기와 같다.
+        // 추후 동일한 x, y, origin(0.5)에서 해당 크기의 이미지로 교체한다.
+        const spriteName = type === 'enemy' ? 'snail' : type === 'item' ? 'wheelbarrow' : type === 'flower' ? testSprites.flowers[i % testSprites.flowers.length] : null;
         const marker = (type === 'item' ? testSprites.itemCard(scene, x, y, spriteName, asset.dropSize, asset.size) :
-          type === 'flower' ? testSprites.flowerCard(scene, x, y, spriteName, asset.dropSize, asset.size, (s,a,b,n)=>animated.sprite(s,a,b,n,i%4)) :
-          type === 'enemy' ? animated.sprite(scene,x,y,spriteName,i%4) : scene.add.rectangle(x, y, asset.size, asset.size, asset.color))
+          type === 'flower' ? testSprites.flowerCard(scene, x, y, spriteName, asset.dropSize, asset.size) :
+          spriteName ? testSprites.marker(scene, x, y, spriteName, asset.size) : scene.add.rectangle(x, y, asset.size, asset.size, asset.color))
           .setName('placeholder:' + asset.assetKey + ':' + i);
-        if(fieldZoom!==1) {
-          fieldPlace(marker,x,y).setDepth(fieldDepth(0));
-          if(type==='item'||type==='flower') marker.setScale(fieldZoom).setVisible(fieldVisible(x,y,asset.dropSize/2));
-          else fieldSize(marker,type==='enemy'?animated.clips[spriteName].size:asset.size);
-        }
-        x=marker.x; y=marker.y;
         if (type === 'item' || type === 'flower') animations.push(floatingDrop(scene, marker, animations.length));
         if (type === 'item') cards.push({ item: previewItems[i], marker, x, y });
         if (type === 'flower') flowers.push({ marker, x, y, spriteName });
@@ -741,7 +682,7 @@
       if (!item || (card && card.consumed)) { tooltip.setVisible(false); return; }
       const previous = dragging && target >= 0 ? equipped[target] : null;
       const anchor = Number.isInteger(index) && index >= 0 ? slotAnchor(index) :
-        { x: card.marker.x, y: card.marker.y, size: assets.item.dropSize*card.marker.scaleX };
+        { x: card.marker.x, y: card.marker.y, size: assets.item.dropSize };
       let rows;
       if (previous) {
         rows = [{ value: previous.name + ' → ' + item.name, replacement: [previous.name, item.name], color: itemTooltip.title },
@@ -803,7 +744,7 @@
       const card = dragging;
       const index = accept && pointer ? hitSlot(point(pointer)) : -1;
       dragging = null; target = -1; hovered = null; pinned = null;
-      card.marker.setDepth(fieldDepth(0)).setPosition(card.x, card.y).setScale(fieldZoom).setAlpha(1);
+      card.marker.setDepth(0).setPosition(card.x, card.y).setAlpha(1);
       if (index >= 0) {
         equipped[index] = card.item; // UI 테스트용 대체. 기존 임시 아이템은 제거.
         card.consumed = true;
@@ -840,7 +781,7 @@
       marker.on('dragstart', pointer => {
         if (card.consumed || dragging) return;
         dragging = card; pinned = null; hovered = null;
-        marker.setDepth(30).setScale(1);
+        marker.setDepth(30);
         dragTo(pointer);
       });
       marker.on('drag', pointer => { if (dragging === card) dragTo(pointer); });
@@ -976,56 +917,44 @@
     const garden = spec.garden;
     const occupied = new Set([44, 45, 54, 55]);
     let bounds = patrolBounds(occupied);
-    const perimeter = b => 2*((b.right-b.left)+(b.bottom-b.top));
-    const walkers = ['person1','person2'].map((name,i)=>{
-      const distance = (bounds.right-bounds.left)/2 + i*perimeter(bounds)/2;
-      const start = patrolPosition(bounds,distance);
-      return {distance, joining:false, guardian:animated.sprite(scene,start.x,start.y,name,i*2)
-        .setDepth(fieldDepth(2)).setName('placeholder:guardian:'+i)};
-    });
-    if(fieldZoom!==1) walkers.forEach(({guardian})=>fieldSize(fieldPlace(guardian,guardian.x,guardian.y),assets.guardian.size));
-    // 기존 72px/s 순찰 경로와 새 경로 합류 동작을 두 수호자에 독립 적용한다.
+    let distance = (bounds.right - bounds.left) / 2, joining = false;
+    const start = patrolPosition(bounds, distance);
+    const guardian = scene.add.rectangle(start.x, start.y, assets.guardian.size, assets.guardian.size, assets.guardian.color)
+      .setDepth(2).setName('placeholder:guardian:0');
+    // 화면 검토용 속도(논리 72px/s, 기존 화면상 속도 유지). 전투/능력치와 연동하지 않는다.
     function updatePatrol(_time, delta) {
-      for (const walker of walkers) {
-        const guardian=walker.guardian, old=fieldWorld(guardian.x,guardian.y), oldX=old.x;
-        let step=Math.max(0,Math.min(delta,100))*0.072;
-        if (walker.joining) {
-          const p=patrolPosition(bounds,walker.distance);
-          const dx=p.x-old.x,dy=p.y-old.y,gap=Math.hypot(dx,dy);
-          if (gap>step) {
-            fieldPlace(guardian,old.x+dx*step/gap,old.y+dy*step/gap);
-            if (dx) guardian.setFlipX(dx<0);
-            continue;
-          }
-          step-=gap;
-          walker.joining=false;
+      let step = Math.max(0, Math.min(delta, 100)) * 0.072;
+      if (joining) {
+        const p = patrolPosition(bounds, distance);
+        const dx = p.x - guardian.x, dy = p.y - guardian.y, gap = Math.hypot(dx, dy);
+        if (gap > step) {
+          guardian.setPosition(guardian.x + dx * step / gap, guardian.y + dy * step / gap);
+          return;
         }
-        walker.distance+=step;
-        const p=patrolPosition(bounds,walker.distance);
-        fieldPlace(guardian,p.x,p.y);
-        if (p.x!==oldX) guardian.setFlipX(p.x<oldX);
+        step -= gap;
+        joining = false;
       }
+      distance += step;
+      const p = patrolPosition(bounds, distance);
+      guardian.setPosition(p.x, p.y);
     }
     function updatePatrolBounds() {
-      const next=patrolBounds(occupied);
-      if (Object.keys(next).every(k=>next[k]===bounds[k])) return;
-      bounds=next;
-      for (const walker of walkers) {
-        const p=fieldWorld(walker.guardian.x,walker.guardian.y);
-        walker.distance=nearestPatrolDistance(bounds,p.x,p.y);
-        walker.joining=true;
-      }
+      const next = patrolBounds(occupied);
+      if (Object.keys(next).every(k => next[k] === bounds[k])) return;
+      bounds = next;
+      distance = nearestPatrolDistance(bounds, guardian.x, guardian.y);
+      joining = true;
     }
     scene.events.on('update', updatePatrol);
     // 10×10 노드 면과 1px 공유선을 단일 텍스처로 합성한다.
     // 점유 및 후보만 표시하고 나머지 격자는 투명하게 유지한다.
-    const soilKey = 'ui-test:garden-soil:' + garden.cell + (fieldZoom===1?'':':zoom'+fieldZoom);
+    const soilKey = 'ui-test:garden-soil:' + garden.cell;
     const soilWidth = garden.columns * garden.pitch + garden.line, soilHeight = garden.rows * garden.pitch + garden.line;
     const soilTexture = scene.textures.exists(soilKey) ? scene.textures.get(soilKey) :
       scene.textures.createCanvas(soilKey, soilWidth, soilHeight);
     soilTexture.setFilter(Phaser.Textures.FilterMode.NEAREST);
     const soil = scene.add.image(garden.x + soilWidth / 2, garden.y + soilHeight / 2, soilKey)
-      .setDepth(fieldDepth(-1)).setName('garden-preview-soil');
+      .setDepth(-1).setName('garden-preview-soil');
     // 각 공유선을 출력 픽셀 경계에 맞추되 축소 시에도 최소 1물리 px을 확보한다.
     // 선 끝/면 시작에 동일한 좌표를 사용해 물리 픽셀에서도 중복 그리기를 방지한다.
     let dragging = null, target = -1;
@@ -1035,8 +964,7 @@
       const visible = new Set([...occupied, ...candidates]);
       // 목적지 밖에서는 전체 후보, 유효 목적지에서는 해당 셀의 공유선만 강조한다.
       const active = dragging ? (candidates.has(target) ? new Set([target]) : candidates) : new Set();
-      const pos=fieldPoint(garden.x,garden.y);
-      const raster = gardenRaster(visible,{...garden,x:pos.x/fieldZoom,y:pos.y/fieldZoom},z*fieldZoom,active), w = raster.width, h = raster.height;
+      const raster = gardenRaster(visible,garden,z,active), w = raster.width, h = raster.height;
       if (soilTexture.width !== w || soilTexture.height !== h) soilTexture.setSize(w,h);
       soil.setTexture(soilKey).setDisplaySize(w/z,h/z).setPosition((raster.x+w/2)/z,(raster.y+h/2)/z);
       const ctx = soilTexture.getContext();
@@ -1054,17 +982,16 @@
       soilTexture.setFilter(Phaser.Textures.FilterMode.NEAREST);
     }
     // 패딩 확대 전 방식: 커서를 따라가는 드래그 카드(30)와 칸 중심 미리보기(15)를 분리한다.
-    const ghost = animated.sprite(scene, 0, 0, testSprites.flowers[0])
-      .setDepth(fieldDepth(15)).setAlpha(0.45).setVisible(false).setName('garden-preview-ghost');
+    const ghost = testSprites.sprite(scene, 0, 0, testSprites.flowers[0], assets.flower.size)
+      .setDepth(15).setAlpha(0.45).setVisible(false).setName('garden-preview-ghost');
     function origin(key) {
       return { x: garden.x + (key % garden.columns) * garden.pitch,
         y: garden.y + Math.floor(key / garden.columns) * garden.pitch };
     }
     function plant(key, spriteName) {
       const p = origin(key);
-      const center=fieldPoint(p.x+garden.line+garden.cell/2,p.y+garden.line+garden.cell/2);
-      fieldSize(animated.sprite(scene,center.x,center.y,spriteName,key%4),assets.flower.size)
-        .setDepth(fieldDepth(1)).setName('garden-preview-flower:' + key);
+      testSprites.sprite(scene, p.x + garden.line + garden.cell / 2, p.y + garden.line + garden.cell / 2, spriteName, assets.flower.size)
+        .setDepth(1).setName('garden-preview-flower:' + key);
     }
     [...occupied].forEach((key, i) => plant(key, testSprites.flowers[i]));
     function refresh() {
@@ -1072,16 +999,13 @@
       ghost.setVisible(false);
       if (dragging && candidates.has(target)) {
         const p = origin(target);
-        const center=fieldPoint(p.x+garden.line+garden.cell/2,p.y+garden.line+garden.cell/2);
-        fieldSize(animated.play(ghost,dragging.spriteName),assets.flower.size)
-          .setPosition(center.x,center.y).setVisible(true);
+        ghost.setTexture(testSprites.textureKey(dragging.spriteName, assets.flower.size)).setDisplaySize(assets.flower.size, assets.flower.size)
+          .setPosition(p.x + garden.line + garden.cell / 2, p.y + garden.line + garden.cell / 2).setVisible(true);
       }
     }
     function hit(pointer) {
       const p = scene.cameras.main.getWorldPoint(pointer.x, pointer.y);
-      if(p.y<spec.top||p.y>=spec.top+spec.fieldHeight) return -1;
-      const world=fieldWorld(p.x,p.y);
-      return gardenHit(world.x,world.y,garden);
+      return gardenHit(p.x, p.y, garden);
     }
     function move(pointer) {
       if (!dragging) return;
@@ -1098,7 +1022,7 @@
       if (!dragging) return;
       const flower = dragging, key = accept && pointer ? hit(pointer) : -1;
       dragging = null; target = -1;
-      flower.marker.setDepth(fieldDepth(0)).setPosition(flower.x, flower.y).setAlpha(1).setStrokeStyle(0, colors.flowerBorder, 0);
+      flower.marker.setDepth(0).setPosition(flower.x, flower.y).setAlpha(1).setStrokeStyle(0, colors.flowerBorder, 0);
       if (gardenCandidates(occupied).has(key)) {
         occupied.add(key); plant(key, flower.spriteName);
         updatePatrolBounds();
@@ -1139,7 +1063,7 @@
     testSprites.install(scene);
     window.GardenUI.fitCamera(scene, spec.width, spec.height);
     scene.cameras.main.setBackgroundColor(P.background.hex);
-    const g = scene.add.graphics().setDepth(fieldDepth(-2)).setName('battlefield');
+    const g = scene.add.graphics().setDepth(-2).setName('battlefield');
     g.fillStyle(colors.field, 1).fillRect(0, spec.top, spec.width, spec.fieldHeight);
     const { cards, flowers } = drawMarkers(scene);
     drawHud(scene);
@@ -1150,5 +1074,5 @@
     text(scene, spec.width - 10, spec.top + spacing.base, '테스트 이미지', bottomStats.fontSize, colors.label, 'right').setDepth(16);
   }
 
-  window.GardenGameLayout = Object.freeze({ spec, fieldZoom, fieldPoint, fieldWorld, assets, colors, spacing, hud, slotCost, formatHudTime, formatHudCount, hudColumns, bottomStats, itemTooltip, replacementTitle, bottomLayout, sumPreviewStats, getPreviewStats, tooltipPosition, gardenCandidates, gardenGridRects, gardenRaster, gardenHit, patrolBounds, patrolPosition, nearestPatrolDistance, draw });
+  window.GardenGameLayout = Object.freeze({ spec, assets, colors, spacing, hud, slotCost, formatHudTime, formatHudCount, hudColumns, bottomStats, itemTooltip, replacementTitle, bottomLayout, sumPreviewStats, getPreviewStats, tooltipPosition, gardenCandidates, gardenGridRects, gardenRaster, gardenHit, patrolBounds, patrolPosition, nearestPatrolDistance, draw });
 }());

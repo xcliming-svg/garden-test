@@ -115,14 +115,14 @@
   }
   // 꽃 24px, 아이템 및 기본 장착 32px. 1px 컷 프레임, 원본 16px 중앙 배치.
   // 공통 중성 면·테두리, 활성 시 종류별 테두리 색만 변경.
-  function dropCard(scene, x, y, name, size, iconSize, kind, imageFactory = sprite) {
+  function dropCard(scene, x, y, name, size, iconSize, kind) {
     const R = window.GardenPalette.reference.n;
     const U = window.GardenUI;
     const border = U.pixelBox(scene,0,0,size,size,R.tabBorder);
     const activeBorder = kind === 'flower' ? R.flowerBorder : R.itemBorder;
     const faceColor = R.tab;
     const face = U.pixelBox(scene,0,0,size-2,size-2,faceColor,{cut:false});
-    const image = imageFactory(scene, 0, 0, name, iconSize);
+    const image = sprite(scene, 0, 0, name, iconSize);
     const group = scene.add.container(x, y, [border, face, image]).setSize(size, size);
     group.setStrokeStyle = (_width, _color, alpha) => {
       border.setFillStyle(alpha ? activeBorder : R.tabBorder, 1);
@@ -133,8 +133,8 @@
   function itemCard(scene, x, y, name, size, iconSize) {
     return dropCard(scene, x, y, name, size, iconSize, 'item');
   }
-  function flowerCard(scene, x, y, name, size, iconSize, imageFactory) {
-    return dropCard(scene, x, y, name, size, iconSize, 'flower', imageFactory);
+  function flowerCard(scene, x, y, name, size, iconSize) {
+    return dropCard(scene, x, y, name, size, iconSize, 'flower');
   }
   window.GardenTestSprites = Object.freeze({ install, sprite, marker, itemCard, flowerCard, pixelData, textureKey: key,
     flowers: Object.freeze(['daisy', 'tulip', 'sunflower', 'hydrangea']) });

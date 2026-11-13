@@ -13,7 +13,7 @@ const originals = Object.fromEntries(['ui.js','game-layout.js','scenes.js','main
 const configs=[{id:'R',name:'screenshot-matched UI',top:32,bottom:40,margin:10,label:12,value:12,timer:12,body:12,menu:12,navFont:14,navHeight:24,navGap:3,blueCell:8,bluePad:5,blueHead:19,slotGap:3,statLabel:8,statValue:8,statCol:70,statGap:3,hudGap:5,bar:12,tipW:158,tipPad:5,tipRow:5,tipLine:4,tipFont:10}];
 function replace(s,a,b){if(!s.includes(a))throw Error('missing anchor '+a);return s.replaceAll(a,b);}
 const variants={R:originals};
-const mime={'.js':'application/javascript','.html':'text/html; charset=utf-8','.css':'text/css; charset=utf-8','.txt':'text/plain; charset=utf-8','.woff2':'font/woff2','.svg':'image/svg+xml'};
+const mime={'.js':'application/javascript','.html':'text/html; charset=utf-8','.css':'text/css; charset=utf-8','.txt':'text/plain; charset=utf-8','.woff2':'font/woff2'};
 const server=createServer((req,res)=>{
   try {
     const url=new URL(req.url,'http://localhost'), parts=url.pathname.split('/').filter(Boolean), id=parts.shift();
@@ -150,7 +150,7 @@ for(const c of configs){
     const enemies=list.filter(o=>o.name?.startsWith('placeholder:'));
     return {zoom:s.cameras.main.zoom,canvas:[s.scale.gameSize.width,s.scale.gameSize.height],top:L.spec.top,bottom:L.spec.bottom,field:L.spec.fieldHeight,garden:L.spec.garden,blueprint,blueprintMetrics,slots:bl.slots,slotGap:L.spec.slots.gap,stats,statSpec:L.bottomStats,costSpec:L.slotCost,side:bl.sideWidth,sideLeft:bl.left,sideRight:bl.right,slotLeft:bl.slotLeft,slotWidth:bl.totalWidth,hud,hudLayout,cost,
       fixed:{garden:L.spec.garden.cell,slot:L.spec.slots.cell,slotOuter:L.spec.slots.size,flower:L.assets.flower.size,item:L.assets.item.size,card:L.assets.item.cardSize,line:L.spec.garden.line},
-      markerOverflow:enemies.filter(o=>o.visible&&(o.y-(o.displayHeight||o.height)/2<L.spec.top||o.y+(o.displayHeight||o.height)/2>L.spec.top+L.spec.fieldHeight)).map(o=>o.name),
+      markerOverflow:enemies.filter(o=>o.visible&&(o.y-(o.height||o.displayHeight)/2<L.spec.top||o.y+(o.height||o.displayHeight)/2>L.spec.top+L.spec.fieldHeight)).map(o=>o.name),
       ink:{label:ink(L.hud.labelSize,'정원 완성도'),value:ink(L.hud.valueSize,'999,999'),timer:ink(L.hud.timeSize,'00:00:00'),statLabel:ink(L.bottomStats.fontSize,'초당 피해량'),statValue:ink(L.bottomStats.valueSize,'100 +24'),tip:ink(L.itemTooltip.fontSize,'획득 범위가 증가합니다.'),menu:ink(U.fontSize.menuAction,'새 게임')},
       fontLoaded:document.fonts.check('10px '+U.fontFamily),tipFont:L.itemTooltip.fontSize
     };
@@ -327,7 +327,7 @@ for(const c of configs){
       U.C.panelAlt===R.n.selected&&U.C.subtle===U.C.border&&L.colors.progressBorder===U.C.border&&
       L.colors.progressTrack===L.colors.disabledFill&&R.n.hudLight===R.n.gridLine&&L.colors.blueprintLine===R.n.gridLine;
   }));
-  check('legacy comparison and item pixel textures preserve Garden 16 and source alpha',await page.evaluate(()=>{
+  check('all displayed sample sprites use Garden 16, preserve source alpha and actual textures',await page.evaluate(()=>{
     const P=window.GardenPalette,S=window.GardenTestSprites,allowed=new Set(Object.values(P.hex).map(c=>c.toLowerCase().slice(1)));
     return [...S.flowers.flatMap(name=>[12,16].map(size=>[name,size])),['snail',12],['snail',16],['wheelbarrow',16]].every(([name,size])=>{
       const original=S.pixelData(name,size,true),current=S.pixelData(name,size,false),display=S.pixelData(name,size);
@@ -344,55 +344,6 @@ for(const c of configs){
       return true;
     });
   }));
-  // SVG preview: loaded textures, actual animation events, fixed animal coordinates.
-  const animatedReport=await page.evaluate(async ()=>{
-    const A=window.GardenAnimatedAssets,s=window.__benchmarkGame.scene.getScene('Game');
-    const enemies=s.children.list.filter(o=>o.name?.startsWith('placeholder:enemy:'));
-    const guardians=s.children.list.filter(o=>o.name?.startsWith('placeholder:guardian:'));
-    const flowers=s.children.list.filter(o=>o.name?.startsWith('garden-preview-flower:'));
-    const drops=s.children.list.filter(o=>o.name?.startsWith('placeholder:flower:')).map(o=>o.list[2]);
-    const sprites=[...enemies,...guardians,...flowers,...drops];
-    const initial=new Map(enemies.map(o=>[o,[o.x,o.y]]));
-    const patrol=guardians.map(o=>[o.x,o.y]);
-    const seen=new Map(sprites.map(o=>[o,new Set([o.texture.key])]));
-    const listeners=sprites.map(o=>{const fn=()=>seen.get(o).add(o.texture.key);o.on('animationupdate',fn);return [o,fn];});
-    const loaded=Object.entries(A.clips).every(([name,clip])=>{
-      const hashes=new Set();
-      for(let i=0;i<A.frames;i++){
-        const texture=s.textures.get(A.key(name,i)),frame=texture.get('art');
-        if(!texture.has('art')||frame.width!==clip.crop[2]/4||frame.height!==clip.crop[2]/4)return false;
-        const cv=document.createElement('canvas');cv.width=250;cv.height=250;
-        const cx=cv.getContext('2d');cx.drawImage(texture.getSourceImage(),0,0,250,250);
-        const pixels=cx.getImageData(0,0,250,250).data;
-        let hash=2166136261,count=0,outside=0;
-        for(let y=0;y<250;y++)for(let x=0;x<250;x++){
-          const q=(y*250+x)*4;
-          if(pixels[q+3]){
-            count++;
-            if(x<frame.cutX||x>=frame.cutX+frame.cutWidth||y<frame.cutY||y>=frame.cutY+frame.cutHeight)outside++;
-          }
-          for(let c=0;c<4;c++)hash=Math.imul(hash^pixels[q+c],16777619);
-        }
-        if(!count||outside)return false;
-        hashes.add(hash);
-      }
-      return hashes.size===4;
-    });
-    await new Promise(r=>setTimeout(r,1650));
-    listeners.forEach(([o,fn])=>o.off('animationupdate',fn));
-    return {loaded,enemyCount:enemies.length,enemyKinds:[...new Set(enemies.map(o=>o.getData('assetClip')))].sort(),
-      expectedKinds:[...A.enemies].sort(),guardianKinds:guardians.map(o=>o.getData('assetClip')),
-      flowerKinds:flowers.map(o=>o.getData('assetClip')).sort(),
-      sizes:sprites.every(o=>Math.abs(o.displayWidth-A.clips[o.getData('assetClip')].size)<0.001&&Math.abs(o.displayHeight-o.displayWidth)<0.001),
-      allFrames:sprites.every(o=>seen.get(o).size===4),
-      animalsStationary:enemies.every(o=>o.x===initial.get(o)[0]&&o.y===initial.get(o)[1]),
-      patrolMoves:guardians.every((o,i)=>Math.hypot(o.x-patrol[i][0],o.y-patrol[i][1])>5),
-      randomCoverage:Array.from({length:10},()=>A.enemyOrder(enemies.length)).every(order=>new Set(order).size===A.enemies.length)};
-  });
-  check('SVG original raster frames loaded, distinct and fully within shared crop',animatedReport.loaded);
-  check('all nine animal species visible in balanced randomized distribution',animatedReport.enemyCount===62&&JSON.stringify(animatedReport.enemyKinds)===JSON.stringify(animatedReport.expectedKinds)&&animatedReport.randomCoverage,JSON.stringify(animatedReport));
-  check('two walking guardians and four distinct center flowers',JSON.stringify(animatedReport.guardianKinds)===JSON.stringify(['person1','person2'])&&JSON.stringify(animatedReport.flowerKinds)===JSON.stringify(['daisy','hydrangea','sunflower','tulip'])&&animatedReport.patrolMoves);
-  check('every SVG sprite plays all four actual frames at configured sizes, stationary animals',animatedReport.allFrames&&animatedReport.sizes&&animatedReport.animalsStationary,JSON.stringify(animatedReport));
   check('reference palette and opaque tree-node garden',await page.evaluate(()=>{const L=window.GardenGameLayout,s=window.__benchmarkGame.scene.getScene('Game'),g=L.spec.garden,t=s.textures.get('ui-test:garden-soil:'+g.cell),px=t.getContext().getImageData(4*g.pitch+3,4*g.pitch+3,1,1).data;const border=t.getContext().getImageData(4*g.pitch+3,4*g.pitch,1,1).data;return L.colors.field===0x0D0D0D&&L.colors.hud===0x161619&&L.colors.gardenSoil===0x161619&&L.colors.gridFill===L.colors.normalFill&&L.colors.gardenSoil===L.colors.disabledFill&&L.colors.gardenBorder===L.colors.disabledBorder&&L.itemTooltip.background===L.colors.normalFill&&L.colors.gardenSoilAlpha===1&&Array.from(px).join(',')==='22,22,25,255'&&Array.from(border).join(',')==='81,81,107,255'&&L.colors.progressTrack===0x161619&&L.colors.progressFill===0x6ABA2C&&L.colors.progressBorder===0x676777&&L.hud.barHeight===12&&L.hud.barWidth===158&&L.spec.top===32;}));
 
   const captureHudGaps=async(png,all,z,labels)=>{
@@ -736,9 +687,7 @@ for(const c of configs){
   await page.mouse.click(b.x+b.width/2,b.y+b.header/2);
   await page.keyboard.press('Escape');await page.waitForFunction(()=>window.__benchmarkGame.scene.isActive('Pause'));
   const frozen=await page.evaluate(()=>window.__benchmarkGame.scene.getScene('Game').children.getByName('placeholder:item:1').list[2].y);
-  const frozenSvg=await page.evaluate(()=>{const s=window.__benchmarkGame.scene.getScene('Game');return s.children.list.filter(o=>o.getData?.('assetClip')).map(o=>[o.name,o.texture.key,o.x,o.y]);});
   await page.waitForTimeout(250);
-  check('pause freezes SVG animations and patrols',await page.evaluate(v=>{const s=window.__benchmarkGame.scene.getScene('Game');return JSON.stringify(s.children.list.filter(o=>o.getData?.('assetClip')).map(o=>[o.name,o.texture.key,o.x,o.y]))===JSON.stringify(v);},frozenSvg));
   check('pause freezes float',await page.evaluate(v=>window.__benchmarkGame.scene.getScene('Game').children.getByName('placeholder:item:1').list[2].y===v,frozen));
   let pause=await menuMetrics('Pause');inspectMenu(pause,'Pause');await menuAudit('Pause');
   await button('Pause','설정');await page.waitForFunction(()=>window.__benchmarkGame.scene.isActive('Settings'));inspectMenu(await menuMetrics('Settings'),'Settings');await menuAudit('Settings');
@@ -872,7 +821,7 @@ for(const c of configs){
     return {colors:L.colors,tooltip:L.itemTooltip,locked:[locked.fillColor,locked.strokeColor],normal:[normal.fillColor,normal.strokeColor],cards,mismatch};
   });
   let baseline;
-  for(const mode of ['default','3','4','5','6','7','8','9','10','invalid']){
+  for(const mode of ['default','1','2','3','4','5','6','7','8','9','10','invalid']){
     await page.setViewportSize({width:960,height:540});
     await page.goto(origin+'/'+c.id+'/index.html?preview=1'+(mode==='default'?'':'&type='+mode),{waitUntil:'load'});
     await page.waitForFunction(()=>window.__benchmarkGame?.scene.isActive('MainMenu'),{},{timeout:20000});
@@ -903,69 +852,7 @@ for(const c of configs){
       }
     }
   }
-  // World-only zoom modes: verify actual UI pixels, crop, species, and drag coordinate inversion.
-  for(const mode of ['1','2']){
-    const factor=mode==='1'?1.5:2;
-    await page.setViewportSize({width:960,height:540});
-    await page.goto(origin+'/'+c.id+'/index.html?type='+mode,{waitUntil:'load'});
-    await page.waitForFunction(()=>window.__benchmarkGame?.scene.isActive('MainMenu'),{},{timeout:20000});
-    await button('MainMenu','새 게임');
-    await page.waitForFunction(()=>window.__benchmarkGame.scene.isActive('Game'));
-    await move(480,32);
-    const zoomState=await page.evaluate(()=>{
-      const L=window.GardenGameLayout,A=window.GardenAnimatedAssets,s=window.__benchmarkGame.scene.getScene('Game'),g=L.spec.garden;
-      const find=n=>s.children.getByName(n);
-      const f=find('garden-preview-flower:44'), f2=find('garden-preview-flower:45'), card=find('placeholder:item:0'), flower=find('placeholder:flower:0');
-      const enemies=s.children.list.filter(o=>o.name?.startsWith('placeholder:enemy:'));
-      const inside=o=>o.x-o.displayWidth/2>=0&&o.x+o.displayWidth/2<=960&&o.y-o.displayHeight/2>=32&&o.y+o.displayHeight/2<=500;
-      const b=L.spec.blueprint;
-      const shown=enemies.filter(o=>inside(o)&&!(o.x-o.displayWidth/2<b.x+b.width&&o.y-o.displayHeight/2<b.y+b.height&&o.x+o.displayWidth/2>b.x&&o.y+o.displayHeight/2>b.y));
-      const p=L.fieldPoint(g.x+4*g.pitch+g.line+g.cell/2,g.y+4*g.pitch+g.line+g.cell/2);
-      return {factor:L.fieldZoom,camera:s.cameras.main.zoom,flowerSize:f.displayWidth,pitch:f2.x-f.x,center:[f.x,f.y],expected:[p.x,p.y],
-        guardians:[0,1].map(i=>find('placeholder:guardian:'+i).displayWidth),enemyKinds:new Set(shown.map(o=>o.getData('assetClip'))).size,
-        enemySizes:enemies.every(o=>Math.abs(o.displayWidth-A.clips[o.getData('assetClip')].size*L.fieldZoom)<0.001),
-        itemSize:card.width*card.scaleX,flowerDropSize:flower.width*flower.scaleX,dropVisible:card.visible&&flower.visible,
-        hud:[L.spec.top,L.spec.bottom],slot:find('slot-frame:0').width,blueprint:find('blueprint-toggle').width,
-        inverse:Math.abs(L.fieldWorld(p.x,p.y).x-(g.x+4*g.pitch+g.line+g.cell/2))<1e-8};
-    });
-    check('world zoom '+mode+' scales world only and keeps all nine visible species',zoomState.factor===factor&&zoomState.camera===1&&zoomState.flowerSize===16*factor&&zoomState.pitch===23*factor&&JSON.stringify(zoomState.center)===JSON.stringify(zoomState.expected)&&zoomState.guardians.every(v=>v===24*factor)&&zoomState.enemyKinds===9&&zoomState.enemySizes&&zoomState.itemSize===32*factor&&zoomState.flowerDropSize===24*factor&&zoomState.dropVisible&&zoomState.hud.join(',')==='32,40'&&zoomState.slot===32&&zoomState.blueprint===93&&zoomState.inverse,JSON.stringify(zoomState));
-    for(const [w,h] of [[960,540],[1280,720],[1920,1080]]){
-      await page.setViewportSize({width:w,height:h});
-      await page.waitForFunction(w=>Math.abs(window.__benchmarkGame.scene.getScene('Game').cameras.main.zoom-w/960)<1e-6,w);
-      const png=await page.screenshot({path:join(out,'field-zoom-type-'+mode+'-'+w+'.png')});
-      const v=await page.evaluate(async ({data})=>{
-        const L=window.GardenGameLayout,g=L.spec.garden,s=window.__benchmarkGame.scene.getScene('Game'),z=s.cameras.main.zoom;
-        const img=await createImageBitmap(await(await fetch('data:image/png;base64,'+data)).blob()),cv=document.createElement('canvas');
-        cv.width=img.width;cv.height=img.height;const cx=cv.getContext('2d');cx.drawImage(img,0,0);
-        const pixels=cx.getImageData(0,0,cv.width,cv.height).data;
-        const rgb=(x,y)=>{const i=(Math.round(y*z)*cv.width+Math.round(x*z))*4;return(pixels[i]<<16)|(pixels[i+1]<<8)|pixels[i+2];};
-        const soil=L.fieldPoint(g.x+4*g.pitch+3,g.y+3*g.pitch+3),edge=L.fieldPoint(g.x+5*g.pitch+0.5,g.y+3*g.pitch+3);
-        const locked=s.children.getByName('slot-frame:9'),blue=L.spec.blueprint;
-        return {soil:rgb(soil.x,soil.y),edge:rgb(edge.x,edge.y),top:rgb(950,4),bottom:rgb(950,538),slot:rgb(locked.x-locked.width/2,locked.y),blueprint:rgb(blue.gridX+blue.frame+blue.pitch,blue.gridY+blue.frame+blue.pitch)};
-      },{data:png.toString('base64')});
-      check('world zoom '+mode+' '+w+' real pixels: enlarged soil and unchanged HUD, slot and blueprint',v.soil===0x161619&&v.edge===0x51516B&&v.top===0x161619&&v.bottom===0x161619&&v.slot===0x51516B&&v.blueprint===0x51516B,JSON.stringify(v));
-    }
-    await page.setViewportSize({width:960,height:540});
-    await page.waitForFunction(()=>window.__benchmarkGame.scene.getScene('Game').cameras.main.zoom===1);
-    const targets=await page.evaluate(()=>{
-      const L=window.GardenGameLayout,g=L.spec.garden,slot=L.bottomLayout().slots[0];
-      return {flower:L.fieldPoint(g.x+4*g.pitch+g.line+g.cell/2,g.y+3*g.pitch+g.line+g.cell/2),slot:{x:slot.x+slot.size/2,y:slot.y+slot.size/2}};
-    });
-    await drag('placeholder:item:0',targets.slot.x,targets.slot.y,false);
-    check('world zoom '+mode+' item drag converts to fixed UI size and snaps to slot',await page.evaluate(()=>{
-      const s=window.__benchmarkGame.scene.getScene('Game'),o=s.children.getByName('placeholder:item:0'),g=s.children.getByName('item-preview-ghost');
-      return o.scaleX===1&&o.alpha===0.25&&g.visible&&g.width===32;
-    }));
-    await page.mouse.up();
-    check('world zoom '+mode+' item equips via real pointer',await page.evaluate(()=>{const s=window.__benchmarkGame.scene.getScene('Game');return s.children.getByName('preview-equipped:0').visible&&!s.children.getByName('placeholder:item:0').visible;}));
-    await drag('placeholder:flower:0',targets.flower.x,targets.flower.y,false);
-    check('world zoom '+mode+' flower inverse hit and enlarged ghost',await page.evaluate(({p,factor})=>{const s=window.__benchmarkGame.scene.getScene('Game'),o=s.children.getByName('garden-preview-ghost');return o.visible&&Math.abs(o.x-p.x)<0.001&&Math.abs(o.y-p.y)<0.001&&o.displayWidth===16*factor;},{p:targets.flower,factor}));
-    await page.mouse.up();
-    check('world zoom '+mode+' flower placement via real pointer',await page.evaluate(()=>{const s=window.__benchmarkGame.scene.getScene('Game');return !!s.children.getByName('garden-preview-flower:34')&&!s.children.getByName('placeholder:flower:0').visible;}));
-    await page.keyboard.press('Escape');await page.waitForFunction(()=>window.__benchmarkGame.scene.isActive('Pause'));
-    check('world zoom '+mode+' pause keeps UI camera unscaled',await page.evaluate(()=>{const g=window.__benchmarkGame;return g.scene.isPaused('Game')&&g.scene.getScene('Pause').cameras.main.zoom===1;}));
-  }
-      // The displayed CSS size and the native backing store must differ at DPR 2.
+    // The displayed CSS size and the native backing store must differ at DPR 2.
   const hi=await browser.newPage({viewport:{width:960,height:540},deviceScaleFactor:2});
   const nativeErrors=[];hi.on('pageerror',e=>nativeErrors.push(String(e)));
   try {
