@@ -61,14 +61,28 @@
   const snailRows = Array.from({ length: 12 }, (_, y) => '00' + snailPixels.slice(y * 12, (y + 1) * 12) + '00');
   samples['snail:16'] = [16, snailPalette, '0'.repeat(32) + snailRows.join('') + '0'.repeat(32)];
   const key = (name, size) => 'ui-test:' + name + ':' + size;
-  // 공통 원본 픽셀 데이터를 복사해 게임 텍스처와 독립 비교 페이지에서 사용한다.
-  function pixelData(name, size) {
+  // 원본 인덱스/알파는 보존하고 렌더링용 소재·명암 역할만 Garden 16에서 선택한다.
+  const materialRoles = Object.freeze({
+    'daisy:12': [null,'paper','gold','leaf'], 'daisy:16': [null,'paper','gold','leaf'],
+    'tulip:12': [null,'red','red','red','leaf','leaf'], 'tulip:16': [null,'red','red','red','leaf','leaf'],
+    'sunflower:12': [null,'gold','gold','gold','bark','leaf','leaf'],
+    'sunflower:16': [null,'gold','gold','gold','bark','gold','leaf','leaf'],
+    'hydrangea:12': [null,'sky','teal','sky','sky','leaf','teal'],
+    'hydrangea:16': [null,'sky','teal','sky','sky','leaf','teal'],
+    'snail:12': [null,'clay','clay','clay','clay','sand','sand','sand','sand','sand','clay','sand','sand','bark','bark','sand'],
+    'snail:16': [null,'clay','clay','clay','clay','sand','sand','sand','sand','sand','clay','sand','sand','bark','bark','sand'],
+    'wheelbarrow:16': [null,'clay','bark','slate']
+  });
+  function pixelData(name, size, original = false) {
     const sample = samples[name + ':' + size];
     if (!sample) throw new Error('Unknown sample: ' + name + ':' + size);
     const [, colors, pixels] = sample;
     const palette = colors.split(' '), data = new Uint8ClampedArray(size * size * 4);
     for (let i = 0; i < pixels.length; i++) {
-      const rgba = palette[parseInt(pixels[i], 16)];
+      const index = parseInt(pixels[i], 16), source = palette[index];
+      const role = materialRoles[name + ':' + size]?.[index];
+      if (!original && index && !role) throw new Error('Missing material role: '+name+':'+size+':'+index);
+      const rgba = !original && role ? window.GardenPalette.hex[role].slice(1) + source.slice(6) : source;
       for (let c = 0; c < 4; c++) data[i * 4 + c] = parseInt(rgba.slice(c * 2, c * 2 + 2), 16);
     }
     return data;
@@ -100,7 +114,7 @@
     return group;
   }
   // 꽃 24px, 아이템 및 기본 장착 32px. 1px 컷 프레임, 원본 16px 중앙 배치.
-  // 참조의 보라회색 면 및 회청색 호버 테두리.
+  // Garden 16의 공통 면 및 자원 청색 포커스 테두리.
   function dropCard(scene, x, y, name, size, iconSize, kind) {
     const R = window.GardenPalette.reference.n;
     const U = window.GardenUI;

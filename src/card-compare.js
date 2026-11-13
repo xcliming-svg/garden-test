@@ -1,6 +1,7 @@
 (function () {
   'use strict';
   const R = window.GardenPalette.reference.hex;
+  for (const [role,color] of Object.entries(R)) document.documentElement.style.setProperty('--garden-'+role,color);
   const P = { grid: R.tab, paper: R.hover, growth: R.green }, sprites = window.GardenTestSprites;
   const paddings = [1, 2, 3, 4], iconSize = 16, line = 1;
   const sizeFor = padding => iconSize + 2 * (padding + line);

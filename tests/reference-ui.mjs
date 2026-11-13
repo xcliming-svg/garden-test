@@ -160,9 +160,9 @@ for(const c of configs){
     check(label+' fixed sizes',JSON.stringify(m.fixed)===JSON.stringify({garden:22,slot:30,slotOuter:32,flower:16,item:16,card:32,line:1}));
     check(label+' HUD bounds',m.hud.length>=6&&m.hud.every(t=>t.x>=-eps&&t.y>=-eps&&t.x+t.w<=960+eps&&t.y+t.h<=m.top+eps),JSON.stringify(m.hud));
     const bp=m.blueprintMetrics;
-    check(label+' blueprint alignment and visible HUD spacing',bp.width===91&&bp.gridX===bp.headerX&&bp.headerX===m.hudLayout.leftPadding&&bp.titlePadX===5&&bp.gridGap===3&&m.blueprint.gap===3&&bp.titleFont===10&&bp.titleColor.toLowerCase()==='#b0b0b0'&&m.blueprint.cell===8&&m.blueprint.line===1&&m.blueprint.width===91&&m.blueprint.height===m.blueprint.header+3+91&&bp.height===19&&bp.topGap===m.hudLayout.textPadTop,JSON.stringify(bp));
+    check(label+' blueprint alignment and visible HUD spacing',bp.width===91&&bp.gridX===bp.headerX&&bp.headerX===m.hudLayout.leftPadding&&bp.titlePadX===5&&bp.gridGap===3&&m.blueprint.gap===3&&bp.titleFont===10&&bp.titleColor.toLowerCase()==='#c8d0d4'&&m.blueprint.cell===8&&m.blueprint.line===1&&m.blueprint.width===91&&m.blueprint.height===m.blueprint.header+3+91&&bp.height===19&&bp.topGap===m.hudLayout.textPadTop,JSON.stringify(bp));
     check(label+' HUD nonoverlap',m.hud.every((a,i)=>m.hud.every((b,j)=>i===j||!overlap(a,b))));
-    check(label+' equal HUD widths, center and labels',m.top===32&&m.hudLayout.centerY===15&&m.hudLayout.leftPadding===7.5&&m.hudLayout.rightPadding===7.5&&m.hudLayout.textPadTop===7.5&&m.hudLayout.textPadBottom===7.5&&m.hudLayout.barHeight===12&&Math.abs(m.hudLayout.timeGap*m.zoom-Math.round(5*m.zoom))<0.01&&Math.abs(m.hudLayout.barGap*m.zoom-Math.round(5*m.zoom))<0.01&&m.hudLayout.metricWidth>0&&Math.abs(m.hudLayout.gemX-2*m.hudLayout.metricWidth)<=1/m.zoom&&3*m.hudLayout.metricWidth<=m.hudLayout.progressX&&m.hudLayout.labelColors.every(c=>c.toLowerCase()==='#b0b0b0')&&m.hudLayout.valueColors.every(c=>c.toLowerCase()==='#ffffff'),JSON.stringify(m.hudLayout));
+    check(label+' equal HUD widths, center and labels',m.top===32&&m.hudLayout.centerY===15&&m.hudLayout.leftPadding===7.5&&m.hudLayout.rightPadding===7.5&&m.hudLayout.textPadTop===7.5&&m.hudLayout.textPadBottom===7.5&&m.hudLayout.barHeight===12&&Math.abs(m.hudLayout.timeGap*m.zoom-Math.round(5*m.zoom))<0.01&&Math.abs(m.hudLayout.barGap*m.zoom-Math.round(5*m.zoom))<0.01&&m.hudLayout.metricWidth>0&&Math.abs(m.hudLayout.gemX-2*m.hudLayout.metricWidth)<=1/m.zoom&&3*m.hudLayout.metricWidth<=m.hudLayout.progressX&&m.hudLayout.labelColors.every(c=>c.toLowerCase()==='#c8d0d4')&&m.hudLayout.valueColors.every(c=>c.toLowerCase()==='#f5f3eb'),JSON.stringify(m.hudLayout));
     check(label+' bottom HUD 40px and equal 3px clear gaps',m.bottom===40&&m.field===468&&m.slotWidth===347&&m.slots.every((s,i)=>s.y-(540-m.bottom+2)===3&&540-(s.y+s.size)===3&&(!i||s.x-m.slots[i-1].x-m.slots[i-1].size===3)),JSON.stringify(m.slots));
     check(label+' stat bounds',m.stats.length>=12&&m.stats.every(t=>t.font===8&&t.y>=540-m.bottom-eps&&t.y+t.h<=540+eps&&t.x>=-eps&&t.x+t.w<=960+eps),JSON.stringify(m.stats));
     const statGroups=['defense','hp','luck','moveSpeed','pickupRange','dps'].map((key,i)=>{const a=m.stats.find(t=>t.name==='stat-label:'+key), v=m.stats.find(t=>t.name==='stat-value:'+key),d=m.stats.find(t=>t.name==='stat-delta:'+key);const center=(i<3?m.sideLeft:m.sideRight)+(i%3+0.5)*70;const left=Math.min(v.x,d?.x??v.x),right=Math.max(v.x+v.w,d?d.x+d.w:v.x+v.w);return !!a&&!!v&&Math.abs(a.x+a.w/2-center)<0.01&&Math.abs((left+right)/2-center)<0.01&&left>=center-35&&right<=center+35&&a.x>=center-35&&a.x+a.w<=center+35&&(!d||Math.abs(d.x-v.x-v.w-2)<0.01);});
@@ -196,7 +196,7 @@ for(const c of configs){
     zh:proposedStatLabels.zh
   };
   const statWidthReport=await page.evaluate(({full,short})=>{
-    const U=window.GardenUI,L=window.GardenGameLayout,s=window.__benchmarkGame.scene.getScene('Game'),p=U.text(s,0,0,'',10,'#FFFFFF');
+    const U=window.GardenUI,L=window.GardenGameLayout,s=window.__benchmarkGame.scene.getScene('Game'),p=U.text(s,0,0,'',10,'#F5F3EB');
     const width=v=>{p.setText(v);return p.width;};
     const measure=labels=>Object.fromEntries(Object.entries(labels).map(([k,arr])=>[k,arr.map(v=>({label:v,width:width(v)}))]));
     const numberRows=[['124','+24'],['100','-24'],['999','+999'],['9,999','+9,999'],['999,999','+999,999'],['999,999,999,999','+999,999,999,999']].map(([value,delta])=>({value,delta,width:width(value)+L.bottomStats.deltaGap+width(delta)}));
@@ -207,7 +207,7 @@ for(const c of configs){
   const missingStatGlyphs=[...new Set([...Object.values(proposedStatLabels).flat(),...Object.values(shortStatLabels).flat()].join(''))].filter(c=>!font.hasGlyphForCodePoint(c.codePointAt(0)));
   console.log('STAT_WIDTH_REPORT '+JSON.stringify({...statWidthReport,missingStatGlyphs}));
   const statWidth8=await page.evaluate(({full,short})=>{
-    const U=window.GardenUI,L=window.GardenGameLayout,s=window.__benchmarkGame.scene.getScene('Game'),p=U.text(s,0,0,'',8,'#FFFFFF');
+    const U=window.GardenUI,L=window.GardenGameLayout,s=window.__benchmarkGame.scene.getScene('Game'),p=U.text(s,0,0,'',8,'#F5F3EB');
     const width=v=>{p.setText(v);return p.width;};
     const measure=labels=>Object.fromEntries(Object.entries(labels).map(([k,arr])=>[k,arr.map(v=>({label:v,width:width(v)}))]));
     const numberRows=[['124','+24'],['999','+999'],['9,999','+9,999'],['999,999','+999,999'],['999,999,999,999','+999,999,999,999']].map(([value,delta])=>({value,delta,width:width(value)+L.bottomStats.deltaGap+width(delta)}));
@@ -223,20 +223,30 @@ for(const c of configs){
     return s.children.list.filter(o=>/^placeholder:(item|flower):/.test(o.name||'')).map(o=>({name:o.name,x:o.x,y:o.y,w:o.width,h:o.height,hitW:o.input.hitArea.width,hitH:o.input.hitArea.height,border:o.list[0].visible,borderY:o.list[0].y,borderColor:o.list[0].fillColor,face:o.list[1].visible,faceColor:o.list[1].fillColor,faceW:o.list[1].width,faceH:o.list[1].height,faceY:o.list[1].y,img:o.list[2].y,imgW:o.list[2].displayWidth,shadow:o.list[3].visible,shadowW:o.list[3].width,shadowH:o.list[3].height}));
   });
   const drops=await dropState();
-  check('all eight drops have 24px flower or 32px item frames, 16px icons and matching hit boxes',drops.length===8&&drops.every(o=>o.w===(o.name.includes(':flower:')?24:32)&&o.h===o.w&&o.hitW===o.w&&o.hitH===o.w&&o.border&&o.face&&o.faceColor===0x3B3B4E&&o.borderColor===(o.name.includes(':flower:')?0x6ABA2C:0x51516B)&&o.faceW===o.w-2&&o.faceH===o.h-2&&o.borderY===o.img&&o.faceY===o.img&&o.imgW===16&&o.shadow&&o.shadowW===12&&o.shadowH===3),JSON.stringify(drops));
+  check('all eight drops have 24px flower or 32px item frames, 16px icons and matching hit boxes',drops.length===8&&drops.every(o=>o.w===(o.name.includes(':flower:')?24:32)&&o.h===o.w&&o.hitW===o.w&&o.hitH===o.w&&o.border&&o.face&&o.faceColor===0x2C343D&&o.borderColor===(o.name.includes(':flower:')?0x94CC6D:0x929DA6)&&o.faceW===o.w-2&&o.faceH===o.h-2&&o.borderY===o.img&&o.faceY===o.img&&o.imgW===16&&o.shadow&&o.shadowW===12&&o.shadowH===3),JSON.stringify(drops));
   const positions=[];
   for(let i=0;i<7;i++){positions.push(await dropState());await page.waitForTimeout(150);}
   check('float moves square and icon together, integer 0..4 px, stable hitbox',positions.every(p=>p.every((o,i)=>o.x===drops[i].x&&o.y===drops[i].y&&o.borderY===o.img&&o.faceY===o.img&&Number.isInteger(o.img)&&o.img>=-4&&o.img<=0))&&drops.every((_,i)=>new Set(positions.map(p=>p[i].img)).size>=2));
-  check('UI palette exactly 16 unique colors and shared role aliases',await page.evaluate(()=>{
-    const R=window.GardenPalette.reference,L=window.GardenGameLayout,U=window.GardenUI;
-    const expected=['#0D0D0D','#161619','#302E3A','#3B3B4E','#44445C','#202020','#51516B','#676777','#A4B2CF','#FFFFFF','#B0B0B0','#AAAAAA','#6ABA2C','#FF4040','#B3DADB','#000000'];
-    return Object.values(R.baseHex).length===16&&new Set(Object.values(R.hex)).size===16&&expected.every(c=>Object.values(R.hex).includes(c))&&
+  check('Garden 16 exactly 16 shared game colors and semantic roles',await page.evaluate(()=>{
+    const P=window.GardenPalette,R=P.reference,L=window.GardenGameLayout,U=window.GardenUI;
+    const expected=['#151A1F','#2C343D','#485662','#929DA6','#C8D0D4','#F5F3EB','#754A35','#BB704D','#D8B48C','#F3C449','#F0787C','#4B8842','#94CC6D','#328F8B','#70B3E0','#B59CD4'];
+    return Object.values(P.hex).length===16&&new Set(Object.values(P.hex)).size===16&&expected.every(c=>Object.values(P.hex).includes(c))&&R.baseHex===P.hex&&Object.values(R.hex).every(c=>expected.includes(c))&&
       U.C.button===L.colors.normalFill&&U.C.muted===L.colors.hudLabel&&L.colors.label===L.colors.hudLabel&&
-      U.C.panelAlt===L.colors.normalBorder&&U.C.subtle===U.C.border&&L.colors.progressBorder===U.C.border&&
-      L.colors.progressTrack===L.colors.disabledFill&&R.n.hudEdge===L.colors.normalFill&&R.n.hudLight===L.colors.normalBorder&&
-      Object.values(window.GardenPalette.hex).length===32;
+      U.C.panelAlt===R.n.header&&U.C.subtle===U.C.border&&L.colors.progressBorder===U.C.border&&
+      L.colors.progressTrack===L.colors.disabledFill&&R.n.hudLight===R.n.gridLine&&L.colors.blueprintLine===R.n.gridLine;
   }));
-  check('reference palette and opaque tree-node garden',await page.evaluate(()=>{const L=window.GardenGameLayout,s=window.__benchmarkGame.scene.getScene('Game'),g=L.spec.garden,t=s.textures.get('ui-test:garden-soil:'+g.cell),px=t.getContext().getImageData(4*g.pitch+3,4*g.pitch+3,1,1).data;const border=t.getContext().getImageData(4*g.pitch,4*g.pitch,1,1).data;return L.colors.field===0x0D0D0D&&L.colors.hud===0x161619&&L.colors.gardenSoil===0x3B3B4E&&L.colors.gridFill===L.colors.normalFill&&L.colors.normalFill===L.colors.gardenSoil&&L.itemTooltip.background===L.colors.normalFill&&L.colors.gardenSoilAlpha===1&&Array.from(px).join(',')==='59,59,78,255'&&Array.from(border).join(',')==='106,186,44,255'&&L.colors.progressTrack===0x302E3A&&L.colors.progressFill===0x6ABA2C&&L.colors.progressBorder===0x676777&&L.hud.barHeight===12&&L.hud.barWidth===158&&L.spec.top===32;}));
+  check('all sample sprites use Garden 16 and preserve original alpha/shape',await page.evaluate(()=>{
+    const P=window.GardenPalette,S=window.GardenTestSprites,allowed=new Set(Object.values(P.hex).map(c=>c.toLowerCase().slice(1)));
+    return [...S.flowers.flatMap(name=>[12,16].map(size=>[name,size])),['snail',12],['snail',16],['wheelbarrow',16]].every(([name,size])=>{
+      const original=S.pixelData(name,size,true),current=S.pixelData(name,size);
+      for(let i=0;i<current.length;i+=4){
+        if(current[i+3]!==original[i+3])return false;
+        if(current[i+3]&&!allowed.has(Array.from(current.slice(i,i+3)).map(v=>v.toString(16).padStart(2,'0')).join('')))return false;
+      }
+      return current.some((v,i)=>i%4!==3&&v!==original[i]);
+    });
+  }));
+  check('reference palette and opaque tree-node garden',await page.evaluate(()=>{const L=window.GardenGameLayout,s=window.__benchmarkGame.scene.getScene('Game'),g=L.spec.garden,t=s.textures.get('ui-test:garden-soil:'+g.cell),px=t.getContext().getImageData(4*g.pitch+3,4*g.pitch+3,1,1).data;const border=t.getContext().getImageData(4*g.pitch,4*g.pitch,1,1).data;return L.colors.field===0x151A1F&&L.colors.hud===0x2C343D&&L.colors.gardenSoil===0x2C343D&&L.colors.gridFill===L.colors.normalFill&&L.colors.normalFill===L.colors.gardenSoil&&L.itemTooltip.background===L.colors.normalFill&&L.colors.gardenSoilAlpha===1&&Array.from(px).join(',')==='44,52,61,255'&&Array.from(border).join(',')==='148,204,109,255'&&L.colors.progressTrack===0x151A1F&&L.colors.progressFill===0x94CC6D&&L.colors.progressBorder===0x929DA6&&L.hud.barHeight===12&&L.hud.barWidth===158&&L.spec.top===32;}));
 
   const captureHudGaps=async(png,all,z,labels)=>{
     return page.evaluate(async ({data,all,z,labels})=>{
@@ -244,10 +254,10 @@ for(const c of configs){
       cv.width=img.width;cv.height=img.height;const ctx=cv.getContext('2d');ctx.drawImage(img,0,0);
       const p=ctx.getImageData(0,0,cv.width,cv.height).data,R=Math.round;
       const scan=(x0,y0,x1,y1,pred)=>{let left=Infinity,right=-1,n=0;for(let y=Math.max(0,y0);y<Math.min(cv.height,y1);y++)for(let x=Math.max(0,x0);x<Math.min(cv.width,x1);x++){const i=(y*cv.width+x)*4;if(pred(p[i],p[i+1],p[i+2])){left=Math.min(left,x);right=Math.max(right,x);n++;}}return {left,right,n};};
-      const box=o=>{const f=parseInt(o.color.slice(1),16),fg=Math.max((f>>16)&255,(f>>8)&255,f&255),threshold=Math.ceil(25+(fg-25)*.25),x=R(o.x*z),y=R(o.y*z);return scan(x,y,x+Math.ceil(o.w*z),y+Math.ceil(o.h*z),(r,g,b)=>Math.max(r,g,b)>=threshold);};
+      const box=o=>{const f=parseInt(o.color.slice(1),16),fg=Math.max((f>>16)&255,(f>>8)&255,f&255),threshold=Math.ceil(61+(fg-61)*.25),x=R(o.x*z),y=R(o.y*z);return scan(x,y,x+Math.ceil(o.w*z),y+Math.ceil(o.h*z),(r,g,b)=>Math.max(r,g,b)>=threshold);};
       const get=t=>all.find(o=>o.text===t),clock=get(labels.time),kills=get(labels.kills),progress=get(labels.progress),time=all.find(o=>o.text.includes(':'));
       const values=all.filter(o=>/^\d[\d,]*$/.test(o.text)).sort((a,b)=>a.x-b.x);
-      const gem=scan(R((kills.x-clock.x)*2*z),0,R(((kills.x-clock.x)*2+7.5+14+1)*z),R(30*z),(r,g,b)=>r===179&&g===218&&b===219);
+      const gem=scan(R((kills.x-clock.x)*2*z),0,R(((kills.x-clock.x)*2+7.5+14+1)*z),R(30*z),(r,g,b)=>r===112&&g===179&&b===224);
       const edges={clock:box(clock),time:box(time),kills:box(kills),count:box(values[0]),gem,gems:box(values[1]),progress:box(progress)};
       return {edges,gaps:[edges.time.left-edges.clock.right-1,edges.count.left-edges.kills.right-1,edges.gems.left-edges.gem.right-1,R(794.5*z)-edges.progress.right-1]};
     },{data:png.toString('base64'),all,z,labels});
@@ -271,9 +281,9 @@ for(const c of configs){
       // Upper and lower text canvases may overlap in their transparent padding.
       // Split the scan at the empty space, not at object rectangle edges.
       const split=Math.round((slot.y+slot.size/2+1.5)*z);
-      const box=(o,upper,bg=25)=>scan(o.x*z,upper?o.y*z:Math.max(split,o.y*z),(o.x+o.w)*z,upper?Math.min(split,(o.y+o.h)*z):(o.y+o.h)*z,inkFor(o,bg));
-      const number=box(cost,false,58);
-      const gem=scan((slot.x+1)*z,(slot.y+1)*z,(slot.x+slot.size-1)*z,split,(r,g,b)=>r===170&&g===170&&b===170);
+      const box=(o,upper,bg=61)=>scan(o.x*z,upper?o.y*z:Math.max(split,o.y*z),(o.x+o.w)*z,upper?Math.min(split,(o.y+o.h)*z):(o.y+o.h)*z,inkFor(o,bg));
+      const number=box(cost,false,31);
+      const gem=scan((slot.x+1)*z,(slot.y+1)*z,(slot.x+slot.size-1)*z,split,(r,g,b)=>r===146&&g===157&&b===166);
       return {number,gem,labels:stats.filter(t=>t.name.startsWith('stat-label:')).map(t=>box(t,true)),values:stats.filter(t=>t.name.startsWith('stat-value:')).map(t=>box(t,false))};
     },{data:bottomPng.toString('base64'),stats:m.stats,cost:m.cost,slot:m.slots[9],z:m.zoom});
     const expectedGap=Math.round(3*m.zoom);
@@ -287,14 +297,15 @@ for(const c of configs){
       const p=ctx.getImageData(0,0,cv.width,cv.height).data,z=m.zoom,R=Math.round;
       const rgb=(x,y)=>Array.from(p.slice((y*cv.width+x)*4,(y*cv.width+x)*4+3)).join(',');
       const runs=(start,end,pred)=>{const a=[];let i=start;while(i<end){if(!pred(i)){i++;continue;}const first=i;while(i<end&&pred(i))i++;a.push([first,i]);}return a;};
-      const hud='22,22,25',field='13,13,13',bp=m.blueprint,first=m.slots[0],last=m.slots.at(-1);
-      const slotRuns=runs(R((first.x-2)*z),R((last.x+last.size+2)*z),x=>rgb(x,R((first.y+first.size/2)*z))!==hud);
-      const slotY=runs(R((first.y-2)*z),R((first.y+first.size+2)*z),y=>rgb(R((first.x+first.size/2)*z),y)!==hud);
+      const hud='44,52,61',field='21,26,31',bp=m.blueprint,first=m.slots[0],last=m.slots.at(-1);
+      const any=(start,end,pred)=>{for(let i=start;i<end;i++)if(pred(i))return true;return false;};
+      const slotRuns=runs(R((first.x-2)*z),R((last.x+last.size+2)*z),x=>any(R(first.y*z),R((first.y+first.size)*z),y=>rgb(x,y)!==hud));
+      const slotY=runs(R((first.y-2)*z),R((first.y+first.size+2)*z),y=>any(R(first.x*z),R((first.x+first.size)*z),x=>rgb(x,y)!==hud));
       const bpY=runs(R((bp.y-2)*z),R((bp.gridY+91+2)*z),y=>rgb(R((bp.x+bp.width/2)*z),y)!==field);
       const bpX=[bp.y+bp.header/2,bp.gridY+45].map(y=>runs(R((bp.x-2)*z),R((bp.x+bp.width+2)*z),x=>rgb(x,R(y*z))!==field));
       const barX=960-7.5-158,barY=15-6;
-      const gaugeX=runs(R((barX-1)*z),cv.width,x=>rgb(x,R(15*z))!==hud);
-      const gaugeY=runs(R((barY-2)*z),R((barY+14)*z),y=>rgb(R((barX+79)*z),y)!==hud);
+      const gaugeX=runs(R((barX-1)*z),cv.width,x=>any(R(barY*z),R((barY+12)*z),y=>rgb(x,y)!==hud));
+      const gaugeY=runs(R((barY-2)*z),R((barY+14)*z),y=>any(R(barX*z),R((barX+158)*z),x=>rgb(x,y)!==hud));
       const topY=runs(0,R(40*z),y=>rgb(0,y)!==field);
       const bottomY=runs(R(490*z),cv.height,y=>rgb(0,y)!==field);
       const pair=(x,w)=>[R(x*z),R((x+w)*z)];
@@ -322,33 +333,33 @@ for(const c of configs){
             return {left:a,top:b,right:c,bottom:d,width:c-a+1,height:d-b+1,n};
           };
           const exact=(r,g,b)=>v=>v[0]===r&&v[1]===g&&v[2]===b;
-          const ink=v=>Math.min(...v)>=145&&Math.max(...v)-Math.min(...v)<=5;
-          const box=o=>bounds(Math.floor(o.x*2),Math.max(0,Math.floor(o.y*2)),Math.ceil((o.x+o.w)*2),Math.ceil((o.y+o.h)*2),ink);
+          const ink=v=>Math.max(...v)>=Math.ceil(98+(212-98)*.25);
+          const box=o=>{const f=parseInt(o.color.slice(1),16),fg=Math.max((f>>16)&255,(f>>8)&255,f&255),threshold=Math.ceil(61+(fg-61)*.25);return bounds(Math.floor(o.x*2),Math.max(0,Math.floor(o.y*2)),Math.ceil((o.x+o.w)*2),Math.ceil((o.y+o.h)*2),v=>Math.max(...v)>=threshold);};
           const label=box(hud.find(o=>o.text==='시간'));
           const time=box(hud.find(o=>o.text==='9999:59:59'));
           const killsLabel=box(hud.find(o=>o.text==='처치 수'));
           const counters=hud.filter(o=>o.text==='999,999,999,999').sort((a,b)=>a.x-b.x).map(box);
-          const gem=bounds(648,0,701,60,v=>v.join(',')==='179,218,219');
+          const gem=bounds(648,0,701,60,v=>v.join(',')==='112,179,224');
           const progressLabel=box(hud.find(o=>o.text==='정원 완성도'));
-          const title=bounds(bp.x*2,Math.floor(bp.y*2),Math.ceil((bp.x+40)*2),Math.ceil((bp.y+bp.header)*2),ink);
-          const header=bounds(bp.x*2,64,(bp.x+bp.width)*2,Math.ceil((bp.y+bp.header)*2),exact(103,103,119));
-          const grid=bounds(bp.x*2,Math.floor(bp.gridY*2),(bp.x+bp.width)*2,Math.ceil((bp.gridY+91)*2),exact(103,103,119));
+          const title=bounds(bp.x*2+2,Math.floor(bp.y*2)+2,Math.ceil((bp.x+40)*2),Math.ceil((bp.y+bp.header)*2)-2,ink);
+          const header=bounds(bp.x*2,64,(bp.x+bp.width)*2,Math.ceil((bp.y+bp.header)*2),exact(146,157,166));
+          const grid=bounds(bp.x*2,Math.floor(bp.gridY*2),(bp.x+bp.width)*2,Math.ceil((bp.gridY+91)*2),exact(146,157,166));
           const seamY=bp.gridY*2, seamX=bp.x*2+8;
           const seam=Array.from({length:10},(_,i)=>rgb(seamX,seamY-8+i));
           const split=Math.round((slot.y+slot.size/2+1.5)*2);
-          const statBox=(o,upper,bg=25)=>{const f=parseInt(o.color.slice(1),16),fg=Math.max((f>>16)&255,(f>>8)&255,f&255),threshold=Math.ceil(bg+(fg-bg)*0.25);return bounds(Math.floor(o.x*2),upper?Math.floor(o.y*2):Math.max(split,Math.floor(o.y*2)),Math.ceil((o.x+o.w)*2),upper?Math.min(split,Math.ceil((o.y+o.h)*2)):Math.ceil((o.y+o.h)*2),v=>Math.max(...v)>=threshold);};
-          const costInk=statBox(cost,false,58), numberInk=stats.filter(t=>t.name.startsWith('stat-value:')).map(t=>({text:t.text,...statBox(t,false)}));
+          const statBox=(o,upper,bg=61)=>{const f=parseInt(o.color.slice(1),16),fg=Math.max((f>>16)&255,(f>>8)&255,f&255),threshold=Math.ceil(bg+(fg-bg)*0.25);return bounds(Math.floor(o.x*2),upper?Math.floor(o.y*2):Math.max(split,Math.floor(o.y*2)),Math.ceil((o.x+o.w)*2),upper?Math.min(split,Math.ceil((o.y+o.h)*2)):Math.ceil((o.y+o.h)*2),v=>Math.max(...v)>=threshold);};
+          const costInk=statBox(cost,false,31), numberInk=stats.filter(t=>t.name.startsWith('stat-value:')).map(t=>({text:t.text,...statBox(t,false)}));
           const labelInk=stats.filter(t=>t.name.startsWith('stat-label:')).map(t=>({text:t.text,...statBox(t,true)}));
-          const gemInk=bounds(slot.x*2+2,slot.y*2+2,(slot.x+slot.size)*2-2,split,exact(170,170,170));
-          const bar=bounds(1500,10,1920,54,exact(103,103,119));
+          const gemInk=bounds(slot.x*2+2,slot.y*2+2,(slot.x+slot.size)*2-2,split,exact(146,157,166));
+          const bar=bounds(1500,10,1920,54,exact(146,157,166));
           const blueprintCorners=[header,grid].flatMap(o=>[rgb(o.left,o.top),rgb(o.right,o.top),rgb(o.left,o.bottom),rgb(o.right,o.bottom)]);
           const corners={bar:[rgb(bar.left,bar.top),rgb(bar.right,bar.top),rgb(bar.left,bar.bottom),rgb(bar.right,bar.bottom)],slot:[rgb(slot.x*2,slot.y*2),rgb((slot.x+slot.size)*2-1,slot.y*2),rgb(slot.x*2,(slot.y+slot.size)*2-1),rgb((slot.x+slot.size)*2-1,(slot.y+slot.size)*2-1)]};
-          const dividers=bounds(0,10,1920,50,exact(32,32,32));
+          const dividers=bounds(0,10,1920,50,exact(21,26,31));
           const dividerRuns=[];
           for(let x=0;x<1920;x++){
-            if(!exact(32,32,32)(rgb(x,12)))continue;
+            if(!exact(21,26,31)(rgb(x,12)))continue;
             let left=x;
-            while(x+1<1920&&exact(32,32,32)(rgb(x+1,12)))x++;
+            while(x+1<1920&&exact(21,26,31)(rgb(x+1,12)))x++;
             dividerRuns.push([left,x]);
           }
           return {image:[cv.width,cv.height],label,time,title,header,grid,bar,dividerRuns,seam,blueprintCorners,costInk,numberInk,labelInk,gemInk,corners,costVisibleGap:costInk.top-gemInk.bottom-1,
@@ -359,10 +370,10 @@ for(const c of configs){
         },{data:png.toString('base64'),hud:m.hud,bp:m.blueprint,stats:m.stats,cost:m.cost,slot:m.slots[9]});
         console.log('PIXEL_REPORT '+JSON.stringify(pixels));
         check('FHD right-aligned gauge and two left dividers',pixels.leftPadding===15&&pixels.rightPadding===pixels.leftPadding&&pixels.bar.width===316&&pixels.bar.height===24&&JSON.stringify(pixels.dividerRuns)===JSON.stringify([[324,327],[648,651]]),JSON.stringify(pixels));
-        check('FHD one logical pixel cut corners on gauge and slot',Object.values(pixels.corners).flat().every(v=>v.join(',')==='22,22,25'),JSON.stringify(pixels.corners));
+        check('FHD one logical pixel cut corners on gauge and slot',Object.values(pixels.corners).flat().every(v=>v.join(',')==='44,52,61'),JSON.stringify(pixels.corners));
         check('FHD 3px visible gap and shared stat/cost row edges',pixels.costInk.n>0&&pixels.gemInk.n>0&&pixels.costVisibleGap===6&&pixels.numberInk.every(t=>t.n>0&&t.top===pixels.costInk.top&&t.bottom===pixels.costInk.bottom)&&pixels.labelInk.every(t=>t.n>0&&t.bottom===pixels.gemInk.bottom),JSON.stringify({cost:pixels.costInk,numbers:pixels.numberInk,labels:pixels.labelInk,gem:pixels.gemInk,gap:pixels.costVisibleGap}));
-        check('FHD blueprint independent cut corners',pixels.blueprintCorners.every(v=>v.join(',')==='13,13,13'),JSON.stringify(pixels.blueprintCorners));
-        check('FHD actual screenshot alignment and visible gaps',pixels.header.width===182&&pixels.grid.width===182&&pixels.header.left===pixels.grid.left&&pixels.header.left===pixels.label.left&&pixels.headerTopGap===15&&[pixels.titleLeftGap,pixels.titleTopGap,pixels.titleBottomGap].every(g=>g===10)&&pixels.gridGap===6&&pixels.grid.height===182&&JSON.stringify(pixels.seam)===JSON.stringify([[103,103,119],[103,103,119],...Array(6).fill([13,13,13]),[103,103,119],[103,103,119]]),JSON.stringify(pixels));
+        check('FHD blueprint independent cut corners',pixels.blueprintCorners.every(v=>v.join(',')==='21,26,31'),JSON.stringify(pixels.blueprintCorners));
+        check('FHD actual screenshot alignment and visible gaps',pixels.header.width===182&&pixels.grid.width===182&&pixels.header.left===pixels.grid.left&&pixels.header.left===pixels.label.left&&pixels.headerTopGap===15&&[pixels.titleLeftGap,pixels.titleTopGap,pixels.titleBottomGap].every(g=>g===10)&&pixels.gridGap===6&&pixels.grid.height===182&&JSON.stringify(pixels.seam)===JSON.stringify([[146,157,166],[146,157,166],...Array(6).fill([21,26,31]),[146,157,166],[146,157,166]]),JSON.stringify(pixels));
       }
     }
   }
@@ -373,7 +384,7 @@ for(const c of configs){
   const drag=async(name,x,y,release=true)=>{let a=await coords(name);await move(a.x,a.y);await page.mouse.down();const b=await page.locator('canvas').boundingBox();await page.mouse.move(b.x+x,b.y+y,{steps:8});if(release)await page.mouse.up();};
   const tip=async()=>page.evaluate(()=>{const s=window.__benchmarkGame.scene.getScene('Game'),t=s.children.getByName('item-preview-tooltip'),r=t.list[0];if(!t.visible||!r)return null;return {x:t.x,y:t.y,w:r.width,h:r.height,color:r.fillColor,stroke:r.strokeColor,header:t.list.find(o=>o.name==='item-tooltip-header')?.fillColor,headerHeight:t.list.find(o=>o.name==='item-tooltip-header')?.height+1,zoom:s.cameras.main.zoom,divider:!!t.getByName('item-tooltip-divider'),rows:t.list.filter(o=>o.type==='Text').map(o=>({x:o.x,y:o.y,w:o.width,h:o.height,text:o.text,color:o.style.color,font:parseFloat(o.style.fontSize)}))};});
   let tips=[];
-  const inspectTip=(t,key)=>{check(key+' tooltip bounds',!!t&&t.x>=c.margin-.5&&t.y>=c.top+c.margin-.5&&t.x+t.w<=960-c.margin+.5&&t.y+t.h<=540-c.bottom-8+.5,JSON.stringify(t));if(t){check(key+' tooltip colors and width',t.w===c.tipW&&t.color===0x3B3B4E&&t.stroke===0x676777&&t.header===0x44445C&&!t.divider&&t.rows[1]?.color.toLowerCase()==='#b0b0b0',JSON.stringify(t));check(key+' tooltip rows',t.rows.every((r,i)=>r.x>=1&&r.x+r.w<=t.w+1&&r.y>=1&&r.y+r.h<=t.h+1&&(!i||r.y>t.rows[i-1].y)),JSON.stringify(t.rows));check(key+' tooltip all rows 10px',t.rows.length>0&&t.rows.every(r=>r.font===10),JSON.stringify(t.rows));tips.push(t);}};
+  const inspectTip=(t,key)=>{check(key+' tooltip bounds',!!t&&t.x>=c.margin-.5&&t.y>=c.top+c.margin-.5&&t.x+t.w<=960-c.margin+.5&&t.y+t.h<=540-c.bottom-8+.5,JSON.stringify(t));if(t){check(key+' tooltip colors and width',t.w===c.tipW&&t.color===0x2C343D&&t.stroke===0x929DA6&&t.header===0x485662&&!t.divider&&t.rows[1]?.color.toLowerCase()==='#c8d0d4',JSON.stringify(t));check(key+' tooltip rows',t.rows.every((r,i)=>r.x>=1&&r.x+r.w<=t.w+1&&r.y>=1&&r.y+r.h<=t.h+1&&(!i||r.y>t.rows[i-1].y)),JSON.stringify(t.rows));check(key+' tooltip all rows 10px',t.rows.length>0&&t.rows.every(r=>r.font===10),JSON.stringify(t.rows));tips.push(t);}};
   const captureTipPixels=async(t,png)=>page.evaluate(async ({data,t})=>{
     const img=await createImageBitmap(await (await fetch('data:image/png;base64,'+data)).blob()),cv=document.createElement('canvas');
     cv.width=img.width;cv.height=img.height;const ctx=cv.getContext('2d');ctx.drawImage(img,0,0);
@@ -381,13 +392,13 @@ for(const c of configs){
     const x0=R(t.x*z),y0=R(t.y*z),x1=R((t.x+t.w)*z),y1=R((t.y+t.h)*z),headerEnd=R((t.y+t.headerHeight)*z);
     const rgb=(x,y)=>Array.from(px.slice((y*cv.width+x)*4,(y*cv.width+x)*4+3));
     const edges=t.rows.map((r,i)=>{
-      const bg=i===0?92:78,fg=parseInt(r.color.slice(1),16),f=Math.max((fg>>16)&255,(fg>>8)&255,fg&255),threshold=Math.ceil(bg+(f-bg)*0.25);
+      const bg=i===0?98:61,fg=parseInt(r.color.slice(1),16),f=Math.max((fg>>16)&255,(fg>>8)&255,fg&255),threshold=Math.ceil(bg+(f-bg)*0.25);
       let left=Infinity,right=-1,top=Infinity,bottom=-1,n=0,exact=0;
       const startX=R((t.x+r.x)*z),startY=R((t.y+r.y)*z);
       for(let y=Math.max(startY,y0+1);y<Math.min(y1-1,startY+Math.ceil(r.h*z));y++)for(let x=Math.max(startX,x0+1);x<Math.min(x1-1,startX+Math.ceil(r.w*z));x++){
         const v=rgb(x,y);if(Math.max(...v)<threshold)continue;
         left=Math.min(left,x);right=Math.max(right,x);top=Math.min(top,y);bottom=Math.max(bottom,y);n++;
-        if(v.join(',')==='176,176,176')exact++;
+        if(v.join(',')==='200,208,212')exact++;
       }
       return {text:r.text,left:left-x0,right:x1-right-1,top:top-y0,bottom:y1-bottom-1,n,exact,inkBottom:bottom-y0};
     });
@@ -417,19 +428,19 @@ for(const c of configs){
   const replacement=await tip();
   const replacementPng=await page.screenshot({path:join(out,c.id+'-replace.png')});
   const tipPixels=await captureTipPixels(replacement,replacementPng);
-  check('replacement actual gray description and no bottom divider',tipPixels.edges[1].exact>0&&tipPixels.divider===0&&tipPixels.headerColor.join(',')==='68,68,92'&&tipPixels.bodyColor.join(',')==='59,59,78',JSON.stringify(tipPixels));
+  check('replacement actual gray description and no bottom divider',tipPixels.edges[1].exact>0&&tipPixels.divider===0&&tipPixels.headerColor.join(',')==='72,86,98'&&tipPixels.bodyColor.join(',')==='44,52,61',JSON.stringify(tipPixels));
   check('replacement visible 5px padding and rows',exactTipPadding(tipPixels,1),JSON.stringify(tipPixels));
   console.log('TOOLTIP_PADDING_REPORT '+JSON.stringify(tipPixels));
   const delta=await gameMetrics();inspectGame(delta,'replacement stats');
   check('dragged item follows target',await page.evaluate(({x,y})=>{const s=window.__benchmarkGame.scene.getScene('Game'),o=s.children.getByName('placeholder:item:3'),ghost=s.children.getByName('item-preview-ghost');return Math.abs(o.x-x)<1&&Math.abs(o.y-y)<1&&Math.abs(o.alpha-.25)<.001&&ghost.visible&&Math.abs(ghost.x-x)<1&&Math.abs(ghost.y-y)<1;},{x:slot.x+slot.size/2,y:slot.y+slot.size/2}));
-  check('dragging image centered and shadow hidden',await page.evaluate(()=>{const o=window.__benchmarkGame.scene.getScene('Game').children.getByName('placeholder:item:3');return o.list[2].y===0&&o.list[1].y===0&&!o.list[3].visible&&o.list[0].visible&&o.list[0].y===0&&o.list[1].visible&&o.list[1].fillColor===0x51516B;}));
+  check('dragging image centered and shadow hidden',await page.evaluate(()=>{const o=window.__benchmarkGame.scene.getScene('Game').children.getByName('placeholder:item:3');return o.list[2].y===0&&o.list[1].y===0&&!o.list[3].visible&&o.list[0].visible&&o.list[0].y===0&&o.list[1].visible&&o.list[1].fillColor===0x485662;}));
   await page.mouse.up();
   check('equipped item keeps original slot frame',await page.evaluate(()=>{const o=window.__benchmarkGame.scene.getScene('Game').children.getByName('preview-equipped:0');return o.visible&&o.list.length===3&&o.list[0].visible&&o.list[1].visible&&o.list[2].y===0;}));
   check('replace',await page.evaluate(()=>window.__benchmarkGame.scene.getScene('Game').children.getByName('preview-equipped:0').visible&&!window.__benchmarkGame.scene.getScene('Game').children.getByName('placeholder:item:3').visible));
   await drag('placeholder:item:1',last.x+last.size/2,last.y+last.size/2);
   check('locked reject',await page.evaluate(()=>window.__benchmarkGame.scene.getScene('Game').children.getByName('placeholder:item:1').visible));
   // Wait for the next actual update frame after dragend, rather than a fixed wall-clock delay.
-  const rejectedDropState=()=>{const o=window.__benchmarkGame.scene.getScene('Game').children.getByName('placeholder:item:1');return o.visible&&o.depth===0&&o.list[3].visible&&o.list[0].visible&&o.list[1].visible&&o.list[1].fillColor===0x3B3B4E;};
+  const rejectedDropState=()=>{const o=window.__benchmarkGame.scene.getScene('Game').children.getByName('placeholder:item:1');return o.visible&&o.depth===0&&o.list[3].visible&&o.list[0].visible&&o.list[1].visible&&o.list[1].fillColor===0x2C343D;};
   const resumed=await page.waitForFunction(rejectedDropState,{}, {timeout:3000}).then(()=>true,()=>false);
   check('rejected drop resumes float',resumed,JSON.stringify(await page.evaluate(()=>{const o=window.__benchmarkGame.scene.getScene('Game').children.getByName('placeholder:item:1');return {visible:o.visible,depth:o.depth,shadow:o.list[3].visible,border:o.list[0].visible,face:o.list[1].visible,fillColor:o.list[1].fillColor};})));
   let g=initial.garden;await drag('placeholder:flower:0',g.x+4*g.pitch+12,g.y+3*g.pitch+12);
@@ -477,7 +488,7 @@ for(const c of configs){
         const metricWidth=kills.x-clock.x, gemX=s.children.getByName('hud-gem-icon').x-L.hud.padding;
         const barX=percent.x+percent.w/2-L.hud.barWidth/2;
         const gaps=[time.x-clock.x-Math.ceil(clock.w),counts[0].x-kills.x-Math.ceil(kills.w),barX-garden.x-Math.ceil(garden.w)];
-        return {lang:U.hudLanguage(),metricWidth,gemX,barX,gaps,all,labels,green:L.colors.progressFill===0x6ABA2C,top:L.spec.top};
+        return {lang:U.hudLanguage(),metricWidth,gemX,barX,gaps,all,labels,green:L.colors.progressFill===0x94CC6D,top:L.spec.top};
       });
       const key=lang+' '+w+'x'+h;
       check(key+' labels and bounds',m.lang===lang&&m.all.length===7&&m.all.every(t=>t.x>=0&&t.y>=0&&t.x+t.w<=960.1&&t.y+t.h<=32.1),JSON.stringify(m));
@@ -519,10 +530,10 @@ for(const c of configs){
       const ink=v=>Math.min(...v)>=145&&Math.max(...v)-Math.min(...v)<=5;
       const scan=(x0,y0,x1,y1,pred)=>{let top=Infinity,bottom=-1,left=Infinity,right=-1,n=0;for(let y=y0;y<y1;y++)for(let x=x0;x<x1;x++)if(pred(rgb(x,y))){top=Math.min(top,y);bottom=Math.max(bottom,y);left=Math.min(left,x);right=Math.max(right,x);n++;}return {top,bottom,left,right,n};};
       const split=Math.round((last.y+last.size/2+1.5)*2);
-      const number=scan(Math.floor(cost.x*2),Math.max(split,Math.floor(cost.y*2)),Math.ceil((cost.x+cost.w)*2),Math.ceil((cost.y+cost.h)*2),v=>Math.max(...v)>=86);
-      const gem=scan(last.x*2+2,last.y*2+2,(last.x+last.size)*2-2,split,v=>v.every(x=>x===170));
-      const digitRows=stats.filter(t=>t.name.startsWith('stat-value:')).map(t=>scan(Math.floor(t.x*2),Math.max(split,Math.floor(t.y*2)),Math.ceil((t.x+t.w)*2),Math.ceil((t.y+t.h)*2),v=>Math.max(...v)>=83));
-      const frame=Array.from({length:last.size*2},(_,i)=>rgb(last.x*2+i,(last.y+last.size)*2-1).join(',')).every((v,i)=>v===(i<2||i>=last.size*2-2?'22,22,25':'81,81,107'));
+      const number=scan(Math.floor(cost.x*2),Math.max(split,Math.floor(cost.y*2)),Math.ceil((cost.x+cost.w)*2),Math.ceil((cost.y+cost.h)*2),v=>Math.max(...v)>=65);
+      const gem=scan(last.x*2+2,last.y*2+2,(last.x+last.size)*2-2,split,v=>v.join(',')==='146,157,166');
+      const digitRows=stats.filter(t=>t.name.startsWith('stat-value:')).map(t=>scan(Math.floor(t.x*2),Math.max(split,Math.floor(t.y*2)),Math.ceil((t.x+t.w)*2),Math.ceil((t.y+t.h)*2),v=>Math.max(...v)>=107));
+      const frame=Array.from({length:last.size*2},(_,i)=>rgb(last.x*2+i,(last.y+last.size)*2-1).join(',')).every((v,i)=>v===(i<2||i>=last.size*2-2?'44,52,61':'146,157,166'));
       return {number,gem,digitRows,frame};
     },{data:screenshot.toString('base64'),last,cost:m.cost,stats:m.stats});
     check(key+' actual FHD digits, gem, intact bottom border',pixel.number.n>0&&pixel.gem.n>0&&pixel.digitRows.every(t=>t.top===pixel.number.top&&t.bottom===pixel.number.bottom)&&pixel.number.bottom<(last.y+size)*2-2&&pixel.gem.top>=last.y*2+2&&pixel.number.top-pixel.gem.bottom-1===6&&pixel.frame,JSON.stringify(pixel));
@@ -580,7 +591,7 @@ for(const c of configs){
       const textObjects=[...s.children.list.filter(o=>o.type==='Text'&&o.visible),...tip.list.filter(o=>o.type==='Text')];
       return {buffer:[cv.width,cv.height],slot:corners(slot.x,slot.y,slot.size,slot.size),tooltip:corners(tip.x,tip.y,bg.width,bg.height),nativeText:textObjects.every(t=>t.style.resolution===z&&t.frame.width===t.canvas.width&&t.frame.height===t.canvas.height&&t.frame.u1===1&&t.frame.v1===1)};
     },{data:png.toString('base64')});
-    check('fractional native output slot/tooltip cuts and exact text frames',nativePixels.slot.every(v=>v==='22,22,25')&&nativePixels.tooltip.every(v=>v==='13,13,13')&&nativePixels.nativeText,JSON.stringify(nativePixels));
+    check('fractional native output slot/tooltip cuts and exact text frames',nativePixels.slot.every(v=>v==='44,52,61')&&nativePixels.tooltip.every(v=>v==='21,26,31')&&nativePixels.nativeText,JSON.stringify(nativePixels));
     console.log('NATIVE_REPORT '+JSON.stringify({before,after,nativeReport,nativePixels}));
     // A non-16:9 browser must preserve the same logical layout, centered with letterbox.
     await hi.setViewportSize({width:1000,height:700});

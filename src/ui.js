@@ -311,9 +311,9 @@
     const border = emphasized ? C.white : C.subtle;
     const fill = emphasized ? C.panelAlt : C.button;
     const hoverBorder = C.white;
-    const base = pixelBox(scene,0,0,width,height,disabled ? R.n.panel : fill,{border:disabled ? C.border : border,strokeWidth:menuStyle.strokeWidth});
+    const base = pixelBox(scene,0,0,width,height,disabled ? R.n.disabledFill : fill,{border:disabled ? R.n.disabledBorder : border,strokeWidth:menuStyle.strokeWidth});
     const caption = text(scene, 0, 0, label, opts.fontSize || (opts.primary ? fontSize.menuAction : fontSize.menuBase),
-      disabled ? C.disabled : opts.danger ? C.redText : C.text, { originX: 0.5, originY: 0.5, inkAlign: 'center', inkBackground: disabled ? R.n.panel : fill });
+      disabled ? C.disabled : opts.danger ? C.redText : C.text, { originX: 0.5, originY: 0.5, inkAlign: 'center', inkBackground: disabled ? R.n.disabledFill : fill });
     const group = scene.add.container(x, y, [base, caption]);
     if (!disabled && typeof action === 'function') {
       base.setInteractive(new Phaser.Geom.Rectangle(-width/2,-height/2,width,height),Phaser.Geom.Rectangle.Contains);

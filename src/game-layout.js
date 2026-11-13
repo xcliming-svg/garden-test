@@ -69,21 +69,21 @@
     guardian: Object.freeze({ size: 24, color: P.n.teal, assetKey: 'guardian', suggestedFile: 'assets/guardian.png' }),
     enemy: Object.freeze({ size: unit * 2, color: P.n.red, assetKey: 'enemy', suggestedFile: 'assets/enemy.png' }),
     gem: Object.freeze({ size: unit, color: P.n.sky, assetKey: 'gem', suggestedFile: 'assets/gem.png' }),
-    flower: Object.freeze({ size: iconSize, cardSize: spec.slots.size, dropSize: flowerDropSize, color: P.n.pink, assetKey: 'flower', suggestedFile: 'assets/flower.png' }),
+    flower: Object.freeze({ size: iconSize, cardSize: spec.slots.size, dropSize: flowerDropSize, color: P.n.red, assetKey: 'flower', suggestedFile: 'assets/flower.png' }),
     item: Object.freeze({ size: iconSize, cardSize: spec.slots.size, dropSize: itemDropSize, color: P.n.gold, assetKey: 'item', suggestedFile: 'assets/item.png' })
   });
 
   const colors = Object.freeze({
     field: R.n.background, hud: R.n.hud, hudBorder: R.n.hudEdge, hudDivider: R.n.divider,
     label: R.hex.label, hudLabel: R.hex.hudLabel, value: R.hex.text,
-    gridFill: R.n.tab, gridLine: R.n.tabBorder, gridBorder: R.n.tabBorder,
+    gridFill: R.n.tab, gridLine: R.n.gridLine, gridBorder: R.n.tabBorder,
     normalFill: R.n.tab, normalBorder: R.n.tabBorder,
     progressTrack: R.n.track, progressBorder: R.n.border, progressFill: R.n.green,
-    disabledFill: R.n.panel, disabledBorder: R.n.tabBorder, disabledText: R.hex.disabled,
+    disabledFill: R.n.disabledFill, disabledBorder: R.n.tabBorder, disabledText: R.hex.disabled,
     enabledFill: R.n.background, enabledBorder: R.n.green, enabledText: R.hex.green,
     focusBorder: R.n.hover, invalidBorder: R.n.red,
     gardenSoil: R.n.tab, gardenSoilAlpha: 1, gardenBorder: R.n.gardenBorder,
-    blueprintLine: R.n.tabBorder, reservedIcon: R.n.icon
+    blueprintLine: R.n.gridLine, reservedIcon: R.n.icon
   });
 
   // 고정된 미리보기 좌표일 뿐 실제 스폰 위치나 수량 정책이 아니다.
