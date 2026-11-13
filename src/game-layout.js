@@ -33,6 +33,8 @@
   // 슬롯 크기 비교용 URL 옵션. 기본 36px 및 기존 전장 드롭 24px는 유지한다.
   const slotMode = new URLSearchParams(window.location.search).get('slots');
   const iconSize = unit * 2, slotSize = slotMode === '24' ? 24 : slotMode === '32' ? 32 : 36, dropSize = 24;
+  // 비교 링크의 실제 실행 규격을 브라우저 탭 제목에서 식별할 수 있게 한다.
+  if (['24', '32', '36'].includes(slotMode)) document.title = 'Garden Test | 슬롯 ' + slotSize + 'px';
   const gardenSize = 10 * gardenPitch;
   const spec = Object.freeze({
     width, height,
