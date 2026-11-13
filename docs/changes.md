@@ -4,7 +4,7 @@
 
 ## 2026-11-14 — 꽃 외곽선 및 정원 내부 그리드 제거, 수호자 크기 비교
 
-- devel c24e104 기반 feature/devel-flower-outline. 꽃 셀 안쪽 1px ink 외곽선, 정원 내부 공유선 제거(외곽 프레임 유지), 수호자 32px 기본 및 person=24/28 비교. 원본 래스터·HUD·도안·순찰 경로 유지. [규격](./flower-head-preview.md). [Chromium 11/11 구성 통과](https://github.com/xcliming-svg/garden-test/actions/runs/43522146911), 코드 1076a6c. 실제 FHD 픽셀 검사 포함. main 변경 없음.
+- devel c24e104 기반 feature/devel-flower-outline. 꽃 셀 안쪽 1px ink 외곽선, 정원 내부 공유선 제거(외곽 프레임 유지), 수호자 32px 기본 및 person=24/28 비교. 원본 래스터·HUD·도안·순찰 경로 유지. [규격](./flower-head-preview.md). [Chromium 11/11 구성 통과](https://github.com/xcliming-svg/garden-test/actions/runs/43522146911), 코드 1076a6c. 실제 FHD 픽셀 검사 포함. 검증본을 devel에 fast-forward 병합하여 비교 화면을 배포한다. main 변경 없음.
 
 ## 2026-11-14 — 꽃 머리 비교 화면 devel 배포
 
