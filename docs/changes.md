@@ -1,5 +1,9 @@
 # 시스템별 변경 이력
 
+## 2026-11-13 — 전장 1.5×/2× 비교
+
+- 사용자 요청에 따라 현재 SVG devel f853ba4에서 feature/devel-field-zoom을 분기한다. 기본 URL 및 UI는 유지하고 type=1은 1.5×, type=2는 2× 전장 확대. 정원/필드 객체 표시 배율과 입력 역변환, 9종 노출 및 일부 드롭 미리보기 앵커 보완. 색상/원본 에셋/실제 게임 로직 변경 없음. [상세 규격](./field-zoom.md). Chromium 실행 결과는 별도 기록.
+
 ## 2026-11-13 — SVG 애니메이션 devel 통합
 
 - 사용자 승인에 따라 검증된 `feature/animated-svg-assets`(6d5fe6d)를 `devel`(0752949)에 병합(567f075). devel의 병합 전 파일 내용은 main c811115와 동일함을 확인했다. 기존 961/961 Chromium 검증본의 실행 코드 및 SVG를 수정하지 않고 통합한다. main은 변경하지 않는다. Pages는 기존 devel push 배포를 사용한다.
