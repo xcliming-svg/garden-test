@@ -92,20 +92,35 @@
   const comparisonTheme = Object.hasOwn(cardThemes,soilType) ? cardThemes[soilType] : null;
   // type=9는 흰색 드롭/장착 카드와 갈색 전장·초록색 정원 비교안이다. 빈 슬롯은 기본색.
   const whiteCards = soilType === '9';
-  const flowerCardStyle = Object.freeze({fill:whiteCards ? P.n.paper : comparisonTheme?.gardenFill ?? R.n.tab,border:comparisonTheme?.gardenBorder ?? R.n.tabBorder});
-  const itemCardStyle = Object.freeze({fill:whiteCards ? P.n.paper : comparisonTheme?.itemFill ?? R.n.tab,border:comparisonTheme?.itemBorder ?? R.n.tabBorder});
+  // type=10: 별도 실험용 자연색 테마. Garden 16 및 기존 비교안은 변경하지 않는다.
+  const pastoral = soilType === '10' ? Object.freeze({
+    field:0x51483C, hud:0x2D332B, hudBorder:0x555743, hudLight:0x858365, hudDivider:0x20251F,
+    label:'#D3C8AE', value:'#FAF2DD', gridFill:0x424B39, gridLine:0x77866A, header:0x4F5943,
+    slotFill:0xB3A184, slotBorder:0x78654F, disabledFill:0x252B24, disabledBorder:0x706650,
+    gardenFill:0x42583B, gardenBorder:0x8C9B70, gardenHighlight:0xF4D78F,
+    flowerFill:0x50654B, flowerBorder:0xB8C49C, flowerActive:0xF4D78F,
+    itemFill:0xD3BE98, itemBorder:0x8E7452, itemActive:0x295E63,
+    progressTrack:0x20251F, progressBorder:0x858365, progressFill:0x697F47,
+    tooltipFill:0x403B30, tooltipHeader:0x554C3C, tooltipBorder:0x8A775C,
+    positive:'#ACCC79', negative:'#E79483'
+  }) : null;
+  const flowerCardStyle = Object.freeze({fill:pastoral?.flowerFill ?? (whiteCards ? P.n.paper : comparisonTheme?.gardenFill ?? R.n.tab),border:pastoral?.flowerBorder ?? comparisonTheme?.gardenBorder ?? R.n.tabBorder,activeBorder:pastoral?.flowerActive ?? R.n.flowerBorder});
+  const itemCardStyle = Object.freeze({fill:pastoral?.itemFill ?? (whiteCards ? P.n.paper : comparisonTheme?.itemFill ?? R.n.tab),border:pastoral?.itemBorder ?? comparisonTheme?.itemBorder ?? R.n.tabBorder,activeBorder:pastoral?.itemActive ?? R.n.itemBorder});
   const colors = Object.freeze({
-    field: whiteCards ? P.n.bark : R.n.background, hud: R.n.hud, hudBorder: R.n.hudEdge, hudDivider: R.n.divider,
-    label: R.hex.label, hudLabel: R.hex.hudLabel, value: R.hex.text,
-    gridFill: R.n.tab, gridLine: R.n.gridLine, gridBorder: R.n.tabBorder,
-    normalFill: comparisonTheme?.itemFill ?? R.n.tab, normalBorder: itemCardStyle.border,
-    flowerCardFill: flowerCardStyle.fill, flowerCardBorder: flowerCardStyle.border, itemCardFill: itemCardStyle.fill,
-    progressTrack: R.n.track, progressBorder: R.n.border, progressFill: R.n.green,
-    disabledFill: R.n.disabledFill, disabledBorder: R.n.tabBorder, disabledText: R.hex.disabled,
-    gardenSoil: whiteCards ? P.n.growth : comparisonTheme?.gardenFill ?? soilColor, gardenSoilAlpha: 1, gardenBorder: comparisonTheme?.gardenBorder ?? R.n.gardenBorder,
-    gardenHighlight: whiteCards ? P.n.ink : R.n.flowerBorder,
-    flowerBorder: R.n.flowerBorder, itemBorder: R.n.itemBorder,
-    blueprintLine: R.n.gridLine, reservedIcon: R.n.icon
+    field: pastoral?.field ?? (whiteCards ? P.n.bark : R.n.background), hud: pastoral?.hud ?? R.n.hud, hudBorder: pastoral?.hudBorder ?? R.n.hudEdge, hudLight: pastoral?.hudLight ?? R.n.hudLight, hudDivider: pastoral?.hudDivider ?? R.n.divider,
+    label: pastoral?.label ?? R.hex.label, hudLabel: pastoral?.label ?? R.hex.hudLabel, value: pastoral?.value ?? R.hex.text,
+    labelInk: pastoral ? Number.parseInt(pastoral.label.slice(1),16) : R.n.label,
+    gridFill: pastoral?.gridFill ?? R.n.tab, gridLine: pastoral?.gridLine ?? R.n.gridLine, gridBorder: pastoral?.hudLight ?? R.n.tabBorder, header: pastoral?.header ?? R.n.header,
+    normalFill: pastoral?.slotFill ?? comparisonTheme?.itemFill ?? R.n.tab, normalBorder: pastoral?.slotBorder ?? itemCardStyle.border,
+    flowerCardFill: flowerCardStyle.fill, flowerCardBorder: flowerCardStyle.border, itemCardFill: itemCardStyle.fill, itemCardBorder: itemCardStyle.border,
+    progressTrack: pastoral?.progressTrack ?? R.n.track, progressBorder: pastoral?.progressBorder ?? R.n.border, progressFill: pastoral?.progressFill ?? R.n.green, barFrame: pastoral?.hudBorder ?? R.n.barFrame,
+    disabledFill: pastoral?.disabledFill ?? R.n.disabledFill, disabledBorder: pastoral?.disabledBorder ?? R.n.tabBorder, disabledText: pastoral?.label ?? R.hex.disabled,
+    gardenSoil: pastoral?.gardenFill ?? (whiteCards ? P.n.growth : comparisonTheme?.gardenFill ?? soilColor), gardenSoilAlpha: 1, gardenBorder: pastoral?.gardenBorder ?? comparisonTheme?.gardenBorder ?? R.n.gardenBorder,
+    gardenHighlight: pastoral?.gardenHighlight ?? (whiteCards ? P.n.ink : R.n.flowerBorder),
+    flowerBorder: flowerCardStyle.activeBorder, itemBorder: itemCardStyle.activeBorder,
+    blueprintLine: pastoral?.gridLine ?? R.n.gridLine, reservedIcon: pastoral ? Number.parseInt(pastoral.label.slice(1),16) : R.n.icon,
+    tooltipFill: pastoral?.tooltipFill ?? R.n.tab, tooltipHeader: pastoral?.tooltipHeader ?? R.n.header, tooltipBorder: pastoral?.tooltipBorder ?? R.n.tabBorder,
+    positive: pastoral?.positive ?? R.hex.green, negative: pastoral?.negative ?? R.hex.red
   });
 
   // 고정된 미리보기 좌표일 뿐 실제 스폰 위치나 수량 정책이 아니다.
@@ -133,7 +148,7 @@
   // 1px 경계선만 사용하는 HUD와 슬롯의 1px 연속 사각형 표시.
   function hudBoundary(g, y) {
     g.fillStyle(colors.hudBorder, 1).fillRect(0, y, spec.width, 1);
-    g.fillStyle(R.n.hudLight, 1).fillRect(0, y + 1, spec.width, 1);
+    g.fillStyle(colors.hudLight, 1).fillRect(0, y + 1, spec.width, 1);
   }
 
   // 도안은 HUD의 두 경계색을 외곽/내곽에 동일하게 사용한다.
@@ -142,7 +157,7 @@
     g.fillStyle(colors.hudBorder,1);
     g.fillRect(x+1,y,w-2,1); g.fillRect(x+1,y+h-1,w-2,1);
     g.fillRect(x,y+1,1,h-2); g.fillRect(x+w-1,y+1,1,h-2);
-    g.fillStyle(R.n.hudLight,1);
+    g.fillStyle(colors.hudLight,1);
     g.fillRect(x+1,y+1,w-2,1); g.fillRect(x+1,y+h-2,w-2,1);
     g.fillRect(x+1,y+2,1,h-4); g.fillRect(x+w-2,y+2,1,h-4);
     if (fill !== undefined) g.fillStyle(fill,1).fillRect(x+2,y+2,w-4,h-4);
@@ -265,7 +280,7 @@
     const barX = spec.width - hud.padding - c.barWidth;
     const progressLabel = text(scene, 0, hud.centerY, labels.progress, hud.labelSize, colors.hudLabel, 'left');
     const barY = hud.centerY - hud.barHeight / 2;
-    U.pixelFrame(g, barX, barY, c.barWidth, hud.barHeight, R.n.barFrame, colors.progressBorder);
+    U.pixelFrame(g, barX, barY, c.barWidth, hud.barHeight, colors.barFrame, colors.progressBorder);
     g.fillStyle(colors.progressTrack, 1).fillRect(barX + 2, barY + 2, c.barWidth - 4, hud.barHeight - 4);
     const progress = Math.max(0, Math.min(100, hud.previewProgress));
     const fillWidth = Math.round((c.barWidth - 4) * progress / 100);
@@ -323,7 +338,7 @@
       const upperBottom = iconTop + iconHeight, numberTop = upperBottom + gap;
       const iconLeft = Math.round((x + (size - c.iconSize) / 2) * zoom);
       icon.setPosition(iconLeft / zoom, iconTop / zoom).clear();
-      icon.fillStyle(R.n.disabled, 1);
+      icon.fillStyle(colors.labelInk, 1);
       const pixelRange = i => {
         const start = Math.min(iconHeight - 1, Math.round(i * zoom));
         const end = Math.min(iconHeight, Math.max(start + 1, Math.round((i + 1) * zoom)));
@@ -482,8 +497,8 @@
     let expanded = true;
     function drawArrow() {
       header.clear();
-      blueprintFrameBox(header,b.x,b.y,b.width,b.header,R.n.header);
-      arrow.clear().lineStyle(1, R.n.label, 1);
+      blueprintFrameBox(header,b.x,b.y,b.width,b.header,colors.header);
+      arrow.clear().lineStyle(1, colors.labelInk, 1);
       const x = b.x + b.width - b.padding - spacing.small;
       const y = b.y + b.header / 2;
       arrow.beginPath();
@@ -536,8 +551,8 @@
   // 정보창의 중성 회색 테두리, 보라색 제목 바와 HUD 공통 회색 본문.
   const itemTooltip = Object.freeze({
     width: hud.barWidth, padding: blueprintPadding, gap: blueprintPadding, bottomPadding: blueprintPadding, fontSize: 10, titleSize: 10,
-    rowGap: hudGap, lineSpacing: 4, strokeWidth: 1, accent: R.n.tabBorder,
-    background: R.n.tab, header: R.n.header,
+    rowGap: hudGap, lineSpacing: 4, strokeWidth: 1, accent: colors.tooltipBorder,
+    background: colors.tooltipFill, header: colors.tooltipHeader,
     title: colors.value, description: colors.hudLabel, hint: colors.disabledText
   });
 
@@ -616,7 +631,7 @@
       stats.forEach(row => {
         const d = next[row.key] - current[row.key];
         row.value.setText(String(next[row.key]));
-        row.delta.setText(d ? signed(d) : '').setColor(d > 0 ? R.hex.green : d < 0 ? R.hex.red : colors.value)
+        row.delta.setText(d ? signed(d) : '').setColor(d > 0 ? colors.positive : d < 0 ? colors.negative : colors.value)
           .setVisible(d !== 0);
         // 레이블 하단과 보석 하단, 모든 숫자의 가시 상단을 동일한 픽셀 행에 정렬한다.
         // 증감이 있을 때는 값과 증감 사이 2px를 두고 전체 행을 중앙 정렬한다.
@@ -641,7 +656,7 @@
     function effectRows(item, removed) {
       return statKeys.filter(key => item.stats[key]).map(key => ({
         value: statLabels[key] + ' ' + signed((removed ? -1 : 1) * item.stats[key]),
-        color: removed ? R.hex.red : R.hex.green
+        color: removed ? colors.negative : colors.positive
       }));
     }
     function rebuildTooltip(key, rows) {

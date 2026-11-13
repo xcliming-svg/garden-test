@@ -120,7 +120,7 @@
     const U = window.GardenUI;
     const normalBorder = style.border ?? R.tabBorder;
     const border = U.pixelBox(scene,0,0,size,size,normalBorder);
-    const activeBorder = kind === 'flower' ? R.flowerBorder : R.itemBorder;
+    const activeBorder = style.activeBorder ?? (kind === 'flower' ? R.flowerBorder : R.itemBorder);
     const faceColor = style.fill ?? R.tab;
     const face = U.pixelBox(scene,0,0,size-2,size-2,faceColor,{cut:false});
     const image = sprite(scene, 0, 0, name, iconSize);

@@ -819,7 +819,7 @@ for(const c of configs){
       if(type===0?(p[i+3]!==0):(p[i+3]!==255||actual!==color))mismatch++;
     }
     return {mismatch,activeCount,faceCount,occupied:occupied.size,candidates:candidates.size,
-      roles:L.colors.field===(style?.field??0x0D0D0D)&&L.colors.gardenHighlight===(style?.gardenHighlight??0x6ABA2C)&&L.colors.gardenSoil===expected&&L.colors.gardenBorder===(style?.gardenBorder??0x51516B)&&L.colors.normalBorder===(style?.itemBorder??0x51516B)&&L.colors.normalFill===(style?.itemFill??0x3B3B4E)&&L.colors.flowerCardFill===(style?.flowerCardFill??(style?expected:0x3B3B4E))&&L.colors.itemCardFill===(style?.itemCardFill??style?.itemFill??0x3B3B4E)&&L.colors.flowerCardBorder===(style?.gardenBorder??0x51516B)&&L.colors.gridFill===0x3B3B4E&&L.colors.flowerBorder===0x6ABA2C&&L.colors.itemBorder===0x67A3EE&&L.itemTooltip.accent===0x51516B};
+      roles:L.colors.field===(style?.field??0x0D0D0D)&&L.colors.gardenHighlight===(style?.gardenHighlight??0x6ABA2C)&&L.colors.gardenSoil===expected&&L.colors.gardenBorder===(style?.gardenBorder??0x51516B)&&L.colors.normalBorder===(style?.slotBorder??style?.itemBorder??0x51516B)&&L.colors.normalFill===(style?.itemFill??0x3B3B4E)&&L.colors.flowerCardFill===(style?.flowerCardFill??(style?expected:0x3B3B4E))&&L.colors.itemCardFill===(style?.itemCardFill??style?.itemFill??0x3B3B4E)&&L.colors.flowerCardBorder===(style?.flowerCardBorder??style?.gardenBorder??0x51516B)&&L.colors.itemCardBorder===(style?.itemBorder??0x51516B)&&L.colors.gridFill===(style?.gridFill??0x3B3B4E)&&L.colors.flowerBorder===(style?.flowerActive??0x6ABA2C)&&L.colors.itemBorder===(style?.itemActive??0x67A3EE)&&L.itemTooltip.accent===(style?.tooltipBorder??0x51516B)};
   },{expected,dragging,target,style});
   const inspectSoilPixels=async(png,expected,z,style=null)=>page.evaluate(async ({data,expected,z,style})=>{
     const L=window.GardenGameLayout,g=L.spec.garden,b=L.spec.blueprint;
@@ -831,7 +831,7 @@ for(const c of configs){
     for(let row=1;row<b.rows;row++)for(let col=1;col<b.columns;col++){
       const x=b.gridX+b.frame+col*b.pitch,y=b.gridY+b.frame+row*b.pitch;
       for(let py=R(y*z);py<R((y+b.line)*z);py++)for(let px=R(x*z);px<R((x+b.line)*z);px++){
-        intersections++;if(rgb(px,py)!==0x51516B)wrong++;
+        intersections++;if(rgb(px,py)!==(style?.gridLine??0x51516B))wrong++;
       }
     }
     const points=[[4,4,3,3],[4,3,3,3],[5,3,3,3],[5,5,3,3],[5,4,0,3]];
@@ -841,7 +841,7 @@ for(const c of configs){
     const outer=rgb(R((b.gridX+4)*z),R(b.gridY*z));
     const inner=rgb(R((b.gridX+4)*z),R((b.gridY+1)*z));
     const field=rgb(R(10*z),R(400*z)),top=rgb(R(2*z),R(2*z)),bottom=rgb(R(2*z),R(520*z));
-    return {intersections,wrong,soil,field,pass:field===(style?.field??0x0D0D0D)&&top===0x161619&&bottom===0x161619&&soil.slice(0,-1).every(v=>v===expected)&&soil.at(-1)===(style?.gardenBorder??0x51516B)&&cell===0x3B3B4E&&line===0x51516B&&outer===0x3B3B4E&&inner===0x51516B};
+    return {intersections,wrong,soil,field,pass:field===(style?.field??0x0D0D0D)&&top===(style?.hud??0x161619)&&bottom===(style?.hud??0x161619)&&soil.slice(0,-1).every(v=>v===expected)&&soil.at(-1)===(style?.gardenBorder??0x51516B)&&cell===(style?.gridFill??0x3B3B4E)&&line===(style?.gridLine??0x51516B)&&outer===(style?.hudBorder??0x3B3B4E)&&inner===(style?.hudLight??0x51516B)};
   },{data:png.toString('base64'),expected,z,style});
   for(const [mode,color] of soilVariants){
     await page.setViewportSize({width:960,height:540});
@@ -878,7 +878,12 @@ for(const c of configs){
     ['6',0xA46444,0xE9D0AB,0x0C9484,0xB0ACBD],
     ['7',0x51516B,0xF46C7C,0x676777,0xF4B404],
     ['8',0x0C9484,0xE9D0AB,0x44445C,0xA46444],
-    ['9',0x6ABA2C,0x51516B,0x3B3B4E,0x51516B,0xFFFFFF,0xFFFFFF,0x7C4C24,0x0D0D0D]
+    ['9',0x6ABA2C,0x51516B,0x3B3B4E,0x51516B,0xFFFFFF,0xFFFFFF,0x7C4C24,0x0D0D0D],
+    ['10',0x42583B,0x8C9B70,0xB3A184,0x8E7452,0x50654B,0xD3BE98,0x51483C,0xF4D78F,{
+      flowerCardBorder:0xB8C49C,slotBorder:0x78654F,flowerActive:0xF4D78F,itemActive:0x295E63,
+      hud:0x2D332B,hudBorder:0x555743,hudLight:0x858365,gridFill:0x424B39,gridLine:0x77866A,
+      disabledFill:0x252B24,disabledBorder:0x706650,tooltipBorder:0x8A775C,tooltipFill:0x403B30,tooltipHeader:0x554C3C
+    }]
   ];
   const inspectThemePixels=async(png,style,z)=>page.evaluate(async ({data,style,z})=>{
     const img=await createImageBitmap(await(await fetch('data:image/png;base64,'+data)).blob()),cv=document.createElement('canvas');
@@ -886,15 +891,16 @@ for(const c of configs){
     const p=ctx.getImageData(0,0,cv.width,cv.height).data,R=Math.round;
     const rgb=(x,y)=>{const i=(R(y*z)*cv.width+R(x*z))*4;return(p[i]<<16)|(p[i+1]<<8)|p[i+2];};
     const s=window.__benchmarkGame.scene.getScene('Game');
-    const pairs=[['placeholder:flower:0',style.flowerCardFill,style.gardenBorder],['placeholder:item:0',style.itemCardFill,style.itemBorder],['slot-frame:0',style.itemFill,style.itemBorder],['slot-frame:9',0x161619,0x51516B]];
+    const pairs=[['placeholder:flower:0',style.flowerCardFill,style.flowerCardBorder??style.gardenBorder],['placeholder:item:0',style.itemCardFill,style.itemBorder],['slot-frame:0',style.itemFill,style.slotBorder??style.itemBorder],['slot-frame:9',style.disabledFill??0x161619,style.disabledBorder??0x51516B]];
     return pairs.map(([name,face,border])=>{
       const o=s.children.getByName(name),left=o.x-o.width/2;
       const actual=[rgb(left+2,o.y),rgb(left,o.y)];
       return {name,actual,expected:[face,border],pass:actual[0]===face&&actual[1]===border};
     });
   },{data:png.toString('base64'),style,z});
-  for(const [mode,gardenFill,gardenBorder,itemFill,itemBorder,flowerCardFill=gardenFill,itemCardFill=itemFill,field=0x0D0D0D,gardenHighlight=0x6ABA2C] of themeVariants){
-    const style={gardenFill,gardenBorder,itemFill,itemBorder,flowerCardFill,itemCardFill,field,gardenHighlight};
+  for(const [mode,gardenFill,gardenBorder,itemFill,itemBorder,flowerCardFill=gardenFill,itemCardFill=itemFill,field=0x0D0D0D,gardenHighlight=0x6ABA2C,extras={}] of themeVariants){
+    const style={gardenFill,gardenBorder,itemFill,itemBorder,flowerCardFill,itemCardFill,field,gardenHighlight,...extras};
+    const flowerCardBorder=style.flowerCardBorder??gardenBorder,slotBorder=style.slotBorder??itemBorder,flowerActive=style.flowerActive??0x6ABA2C,itemActive=style.itemActive??0x67A3EE;
     await page.setViewportSize({width:960,height:540});
     await page.goto(origin+'/'+c.id+'/index.html?preview=1&type='+mode,{waitUntil:'load'});
     await page.waitForFunction(()=>window.__benchmarkGame?.scene.isActive('MainMenu'),{},{timeout:20000});
@@ -903,10 +909,10 @@ for(const c of configs){
     await move(10,200);
     const state=await inspectSoilTexture(gardenFill,false,-1,style);
     check('theme '+mode+' initial full garden texture and palette roles',state.mismatch===0&&state.roles&&state.occupied===4&&state.candidates===8,JSON.stringify(state));
-    check('theme '+mode+' exact 16-color membership',await page.evaluate(style=>Object.values(style).every(v=>Object.values(window.GardenPalette.n).includes(v))&&Object.keys(window.GardenPalette.hex).length===16,style));
-    const slotsMatch=async(target=null,equipped=false)=>slotState().then(a=>a.every((v,i)=>v.single&&v.face===(i===9?0x161619:equipped&&i===0?itemCardFill:itemFill)&&v.border===(i===9?0x51516B:target===-1||target===i?0x67A3EE:itemBorder)));
+    check('theme '+mode+' palette isolation',await page.evaluate(({style,mode})=>Object.keys(window.GardenPalette.hex).length===16&&(mode==='10'?!Object.values(window.GardenPalette.n).includes(style.field):Object.values(style).every(v=>Object.values(window.GardenPalette.n).includes(v))),{style,mode}));
+    const slotsMatch=async(target=null,equipped=false)=>slotState().then(a=>a.every((v,i)=>v.single&&v.face===(i===9?(style.disabledFill??0x161619):equipped&&i===0?itemCardFill:itemFill)&&v.border===(i===9?(style.disabledBorder??0x51516B):target===-1||target===i?itemActive:equipped&&i===0?itemBorder:slotBorder)));
     const cardMatch=async(name,face,border,alpha=1)=>cardState(name).then(v=>v.face===face&&v.border===border&&v.alpha===alpha);
-    check('theme '+mode+' default cards and slots',await cardMatch('placeholder:flower:0',flowerCardFill,gardenBorder)&&await cardMatch('placeholder:item:0',itemCardFill,itemBorder)&&await slotsMatch());
+    check('theme '+mode+' default cards and slots',await cardMatch('placeholder:flower:0',flowerCardFill,flowerCardBorder)&&await cardMatch('placeholder:item:0',itemCardFill,itemBorder)&&await slotsMatch());
     for(const [w,h] of [[960,540],[1920,1080]]){
       await page.setViewportSize({width:w,height:h});
       await page.waitForFunction(w=>window.__benchmarkGame.scene.getScene('Game').cameras.main.zoom===w/960,w);
@@ -920,18 +926,18 @@ for(const c of configs){
     const g=await page.evaluate(()=>window.GardenGameLayout.spec.garden);
     await drag('placeholder:flower:0',10,200,false);
     const active=await inspectSoilTexture(gardenFill,true,-1,style);
-    check('theme '+mode+' all flower candidates and green source card',active.mismatch===0&&active.activeCount>88&&active.roles&&await cardMatch('placeholder:flower:0',flowerCardFill,0x6ABA2C));
+    check('theme '+mode+' all flower candidates and green source card',active.mismatch===0&&active.activeCount>88&&active.roles&&await cardMatch('placeholder:flower:0',flowerCardFill,flowerActive));
     await move(g.x+4*g.pitch+g.outer/2-5,g.y+3*g.pitch+g.outer/2-5);
     const focused=await inspectSoilTexture(gardenFill,true,34,style);
-    check('theme '+mode+' single flower candidate and translucent card',focused.mismatch===0&&focused.activeCount===88&&await cardMatch('placeholder:flower:0',flowerCardFill,0x6ABA2C,0.25));
+    check('theme '+mode+' single flower candidate and translucent card',focused.mismatch===0&&focused.activeCount===88&&await cardMatch('placeholder:flower:0',flowerCardFill,flowerActive,0.25));
     await page.screenshot({path:join(out,'card-theme-'+mode+'-flower-target.png')});
     await page.mouse.up();
     const planted=await inspectSoilTexture(gardenFill,false,-1,style);
     check('theme '+mode+' planted restores themed borders',planted.mismatch===0&&planted.occupied===5&&planted.roles);
     await drag('placeholder:item:0',10,200,false);
-    check('theme '+mode+' all item candidates and sky source card',await slotsMatch(-1)&&await cardMatch('placeholder:item:0',itemCardFill,0x67A3EE));
+    check('theme '+mode+' all item candidates and sky source card',await slotsMatch(-1)&&await cardMatch('placeholder:item:0',itemCardFill,itemActive));
     await move(slot.x+3,slot.y+3);
-    check('theme '+mode+' single item target and translucent card',await slotsMatch(0)&&await cardMatch('placeholder:item:0',itemCardFill,0x67A3EE,0.25));
+    check('theme '+mode+' single item target and translucent card',await slotsMatch(0)&&await cardMatch('placeholder:item:0',itemCardFill,itemActive,0.25));
     await page.screenshot({path:join(out,'card-theme-'+mode+'-item-target.png')});
     await move(10,200);
     check('theme '+mode+' item exit restores all candidates',await slotsMatch(-1));
@@ -939,6 +945,12 @@ for(const c of configs){
     await page.mouse.up();
     await move(10,200);
     check('theme '+mode+' equipped item matches themed slot',await slotsMatch(null,true)&&await cardMatch('preview-equipped:0',itemCardFill,itemBorder));
+    if(mode==='10'){
+      const loc=await coords('preview-slot:0');await move(loc.x,loc.y);
+      const tooltip=await tip();
+      check('pastoral tooltip themed surface/header/border',tooltip?.color===style.tooltipFill&&tooltip?.header===style.tooltipHeader&&tooltip?.stroke===style.tooltipBorder,JSON.stringify(tooltip));
+      await page.screenshot({path:join(out,'card-theme-10-tooltip.png')});
+    }
   }
     // The displayed CSS size and the native backing store must differ at DPR 2.
   const hi=await browser.newPage({viewport:{width:960,height:540},deviceScaleFactor:2});
