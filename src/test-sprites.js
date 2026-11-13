@@ -61,19 +61,19 @@
   const snailRows = Array.from({ length: 12 }, (_, y) => '00' + snailPixels.slice(y * 12, (y + 1) * 12) + '00');
   samples['snail:16'] = [16, snailPalette, '0'.repeat(32) + snailRows.join('') + '0'.repeat(32)];
   const key = (name, size) => 'ui-test:' + name + ':' + size;
-  // 원본 샘플은 실제 표시에도 보존한다. 16색 근사본은 비교/신규 제작 참고용이며 강제로 적용하지 않는다.
+  // 원본 픽셀 인덱스/알파는 보존하고 실제 게임 색은 Garden 16 소재 역할을 사용한다.
   const materialRoles = Object.freeze({
     'daisy:12': [null,'sand','gold','growth'], 'daisy:16': [null,'sand','gold','growth'],
     'tulip:12': [null,'red','red','red','growth','growth'], 'tulip:16': [null,'red','red','red','growth','growth'],
     'sunflower:12': [null,'gold','gold','gold','bark','growth','growth'],
     'sunflower:16': [null,'gold','gold','gold','bark','gold','growth','growth'],
-    'hydrangea:12': [null,'sky','sky','sky','sky','growth','sky'],
-    'hydrangea:16': [null,'sky','sky','sky','sky','growth','sky'],
+    'hydrangea:12': [null,'sky','sky','silver','silver','growth','sky'],
+    'hydrangea:16': [null,'sky','sky','silver','silver','growth','sky'],
     'snail:12': [null,'clay','clay','clay','clay','sand','sand','sand','sand','sand','clay','sand','sand','bark','bark','sand'],
     'snail:16': [null,'clay','clay','clay','clay','sand','sand','sand','sand','sand','clay','sand','sand','bark','bark','sand'],
     'wheelbarrow:16': [null,'clay','bark','slate']
   });
-  function pixelData(name, size, original = true) {
+  function pixelData(name, size, original = false) {
     const sample = samples[name + ':' + size];
     if (!sample) throw new Error('Unknown sample: ' + name + ':' + size);
     const [, colors, pixels] = sample;

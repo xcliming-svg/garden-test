@@ -236,11 +236,16 @@ for(const c of configs){
       U.C.panelAlt===R.n.selected&&U.C.subtle===U.C.border&&L.colors.progressBorder===U.C.border&&
       L.colors.progressTrack===L.colors.disabledFill&&R.n.hudLight===R.n.gridLine&&L.colors.blueprintLine===R.n.gridLine;
   }));
-  check('all original sprites retain source pixels; optional Garden 16 approximation preserves alpha',await page.evaluate(()=>{
+  check('all displayed sample sprites use Garden 16, preserve source alpha and actual textures',await page.evaluate(()=>{
     const P=window.GardenPalette,S=window.GardenTestSprites,allowed=new Set(Object.values(P.hex).map(c=>c.toLowerCase().slice(1)));
     return [...S.flowers.flatMap(name=>[12,16].map(size=>[name,size])),['snail',12],['snail',16],['wheelbarrow',16]].every(([name,size])=>{
       const original=S.pixelData(name,size,true),current=S.pixelData(name,size,false),display=S.pixelData(name,size);
-      if(!display.every((v,i)=>v===original[i]))return false;
+      if(!display.every((v,i)=>v===current[i]))return false;
+      const tex=window.__benchmarkGame.scene.getScene('Game').textures.get(S.textureKey(name,size));
+      const cv=document.createElement('canvas');cv.width=size;cv.height=size;const ctx=cv.getContext('2d');
+      const im=ctx.createImageData(size,size);im.data.set(current);ctx.putImageData(im,0,0);
+      const rendered=tex.getContext().getImageData(0,0,size,size).data,expected=ctx.getImageData(0,0,size,size).data;
+      if(!rendered.every((v,i)=>v===expected[i]))return false;
       for(let i=0;i<current.length;i+=4){
         if(current[i+3]!==original[i+3])return false;
         if(current[i+3]&&!allowed.has(Array.from(current.slice(i,i+3)).map(v=>v.toString(16).padStart(2,'0')).join('')))return false;
