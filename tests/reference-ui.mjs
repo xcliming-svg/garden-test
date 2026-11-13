@@ -108,7 +108,7 @@ for(const c of configs){
     check(label+' fixed sizes',JSON.stringify(m.fixed)===JSON.stringify({garden:22,slot:30,slotOuter:32,flower:16,item:16,card:32,line:1}));
     check(label+' HUD bounds',m.hud.length>=6&&m.hud.every(t=>t.x>=-eps&&t.y>=-eps&&t.x+t.w<=960+eps&&t.y+t.h<=m.top+eps),JSON.stringify(m.hud));
     const bp=m.blueprintMetrics;
-    check(label+' blueprint alignment and visible HUD spacing',bp.width===91&&bp.gridX===bp.headerX&&bp.headerX===m.hudLayout.leftPadding&&bp.titlePadX===5&&bp.gridGap===-1&&m.blueprint.gap===0&&bp.titleFont===10&&m.blueprint.cell===8&&m.blueprint.line===1&&m.blueprint.width===91&&m.blueprint.height===m.blueprint.header+91-1&&bp.height===19&&bp.topGap===m.hudLayout.textPadTop,JSON.stringify(bp));
+    check(label+' blueprint alignment and visible HUD spacing',bp.width===91&&bp.gridX===bp.headerX&&bp.headerX===m.hudLayout.leftPadding&&bp.titlePadX===5&&bp.gridGap===3&&m.blueprint.gap===3&&bp.titleFont===10&&m.blueprint.cell===8&&m.blueprint.line===1&&m.blueprint.width===91&&m.blueprint.height===m.blueprint.header+3+91&&bp.height===19&&bp.topGap===m.hudLayout.textPadTop,JSON.stringify(bp));
     check(label+' HUD nonoverlap',m.hud.every((a,i)=>m.hud.every((b,j)=>i===j||!overlap(a,b))));
     check(label+' equal HUD widths, center and labels',m.top===32&&m.hudLayout.centerY===15&&m.hudLayout.leftPadding===7.5&&m.hudLayout.rightPadding===7.5&&m.hudLayout.textPadTop===7.5&&m.hudLayout.textPadBottom===7.5&&m.hudLayout.barHeight===12&&Math.abs(m.hudLayout.timeGap-5)<0.01&&Math.abs(m.hudLayout.barGap-5)<0.01&&m.hudLayout.metricWidth>0&&m.hudLayout.gemX===2*m.hudLayout.metricWidth&&3*m.hudLayout.metricWidth<=m.hudLayout.progressX&&m.hudLayout.labelColors.every(c=>c.toLowerCase()==='#b0b0b0')&&m.hudLayout.valueColors.every(c=>c.toLowerCase()==='#ffffff'),JSON.stringify(m.hudLayout));
     check(label+' bottom HUD 40px and equal 3px clear gaps',m.bottom===40&&m.field===468&&m.slotWidth===347&&m.slots.every((s,i)=>s.y-(540-m.bottom+2)===3&&540-(s.y+s.size)===3&&(!i||s.x-m.slots[i-1].x-m.slots[i-1].size===3)),JSON.stringify(m.slots));
@@ -189,11 +189,15 @@ for(const c of configs){
       cv.width=img.width;cv.height=img.height;const ctx=cv.getContext('2d');ctx.drawImage(img,0,0);
       const p=ctx.getImageData(0,0,cv.width,cv.height).data;
       const scan=(x0,y0,x1,y1,pred)=>{let top=Infinity,bottom=-1,n=0;for(let y=Math.max(0,Math.floor(y0));y<Math.min(cv.height,Math.ceil(y1));y++)for(let x=Math.max(0,Math.floor(x0));x<Math.min(cv.width,Math.ceil(x1));x++){const i=(y*cv.width+x)*4;if(pred(p[i],p[i+1],p[i+2])){top=Math.min(top,y);bottom=Math.max(bottom,y);n++;}}return {top,bottom,n};};
-      const ink=(r,g,b)=>Math.min(r,g,b)>=145&&Math.max(r,g,b)-Math.min(r,g,b)<=5;
-      const box=o=>scan(o.x*z,o.y*z,(o.x+o.w)*z,(o.y+o.h)*z,ink);
-      const number=box(cost);
-      const gem=scan((slot.x+1)*z,(slot.y+1)*z,(slot.x+slot.size-1)*z,number.top,(r,g,b)=>r===170&&g===170&&b===170);
-      return {number,gem,labels:stats.filter(t=>t.name.startsWith('stat-label:')).map(box),values:stats.filter(t=>t.name.startsWith('stat-value:')).map(box)};
+      const threshold=z<1?75:145;
+      const ink=(r,g,b)=>Math.min(r,g,b)>=threshold&&Math.max(r,g,b)-Math.min(r,g,b)<=5;
+      // Upper and lower text canvases may overlap in their transparent padding.
+      // Split the scan at the empty space, not at object rectangle edges.
+      const split=Math.round((slot.y+slot.size/2+1.5)*z);
+      const box=(o,upper)=>scan(o.x*z,upper?o.y*z:Math.max(split,o.y*z),(o.x+o.w)*z,upper?Math.min(split,(o.y+o.h)*z):(o.y+o.h)*z,ink);
+      const number=box(cost,false);
+      const gem=scan((slot.x+1)*z,(slot.y+1)*z,(slot.x+slot.size-1)*z,split,(r,g,b)=>r===170&&g===170&&b===170);
+      return {number,gem,labels:stats.filter(t=>t.name.startsWith('stat-label:')).map(t=>box(t,true)),values:stats.filter(t=>t.name.startsWith('stat-value:')).map(t=>box(t,false))};
     },{data:bottomPng.toString('base64'),stats:m.stats,cost:m.cost,slot:m.slots[9],z:m.zoom});
     const expectedGap=Math.round(3*m.zoom);
     check(w+'x'+h+' actual visible bottom 3px gaps and alignment',bottomPixels.number.n>0&&bottomPixels.gem.n>0&&bottomPixels.number.top-bottomPixels.gem.bottom-1===expectedGap&&bottomPixels.labels.every(t=>t.n>0&&t.bottom===bottomPixels.gem.bottom)&&bottomPixels.values.every(t=>t.n>0&&t.top===bottomPixels.number.top&&Math.abs(t.bottom-bottomPixels.number.bottom)<=1),JSON.stringify(bottomPixels));
@@ -223,11 +227,12 @@ for(const c of configs){
           const header=bounds(bp.x*2,64,(bp.x+bp.width)*2,Math.ceil((bp.y+bp.header)*2),exact(103,103,119));
           const grid=bounds(bp.x*2,Math.floor(bp.gridY*2),(bp.x+bp.width)*2,Math.ceil((bp.gridY+91)*2),exact(103,103,119));
           const seamY=bp.gridY*2, seamX=bp.x*2+8;
-          const seam=[-1,0,1,2].map(d=>rgb(seamX,seamY+d));
+          const seam=Array.from({length:10},(_,i)=>rgb(seamX,seamY-8+i));
           const costInk=box(cost), numberInk=stats.filter(t=>t.name.startsWith('stat-value:')).map(t=>({text:t.text,...box(t)}));
           const labelInk=stats.filter(t=>t.name.startsWith('stat-label:')).map(t=>({text:t.text,...box(t)}));
           const gemInk=bounds(slot.x*2+2,slot.y*2+2,(slot.x+slot.size)*2-2,Math.floor(cost.y*2),exact(170,170,170));
           const bar=bounds(1500,10,1920,54,exact(135,135,150));
+          const blueprintCorners=[header,grid].flatMap(o=>[rgb(o.left,o.top),rgb(o.right,o.top),rgb(o.left,o.bottom),rgb(o.right,o.bottom)]);
           const corners={bar:[rgb(bar.left,bar.top),rgb(bar.right,bar.top),rgb(bar.left,bar.bottom),rgb(bar.right,bar.bottom)],slot:[rgb(slot.x*2,slot.y*2),rgb((slot.x+slot.size)*2-1,slot.y*2),rgb(slot.x*2,(slot.y+slot.size)*2-1),rgb((slot.x+slot.size)*2-1,(slot.y+slot.size)*2-1)]};
           const dividers=bounds(0,10,1920,50,exact(32,32,32));
           const dividerRuns=[];
@@ -237,7 +242,7 @@ for(const c of configs){
             while(x+1<1920&&exact(32,32,32)(rgb(x+1,12)))x++;
             dividerRuns.push([left,x]);
           }
-          return {image:[cv.width,cv.height],label,time,title,header,grid,bar,dividerRuns,seam,costInk,numberInk,labelInk,gemInk,corners,costVisibleGap:costInk.top-gemInk.bottom-1,
+          return {image:[cv.width,cv.height],label,time,title,header,grid,bar,dividerRuns,seam,blueprintCorners,costInk,numberInk,labelInk,gemInk,corners,costVisibleGap:costInk.top-gemInk.bottom-1,
             leftPadding:label.left,rightPadding:cv.width-bar.right-1,
             timeGap:time.left-label.right-1,hudBottomGap:64-Math.max(label.bottom,time.bottom)-1,
             headerTopGap:header.top-64,titleLeftGap:title.left-header.left,titleTopGap:title.top-header.top,
@@ -247,7 +252,8 @@ for(const c of configs){
         check('FHD right-aligned gauge and two left dividers',pixels.leftPadding===15&&pixels.rightPadding===pixels.leftPadding&&pixels.bar.width===316&&pixels.bar.height===24&&JSON.stringify(pixels.dividerRuns)===JSON.stringify([[324,327],[648,651]]),JSON.stringify(pixels));
         check('FHD one logical pixel cut corners on gauge and slot',Object.values(pixels.corners).flat().every(v=>v.join(',')==='22,22,25'),JSON.stringify(pixels.corners));
         check('FHD 3px visible gap and shared stat/cost row edges',pixels.costInk.n>0&&pixels.gemInk.n>0&&pixels.costVisibleGap===6&&pixels.numberInk.every(t=>t.n>0&&t.top===pixels.costInk.top&&t.bottom===pixels.costInk.bottom)&&pixels.labelInk.every(t=>t.n>0&&t.bottom===pixels.gemInk.bottom),JSON.stringify({cost:pixels.costInk,numbers:pixels.numberInk,labels:pixels.labelInk,gem:pixels.gemInk,gap:pixels.costVisibleGap}));
-        check('FHD actual screenshot alignment and visible gaps',pixels.header.width===182&&pixels.grid.width===182&&pixels.header.left===pixels.grid.left&&pixels.header.left===pixels.label.left&&pixels.headerTopGap===15&&[pixels.titleLeftGap,pixels.titleTopGap,pixels.titleBottomGap].every(g=>g===10)&&pixels.gridGap===-2&&pixels.grid.height===182&&JSON.stringify(pixels.seam)===JSON.stringify([[68,68,92],[103,103,119],[103,103,119],[48,46,58]]),JSON.stringify(pixels));
+        check('FHD blueprint independent cut corners',pixels.blueprintCorners.every(v=>v.join(',')==='13,13,13'),JSON.stringify(pixels.blueprintCorners));
+        check('FHD actual screenshot alignment and visible gaps',pixels.header.width===182&&pixels.grid.width===182&&pixels.header.left===pixels.grid.left&&pixels.header.left===pixels.label.left&&pixels.headerTopGap===15&&[pixels.titleLeftGap,pixels.titleTopGap,pixels.titleBottomGap].every(g=>g===10)&&pixels.gridGap===6&&pixels.grid.height===182&&JSON.stringify(pixels.seam)===JSON.stringify([[103,103,119],[103,103,119],...Array(6).fill([13,13,13]),[103,103,119],[103,103,119]]),JSON.stringify(pixels));
       }
     }
   }
