@@ -114,18 +114,18 @@
     return group;
   }
   // 꽃 24px, 아이템 및 기본 장착 32px. 1px 컷 프레임, 원본 16px 중앙 배치.
-  // Garden 16의 보라회색 공통 면 및 밝은 중성 포커스 테두리.
+  // 공통 중성 면·테두리, 활성 시 종류별 테두리 색만 변경.
   function dropCard(scene, x, y, name, size, iconSize, kind) {
     const R = window.GardenPalette.reference.n;
     const U = window.GardenUI;
-    const border = U.pixelBox(scene,0,0,size,size,kind === 'flower' ? R.green : R.tabBorder);
+    const border = U.pixelBox(scene,0,0,size,size,R.tabBorder);
+    const activeBorder = kind === 'flower' ? R.flowerBorder : R.itemBorder;
     const faceColor = R.tab;
     const face = U.pixelBox(scene,0,0,size-2,size-2,faceColor,{cut:false});
     const image = sprite(scene, 0, 0, name, iconSize);
     const group = scene.add.container(x, y, [border, face, image]).setSize(size, size);
     group.setStrokeStyle = (_width, _color, alpha) => {
-      face.setFillStyle(alpha ? R.selected : faceColor, 1);
-      border.setFillStyle(alpha ? R.hover : kind === 'flower' ? R.green : R.tabBorder, 1);
+      border.setFillStyle(alpha ? activeBorder : R.tabBorder, 1);
       return group;
     };
     return group;

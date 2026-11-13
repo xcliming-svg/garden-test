@@ -161,7 +161,7 @@ for(const c of configs){
     check(label+' fixed sizes',JSON.stringify(m.fixed)===JSON.stringify({garden:22,slot:30,slotOuter:32,flower:16,item:16,card:32,line:1}));
     check(label+' HUD bounds',m.hud.length>=6&&m.hud.every(t=>t.x>=-eps&&t.y>=-eps&&t.x+t.w<=960+eps&&t.y+t.h<=m.top+eps),JSON.stringify(m.hud));
     const bp=m.blueprintMetrics;
-    check(label+' blueprint alignment and visible HUD spacing',bp.width===91&&bp.gridX===bp.headerX&&bp.headerX===m.hudLayout.leftPadding&&bp.titlePadX===5&&bp.gridGap===3&&m.blueprint.gap===3&&bp.titleFont===10&&bp.titleColor.toLowerCase()==='#b0acbd'&&m.blueprint.cell===8&&m.blueprint.line===1&&m.blueprint.width===91&&m.blueprint.height===m.blueprint.header+3+91&&bp.height===19&&bp.topGap===m.hudLayout.textPadTop,JSON.stringify(bp));
+    check(label+' blueprint alignment and visible HUD spacing',bp.width===93&&bp.gridX===bp.headerX&&bp.headerX===m.hudLayout.leftPadding&&bp.titlePadX===5&&bp.gridGap===3&&m.blueprint.gap===3&&bp.titleFont===10&&bp.titleColor.toLowerCase()==='#b0acbd'&&m.blueprint.cell===8&&m.blueprint.line===1&&m.blueprint.width===93&&m.blueprint.height===m.blueprint.header+3+93&&bp.height===19&&bp.topGap===m.hudLayout.textPadTop,JSON.stringify(bp));
     check(label+' HUD nonoverlap',m.hud.every((a,i)=>m.hud.every((b,j)=>i===j||!overlap(a,b))));
     check(label+' equal HUD widths, center and labels',m.top===32&&m.hudLayout.centerY===15&&m.hudLayout.leftPadding===7.5&&m.hudLayout.rightPadding===7.5&&m.hudLayout.textPadTop===7.5&&m.hudLayout.textPadBottom===7.5&&m.hudLayout.barHeight===12&&Math.abs(m.hudLayout.timeGap*m.zoom-Math.round(5*m.zoom))<0.01&&Math.abs(m.hudLayout.barGap*m.zoom-Math.round(5*m.zoom))<0.01&&m.hudLayout.metricWidth>0&&Math.abs(m.hudLayout.gemX-2*m.hudLayout.metricWidth)<=1/m.zoom&&3*m.hudLayout.metricWidth<=m.hudLayout.progressX&&m.hudLayout.labelColors.every(c=>c.toLowerCase()==='#b0acbd')&&m.hudLayout.valueColors.every(c=>c.toLowerCase()==='#ffffff'),JSON.stringify(m.hudLayout));
     check(label+' bottom HUD 40px and equal 3px clear gaps',m.bottom===40&&m.field===468&&m.slotWidth===347&&m.slots.every((s,i)=>s.y-(540-m.bottom+2)===3&&540-(s.y+s.size)===3&&(!i||s.x-m.slots[i-1].x-m.slots[i-1].size===3)),JSON.stringify(m.slots));
@@ -228,7 +228,7 @@ for(const c of configs){
     let textureMismatch=0;
     for(let y=0;y<h;y++)for(let x=0;x<w;x++){
       const type=expected(visible,x,y),i=(y*w+x)*4,v=Array.from(pixels.slice(i,i+4)).join(',');
-      if(v!==(type===2?'106,186,44,255':type===1?'59,59,78,255':'0,0,0,0'))textureMismatch++;
+      if(v!==(type===2?'81,81,107,255':type===1?'59,59,78,255':'0,0,0,0'))textureMismatch++;
     }
     const center=key=>({x:g.x+key%g.columns*g.pitch+g.line+g.cell/2,y:g.y+Math.floor(key/g.columns)*g.pitch+g.line+g.cell/2});
     const centers=[...occupied].every(key=>{const o=s.children.getByName('garden-preview-flower:'+key),p=center(key);return o.x===p.x&&o.y===p.y;});
@@ -250,7 +250,7 @@ for(const c of configs){
     cv.width=img.width;cv.height=img.height;const ctx=cv.getContext('2d');ctx.drawImage(img,0,0);
     const p=ctx.getImageData(0,0,cv.width,cv.height).data,R=Math.round;
     const rgb=(x,y)=>Array.from(p.slice((y*cv.width+x)*4,(y*cv.width+x)*4+3)).join(',');
-    const green='106,186,44',face='59,59,78';
+    const green='81,81,107',face='59,59,78';
     const x=(g.x+5*g.pitch)*z,y=(g.y+5*g.pitch)*z;
     // Scan the shared lines in an unoccupied strip, away from the 16px flower icons.
     const scan=(vertical,at,fixed)=>{
@@ -313,7 +313,7 @@ for(const c of configs){
     return s.children.list.filter(o=>/^placeholder:(item|flower):/.test(o.name||'')).map(o=>({name:o.name,x:o.x,y:o.y,w:o.width,h:o.height,hitW:o.input.hitArea.width,hitH:o.input.hitArea.height,border:o.list[0].visible,borderY:o.list[0].y,borderColor:o.list[0].fillColor,face:o.list[1].visible,faceColor:o.list[1].fillColor,faceW:o.list[1].width,faceH:o.list[1].height,faceY:o.list[1].y,img:o.list[2].y,imgW:o.list[2].displayWidth,shadow:o.list[3].visible,shadowW:o.list[3].width,shadowH:o.list[3].height}));
   });
   const drops=await dropState();
-  check('all eight drops have 24px flower or 32px item frames, 16px icons and matching hit boxes',drops.length===8&&drops.every(o=>o.w===(o.name.includes(':flower:')?24:32)&&o.h===o.w&&o.hitW===o.w&&o.hitH===o.w&&o.border&&o.face&&o.faceColor===0x3B3B4E&&o.borderColor===(o.name.includes(':flower:')?0x6ABA2C:0x51516B)&&o.faceW===o.w-2&&o.faceH===o.h-2&&o.borderY===o.img&&o.faceY===o.img&&o.imgW===16&&o.shadow&&o.shadowW===12&&o.shadowH===3),JSON.stringify(drops));
+  check('all eight drops have 24px flower or 32px item frames, 16px icons and matching hit boxes',drops.length===8&&drops.every(o=>o.w===(o.name.includes(':flower:')?24:32)&&o.h===o.w&&o.hitW===o.w&&o.hitH===o.w&&o.border&&o.face&&o.faceColor===0x3B3B4E&&o.borderColor===0x51516B&&o.faceW===o.w-2&&o.faceH===o.h-2&&o.borderY===o.img&&o.faceY===o.img&&o.imgW===16&&o.shadow&&o.shadowW===12&&o.shadowH===3),JSON.stringify(drops));
   const positions=[];
   for(let i=0;i<7;i++){positions.push(await dropState());await page.waitForTimeout(150);}
   check('float moves square and icon together, integer 0..4 px, stable hitbox',positions.every(p=>p.every((o,i)=>o.x===drops[i].x&&o.y===drops[i].y&&o.borderY===o.img&&o.faceY===o.img&&Number.isInteger(o.img)&&o.img>=-4&&o.img<=0))&&drops.every((_,i)=>new Set(positions.map(p=>p[i].img)).size>=2));
@@ -342,7 +342,7 @@ for(const c of configs){
       return true;
     });
   }));
-  check('reference palette and opaque tree-node garden',await page.evaluate(()=>{const L=window.GardenGameLayout,s=window.__benchmarkGame.scene.getScene('Game'),g=L.spec.garden,t=s.textures.get('ui-test:garden-soil:'+g.cell),px=t.getContext().getImageData(4*g.pitch+3,4*g.pitch+3,1,1).data;const border=t.getContext().getImageData(4*g.pitch+3,4*g.pitch,1,1).data;return L.colors.field===0x0D0D0D&&L.colors.hud===0x161619&&L.colors.gardenSoil===0x3B3B4E&&L.colors.gridFill===L.colors.normalFill&&L.colors.normalFill===L.colors.gardenSoil&&L.itemTooltip.background===L.colors.normalFill&&L.colors.gardenSoilAlpha===1&&Array.from(px).join(',')==='59,59,78,255'&&Array.from(border).join(',')==='106,186,44,255'&&L.colors.progressTrack===0x161619&&L.colors.progressFill===0x6ABA2C&&L.colors.progressBorder===0x676777&&L.hud.barHeight===12&&L.hud.barWidth===158&&L.spec.top===32;}));
+  check('reference palette and opaque tree-node garden',await page.evaluate(()=>{const L=window.GardenGameLayout,s=window.__benchmarkGame.scene.getScene('Game'),g=L.spec.garden,t=s.textures.get('ui-test:garden-soil:'+g.cell),px=t.getContext().getImageData(4*g.pitch+3,4*g.pitch+3,1,1).data;const border=t.getContext().getImageData(4*g.pitch+3,4*g.pitch,1,1).data;return L.colors.field===0x0D0D0D&&L.colors.hud===0x161619&&L.colors.gardenSoil===0x3B3B4E&&L.colors.gridFill===L.colors.normalFill&&L.colors.normalFill===L.colors.gardenSoil&&L.itemTooltip.background===L.colors.normalFill&&L.colors.gardenSoilAlpha===1&&Array.from(px).join(',')==='59,59,78,255'&&Array.from(border).join(',')==='81,81,107,255'&&L.colors.progressTrack===0x161619&&L.colors.progressFill===0x6ABA2C&&L.colors.progressBorder===0x676777&&L.hud.barHeight===12&&L.hud.barWidth===158&&L.spec.top===32;}));
 
   const captureHudGaps=async(png,all,z,labels)=>{
     return page.evaluate(async ({data,all,z,labels})=>{
@@ -401,15 +401,15 @@ for(const c of configs){
       const any=(start,end,pred)=>{for(let i=start;i<end;i++)if(pred(i))return true;return false;};
       const slotRuns=runs(R((first.x-2)*z),R((last.x+last.size+2)*z),x=>any(R(first.y*z),R((first.y+first.size)*z),y=>rgb(x,y)!==hud));
       const slotY=runs(R((first.y-2)*z),R((first.y+first.size+2)*z),y=>any(R(first.x*z),R((first.x+first.size)*z),x=>rgb(x,y)!==hud));
-      const bpY=runs(R((bp.y-2)*z),R((bp.gridY+91+2)*z),y=>rgb(R((bp.x+bp.width/2)*z),y)!==field);
-      const bpX=[[bp.y,bp.header],[bp.gridY,91]].map(([y,h])=>runs(R((bp.x-2)*z),R((bp.x+bp.width+2)*z),x=>any(R(y*z),R((y+h)*z),py=>rgb(x,py)!==field)));
+      const bpY=runs(R((bp.y-2)*z),R((bp.gridY+bp.width+2)*z),y=>rgb(R((bp.x+bp.width/2)*z),y)!==field);
+      const bpX=[[bp.y,bp.header],[bp.gridY,bp.width]].map(([y,h])=>runs(R((bp.x-2)*z),R((bp.x+bp.width+2)*z),x=>any(R(y*z),R((y+h)*z),py=>rgb(x,py)!==field)));
       const barX=960-7.5-158,barY=15-6;
       const gaugeX=runs(R((barX-1)*z),cv.width,x=>any(R(barY*z),R((barY+12)*z),y=>rgb(x,y)!==hud));
       const gaugeY=runs(R((barY-2)*z),R((barY+14)*z),y=>any(R(barX*z),R((barX+158)*z),x=>rgb(x,y)!==hud));
       const topY=runs(0,R(40*z),y=>rgb(0,y)!==field);
       const bottomY=runs(R(490*z),cv.height,y=>rgb(0,y)!==field);
       const pair=(x,w)=>[R(x*z),R((x+w)*z)];
-      const expected={slotRuns:m.slots.map(s=>pair(s.x,s.size)),slotY:[pair(first.y,first.size)],bpY:[pair(bp.y,bp.header),pair(bp.gridY,91)],bpX:[[pair(bp.x,bp.width)],[pair(bp.x,bp.width)]],gaugeX:[pair(barX,158)],gaugeY:[pair(barY,12)],topY:[[0,R(m.top*z)]],bottomY:[[R((540-m.bottom)*z),cv.height]]};
+      const expected={slotRuns:m.slots.map(s=>pair(s.x,s.size)),slotY:[pair(first.y,first.size)],bpY:[pair(bp.y,bp.header),pair(bp.gridY,bp.width)],bpX:[[pair(bp.x,bp.width)],[pair(bp.x,bp.width)]],gaugeX:[pair(barX,158)],gaugeY:[pair(barY,12)],topY:[[0,R(m.top*z)]],bottomY:[[R((540-m.bottom)*z),cv.height]]};
       const actual={slotRuns,slotY,bpY,bpX,gaugeX,gaugeY,topY,bottomY};
       const near=(a,b)=>Array.isArray(a)?Array.isArray(b)&&a.length===b.length&&a.every((v,i)=>near(v,b[i])):Math.abs(a-b)<=1;
       return {actual,expected,checks:Object.fromEntries(Object.keys(expected).map(k=>[k,near(actual[k],expected[k])]))};
@@ -442,8 +442,8 @@ for(const c of configs){
           const gem=bounds(648,0,701,60,v=>v.join(',')==='176,172,189');
           const progressLabel=box(hud.find(o=>o.text==='정원 완성도'));
           const title=bounds(bp.x*2+2,Math.floor(bp.y*2)+2,Math.ceil((bp.x+40)*2),Math.ceil((bp.y+bp.header)*2)-2,ink);
-          const header=bounds(bp.x*2,64,(bp.x+bp.width)*2,Math.ceil((bp.y+bp.header)*2),exact(103,103,119));
-          const grid=bounds(bp.x*2,Math.floor(bp.gridY*2),(bp.x+bp.width)*2,Math.ceil((bp.gridY+91)*2),exact(103,103,119));
+          const header=bounds(bp.x*2,64,(bp.x+bp.width)*2,Math.ceil((bp.y+bp.header)*2),exact(59,59,78));
+          const grid=bounds(bp.x*2,Math.floor(bp.gridY*2),(bp.x+bp.width)*2,Math.ceil((bp.gridY+bp.width)*2),exact(59,59,78));
           const seamY=bp.gridY*2, seamX=bp.x*2+8;
           const seam=Array.from({length:10},(_,i)=>rgb(seamX,seamY-8+i));
           const split=Math.round((slot.y+slot.size/2+1.5)*2);
@@ -453,6 +453,7 @@ for(const c of configs){
           const gemInk=bounds(slot.x*2+2,slot.y*2+2,(slot.x+slot.size)*2-2,split,exact(176,172,189));
           const bar=bounds(1500,10,1920,54,exact(103,103,119));
           const blueprintCorners=[header,grid].flatMap(o=>[rgb(o.left,o.top),rgb(o.right,o.top),rgb(o.left,o.bottom),rgb(o.right,o.bottom)]);
+          const blueprintBorders=[bp.y,bp.gridY].map(y=>Array.from({length:4},(_,i)=>rgb(bp.x*2+20,y*2+i).join(',')));
           const corners={bar:[rgb(bar.left,bar.top),rgb(bar.right,bar.top),rgb(bar.left,bar.bottom),rgb(bar.right,bar.bottom)],slot:[rgb(slot.x*2,slot.y*2),rgb((slot.x+slot.size)*2-1,slot.y*2),rgb(slot.x*2,(slot.y+slot.size)*2-1),rgb((slot.x+slot.size)*2-1,(slot.y+slot.size)*2-1)]};
           const dividers=bounds(0,10,1920,50,exact(13,13,13));
           const dividerRuns=[];
@@ -462,7 +463,7 @@ for(const c of configs){
             while(x+1<1920&&exact(13,13,13)(rgb(x+1,12)))x++;
             dividerRuns.push([left,x]);
           }
-          return {image:[cv.width,cv.height],label,time,title,header,grid,bar,dividerRuns,seam,blueprintCorners,costInk,numberInk,labelInk,gemInk,corners,costVisibleGap:costInk.top-gemInk.bottom-1,
+          return {image:[cv.width,cv.height],label,time,title,header,grid,bar,dividerRuns,seam,blueprintCorners,blueprintBorders,costInk,numberInk,labelInk,gemInk,corners,costVisibleGap:costInk.top-gemInk.bottom-1,
             leftPadding:label.left,rightPadding:cv.width-bar.right-1,visibleHudGaps:{time:time.left-label.right-1,kills:counters[0].left-killsLabel.right-1,gem:gem.n?counters[1].left-gem.right-1:null,progress:bar.left-progressLabel.right-1},
             timeGap:time.left-label.right-1,hudBottomGap:64-Math.max(label.bottom,time.bottom)-1,
             headerTopGap:header.top-64,titleLeftGap:title.left-header.left,titleTopGap:title.top-header.top,
@@ -473,7 +474,8 @@ for(const c of configs){
         check('FHD one logical pixel cut corners on gauge and slot',Object.values(pixels.corners).flat().every(v=>v.join(',')==='22,22,25'),JSON.stringify(pixels.corners));
         check('FHD 3px visible gap and shared stat/cost row edges',pixels.costInk.n>0&&pixels.gemInk.n>0&&pixels.costVisibleGap===6&&pixels.numberInk.every(t=>t.n>0&&t.top===pixels.costInk.top&&t.bottom===pixels.costInk.bottom)&&pixels.labelInk.every(t=>t.n>0&&t.bottom===pixels.gemInk.bottom),JSON.stringify({cost:pixels.costInk,numbers:pixels.numberInk,labels:pixels.labelInk,gem:pixels.gemInk,gap:pixels.costVisibleGap}));
         check('FHD blueprint independent cut corners',pixels.blueprintCorners.every(v=>v.join(',')==='13,13,13'),JSON.stringify(pixels.blueprintCorners));
-        check('FHD actual screenshot alignment and visible gaps',pixels.header.width===182&&pixels.grid.width===182&&pixels.header.left===pixels.grid.left&&pixels.header.left===pixels.label.left&&pixels.headerTopGap===15&&[pixels.titleLeftGap,pixels.titleTopGap,pixels.titleBottomGap].every(g=>g===10)&&pixels.gridGap===6&&pixels.grid.height===182&&JSON.stringify(pixels.seam)===JSON.stringify([[103,103,119],[103,103,119],...Array(6).fill([13,13,13]),[103,103,119],[103,103,119]]),JSON.stringify(pixels));
+        check('FHD blueprint matches HUD double border',pixels.blueprintBorders.every(v=>v.join('|')==='59,59,78|59,59,78|81,81,107|81,81,107'),JSON.stringify(pixels.blueprintBorders));
+        check('FHD actual screenshot alignment and visible gaps',pixels.header.width===186&&pixels.grid.width===186&&pixels.header.left===pixels.grid.left&&pixels.header.left===pixels.label.left&&pixels.headerTopGap===15&&[pixels.titleLeftGap,pixels.titleTopGap,pixels.titleBottomGap].every(g=>g===10)&&pixels.gridGap===6&&pixels.grid.height===186&&JSON.stringify(pixels.seam)===JSON.stringify([[59,59,78],[59,59,78],...Array(6).fill([13,13,13]),[59,59,78],[59,59,78]]),JSON.stringify(pixels));
       }
     }
   }
@@ -484,7 +486,7 @@ for(const c of configs){
   const drag=async(name,x,y,release=true)=>{let a=await coords(name);await move(a.x,a.y);await page.mouse.down();const b=await page.locator('canvas').boundingBox();await page.mouse.move(b.x+x,b.y+y,{steps:8});if(release)await page.mouse.up();};
   const tip=async()=>page.evaluate(()=>{const s=window.__benchmarkGame.scene.getScene('Game'),t=s.children.getByName('item-preview-tooltip'),r=t.list[0];if(!t.visible||!r)return null;return {x:t.x,y:t.y,w:r.width,h:r.height,color:r.fillColor,stroke:r.strokeColor,header:t.list.find(o=>o.name==='item-tooltip-header')?.fillColor,headerHeight:t.list.find(o=>o.name==='item-tooltip-header')?.height+1,zoom:s.cameras.main.zoom,divider:!!t.getByName('item-tooltip-divider'),rows:t.list.filter(o=>o.type==='Text').map(o=>({x:o.x,y:o.y,w:o.width,h:o.height,text:o.text,color:o.style.color,font:parseFloat(o.style.fontSize)}))};});
   let tips=[];
-  const inspectTip=(t,key,isSlot=false)=>{check(key+' tooltip bounds',!!t&&t.x>=c.margin-.5&&t.y>=c.top+c.margin-.5&&t.x+t.w<=960-c.margin+.5&&t.y+t.h<=540-c.bottom-(isSlot?0:8)+.5,JSON.stringify(t));if(t){check(key+' tooltip colors and width',t.w===c.tipW&&t.color===0x3B3B4E&&t.stroke===0x676777&&t.header===0x44445C&&!t.divider&&t.rows[1]?.color.toLowerCase()==='#b0acbd',JSON.stringify(t));check(key+' tooltip rows',t.rows.every((r,i)=>r.x>=1&&r.x+r.w<=t.w+1&&r.y>=1&&r.y+r.h<=t.h+1&&(!i||r.y>t.rows[i-1].y)),JSON.stringify(t.rows));check(key+' tooltip all rows 10px',t.rows.length>0&&t.rows.every(r=>r.font===10),JSON.stringify(t.rows));tips.push(t);}};
+  const inspectTip=(t,key,isSlot=false)=>{check(key+' tooltip bounds',!!t&&t.x>=c.margin-.5&&t.y>=c.top+c.margin-.5&&t.x+t.w<=960-c.margin+.5&&t.y+t.h<=540-c.bottom-(isSlot?0:8)+.5,JSON.stringify(t));if(t){check(key+' tooltip colors and width',t.w===c.tipW&&t.color===0x3B3B4E&&t.stroke===0x51516B&&t.header===0x44445C&&!t.divider&&t.rows[1]?.color.toLowerCase()==='#b0acbd',JSON.stringify(t));check(key+' tooltip rows',t.rows.every((r,i)=>r.x>=1&&r.x+r.w<=t.w+1&&r.y>=1&&r.y+r.h<=t.h+1&&(!i||r.y>t.rows[i-1].y)),JSON.stringify(t.rows));check(key+' tooltip all rows 10px',t.rows.length>0&&t.rows.every(r=>r.font===10),JSON.stringify(t.rows));tips.push(t);}};
   const captureTipPixels=async(t,png)=>page.evaluate(async ({data,t})=>{
     const img=await createImageBitmap(await (await fetch('data:image/png;base64,'+data)).blob()),cv=document.createElement('canvas');
     cv.width=img.width;cv.height=img.height;const ctx=cv.getContext('2d');ctx.drawImage(img,0,0);
@@ -513,7 +515,7 @@ for(const c of configs){
     const px=ctx.getImageData(0,0,cv.width,cv.height).data,z=t.zoom,R=Math.round;
     const vertical=side==='above',fixed=R((vertical?a.x:a.y)*z);
     const rgb=v=>{const x=vertical?fixed:v,y=vertical?v:fixed,i=(y*cv.width+x)*4;return (px[i]<<16)|(px[i+1]<<8)|px[i+2];};
-    const cardColors=[0xB0ACBD,0x51516B],tipColors=[0x676777,0x44445C,0x3B3B4E];
+    const cardColors=[0x67A3EE,0x3B3B4E],tipColors=[0x51516B,0x44445C,0x3B3B4E];
     const edge=(expected,colors,high,limit=Infinity)=>{
       // Prefer the border itself; when a subpixel border vanishes, use its fill.
       // In the vertical case exclude the separate HUD boundary, which shares the panel fill.
@@ -569,7 +571,18 @@ for(const c of configs){
   }
   await page.setViewportSize({width:960,height:540});await page.waitForFunction(()=>window.__benchmarkGame.scene.getScene('Game').cameras.main.zoom===1);
   const slot=initial.slots[0],last=initial.slots[9];
-  await drag('placeholder:item:0',slot.x+slot.size/2,slot.y+slot.size/2);
+  const cardState=async name=>page.evaluate(name=>{const o=window.__benchmarkGame.scene.getScene('Game').children.getByName(name);return {border:o.list[0].fillColor,face:o.list[1].fillColor,alpha:o.alpha};},name);
+  const slotState=async()=>page.evaluate(()=>{const s=window.__benchmarkGame.scene.getScene('Game');return Array.from({length:10},(_,i)=>{const b=s.children.getByName('slot-frame:'+i),o=s.children.getByName('preview-equipped:'+i);return {border:o?.visible?o.list[0].fillColor:b.strokeColor,face:o?.visible?o.list[1].fillColor:b.fillColor,single:!(o?.visible&&b.visible)};});});
+  const sky=0x67A3EE,slate=0x51516B,panel=0x3B3B4E;
+  const a=await coords('placeholder:item:0');await move(a.x,a.y);
+  check('item hover sky border only',JSON.stringify(await cardState('placeholder:item:0'))===JSON.stringify({border:sky,face:panel,alpha:1}));
+  await drag('placeholder:item:0',10,200,false);
+  check('item drag sky on all nine usable slots, locked neutral',await slotState().then(a=>a.every((v,i)=>v.single&&v.border===(i===9?slate:sky)&&v.face===(i===9?0x161619:panel))));
+  await page.screenshot({path:join(out,'item-drag-borders.png')});
+  await move(slot.x+slot.size/2,slot.y+slot.size/2);
+  check('item target sky with one slot border and ghost icon',await page.evaluate(()=>{const s=window.__benchmarkGame.scene.getScene('Game'),g=s.children.getByName('item-preview-ghost');return g.visible&&!g.list[0].visible&&!g.list[1].visible&&s.children.getByName('slot-frame:0').strokeColor===0x67A3EE&&!s.children.getByName('preview-slot-highlight');}));
+  await page.mouse.up();
+  check('item placed returns to slate, single frame',await slotState().then(a=>a.every(v=>v.single&&v.border===slate)));
   check('equip',await page.evaluate(()=>window.__benchmarkGame.scene.getScene('Game').children.getByName('preview-equipped:0').visible));
   for(const [w,h] of viewportSizes){
     await page.setViewportSize({width:w,height:h});await page.waitForFunction(w=>Math.abs(window.__benchmarkGame.scene.getScene('Game').cameras.main.zoom-w/960)<1e-6,w);
@@ -592,7 +605,7 @@ for(const c of configs){
   console.log('TOOLTIP_PADDING_REPORT '+JSON.stringify(tipPixels));
   const delta=await gameMetrics();inspectGame(delta,'replacement stats');
   check('dragged item follows target',await page.evaluate(({x,y})=>{const s=window.__benchmarkGame.scene.getScene('Game'),o=s.children.getByName('placeholder:item:3'),ghost=s.children.getByName('item-preview-ghost');return Math.abs(o.x-x)<1&&Math.abs(o.y-y)<1&&Math.abs(o.alpha-.25)<.001&&ghost.visible&&Math.abs(ghost.x-x)<1&&Math.abs(ghost.y-y)<1;},{x:slot.x+slot.size/2,y:slot.y+slot.size/2}));
-  check('dragging image centered and shadow hidden',await page.evaluate(()=>{const o=window.__benchmarkGame.scene.getScene('Game').children.getByName('placeholder:item:3');return o.list[2].y===0&&o.list[1].y===0&&!o.list[3].visible&&o.list[0].visible&&o.list[0].y===0&&o.list[1].visible&&o.list[1].fillColor===0x51516B;}));
+  check('dragging image centered and shadow hidden',await page.evaluate(()=>{const o=window.__benchmarkGame.scene.getScene('Game').children.getByName('placeholder:item:3');return o.list[2].y===0&&o.list[1].y===0&&!o.list[3].visible&&o.list[0].visible&&o.list[0].y===0&&o.list[1].visible&&o.list[1].fillColor===0x3B3B4E&&o.list[0].fillColor===0x67A3EE;}));
   await page.mouse.up();
   check('equipped item keeps original slot frame',await page.evaluate(()=>{const o=window.__benchmarkGame.scene.getScene('Game').children.getByName('preview-equipped:0');return o.visible&&o.list.length===3&&o.list[0].visible&&o.list[1].visible&&o.list[2].y===0;}));
   check('replace',await page.evaluate(()=>window.__benchmarkGame.scene.getScene('Game').children.getByName('preview-equipped:0').visible&&!window.__benchmarkGame.scene.getScene('Game').children.getByName('placeholder:item:3').visible));
@@ -604,21 +617,34 @@ for(const c of configs){
   check('rejected drop resumes float',resumed,JSON.stringify(await page.evaluate(()=>{const o=window.__benchmarkGame.scene.getScene('Game').children.getByName('placeholder:item:1');return {visible:o.visible,depth:o.depth,shadow:o.list[3].visible,border:o.list[0].visible,face:o.list[1].visible,fillColor:o.list[1].fillColor};})));
   let g=initial.garden;
   const targetFlower={x:g.x+4*g.pitch+g.line+g.cell/2,y:g.y+3*g.pitch+g.line+g.cell/2};
-  await page.evaluate(()=>{
-    const g=window.__benchmarkGame.scene.getScene('Game').children.getByName('garden-preview-highlight'),fill=g.fillRect,clear=g.clear;
-    g.auditRects=[];
-    g.fillRect=function(x,y,w,h){this.auditRects.push({x,y,w,h});return fill.call(this,x,y,w,h);};
-    g.clear=function(){this.auditRects=[];return clear.call(this);};
+  const flowerPos=await coords('placeholder:flower:0');await move(flowerPos.x,flowerPos.y);
+  check('flower hover green border only',JSON.stringify(await cardState('placeholder:flower:0'))===JSON.stringify({border:0x6ABA2C,face:panel,alpha:1}));
+  const flowerGridState=async()=>page.evaluate(()=>{
+    const L=window.GardenGameLayout,g=L.spec.garden,s=window.__benchmarkGame.scene.getScene('Game'),occupied=new Set([44,45,54,55]),candidates=L.gardenCandidates(occupied),visible=new Set([...occupied,...candidates]),t=s.textures.get('ui-test:garden-soil:'+g.cell),ctx=t.getContext();
+    const pixels=ctx.getImageData(0,0,g.size,g.size).data;
+    let mismatch=0,green=0,expectedGreen=0;
+    for(let y=0;y<g.size;y++)for(let x=0;x<g.size;x++){
+      let type=0;
+      for(const k of visible){
+        const a=x-k%g.columns*g.pitch,b=y-Math.floor(k/g.columns)*g.pitch;
+        if(a<0||a>=g.outer||b<0||b>=g.outer)continue;
+        const ex=a===0||a===g.outer-1,ey=b===0||b===g.outer-1;
+        if(ex&&ey)continue;
+        type=Math.max(type,ex||ey?(candidates.has(k)?3:2):1);
+      }
+      const i=(y*g.size+x)*4,v=Array.from(pixels.slice(i,i+4)).join(',');
+      if(type===3)expectedGreen++;
+      if(v==='106,186,44,255')green++;
+      if(v!==(type===3?'106,186,44,255':type===2?'81,81,107,255':type===1?'59,59,78,255':'0,0,0,0'))mismatch++;
+    }
+    return {mismatch,green,expectedGreen,noOverlay:!s.children.getByName('garden-preview-highlight')};
   });
-  await drag('placeholder:flower:0',targetFlower.x,targetFlower.y,false);
-  check('flower target has no duplicate border draw, only other candidate pluses',await page.evaluate(()=>{
-    const s=window.__benchmarkGame.scene.getScene('Game'),a=s.children.getByName('garden-preview-highlight').auditRects;
-    const L=window.GardenGameLayout,g=L.spec.garden,occupied=new Set([44,45,54,55]),candidates=L.gardenCandidates(occupied);
-    return a.length===(candidates.size-1)*3&&a.every(r=>[4,9].includes(Math.max(r.w,r.h))&&Math.min(r.w,r.h)===1&&[...candidates].filter(k=>k!==34).some(k=>{
-      const x=g.x+k%g.columns*g.pitch+g.line,y=g.y+Math.floor(k/g.columns)*g.pitch+g.line;
-      return r.x>=x&&r.y>=y&&r.x+r.w<=x+g.cell&&r.y+r.h<=y+g.cell;
-    }));
-  }));
+  await drag('placeholder:flower:0',10,200,false);
+  check('flower drag candidate borders only, no overlay',await flowerGridState().then(a=>a.mismatch===0&&a.green===a.expectedGreen&&a.green>0&&a.noOverlay));
+  check('flower drag card green border and neutral face',JSON.stringify(await cardState('placeholder:flower:0'))===JSON.stringify({border:0x6ABA2C,face:panel,alpha:1}));
+  await page.screenshot({path:join(out,'flower-drag-borders.png')});
+  await move(targetFlower.x,targetFlower.y);
+  check('flower target retains single green grid and no pluses',await flowerGridState().then(a=>a.mismatch===0&&a.noOverlay));
   const gardenDragPng=await page.screenshot({path:join(out,'garden-drag-cut-corners.png')});
   const gardenDragSeams=await captureGardenSeams(page,gardenDragPng,g,1);
   check('flower target preserves cut corner pixels during drag',gardenDragSeams.corners.filter(v=>v.row===4&&(v.col===4||v.col===5)).every(v=>v.clear),JSON.stringify(gardenDragSeams.corners));

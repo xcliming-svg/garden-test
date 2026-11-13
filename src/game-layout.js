@@ -11,7 +11,7 @@
   const U = window.GardenUI;
   const { unit, tile, spacing } = U;
   const blueprintCell = 8, blueprintLine = 1, blueprintPitch = blueprintCell + blueprintLine;
-  const blueprintGrid = 10 * blueprintPitch + blueprintLine;
+  const blueprintFrame = 1, blueprintGrid = 10 * blueprintPitch + blueprintLine + 2 * blueprintFrame;
   const hudGap = 5;
   // 제목의 가시 여백은 5px. 분리된 제목 박스와 그리드 사이는 3px.
   const blueprintPadding = hudGap, blueprintFontSize = 10, blueprintGap = 3;
@@ -46,7 +46,7 @@
     garden: Object.freeze({ x: Math.floor((width - gardenSize) / 2), y: Math.floor(topHudHeight + (fieldHeight - gardenSize) / 2), columns: 10, rows: 10, cell: gardenCell, line: cellLine, gap: 0, pitch: gardenPitch, outer: gardenOuter, size: gardenSize }),
     blueprint: Object.freeze({
       x: hudPadding, y: blueprintY, padding: blueprintPadding, gap: blueprintGap, topGap: blueprintTopGap, header: blueprintHeader, fontSize: blueprintFontSize,
-      columns: 10, rows: 10, cell: blueprintCell, line: blueprintLine, pitch: blueprintPitch,
+      columns: 10, rows: 10, cell: blueprintCell, line: blueprintLine, pitch: blueprintPitch, frame: blueprintFrame,
       width: blueprintGrid,
       height: blueprintHeader + blueprintGap + blueprintGrid,
       gridX: hudPadding, gridY: blueprintY + blueprintHeader + blueprintGap
@@ -82,9 +82,8 @@
     normalFill: R.n.tab, normalBorder: R.n.tabBorder,
     progressTrack: R.n.track, progressBorder: R.n.border, progressFill: R.n.green,
     disabledFill: R.n.disabledFill, disabledBorder: R.n.tabBorder, disabledText: R.hex.disabled,
-    enabledFill: R.n.background, enabledBorder: R.n.green, enabledText: R.hex.green,
-    focusBorder: R.n.hover, invalidBorder: R.n.red,
     gardenSoil: R.n.tab, gardenSoilAlpha: 1, gardenBorder: R.n.gardenBorder,
+    flowerBorder: R.n.flowerBorder, itemBorder: R.n.itemBorder,
     blueprintLine: R.n.gridLine, reservedIcon: R.n.icon
   });
 
@@ -116,43 +115,28 @@
     g.fillStyle(R.n.hudLight, 1).fillRect(0, y + 1, spec.width, 1);
   }
 
-  // 내부 면을 침범하지 않는 1px 외부 프레임.
-  function slotVisual(g, x, y, size, disabled) {
-    U.pixelFrame(g, x, y, size, size, disabled ? colors.disabledFill : colors.normalFill,
-      disabled ? colors.disabledBorder : colors.normalBorder);
+  // 도안은 HUD의 두 경계색을 외곽/내곽에 동일하게 사용한다.
+  // 내부 8px 셀과 1px 공유선을 보존하기 위해 바깥에 1px 띠를 추가한다.
+  function blueprintFrameBox(g,x,y,w,h,fill) {
+    g.fillStyle(colors.hudBorder,1);
+    g.fillRect(x+1,y,w-2,1); g.fillRect(x+1,y+h-1,w-2,1);
+    g.fillRect(x,y+1,1,h-2); g.fillRect(x+w-1,y+1,1,h-2);
+    g.fillStyle(R.n.hudLight,1);
+    g.fillRect(x+1,y+1,w-2,1); g.fillRect(x+1,y+h-2,w-2,1);
+    g.fillRect(x+1,y+2,1,h-4); g.fillRect(x+w-2,y+2,1,h-4);
+    if (fill !== undefined) g.fillStyle(fill,1).fillRect(x+2,y+2,w-4,h-4);
   }
-
-  // 드래그 중 후보에는 1px 두께의 9px 십자, 진입한 대상에는 같은 황록 1px 사각형.
-  // 정수 픽셀 중앙에 맞추고 교차점과 모서리를 중복해서 그리지 않는다.
-  function dropPlus(g, x, y, size) {
-    const cx = x + Math.floor(size / 2), cy = y + Math.floor(size / 2);
-    g.fillStyle(colors.enabledBorder, 1);
-    g.fillRect(cx - 4, cy, 9, 1);
-    g.fillRect(cx, cy - 4, 1, 4);
-    g.fillRect(cx, cy + 1, 1, 4);
-  }
-  function dropSquare(g, x, y, size) {
-    g.fillStyle(colors.enabledBorder, 1);
-    g.fillRect(x + 1, y, size - 2, 1);
-    g.fillRect(x + 1, y + size - 1, size - 2, 1);
-    g.fillRect(x, y + 1, 1, size - 2);
-    g.fillRect(x + size - 1, y + 1, 1, size - 2);
-  }
-
-  function grid(g, x, y, b, fill, line, outerBorder = colors.gridBorder) {
-    const width = b.columns * b.pitch + b.line;
-    const height = b.rows * b.pitch + b.line;
-    // 외곽 및 내부 공유선은 1px, 각 칸의 순수 내부는 8×8.
-    U.pixelFrame(g, x, y, width, height, fill, outerBorder);
-    g.fillStyle(line, 1);
-    for (let i = 1; i < b.columns; i++) {
-      g.fillRect(x + i * b.pitch, y + b.line, b.line, height - 2 * b.line);
+  function grid(g,x,y,b,fill,line) {
+    const width=b.width,height=b.rows*b.pitch+b.line+2*b.frame;
+    blueprintFrameBox(g,x,y,width,height);
+    for(let row=0;row<b.rows;row++)for(let col=0;col<b.columns;col++){
+      g.fillStyle(fill,1).fillRect(x+b.frame+b.line+col*b.pitch,y+b.frame+b.line+row*b.pitch,b.cell,b.cell);
     }
-    // 가로선은 각 내부 면 구간만 그려 세로선과 중복하지 않는다.
-    for (let row = 1; row < b.rows; row++) {
-      for (let col = 0; col < b.columns; col++) {
-        g.fillRect(x + b.line + col * b.pitch, y + row * b.pitch, b.cell, b.line);
-      }
+    for(let i=1;i<b.columns;i++){
+      g.fillStyle(line,1).fillRect(x+b.frame+i*b.pitch,y+b.frame+b.line,b.line,height-2*(b.frame+b.line));
+    }
+    for(let row=1;row<b.rows;row++)for(let col=0;col<b.columns;col++){
+      g.fillStyle(line,1).fillRect(x+b.frame+b.line+col*b.pitch,y+b.frame+row*b.pitch,b.cell,b.line);
     }
   }
 
@@ -398,9 +382,11 @@
     g.fillStyle(colors.hud, 1).fillRect(0, spec.top + spec.fieldHeight, spec.width, spec.bottom);
     hudBoundary(g, spec.top + spec.fieldHeight);
     const layout = bottomLayout();
-    layout.slots.forEach((slot, i) => {
-      slotVisual(g, slot.x, slot.y, slot.size, i === s.preview);
-      if (i === s.preview) layout.alignCost = drawSlotCost(scene, slot.x + s.line, slot.y + s.line, s.cell, s.exampleCost);
+    layout.slotFrames = layout.slots.map((slot,i) => {
+      const disabled=i===s.preview;
+      const frame=U.pixelBox(scene,slot.x+slot.size/2,slot.y+slot.size/2,slot.size,slot.size,disabled?colors.disabledFill:colors.normalFill,{strokeWidth:s.line,border:disabled?colors.disabledBorder:colors.normalBorder}).setName('slot-frame:'+i);
+      if(disabled)layout.alignCost=drawSlotCost(scene,slot.x+s.line,slot.y+s.line,s.cell,s.exampleCost);
+      return frame;
     });
     // 기존 확장 슬롯은 표시만 하며 드롭/클릭 대상으로 등록하지 않는다.
     return layout;
@@ -465,7 +451,7 @@
     // 패널 접기는 화면 UI 상태만 변경한다.
     const body = U.pixelGraphics(scene).setDepth(10).setName('blueprint-body');
     // 제목 박스와 그리드를 독립 외곽선으로 그리고 사이에 3px 공백을 둔다.
-    grid(body, b.gridX, b.gridY, b, colors.gridFill, colors.blueprintLine, R.n.panelBorder);
+    grid(body, b.gridX, b.gridY, b, colors.gridFill, colors.blueprintLine);
 
     const header = U.pixelGraphics(scene).setDepth(11).setName('blueprint-header');
     text(scene, b.x + b.padding, b.y + b.header / 2 - 0.75, '도안', b.fontSize, colors.hudLabel, 'left').setDepth(12).setName('blueprint-title');
@@ -473,7 +459,7 @@
     let expanded = true;
     function drawArrow() {
       header.clear();
-      U.pixelFrame(header,b.x,b.y,b.width,b.header,R.n.header,R.n.panelBorder);
+      blueprintFrameBox(header,b.x,b.y,b.width,b.header,R.n.header);
       arrow.clear().lineStyle(1, R.n.label, 1);
       const x = b.x + b.width - b.padding - spacing.small;
       const y = b.y + b.header / 2;
@@ -527,7 +513,7 @@
   // 정보창의 중성 회색 테두리, 보라색 제목 바와 HUD 공통 회색 본문.
   const itemTooltip = Object.freeze({
     width: hud.barWidth, padding: blueprintPadding, gap: blueprintPadding, bottomPadding: blueprintPadding, fontSize: 10, titleSize: 10,
-    rowGap: hudGap, lineSpacing: 4, strokeWidth: 1, accent: R.n.panelBorder,
+    rowGap: hudGap, lineSpacing: 4, strokeWidth: 1, accent: R.n.tabBorder,
     background: R.n.tab, header: R.n.header,
     title: colors.value, description: colors.hudLabel, hint: colors.disabledText
   });
@@ -576,12 +562,13 @@
     const equipped = Array(s.preview).fill(null);
     let hovered = null, pinned = null, dragging = null, target = -1;
     const clickable = new Set();
-    const accents = U.pixelGraphics(scene).setDepth(31).setName('preview-slot-highlight');
     const slotItems = [];
     const slots = layout.slots.slice(0, s.preview);
-    // 꽃과 같은 드래그 카드/스냅 미리보기 분리. 장착 결과와 동일한 카드 외형.
+    // 꽃과 동일하게 스냅 미리보기는 아이콘만 표시한다. 외곽선과 면은 슬롯이 담당한다.
     const ghost = testSprites.itemCard(scene, 0, 0, 'wheelbarrow', assets.item.cardSize, assets.item.size)
       .setDepth(22).setAlpha(0.45).setVisible(false).setName('item-preview-ghost');
+    ghost.list[0].setVisible(false);
+    ghost.list[1].setVisible(false);
 
     // 양쪽 바깥 여백에서 동일 폭 열 3개. 각 텍스트 묶음의 실제 크기로 중앙 정렬.
     const stats = statKeys.map((key, index) => {
@@ -712,22 +699,16 @@
     function sameFocus(a, b) { return !!a && !!b && (a.card ? a.card === b.card : a.slot === b.slot); }
     function refresh() {
       const focus = hovered || pinned;
-      accents.clear();
       cards.forEach(card => {
         const active = dragging ? dragging === card : focus && focus.card === card;
-        card.marker.setStrokeStyle(active ? 1 : 0, colors.focusBorder, active ? 1 : 0);
+        card.marker.setStrokeStyle(active ? 1 : 0, colors.itemBorder, active ? 1 : 0);
       });
       slots.forEach((slot, index) => {
-        const focused = dragging ? target === index : focus && focus.slot === index && equipped[index];
-        // 슬롯 면과 외부 프레임을 유지하고 이동 중에는 +, 진입한 칸만 황록 사각형.
-        if (dragging) {
-          if (focused) dropSquare(accents, slot.x, slot.y, slot.size);
-          else dropPlus(accents, slot.x, slot.y, slot.size);
-        }
-        // 평상시 장착 카드 호버는 카드 내부 면만 강조하며 꺾쇠는 그리지 않는다.
-        slotItems[index].setStrokeStyle(0, colors.focusBorder, !dragging && focused ? 1 : 0);
-        // 교체 대상의 기존 카드는 미리보기와 중첩하지 않도록 잠시 숨긴다.
-        slotItems[index].setVisible(!!equipped[index] && !(dragging && target === index)).setAlpha(1);
+        const active = !!dragging || !!(focus && focus.slot===index && equipped[index]);
+        const showItem = !!equipped[index] && !(dragging && target===index);
+        // 후보는 기존 프레임 색만 변경한다. 장착 카드와 빈 슬롯의 프레임은 동시에 표시하지 않는다.
+        layout.slotFrames[index].setStrokeStyle(s.line,active?colors.itemBorder:colors.normalBorder,1).setVisible(!showItem);
+        slotItems[index].setStrokeStyle(s.line,colors.itemBorder,active?1:0).setVisible(showItem).setAlpha(1);
       });
       ghost.setVisible(false);
       if (dragging && target >= 0) {
@@ -845,17 +826,18 @@
 
   // 셀 내부와 가로/세로 공유선은 서로 겹치지 않는 영역이다.
   // 각 셀의 네 1×1px 모서리(공유선 교차점 포함)는 투명하게 남긴다.
-  function gardenGridRects(visible, g = spec.garden) {
+  function gardenGridRects(visible, g = spec.garden, active = new Set()) {
     const { columns, rows, pitch, cell, line } = g;
     const rects = [];
     const has = (x,y) => x >= 0 && x < columns && y >= 0 && y < rows && visible.has(y * columns + x);
-    const add = (x,y,w,h,border) => rects.push({ x,y,w,h,border });
+    const hot = (x,y) => has(x,y) && active.has(y*columns+x);
+    const add = (x,y,w,h,border,highlight=false) => rects.push({ x,y,w,h,border,highlight });
     for (let y = 0; y <= rows; y++) for (let x = 0; x <= columns; x++) {
       const px = x * pitch, py = y * pitch;
       const a = has(x,y), b = has(x-1,y), c = has(x,y-1);
       if (a) add(px+line,py+line,cell,cell,false);
-      if (a || c) add(px+line,py,cell,line,true);
-      if (a || b) add(px,py+line,line,cell,true);
+      if (a || c) add(px+line,py,cell,line,true,hot(x,y)||hot(x,y-1));
+      if (a || b) add(px,py+line,line,cell,true,hot(x,y)||hot(x-1,y));
       // 교차점은 그리지 않는다. 인접 셀도 동일한 모서리 컷을 공유한다.
     }
     return rects;
@@ -863,7 +845,7 @@
 
   // 공통 경계를 물리 픽셀에 한 번만 매핑한다. 축소에서도 선은 최소 1물리 px
   // (피치가 1물리 px 미만인 극소 창은 예외). 선/면의 끝점을 공유해 겹치지 않는다.
-  function gardenRaster(visible, g, z) {
+  function gardenRaster(visible, g, z, active = new Set()) {
     const axis = base => {
       const start = n => Math.round((base + n*g.pitch)*z);
       const end = n => Math.min(start(n+1), Math.max(start(n)+1, Math.round((base+n*g.pitch+g.line)*z)));
@@ -876,9 +858,9 @@
     const ax = axis(g.x), ay = axis(g.y);
     const width = Math.max(1,ax.at(g.columns*g.pitch+g.line));
     const height = Math.max(1,ay.at(g.rows*g.pitch+g.line));
-    const rects = gardenGridRects(visible,g).map(r => {
+    const rects = gardenGridRects(visible,g,active).map(r => {
       const x = ax.at(r.x), y = ay.at(r.y);
-      return { x,y,w:ax.at(r.x+r.w)-x,h:ay.at(r.y+r.h)-y,border:r.border };
+      return { x,y,w:ax.at(r.x+r.w)-x,h:ay.at(r.y+r.h)-y,border:r.border,highlight:r.highlight };
     }).filter(r => r.w>0 && r.h>0);
     return { x:ax.offset,y:ay.offset,width,height,rects };
   }
@@ -972,19 +954,21 @@
       .setDepth(-1).setName('garden-preview-soil');
     // 각 공유선을 출력 픽셀 경계에 맞추되 축소 시에도 최소 1물리 px을 확보한다.
     // 선 끝/면 시작에 동일한 좌표를 사용해 물리 픽셀에서도 중복 그리기를 방지한다.
+    let dragging = null, target = -1;
     function refreshSoil() {
       const z = scene.cameras.main.zoom;
       const visible = new Set([...occupied, ...gardenCandidates(occupied)]);
-      const raster = gardenRaster(visible,garden,z), w = raster.width, h = raster.height;
+      const raster = gardenRaster(visible,garden,z,dragging?gardenCandidates(occupied):new Set()), w = raster.width, h = raster.height;
       if (soilTexture.width !== w || soilTexture.height !== h) soilTexture.setSize(w,h);
       soil.setTexture(soilKey).setDisplaySize(w/z,h/z).setPosition((raster.x+w/2)/z,(raster.y+h/2)/z);
       const ctx = soilTexture.getContext();
       ctx.clearRect(0, 0, w, h);
       const border = '#' + colors.gardenBorder.toString(16).padStart(6, '0');
       const face = '#' + colors.gardenSoil.toString(16).padStart(6, '0');
+      const highlight = '#' + colors.flowerBorder.toString(16).padStart(6,'0');
       for (const r of raster.rects) {
         ctx.globalAlpha = r.border ? 1 : colors.gardenSoilAlpha;
-        ctx.fillStyle = r.border ? border : face;
+        ctx.fillStyle = r.highlight ? highlight : r.border ? border : face;
         ctx.fillRect(r.x,r.y,r.w,r.h);
       }
       ctx.globalAlpha = 1;
@@ -992,10 +976,8 @@
       soilTexture.setFilter(Phaser.Textures.FilterMode.NEAREST);
     }
     // 패딩 확대 전 방식: 커서를 따라가는 드래그 카드(30)와 칸 중심 미리보기(15)를 분리한다.
-    const accents = U.pixelGraphics(scene).setDepth(31).setName('garden-preview-highlight');
     const ghost = testSprites.sprite(scene, 0, 0, testSprites.flowers[0], assets.flower.size)
       .setDepth(15).setAlpha(0.45).setVisible(false).setName('garden-preview-ghost');
-    let dragging = null, target = -1;
     function origin(key) {
       return { x: garden.x + (key % garden.columns) * garden.pitch,
         y: garden.y + Math.floor(key / garden.columns) * garden.pitch };
@@ -1007,14 +989,7 @@
     }
     [...occupied].forEach((key, i) => plant(key, testSprites.flowers[i]));
     function refresh() {
-      accents.clear();
       const candidates = gardenCandidates(occupied);
-      if (dragging) for (const key of candidates) {
-        // 기존 초록 공유선이 선택 외곽선 역할도 한다. 덧그리지 않는다.
-        if (key === target) continue;
-        const p = origin(key);
-        dropPlus(accents, p.x + garden.line, p.y + garden.line, garden.cell);
-      }
       ghost.setVisible(false);
       if (dragging && candidates.has(target)) {
         const p = origin(target);
@@ -1040,25 +1015,25 @@
       if (!dragging) return;
       const flower = dragging, key = accept && pointer ? hit(pointer) : -1;
       dragging = null; target = -1;
-      flower.marker.setDepth(0).setPosition(flower.x, flower.y).setAlpha(1).setStrokeStyle(0, colors.focusBorder, 0);
+      flower.marker.setDepth(0).setPosition(flower.x, flower.y).setAlpha(1).setStrokeStyle(0, colors.flowerBorder, 0);
       if (gardenCandidates(occupied).has(key)) {
         occupied.add(key); plant(key, flower.spriteName);
-        refreshSoil();
         updatePatrolBounds();
         flower.consumed = true;
         flower.marker.disableInteractive().setVisible(false);
       }
+      refreshSoil();
       refresh();
     }
     flowers.forEach(flower => {
       const marker = flower.marker;
       marker.setInteractive({ useHandCursor: true, draggable: true });
       scene.input.setDraggable(marker);
-      marker.on('pointerover', () => { if (!dragging) marker.setStrokeStyle(1, colors.focusBorder, 1); });
-      marker.on('pointerout', () => { if (!dragging) marker.setStrokeStyle(0, colors.focusBorder, 0); });
+      marker.on('pointerover', () => { if (!dragging) marker.setStrokeStyle(1, colors.flowerBorder, 1); });
+      marker.on('pointerout', () => { if (!dragging) marker.setStrokeStyle(0, colors.flowerBorder, 0); });
       marker.on('dragstart', pointer => {
         if (flower.consumed || dragging) return;
-        dragging = flower; marker.setDepth(30).setStrokeStyle(1, colors.focusBorder, 1); move(pointer);
+        dragging = flower; marker.setDepth(30).setStrokeStyle(1, colors.flowerBorder, 1); refreshSoil(); move(pointer);
       });
       marker.on('drag', pointer => { if (dragging === flower) move(pointer); });
       marker.on('dragend', pointer => { if (dragging === flower) finish(pointer, true); });
