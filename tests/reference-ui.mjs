@@ -150,6 +150,16 @@ for(const c of configs){
   },{full:proposedStatLabels,short:shortStatLabels});
   const missingStatGlyphs=[...new Set([...Object.values(proposedStatLabels).flat(),...Object.values(shortStatLabels).flat()].join(''))].filter(c=>!font.hasGlyphForCodePoint(c.codePointAt(0)));
   console.log('STAT_WIDTH_REPORT '+JSON.stringify({...statWidthReport,missingStatGlyphs}));
+  const statWidth8=await page.evaluate(({full,short})=>{
+    const U=window.GardenUI,L=window.GardenGameLayout,s=window.__benchmarkGame.scene.getScene('Game'),p=U.text(s,0,0,'',8,'#FFFFFF');
+    const width=v=>{p.setText(v);return p.width;};
+    const measure=labels=>Object.fromEntries(Object.entries(labels).map(([k,arr])=>[k,arr.map(v=>({label:v,width:width(v)}))]));
+    const numberRows=[['124','+24'],['999','+999'],['9,999','+9,999'],['999,999','+999,999'],['999,999,999,999','+999,999,999,999']].map(([value,delta])=>({value,delta,width:width(value)+L.bottomStats.deltaGap+width(delta)}));
+    const result={full:measure(full),short:measure(short),numberRows,slotCostWidth:width('999')};
+    p.destroy();return result;
+  },{full:proposedStatLabels,short:shortStatLabels});
+  console.log('STAT_WIDTH_8_REPORT '+JSON.stringify(statWidth8));
+
 
   const dropState=()=>page.evaluate(()=>{
     const s=window.__benchmarkGame.scene.getScene('Game');
