@@ -819,7 +819,7 @@ for(const c of configs){
       if(type===0?(p[i+3]!==0):(p[i+3]!==255||actual!==color))mismatch++;
     }
     return {mismatch,activeCount,faceCount,occupied:occupied.size,candidates:candidates.size,
-      roles:L.colors.gardenSoil===expected&&L.colors.gardenBorder===(style?.gardenBorder??0x51516B)&&L.colors.normalBorder===(style?.itemBorder??0x51516B)&&L.colors.normalFill===(style?.itemFill??0x3B3B4E)&&L.colors.flowerCardFill===(style?expected:0x3B3B4E)&&L.colors.flowerCardBorder===(style?.gardenBorder??0x51516B)&&L.colors.gridFill===0x3B3B4E&&L.colors.flowerBorder===0x6ABA2C&&L.colors.itemBorder===0x67A3EE&&L.itemTooltip.accent===0x51516B};
+      roles:L.colors.gardenSoil===expected&&L.colors.gardenBorder===(style?.gardenBorder??0x51516B)&&L.colors.normalBorder===(style?.itemBorder??0x51516B)&&L.colors.normalFill===(style?.itemFill??0x3B3B4E)&&L.colors.flowerCardFill===(style?.flowerCardFill??(style?expected:0x3B3B4E))&&L.colors.itemCardFill===(style?.itemCardFill??style?.itemFill??0x3B3B4E)&&L.colors.flowerCardBorder===(style?.gardenBorder??0x51516B)&&L.colors.gridFill===0x3B3B4E&&L.colors.flowerBorder===0x6ABA2C&&L.colors.itemBorder===0x67A3EE&&L.itemTooltip.accent===0x51516B};
   },{expected,dragging,target,style});
   const inspectSoilPixels=async(png,expected,z,style=null)=>page.evaluate(async ({data,expected,z,style})=>{
     const L=window.GardenGameLayout,g=L.spec.garden,b=L.spec.blueprint;
@@ -876,7 +876,8 @@ for(const c of configs){
     ['5',0x7C4C24,0xA46444,0x44445C,0xF4B404],
     ['6',0xA46444,0xE9D0AB,0x0C9484,0xB0ACBD],
     ['7',0x51516B,0xF46C7C,0x676777,0xF4B404],
-    ['8',0x0C9484,0xE9D0AB,0x44445C,0xA46444]
+    ['8',0x0C9484,0xE9D0AB,0x44445C,0xA46444],
+    ['9',0x3B3B4E,0x51516B,0x3B3B4E,0x51516B,0xFFFFFF,0xFFFFFF]
   ];
   const inspectThemePixels=async(png,style,z)=>page.evaluate(async ({data,style,z})=>{
     const img=await createImageBitmap(await(await fetch('data:image/png;base64,'+data)).blob()),cv=document.createElement('canvas');
@@ -884,15 +885,15 @@ for(const c of configs){
     const p=ctx.getImageData(0,0,cv.width,cv.height).data,R=Math.round;
     const rgb=(x,y)=>{const i=(R(y*z)*cv.width+R(x*z))*4;return(p[i]<<16)|(p[i+1]<<8)|p[i+2];};
     const s=window.__benchmarkGame.scene.getScene('Game');
-    const pairs=[['placeholder:flower:0',style.gardenFill,style.gardenBorder],['placeholder:item:0',style.itemFill,style.itemBorder],['slot-frame:0',style.itemFill,style.itemBorder],['slot-frame:9',0x161619,0x51516B]];
+    const pairs=[['placeholder:flower:0',style.flowerCardFill,style.gardenBorder],['placeholder:item:0',style.itemCardFill,style.itemBorder],['slot-frame:0',style.itemFill,style.itemBorder],['slot-frame:9',0x161619,0x51516B]];
     return pairs.map(([name,face,border])=>{
       const o=s.children.getByName(name),left=o.x-o.width/2;
       const actual=[rgb(left+2,o.y),rgb(left,o.y)];
       return {name,actual,expected:[face,border],pass:actual[0]===face&&actual[1]===border};
     });
   },{data:png.toString('base64'),style,z});
-  for(const [mode,gardenFill,gardenBorder,itemFill,itemBorder] of themeVariants){
-    const style={gardenFill,gardenBorder,itemFill,itemBorder};
+  for(const [mode,gardenFill,gardenBorder,itemFill,itemBorder,flowerCardFill=gardenFill,itemCardFill=itemFill] of themeVariants){
+    const style={gardenFill,gardenBorder,itemFill,itemBorder,flowerCardFill,itemCardFill};
     await page.setViewportSize({width:960,height:540});
     await page.goto(origin+'/'+c.id+'/index.html?preview=1&type='+mode,{waitUntil:'load'});
     await page.waitForFunction(()=>window.__benchmarkGame?.scene.isActive('MainMenu'),{},{timeout:20000});
@@ -902,9 +903,9 @@ for(const c of configs){
     const state=await inspectSoilTexture(gardenFill,false,-1,style);
     check('theme '+mode+' initial full garden texture and palette roles',state.mismatch===0&&state.roles&&state.occupied===4&&state.candidates===8,JSON.stringify(state));
     check('theme '+mode+' exact 16-color membership',await page.evaluate(style=>Object.values(style).every(v=>Object.values(window.GardenPalette.n).includes(v))&&Object.keys(window.GardenPalette.hex).length===16,style));
-    const slotsMatch=async(target=null)=>slotState().then(a=>a.every((v,i)=>v.single&&v.face===(i===9?0x161619:itemFill)&&v.border===(i===9?0x51516B:target===-1||target===i?0x67A3EE:itemBorder)));
+    const slotsMatch=async(target=null,equipped=false)=>slotState().then(a=>a.every((v,i)=>v.single&&v.face===(i===9?0x161619:equipped&&i===0?itemCardFill:itemFill)&&v.border===(i===9?0x51516B:target===-1||target===i?0x67A3EE:itemBorder)));
     const cardMatch=async(name,face,border,alpha=1)=>cardState(name).then(v=>v.face===face&&v.border===border&&v.alpha===alpha);
-    check('theme '+mode+' default cards and slots',await cardMatch('placeholder:flower:0',gardenFill,gardenBorder)&&await cardMatch('placeholder:item:0',itemFill,itemBorder)&&await slotsMatch());
+    check('theme '+mode+' default cards and slots',await cardMatch('placeholder:flower:0',flowerCardFill,gardenBorder)&&await cardMatch('placeholder:item:0',itemCardFill,itemBorder)&&await slotsMatch());
     for(const [w,h] of [[960,540],[1920,1080]]){
       await page.setViewportSize({width:w,height:h});
       await page.waitForFunction(w=>window.__benchmarkGame.scene.getScene('Game').cameras.main.zoom===w/960,w);
@@ -918,25 +919,25 @@ for(const c of configs){
     const g=await page.evaluate(()=>window.GardenGameLayout.spec.garden);
     await drag('placeholder:flower:0',10,200,false);
     const active=await inspectSoilTexture(gardenFill,true,-1,style);
-    check('theme '+mode+' all flower candidates and green source card',active.mismatch===0&&active.activeCount>88&&active.roles&&await cardMatch('placeholder:flower:0',gardenFill,0x6ABA2C));
+    check('theme '+mode+' all flower candidates and green source card',active.mismatch===0&&active.activeCount>88&&active.roles&&await cardMatch('placeholder:flower:0',flowerCardFill,0x6ABA2C));
     await move(g.x+4*g.pitch+g.outer/2-5,g.y+3*g.pitch+g.outer/2-5);
     const focused=await inspectSoilTexture(gardenFill,true,34,style);
-    check('theme '+mode+' single flower candidate and translucent card',focused.mismatch===0&&focused.activeCount===88&&await cardMatch('placeholder:flower:0',gardenFill,0x6ABA2C,0.25));
+    check('theme '+mode+' single flower candidate and translucent card',focused.mismatch===0&&focused.activeCount===88&&await cardMatch('placeholder:flower:0',flowerCardFill,0x6ABA2C,0.25));
     await page.screenshot({path:join(out,'card-theme-'+mode+'-flower-target.png')});
     await page.mouse.up();
     const planted=await inspectSoilTexture(gardenFill,false,-1,style);
     check('theme '+mode+' planted restores themed borders',planted.mismatch===0&&planted.occupied===5&&planted.roles);
     await drag('placeholder:item:0',10,200,false);
-    check('theme '+mode+' all item candidates and sky source card',await slotsMatch(-1)&&await cardMatch('placeholder:item:0',itemFill,0x67A3EE));
+    check('theme '+mode+' all item candidates and sky source card',await slotsMatch(-1)&&await cardMatch('placeholder:item:0',itemCardFill,0x67A3EE));
     await move(slot.x+3,slot.y+3);
-    check('theme '+mode+' single item target and translucent card',await slotsMatch(0)&&await cardMatch('placeholder:item:0',itemFill,0x67A3EE,0.25));
+    check('theme '+mode+' single item target and translucent card',await slotsMatch(0)&&await cardMatch('placeholder:item:0',itemCardFill,0x67A3EE,0.25));
     await page.screenshot({path:join(out,'card-theme-'+mode+'-item-target.png')});
     await move(10,200);
     check('theme '+mode+' item exit restores all candidates',await slotsMatch(-1));
     await move(slot.x+3,slot.y+3);
     await page.mouse.up();
     await move(10,200);
-    check('theme '+mode+' equipped item matches themed slot',await slotsMatch()&&await cardMatch('preview-equipped:0',itemFill,itemBorder));
+    check('theme '+mode+' equipped item matches themed slot',await slotsMatch(null,true)&&await cardMatch('preview-equipped:0',itemCardFill,itemBorder));
   }
     // The displayed CSS size and the native backing store must differ at DPR 2.
   const hi=await browser.newPage({viewport:{width:960,height:540},deviceScaleFactor:2});
