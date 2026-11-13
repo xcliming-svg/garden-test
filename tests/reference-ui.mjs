@@ -113,11 +113,12 @@ for(const c of configs){
     check(label+' equal HUD widths, center and labels',m.top===32&&m.hudLayout.centerY===15&&m.hudLayout.leftPadding===7.5&&m.hudLayout.rightPadding===7.5&&m.hudLayout.textPadTop===7.5&&m.hudLayout.textPadBottom===7.5&&m.hudLayout.barHeight===12&&Math.abs(m.hudLayout.timeGap-5)<0.01&&Math.abs(m.hudLayout.barGap-5)<0.01&&m.hudLayout.metricWidth>0&&m.hudLayout.gemX===2*m.hudLayout.metricWidth&&3*m.hudLayout.metricWidth<=m.hudLayout.progressX&&m.hudLayout.labelColors.every(c=>c.toLowerCase()==='#b0b0b0')&&m.hudLayout.valueColors.every(c=>c.toLowerCase()==='#ffffff'),JSON.stringify(m.hudLayout));
     check(label+' bottom HUD 40px and equal 3px clear gaps',m.bottom===40&&m.field===468&&m.slotWidth===347&&m.slots.every((s,i)=>s.y-(540-m.bottom+2)===3&&540-(s.y+s.size)===3&&(!i||s.x-m.slots[i-1].x-m.slots[i-1].size===3)),JSON.stringify(m.slots));
     check(label+' stat bounds',m.stats.length>=12&&m.stats.every(t=>t.font===8&&t.y>=540-m.bottom-eps&&t.y+t.h<=540+eps&&t.x>=-eps&&t.x+t.w<=960+eps),JSON.stringify(m.stats));
-    const statGroups=['defense','hp','luck','moveSpeed','pickupRange','dps'].map((key,i)=>{const a=m.stats.find(t=>t.name==='stat-label:'+key), v=m.stats.find(t=>t.name==='stat-value:'+key),d=m.stats.find(t=>t.name==='stat-delta:'+key);const center=(i<3?m.sideLeft:m.sideRight)+(i%3+0.5)*70;const left=Math.min(v.x,d?.x??v.x),right=Math.max(v.x+v.w,d?d.x+d.w:v.x+v.w);return !!a&&!!v&&Math.abs(a.x+a.w/2-center)<0.01&&Math.abs((left+right)/2-center)<0.01&&left>=center-35&&right<=center+35&&a.x>=center-35&&a.x+a.w<=center+35&&Math.abs(v.y-a.y-a.h-3)<0.01&&Math.abs((a.y+v.y+v.h)/2-(m.slots[0].y+m.slots[0].size/2))<0.01&&(!d||Math.abs(d.x-v.x-v.w-2)<0.01&&d.y===v.y);});
-    check(label+' 70px columns, 3px row gap and centered groups',m.side===210&&m.statSpec.columnWidth===70&&m.statSpec.lineGap===3&&statGroups.every(Boolean),JSON.stringify(m.stats));
-    check(label+' stat nonoverlap',m.stats.every((a,i)=>m.stats.every((b,j)=>i===j||!overlap(a,b))));
+    const statGroups=['defense','hp','luck','moveSpeed','pickupRange','dps'].map((key,i)=>{const a=m.stats.find(t=>t.name==='stat-label:'+key), v=m.stats.find(t=>t.name==='stat-value:'+key),d=m.stats.find(t=>t.name==='stat-delta:'+key);const center=(i<3?m.sideLeft:m.sideRight)+(i%3+0.5)*70;const left=Math.min(v.x,d?.x??v.x),right=Math.max(v.x+v.w,d?d.x+d.w:v.x+v.w);return !!a&&!!v&&Math.abs(a.x+a.w/2-center)<0.01&&Math.abs((left+right)/2-center)<0.01&&left>=center-35&&right<=center+35&&a.x>=center-35&&a.x+a.w<=center+35&&(!d||Math.abs(d.x-v.x-v.w-2)<0.01);});
+    check(label+' 70px columns, 3px visible row gap specification and horizontal centering',m.side===210&&m.statSpec.columnWidth===70&&m.statSpec.lineGap===3&&statGroups.every(Boolean),JSON.stringify(m.stats));
+    // Transparent glyph padding may overlap vertically; the actual screenshot verifies visible rows.
+    check(label+' stat nonoverlap across columns',m.stats.every((a,i)=>m.stats.every((b,j)=>i===j||a.name.split(':')[1]===b.name.split(':')[1]||!overlap(a,b))));
     check(label+' stats/slots separation',m.stats.every(t=>m.slots.every(b=>!overlap(t,{x:b.x,y:b.y,w:b.size,h:b.size}))));
-    let cost=m.cost,b=m.slots[9];check(label+' cost bounds',!!cost&&cost.font===8&&m.costSpec.gap===3&&m.stats.filter(t=>t.name.startsWith('stat-value:')).every(t=>t.y===cost.y&&t.h===cost.h)&&m.stats.filter(t=>t.name.startsWith('stat-label:')).every(t=>Math.abs(t.y+t.h/2-(cost.y-3-cost.h/2))<0.01)&&cost.y-3-cost.h/2-m.costSpec.iconSize/2>=b.y+1&&Math.abs(cost.x+cost.w/2-(b.x+b.size/2))<0.01&&cost.x>=b.x+1-eps&&cost.y>=b.y+1-eps&&cost.x+cost.w<=b.x+b.size-1+eps&&cost.y+cost.h<=b.y+b.size-1+eps,JSON.stringify(cost));
+    let cost=m.cost,b=m.slots[9];check(label+' cost bounds',!!cost&&cost.font===8&&m.costSpec.gap===3&&Math.abs(cost.x+cost.w/2-(b.x+b.size/2))<0.01&&cost.x>=b.x+1-eps&&cost.y>=b.y+1-eps&&cost.x+cost.w<=b.x+b.size-1+eps&&cost.y+cost.h<=b.y+b.size-1+eps,JSON.stringify(cost));
     // A dragged item intentionally follows the pointer into the HUD/slot. Only this specific card
     // is exempt during replacement; independently verify its exact target/alpha below.
     const overflow=m.markerOverflow.filter(n=>label!=='replacement stats'||n!=='placeholder:item:3');
@@ -181,6 +182,22 @@ for(const c of configs){
     await page.setViewportSize({width:w,height:h});
     await page.waitForFunction(([w,h])=>{let s=window.__benchmarkGame.scene.getScene('Game');return s.scale.gameSize.width===w&&s.scale.gameSize.height===h&&Math.abs(s.cameras.main.zoom-w/960)<1e-6},[w,h],{timeout:8000});
     const m=await gameMetrics();inspectGame(m,w+'x'+h);observations.push(m);
+    // Inspect real output pixels at every viewport, not transparent text object bounds.
+    const bottomPng=await page.screenshot();
+    const bottomPixels=await page.evaluate(async ({data,stats,cost,slot,z})=>{
+      const img=await createImageBitmap(await (await fetch('data:image/png;base64,'+data)).blob()), cv=document.createElement('canvas');
+      cv.width=img.width;cv.height=img.height;const ctx=cv.getContext('2d');ctx.drawImage(img,0,0);
+      const p=ctx.getImageData(0,0,cv.width,cv.height).data;
+      const scan=(x0,y0,x1,y1,pred)=>{let top=Infinity,bottom=-1,n=0;for(let y=Math.max(0,Math.floor(y0));y<Math.min(cv.height,Math.ceil(y1));y++)for(let x=Math.max(0,Math.floor(x0));x<Math.min(cv.width,Math.ceil(x1));x++){const i=(y*cv.width+x)*4;if(pred(p[i],p[i+1],p[i+2])){top=Math.min(top,y);bottom=Math.max(bottom,y);n++;}}return {top,bottom,n};};
+      const ink=(r,g,b)=>Math.min(r,g,b)>=145&&Math.max(r,g,b)-Math.min(r,g,b)<=5;
+      const box=o=>scan(o.x*z,o.y*z,(o.x+o.w)*z,(o.y+o.h)*z,ink);
+      const number=box(cost);
+      const gem=scan((slot.x+1)*z,(slot.y+1)*z,(slot.x+slot.size-1)*z,number.top,(r,g,b)=>r===170&&g===170&&b===170);
+      return {number,gem,labels:stats.filter(t=>t.name.startsWith('stat-label:')).map(box),values:stats.filter(t=>t.name.startsWith('stat-value:')).map(box)};
+    },{data:bottomPng.toString('base64'),stats:m.stats,cost:m.cost,slot:m.slots[9],z:m.zoom});
+    const expectedGap=Math.round(3*m.zoom);
+    check(w+'x'+h+' actual visible bottom 3px gaps and alignment',bottomPixels.number.n>0&&bottomPixels.gem.n>0&&bottomPixels.number.top-bottomPixels.gem.bottom-1===expectedGap&&bottomPixels.labels.every(t=>t.n>0&&t.bottom===bottomPixels.gem.bottom)&&bottomPixels.values.every(t=>t.n>0&&t.top===bottomPixels.number.top&&Math.abs(t.bottom-bottomPixels.number.bottom)<=1),JSON.stringify(bottomPixels));
+    console.log('BOTTOM_PIXELS '+w+' '+JSON.stringify(bottomPixels));
     if(w===1280||w===1920){
       const png=await page.screenshot({path:join(out,c.id+'-'+w+'.png')});
       if(w===1920){
@@ -229,7 +246,7 @@ for(const c of configs){
         console.log('PIXEL_REPORT '+JSON.stringify(pixels));
         check('FHD right-aligned gauge and two left dividers',pixels.leftPadding===15&&pixels.rightPadding===pixels.leftPadding&&pixels.bar.width===316&&pixels.bar.height===24&&JSON.stringify(pixels.dividerRuns)===JSON.stringify([[324,327],[648,651]]),JSON.stringify(pixels));
         check('FHD one logical pixel cut corners on gauge and slot',Object.values(pixels.corners).flat().every(v=>v.join(',')==='22,22,25'),JSON.stringify(pixels.corners));
-        check('FHD slot cost and stat digits share visible baseline',pixels.costInk.n>0&&pixels.gemInk.n>0&&pixels.numberInk.every(t=>t.n>0&&t.top===pixels.costInk.top&&t.bottom===pixels.costInk.bottom)&&pixels.labelInk.every(t=>t.n>0&&Math.abs((t.top+t.bottom)/2-(pixels.gemInk.top+pixels.gemInk.bottom)/2)<=2),JSON.stringify({cost:pixels.costInk,numbers:pixels.numberInk,labels:pixels.labelInk,gem:pixels.gemInk,gap:pixels.costVisibleGap}));
+        check('FHD 3px visible gap and shared stat/cost row edges',pixels.costInk.n>0&&pixels.gemInk.n>0&&pixels.costVisibleGap===6&&pixels.numberInk.every(t=>t.n>0&&t.top===pixels.costInk.top&&t.bottom===pixels.costInk.bottom)&&pixels.labelInk.every(t=>t.n>0&&t.bottom===pixels.gemInk.bottom),JSON.stringify({cost:pixels.costInk,numbers:pixels.numberInk,labels:pixels.labelInk,gem:pixels.gemInk,gap:pixels.costVisibleGap}));
         check('FHD actual screenshot alignment and visible gaps',pixels.header.width===182&&pixels.grid.width===182&&pixels.header.left===pixels.grid.left&&pixels.header.left===pixels.label.left&&pixels.headerTopGap===15&&[pixels.titleLeftGap,pixels.titleTopGap,pixels.titleBottomGap].every(g=>g===10)&&pixels.gridGap===-2&&pixels.grid.height===182&&JSON.stringify(pixels.seam)===JSON.stringify([[68,68,92],[103,103,119],[103,103,119],[48,46,58]]),JSON.stringify(pixels));
       }
     }
@@ -331,7 +348,7 @@ for(const c of configs){
     check(key+' browser title identifies selected slot size',await page.title()==='Garden Test | 슬롯 '+size+'px');
     check(key+' equal sizes, center and gap',m.slots.length===10&&m.slots.every((s,i)=>s.size===size&&s.y-(540-m.bottom+2)===3&&540-(s.y+s.size)===3&&(!i||s.x-m.slots[i-1].x===size+3))&&m.slotWidth===10*size+27&&Math.abs(m.slotLeft+m.slotWidth/2-480)<=0.5&&m.side===210&&detail.bottom===size+8,JSON.stringify(m.slots));
     check(key+' matching hitboxes, cards, ghost and 32px field items',detail.zones.length===9&&detail.zones.every(a=>a.every(v=>v===size))&&detail.cards.length===9&&detail.cards.every(a=>a[0]===size&&a[1]===size&&a[2]===size-2&&a[3]===16)&&detail.ghost.every(v=>v===size)&&detail.drop===32,JSON.stringify(detail));
-    check(key+' cost aligns with stat row',m.cost.font===8&&m.costSpec.gap===3&&m.stats.filter(t=>t.name.startsWith('stat-value:')).every(t=>t.y===m.cost.y&&t.h===m.cost.h)&&detail.costMasked===(size===24),JSON.stringify(m.cost));
+    check(key+' cost shares visible row gap specification',m.cost.font===8&&m.costSpec.gap===3&&m.statSpec.lineGap===3&&detail.costMasked===(size===24),JSON.stringify(m.cost));
     await page.setViewportSize({width:1920,height:1080});
     await page.waitForFunction(()=>window.__benchmarkGame.scene.getScene('Game').cameras.main.zoom===2);
     const screenshot=await page.screenshot({path:join(out,'slots-'+size+'-1920.png')});
@@ -347,7 +364,7 @@ for(const c of configs){
       const frame=Array.from({length:last.size*2},(_,i)=>rgb(last.x*2+i,(last.y+last.size)*2-1).join(',')).every((v,i)=>v===(i<2||i>=last.size*2-2?'22,22,25':'81,81,107'));
       return {number,gem,digitRows,frame};
     },{data:screenshot.toString('base64'),last,cost:m.cost,stats:m.stats});
-    check(key+' actual FHD digits, gem, intact bottom border',pixel.number.n>0&&pixel.gem.n>0&&pixel.digitRows.every(t=>t.top===pixel.number.top&&t.bottom===pixel.number.bottom)&&pixel.number.bottom<(last.y+size)*2-2&&pixel.gem.top>=last.y*2+2&&pixel.gem.bottom<pixel.number.top&&pixel.frame,JSON.stringify(pixel));
+    check(key+' actual FHD digits, gem, intact bottom border',pixel.number.n>0&&pixel.gem.n>0&&pixel.digitRows.every(t=>t.top===pixel.number.top&&t.bottom===pixel.number.bottom)&&pixel.number.bottom<(last.y+size)*2-2&&pixel.gem.top>=last.y*2+2&&pixel.number.top-pixel.gem.bottom-1===6&&pixel.frame,JSON.stringify(pixel));
     await page.setViewportSize({width:960,height:540});await page.waitForFunction(()=>window.__benchmarkGame.scene.getScene('Game').cameras.main.zoom===1);
     await drag('placeholder:item:0',slot.x+size/2,slot.y+size/2);
     check(key+' equip',await page.evaluate(()=>window.__benchmarkGame.scene.getScene('Game').children.getByName('preview-equipped:0').visible));

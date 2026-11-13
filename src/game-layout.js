@@ -279,18 +279,51 @@
     // 참조처럼 흰 숫자와 검은 1px 그림자를 그대로 유지.
   }
 
-  function drawSlotCost(scene, g, x, y, size, value) {
-    const c = slotCost;
-    // 능력치와 동일한 8px 단일 행 높이/간격으로 수치 행을 맞춘다.
+  // 글자 그림자는 제외하고 실제 전경 픽셀의 세로 범위를 측정한다.
+  // 네이티브 텍스처 해상도가 바뀌면 다시 측정하며 원본 글리프는 수정하지 않는다.
+  const bottomInkCache = new WeakMap();
+  function bottomInk(item, background) {
+    const key = [item.text, item.style.color, item.style.resolution, item.canvas.width, item.canvas.height, background].join('|');
+    const cached = bottomInkCache.get(item);
+    if (cached?.key === key) return cached.ink;
+    const { width, height } = item.canvas;
+    const data = item.context.getImageData(0, 0, width, height).data;
+    const bg = Math.max((background >> 16) & 255, (background >> 8) & 255, background & 255);
+    let top = height, bottom = 0, fallbackTop = height, fallbackBottom = 0;
+    for (let y = 0; y < height; y++) for (let x = 0; x < width; x++) {
+      const i = (y * width + x) * 4, alpha = data[i + 3] / 255;
+      const color = Math.max(data[i], data[i + 1], data[i + 2]);
+      if (!alpha || !color) continue;
+      fallbackTop = Math.min(fallbackTop, y);
+      fallbackBottom = Math.max(fallbackBottom, y + 1);
+      if (color * alpha + bg * (1 - alpha) < 145) continue;
+      top = Math.min(top, y);
+      bottom = Math.max(bottom, y + 1);
+    }
+    const ink = bottom > top ? { top, bottom } : { top: fallbackTop, bottom: fallbackBottom };
+    bottomInkCache.set(item, { key, ink });
+    return ink;
+  }
+
+  function drawSlotCost(scene, x, y, size, value) {
+    const c = slotCost, centerY = y + size / 2;
     const cost = text(scene, x + size / 2, 0, String(value), c.fontSize, colors.disabledText, 'center').setName('slot-cost-value');
-    const textHeight = cost.height;
-    const valueY = y + size / 2 + (textHeight + bottomStats.lineGap) / 2;
-    // 보석 중심을 능력치 레이블 행 중심과 정확히 맞춘다.
-    const iconTop = y + size / 2 - (textHeight + c.gap) / 2 - c.iconSize / 2;
-    reserveIcon(g, x + (size - c.iconSize) / 2, iconTop, c.iconSize, R.n.disabled);
-    cost.setPosition(x + size / 2, valueY);
-    // 24px 비교 슬롯은 글자의 투명 텍스처/그림자 일부가 테두리까지 닿는다.
-    // 숫자 기준선과 3px 행 간격을 유지하면서 슬롯 내부에서만 그린다.
+    const icon = U.pixelGraphics(scene).setName('slot-cost-icon');
+    reserveIcon(icon, x + (size - c.iconSize) / 2, 0, c.iconSize, R.n.disabled);
+    // 숫자 및 보석의 실제 픽셀 외접 범위가 HUD 중심에 오도록 배치한다.
+    function alignCost() {
+      const zoom = scene.cameras.main.zoom;
+      const ink = bottomInk(cost, colors.disabledFill);
+      const iconHeight = Math.round(c.iconSize * zoom), gap = Math.round(c.gap * zoom);
+      const numberHeight = ink.bottom - ink.top;
+      const iconTop = Math.round(centerY * zoom - (iconHeight + gap + numberHeight) / 2);
+      const upperBottom = iconTop + iconHeight, numberTop = upperBottom + gap;
+      icon.setY(iconTop / zoom);
+      cost.setY((numberTop - ink.top) / zoom + cost.displayOriginY);
+      return { zoom, upperBottom, numberTop, numberBottom: numberTop + numberHeight };
+    }
+    alignCost();
+    // 24px 비교 슬롯에서도 그림자가 외곽선을 침범하지 않도록 기존 마스크 유지.
     if (size === 22) {
       const clip = scene.make.graphics({ x: 0, y: 0, add: false });
       clip.fillStyle(0xffffff, 1).fillRect(x, y, size, size);
@@ -298,6 +331,7 @@
       cost.setMask(mask);
       cost.once('destroy', () => { mask.destroy(); clip.destroy(); });
     }
+    return alignCost;
   }
 
   // 9개 일반 + 마지막 확장 슬롯을 최대 폭에서 검토한다. 실제 초기 슬롯 정책은 4개로 유지.
@@ -355,7 +389,7 @@
     const layout = bottomLayout();
     layout.slots.forEach((slot, i) => {
       slotVisual(g, slot.x, slot.y, slot.size, i === s.preview);
-      if (i === s.preview) drawSlotCost(scene, g, slot.x + s.line, slot.y + s.line, s.cell, s.exampleCost);
+      if (i === s.preview) layout.alignCost = drawSlotCost(scene, slot.x + s.line, slot.y + s.line, s.cell, s.exampleCost);
     });
     // 기존 확장 슬롯은 표시만 하며 드롭/클릭 대상으로 등록하지 않는다.
     return layout;
@@ -551,25 +585,26 @@
     function renderStats() {
       const current = sumPreviewStats(equipped);
       const next = dragging && target >= 0 ? getPreviewStats(equipped, target, dragging.item) : current;
+      const rows = layout.alignCost();
       stats.forEach(row => {
         const d = next[row.key] - current[row.key];
         row.value.setText(String(next[row.key]));
         row.delta.setText(d ? signed(d) : '').setColor(d > 0 ? R.hex.green : d < 0 ? R.hex.red : colors.value)
           .setVisible(d !== 0);
-        // 라벨과 값 행의 실제 바운딩 크기를 기준으로 지정 행 간격,
+        // 레이블 하단과 보석 하단, 모든 숫자의 가시 상단을 동일한 픽셀 행에 정렬한다.
         // 증감이 있을 때는 값과 증감 사이 2px를 두고 전체 행을 중앙 정렬한다.
         const valueWidth = row.value.width;
         const deltaWidth = d ? row.delta.width : 0;
         const gap = d ? bottomStats.deltaGap : 0;
         const rowWidth = valueWidth + gap + deltaWidth;
-        const rowHeight = Math.max(row.value.height, d ? row.delta.height : 0);
-        const groupHeight = row.label.height + bottomStats.lineGap + rowHeight;
-        const top = layout.centerY - groupHeight / 2;
-        const valueY = top + row.label.height + bottomStats.lineGap + rowHeight / 2;
+        const labelInk = bottomInk(row.label, colors.hud), valueInk = bottomInk(row.value, colors.hud);
+        const labelY = (rows.upperBottom - labelInk.bottom) / rows.zoom + row.label.displayOriginY;
+        const valueY = (rows.numberTop - valueInk.top) / rows.zoom + row.value.displayOriginY;
         const left = row.x - rowWidth / 2;
-        row.label.setPosition(row.x, top + row.label.height / 2);
+        row.label.setPosition(row.x, labelY);
         row.value.setPosition(left + valueWidth / 2, valueY);
-        row.delta.setPosition(left + valueWidth + gap + deltaWidth / 2, valueY);
+        const deltaY = d ? (rows.numberBottom - bottomInk(row.delta, colors.hud).bottom) / rows.zoom + row.delta.displayOriginY : valueY;
+        row.delta.setPosition(left + valueWidth + gap + deltaWidth / 2, deltaY);
       });
     }
     function slotAnchor(index) {
