@@ -43,6 +43,12 @@ jobs:
             done
             for script in "$target"/src/*.js; do node --check "$script"; done
             git -C "$source" rev-parse HEAD > "$target/version.txt"
+            # devel 전용: 배포 커밋이 바뀌면 HTML의 모든 로컬 스크립트 URL도 바뀐다.
+            if [[ "$branch" == "devel" ]]; then
+              revision=$(cat "$target/version.txt")
+              sed -E -i "s|(src=\"\\./src/[^\"]+\\.js)\"|\\1?v=${revision}\"|g" "$target/index.html" "$target/card-compare.html"
+              grep -Fq "./src/game-layout.js?v=${revision}" "$target/index.html"
+            fi
           done
           touch _site/.nojekyll
           test -s _site/index.html
