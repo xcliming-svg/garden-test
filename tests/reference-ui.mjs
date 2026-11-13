@@ -134,9 +134,9 @@ for(const c of configs){
     const gemValue=hud.filter(o=>o.text==='999,999,999,999').sort((a,b)=>a.x-b.x).at(-1);
     const metricWidth=kills.x-clock.x;
     const timeValue=hud.find(o=>o.text==='9999:59:59'), percent=hud.find(o=>o.text==='30%');
-    const z=s.cameras.main.zoom,ink=o=>{const t=list.find(t=>t.type==='Text'&&t.text===o.text&&Math.abs(t.x-t.displayOriginX-o.x)<.01);const b=U.inkBounds(t,L.colors.hud),x=Math.round(o.x*z);return {left:x+b.left,right:x+b.right};};
-    const timeGap=(ink(timeValue).left-ink(clock).right)/z;
-    const barGap=(Math.round((percent.x+percent.w/2-L.hud.barWidth/2)*z)-ink(gardenLabel).right)/z;
+    const z=s.cameras.main.zoom,glyphEdge=o=>{const t=list.find(t=>t.type==='Text'&&t.text===o.text&&Math.abs(t.x-t.displayOriginX-o.x)<.01);const b=U.inkBounds(t,L.colors.hud),x=Math.round(o.x*z);return {left:x+b.left,right:x+b.right};};
+    const timeGap=(glyphEdge(timeValue).left-glyphEdge(clock).right)/z;
+    const barGap=(Math.round((percent.x+percent.w/2-L.hud.barWidth/2)*z)-glyphEdge(gardenLabel).right)/z;
     const hudLayout={metricWidth,timeGap,barGap,leftPadding:clock.x,rightPadding:L.spec.width-(percent.x+percent.w/2+L.hud.barWidth/2),textPadTop:clock.y,textPadBottom:L.spec.top-2-clock.y-clock.h,barHeight:L.hud.barHeight,gemX:s.children.getByName('hud-gem-icon').x-L.hud.padding,progressX:gardenLabel.x-L.hud.padding,centerY:L.hud.centerY,labelColors:[clock.color,kills.color,gardenLabel.color],valueColors:hud.filter(o=>!['시간','처치 수','정원 완성도'].includes(o.text)).map(o=>o.color)};
     const stats=visibleText.filter(o=>o.name?.startsWith('stat-'));
     const cost=visibleText.find(o=>o.text==='999');
