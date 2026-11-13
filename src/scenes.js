@@ -202,10 +202,10 @@
     constructor(key, victory) { super(key); this.victory = victory; }
     create() {
       U.background(this, this.victory ? 'RESULT / VICTORY' : 'RESULT / DEFEAT');
-      U.panel(this, 480, 270, 480, 280, { fill: U.C.panel, stroke: U.C.border });
+      U.panel(this, 480, 270, 480, 280, { fill: U.C.panel, stroke: this.victory ? U.C.green : U.C.red });
       U.panelHeader(this, 480, 130, 480);
       centered(this, 480, headerCenter(130), this.victory ? '성공' : '실패', U.fontSize.menuHeading,
-        this.victory ? U.C.greenText : U.C.redText, { inkBackground: U.C.header });
+        U.C.text, { inkBackground: U.C.header });
       centered(this, 480, 176, '런 결과 화면 · UI 미리보기', U.fontSize.menuBase, U.C.muted);
       U.rule(this, innerLeft(480), 190, innerRight(480), 190, U.C.border, 1);
 

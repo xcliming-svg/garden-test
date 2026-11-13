@@ -309,7 +309,7 @@
     const disabled = !!opts.disabled;
     const emphasized = !!(opts.primary || opts.selected);
     const border = emphasized ? C.white : C.subtle;
-    const fill = emphasized ? C.panelAlt : C.button;
+    const fill = emphasized && !opts.danger ? C.panelAlt : C.button;
     const hoverBorder = C.white;
     const base = pixelBox(scene,0,0,width,height,disabled ? R.n.disabledFill : fill,{border:disabled ? R.n.disabledBorder : border,strokeWidth:menuStyle.strokeWidth});
     const caption = text(scene, 0, 0, label, opts.fontSize || (opts.primary ? fontSize.menuAction : fontSize.menuBase),
@@ -319,7 +319,7 @@
       base.setInteractive(new Phaser.Geom.Rectangle(-width/2,-height/2,width,height),Phaser.Geom.Rectangle.Contains);
       base.input.cursor = 'pointer';
       base.on('pointerover', function () {
-        base.setFillStyle(C.panelAlt);
+        base.setFillStyle(opts.danger ? C.button : C.panelAlt);
         base.setStrokeStyle(menuStyle.strokeWidth, hoverBorder, 1);
       });
       base.on('pointerout', function () {

@@ -57,7 +57,7 @@ for(const c of configs){
     const s=window.__benchmarkGame.scene.getScene(key), list=s.children.list,U=window.GardenUI,z=s.cameras.main.zoom;
     const buttons=list.filter(o=>o.type==='Container'&&o.list?.length===2&&o.list[0].pixelBox&&o.list[1].type==='Text').map(o=>{let [r,t]=o.list;return {text:t.text,x:o.x-r.width/2,y:o.y-r.height/2,w:r.width,h:r.height,px:(r.width-t.width)/2,py:(r.height-t.height)/2,font:parseFloat(t.style.fontSize),fill:r.fillColor,color:t.style.color,res:t.style.resolution,tx:o.x+t.x-t.displayOriginX,ty:o.y+t.y-t.displayOriginY,tw:t.width,th:t.height}});
     const texts=list.filter(o=>o.type==='Text'&&o.visible).map(o=>({text:o.text,x:o.x-o.displayOriginX,y:o.y-o.displayOriginY,w:o.width,h:o.height,font:parseFloat(o.style.fontSize),res:o.style.resolution,color:o.style.color}));
-    const panels=list.filter(o=>o.pixelBox&&o.width<960&&o.height>100).map(o=>({x:o.x-o.width/2,y:o.y-o.height/2,w:o.width,h:o.height}));
+    const panels=list.filter(o=>o.pixelBox&&o.width<960&&o.height>100).map(o=>({x:o.x-o.width/2,y:o.y-o.height/2,w:o.width,h:o.height,stroke:o.strokeColor}));
     const h=s.children.getByName('menu-panel-header');
     return {buttons,texts,panels,zoom:z,header:h?{x:h.x-h.width/2,y:h.y-h.height/2,w:h.width,h:h.height,fill:h.fillColor}:null};
   },key);
@@ -75,6 +75,7 @@ for(const c of configs){
     }
     check(key+' role font sizes',m.buttons.every(b=>b.font===((b.text==='새 게임'||b.text==='계속하기')?14:12)),JSON.stringify(m.buttons));
     if(m.header){check(key+' common 32px header and 18px title',m.header.h===32&&m.texts.some(t=>t.font===18&&t.y>=m.header.y&&t.y+t.h<=m.header.y+m.header.h+1),JSON.stringify(m));}
+    if(key==='Victory'||key==='Defeat')check(key+' readable neutral title and semantic result frame',m.texts.some(t=>t.text===(key==='Victory'?'성공':'실패')&&t.color.toLowerCase()==='#f5f3eb')&&m.panels[0]?.stroke===(key==='Victory'?0x94CC6D:0xF0787C),JSON.stringify(m));
     if(key==='Settings'){const tabs=m.buttons.filter(b=>b.text!=='돌아가기').sort((a,b)=>a.x-b.x);check(key+' full content width and 3px tab gaps',tabs.length===3&&Math.abs(tabs[0].x-250)<1e-6&&Math.abs(tabs[2].x+tabs[2].w-710)<1e-6&&tabs.slice(1).every((t,i)=>Math.abs(t.x-tabs[i].x-tabs[i].w-3)<1e-6),JSON.stringify(tabs));}
     if(['Confirm','Victory','Defeat'].includes(key)){const pair=[...m.buttons].sort((a,b)=>a.x-b.x);check(key+' 3px footer action gap',pair.length===2&&Math.abs(pair[1].x-pair[0].x-pair[0].w-3)<1e-6,JSON.stringify(pair));}
     check(key+' button/text nonoverlap',m.buttons.every((b,i)=>m.buttons.every((q,j)=>i===j||!overlap(b,q))&&m.texts.every(t=>!overlap(b,t))),JSON.stringify(m.buttons.flatMap(b=>m.texts.filter(t=>overlap(b,t)).map(t=>[b.text,t.text]))));
