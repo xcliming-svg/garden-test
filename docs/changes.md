@@ -2,6 +2,10 @@
 
 각 구현 변경의 결과를 시스템 단위로 기록한다. 대화 원문 또는 코드 diff의 복제가 아니라 **어떤 시스템에 무엇이 적용되었으며, 무엇이 아직 구현되지 않았는지**를 설명한다. 최신 구현 상태는 [implementation.md](./implementation.md)를 참조한다.
 
+## 2026-11-14 — 수호자 대형 크기 비교
+
+- devel 6915d5f 기반 feature/devel-guardian-size-compare. 원본 비율 유지, person=36/40/44/48/56 추가, 기본 32 및 이전 옵션 유지. 대형 정원과 조합 시 HUD 겹침만 방지. 정원·꽃·HUD는 변경하지 않는다. 전용 Chromium 17개 구성 및 FHD 실제 가시 폭·높이 검사 추가. [규격](./flower-head-preview.md).
+
 ## 2026-11-14 — 꽃 외곽선 및 정원 내부 그리드 제거, 수호자 크기 비교
 
 - devel c24e104 기반 feature/devel-flower-outline. 꽃 셀 안쪽 1px ink 외곽선, 정원 내부 공유선 제거(외곽 프레임 유지), 수호자 32px 기본 및 person=24/28 비교. 원본 래스터·HUD·도안·순찰 경로 유지. [규격](./flower-head-preview.md). [Chromium 11/11 구성 통과](https://github.com/xcliming-svg/garden-test/actions/runs/43522146911), 코드 1076a6c. 실제 FHD 픽셀 검사 포함. 검증본을 devel에 fast-forward 병합하여 비교 화면을 배포한다. main 변경 없음.

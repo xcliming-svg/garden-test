@@ -18,7 +18,8 @@
   const flowers = Object.freeze(['daisy','tulip','sunflower','hydrangea']);
   const key = (name,size) => 'flower-head-preview:'+name+':'+size;
   const guardianMode = new URLSearchParams(window.location.search).get('person');
-  const guardianSize = guardianMode === '24' ? 24 : guardianMode === '28' ? 28 : 32;
+  const guardianSizes = Object.freeze([24,28,32,36,40,44,48,56]);
+  const guardianSize = guardianSizes.includes(Number(guardianMode)) ? Number(guardianMode) : 32;
   // Keep the outline inside the cell, so adjacent flowers never overlap.
   function outlinedPixels(pixels, size) {
     const inner = size - 2, result = new Uint8Array(size * size);
@@ -93,6 +94,11 @@
         .setDisplaySize(g.cell,g.cell).setDepth(1).setName('garden-preview-flower:'+index);
     }
     const bounds=patrolBounds(occupied);
+    // Keep larger comparison sprites inside the battlefield, including ?garden=32.
+    // Default garden patrol coordinates remain unchanged at every comparison size.
+    const half=guardianSize/2;
+    bounds.top=Math.max(bounds.top,spec.top+half);
+    bounds.bottom=Math.min(bounds.bottom,spec.height-spec.bottom-half);
     let distance=(bounds.right-bounds.left)/2;
     const start=patrolPosition(bounds,distance);
     const guardian=scene.add.image(start.x,start.y,key('guardian',24))

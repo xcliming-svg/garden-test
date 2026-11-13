@@ -41,7 +41,7 @@ const url='http://127.0.0.1:'+server.address().port;
 const browser=await chromium.launch({channel:'chrome',headless:true,args:['--no-sandbox','--disable-dev-shm-usage','--use-gl=angle','--use-angle=swiftshader','--enable-unsafe-swiftshader']});
 const report=[];
 try{
- for(const [w,h,dpr,cell,query] of [[640,360,1,22,''],[960,540,1,22,''],[1280,720,1,22,''],[1600,900,1,22,''],[1920,1080,1,22,''],[960,540,2,22,''],[960,540,1,32,'?garden=32'],[960,540,1,22,'?slots=24'],[960,540,1,22,'?slots=36'],[1920,1080,1,22,'?person=24'],[1920,1080,1,22,'?person=28']]){
+ for(const [w,h,dpr,cell,query] of [[640,360,1,22,''],[960,540,1,22,''],[1280,720,1,22,''],[1600,900,1,22,''],[1920,1080,1,22,''],[960,540,2,22,''],[960,540,1,32,'?garden=32'],[960,540,1,22,'?slots=24'],[960,540,1,22,'?slots=36'],[1920,1080,1,22,'?person=24'],[1920,1080,1,22,'?person=28'],...([36,40,44,48,56].map(n=>[1920,1080,1,22,'?person='+n])),[960,540,1,32,'?garden=32&person=56']]){
   const page=await browser.newPage({viewport:{width:w,height:h},deviceScaleFactor:dpr});
   const errors=[];page.on('pageerror',e=>errors.push(String(e)));
   try {
@@ -89,6 +89,7 @@ try{
    assert.ok(state.seamColors.every(c=>c.join(',')==='22,22,25,255'),JSON.stringify(state.seamColors));
    const person=Number(new URLSearchParams(query).get('person')||32);
    assert.deepEqual(state.corner,[0,0,0,0]);assert.equal(state.guardian.w,person);assert.equal(state.guardian.h,person);
+   assert.ok(state.guardian.y-person/2>=32&&state.guardian.y+person/2<=500,JSON.stringify(state.guardian));
    assert.ok(state.hud);assert.equal(state.slots,10);assert.deepEqual(state.canvas,[w*dpr,h*dpr]);
    await page.waitForFunction(({x,y})=>{const o=window.__previewGame.scene.getScene('Game').children.getByName('placeholder:guardian:0');return Math.hypot(o.x-x,o.y-y)>2;},state.guardian);
    const png=await page.screenshot({path:join(out,'flower-head-'+w+'-'+dpr+'-'+cell+'-'+(query.replace(/[^0-9]/g,'')||'default')+'.png'),scale:'device'});
@@ -113,9 +114,15 @@ try{
        outline++;if(pixel(Math.round((o.x-n/2+x)*z),Math.round((o.y-n/2+y)*z))!==0x0d0d0d)wrongOutline++;
       }
      }
-     return {seams,wrongSeams,outline,wrongOutline};
+     // Measure visible teal pixels in the real screenshot, independently of display size.
+     let left=cv.width,right=-1,top=cv.height,bottom=-1;
+     for(let y=0;y<cv.height;y++)for(let x=0;x<cv.width;x++)if(pixel(x,y)===0x0c9484){
+      left=Math.min(left,x);right=Math.max(right,x);top=Math.min(top,y);bottom=Math.max(bottom,y);
+     }
+     return {seams,wrongSeams,outline,wrongOutline,personWidth:right-left+1,personHeight:bottom-top+1};
     },png.toString('base64'));
     assert.ok(actual.seams>0&&actual.wrongSeams===0&&actual.outline>0&&actual.wrongOutline===0,JSON.stringify(actual));
+    assert.ok(Math.abs(actual.personWidth-person*2*15/24)<=2&&Math.abs(actual.personHeight-person*2)<=1,JSON.stringify(actual));
     state.actual=actual;
    }
    await page.keyboard.press('Escape');await page.waitForFunction(()=>window.__previewGame.scene.isActive('Pause'));
