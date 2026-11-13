@@ -360,6 +360,52 @@ for(const c of configs){
     slotVariants.push({size,width:m.slotWidth,slot,detail,pixel});
   }
   console.log('SLOT_VARIANTS '+JSON.stringify(slotVariants));
+  // The displayed CSS size and the native backing store must differ at DPR 2.
+  const hi=await browser.newPage({viewport:{width:960,height:540},deviceScaleFactor:2});
+  const nativeErrors=[];hi.on('pageerror',e=>nativeErrors.push(String(e)));
+  try {
+    await hi.goto(origin+'/'+c.id+'/index.html?hud=stress',{waitUntil:'load'});
+    await hi.waitForFunction(()=>window.__benchmarkGame?.scene.isActive('MainMenu'),{},{timeout:20000});
+    const nativeMetrics=()=>hi.evaluate(()=>{
+      const game=window.__benchmarkGame,cv=game.canvas,r=cv.getBoundingClientRect();
+      return {buffer:[cv.width,cv.height],css:[r.width,r.height],dpr:devicePixelRatio,scale:[game.scale.displayScale.x,game.scale.displayScale.y],game:[game.scale.gameSize.width,game.scale.gameSize.height]};
+    });
+    const before=await nativeMetrics();
+    check('DPR 2 native backing buffer and input scale',JSON.stringify(before.buffer)==='[1920,1080]'&&JSON.stringify(before.css)==='[960,540]'&&before.dpr===2&&before.scale.every(v=>v===2)&&JSON.stringify(before.game)===JSON.stringify(before.buffer),JSON.stringify(before));
+    // CSS-coordinate click at DPR 2: verifies ScaleManager input mapping.
+    await hi.mouse.click(480,252);
+    await hi.waitForFunction(()=>window.__benchmarkGame.scene.isActive('Game'),{},{timeout:5000});
+    const nativeReport=await hi.evaluate(()=>{
+      const s=window.__benchmarkGame.scene.getScene('Game'),z=s.cameras.main.zoom;
+      const texts=s.children.list.filter(o=>o.type==='Text'&&o.visible);
+      return {zoom:z,texts:texts.length,native:texts.every(t=>t.style.resolution===z&&t.frame.width===t.canvas.width&&t.frame.height===t.canvas.height&&t.frame.u1===1&&t.frame.v1===1)};
+    });
+    check('DPR 2 text texture maps 1:1 to device pixels',nativeReport.zoom===2&&nativeReport.texts>=20&&nativeReport.native,JSON.stringify(nativeReport));
+    await hi.screenshot({path:join(out,'native-dpr2-1920.png'),scale:'device'});
+    await hi.setViewportSize({width:800,height:450});
+    await hi.waitForFunction(()=>window.__benchmarkGame.canvas.width===1600&&window.__benchmarkGame.scene.getScene('Game').cameras.main.zoom===1600/960);
+    const after=await nativeMetrics();
+    check('DPR 2 resize retains native backing buffer and CSS input mapping',JSON.stringify(after.buffer)==='[1600,900]'&&JSON.stringify(after.css)==='[800,450]'&&after.scale.every(v=>v===2),JSON.stringify(after));
+    const marker=await hi.evaluate(()=>{const o=window.__benchmarkGame.scene.getScene('Game').children.getByName('placeholder:item:0');return {x:o.x,y:o.y};});
+    await hi.mouse.move(marker.x*800/960,marker.y*450/540);
+    await hi.waitForFunction(()=>window.__benchmarkGame.scene.getScene('Game').children.getByName('item-preview-tooltip').visible,{},{timeout:5000});
+    const png=await hi.screenshot({path:join(out,'native-dpr2-fractional-tooltip.png'),scale:'device'});
+    const nativePixels=await hi.evaluate(async ({data})=>{
+      const game=window.__benchmarkGame,s=game.scene.getScene('Game'),z=s.cameras.main.zoom;
+      const img=await createImageBitmap(await (await fetch('data:image/png;base64,'+data)).blob());
+      const cv=document.createElement('canvas');cv.width=img.width;cv.height=img.height;
+      const ctx=cv.getContext('2d');ctx.drawImage(img,0,0);const pixels=ctx.getImageData(0,0,cv.width,cv.height).data;
+      const rgb=(x,y)=>Array.from(pixels.slice((y*cv.width+x)*4,(y*cv.width+x)*4+3)).join(',');
+      const corners=(x,y,w,h)=>{const l=Math.round(x*z),t=Math.round(y*z),r=Math.round((x+w)*z)-1,b=Math.round((y+h)*z)-1;return [rgb(l,t),rgb(r,t),rgb(l,b),rgb(r,b)];};
+      const tip=s.children.getByName('item-preview-tooltip'),bg=tip.getByName('item-tooltip-background');
+      const slot=window.GardenGameLayout.bottomLayout().slots[9];
+      const textObjects=[...s.children.list.filter(o=>o.type==='Text'&&o.visible),...tip.list.filter(o=>o.type==='Text')];
+      return {buffer:[cv.width,cv.height],slot:corners(slot.x,slot.y,slot.size,slot.size),tooltip:corners(tip.x,tip.y,bg.width,bg.height),nativeText:textObjects.every(t=>t.style.resolution===z&&t.frame.width===t.canvas.width&&t.frame.height===t.canvas.height&&t.frame.u1===1&&t.frame.v1===1)};
+    },{data:png.toString('base64')});
+    check('fractional native output slot/tooltip cuts and exact text frames',nativePixels.slot.every(v=>v==='22,22,25')&&nativePixels.tooltip.every(v=>v==='13,13,13')&&nativePixels.nativeText,JSON.stringify(nativePixels));
+    console.log('NATIVE_REPORT '+JSON.stringify({before,after,nativeReport,nativePixels}));
+    check('native DPR runtime errors',nativeErrors.length===0,nativeErrors.join('; '));
+  } finally { await hi.close(); }
   check('localized runtime errors',errors.length===0,errors.join('; '));
   results.push({id:c.id,name:c.name,localeResults,passed:checks.filter(x=>x.pass).length,total:checks.length,eligible:checks.every(x=>x.pass),fails:checks.filter(x=>!x.pass),ink:initial.ink,blueprintMetrics:initial.blueprintMetrics,hudLayout:initial.hudLayout,renderer:await page.evaluate(()=>window.__benchmarkGame.renderer.type),observations:observations.map(m=>({canvas:m.canvas,zoom:m.zoom}))});
  }catch(e){results.push({id:c.id,name:c.name,config:c,score:null,eligible:false,passed:checks.filter(x=>x.pass).length,total:checks.length,fails:[...checks.filter(x=>!x.pass),{name:'exception',detail:String(e)}],errors});}
