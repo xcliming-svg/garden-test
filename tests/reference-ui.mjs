@@ -10,7 +10,7 @@ mkdirSync(out, {recursive:true});
 const require = createRequire(import.meta.url);
 const phaserPath = require.resolve('phaser/dist/phaser.min.js');
 const originals = Object.fromEntries(['ui.js','game-layout.js','scenes.js','main.js'].map(n=>[n,readFileSync(join(root,'src',n),'utf8').replace(/\r\n/g,'\n')]));
-const configs=[{id:'R',name:'screenshot-matched UI',top:32,bottom:44,margin:10,label:12,value:12,timer:12,body:12,menu:12,navFont:14,navHeight:24,navGap:3,blueCell:8,bluePad:7.5,blueHead:25.5,slotGap:3,statLabel:12,statValue:16,statCol:74,statGap:3,hudGap:5,bar:14,tipW:158,tipPad:6,tipRow:5,tipLine:4,tipFont:10}];
+const configs=[{id:'R',name:'screenshot-matched UI',top:32,bottom:44,margin:10,label:12,value:12,timer:12,body:12,menu:12,navFont:14,navHeight:24,navGap:3,blueCell:8,bluePad:7.5,blueHead:25.5,slotGap:3,statLabel:12,statValue:16,statCol:74,statGap:3,hudGap:5,bar:12,tipW:158,tipPad:6,tipRow:5,tipLine:4,tipFont:10}];
 function replace(s,a,b){if(!s.includes(a))throw Error('missing anchor '+a);return s.replaceAll(a,b);}
 const variants={R:originals};
 const mime={'.js':'application/javascript','.html':'text/html; charset=utf-8','.css':'text/css; charset=utf-8','.txt':'text/plain; charset=utf-8','.woff2':'font/woff2'};
@@ -85,7 +85,7 @@ for(const c of configs){
     const timeValue=hud.find(o=>o.text==='9999:59:59'), percent=hud.find(o=>o.text==='30%');
     const timeGap=timeValue.x-clock.x-Math.ceil(clock.w);
     const barGap=percent.x+percent.w/2-L.hud.barWidth/2-gardenLabel.x-Math.ceil(gardenLabel.w);
-    const hudLayout={metricWidth,timeGap,barGap,gemX:gemValue.x-L.hud.padding-L.hud.iconSize-L.hud.gap,progressX:gardenLabel.x-L.hud.padding,centerY:L.hud.centerY,labelColors:[clock.color,kills.color,gardenLabel.color],valueColors:hud.filter(o=>!['시간','처치 수','정원 완성도'].includes(o.text)).map(o=>o.color)};
+    const hudLayout={metricWidth,timeGap,barGap,leftPadding:clock.x,rightPadding:L.spec.width-(percent.x+percent.w/2+L.hud.barWidth/2),textPadTop:clock.y,textPadBottom:L.spec.top-2-clock.y-clock.h,barHeight:L.hud.barHeight,gemX:gemValue.x-L.hud.padding-L.hud.iconSize-L.hud.gap,progressX:gardenLabel.x-L.hud.padding,centerY:L.hud.centerY,labelColors:[clock.color,kills.color,gardenLabel.color],valueColors:hud.filter(o=>!['시간','처치 수','정원 완성도'].includes(o.text)).map(o=>o.color)};
     const stats=visibleText.filter(o=>o.name?.startsWith('stat-'));
     const cost=visibleText.find(o=>o.text==='999');
     const context=document.createElement('canvas').getContext('2d');
@@ -110,7 +110,7 @@ for(const c of configs){
     const bp=m.blueprintMetrics;
     check(label+' blueprint alignment and visible HUD spacing',bp.width===91&&bp.gridX===bp.headerX&&bp.titlePadX===7.5&&bp.gridGap===7.5&&m.blueprint.width===91&&m.blueprint.height===m.blueprint.header+7.5+91&&bp.height===25.5&&bp.topGap===11.5,JSON.stringify(bp));
     check(label+' HUD nonoverlap',m.hud.every((a,i)=>m.hud.every((b,j)=>i===j||!overlap(a,b))));
-    check(label+' equal HUD widths, center and labels',m.top===32&&m.hudLayout.centerY===15&&Math.abs(m.hudLayout.timeGap-5)<0.01&&Math.abs(m.hudLayout.barGap-5)<0.01&&m.hudLayout.metricWidth>0&&m.hudLayout.gemX===2*m.hudLayout.metricWidth&&3*m.hudLayout.metricWidth<=m.hudLayout.progressX&&m.hudLayout.labelColors.every(c=>c.toLowerCase()==='#b0b0b0')&&m.hudLayout.valueColors.every(c=>c.toLowerCase()==='#ffffff'),JSON.stringify(m.hudLayout));
+    check(label+' equal HUD widths, center and labels',m.top===32&&m.hudLayout.centerY===15&&m.hudLayout.leftPadding===7.5&&m.hudLayout.rightPadding===7.5&&m.hudLayout.textPadTop===7.5&&m.hudLayout.textPadBottom===7.5&&m.hudLayout.barHeight===12&&Math.abs(m.hudLayout.timeGap-5)<0.01&&Math.abs(m.hudLayout.barGap-5)<0.01&&m.hudLayout.metricWidth>0&&m.hudLayout.gemX===2*m.hudLayout.metricWidth&&3*m.hudLayout.metricWidth<=m.hudLayout.progressX&&m.hudLayout.labelColors.every(c=>c.toLowerCase()==='#b0b0b0')&&m.hudLayout.valueColors.every(c=>c.toLowerCase()==='#ffffff'),JSON.stringify(m.hudLayout));
     check(label+' stat bounds',m.stats.length>=12&&m.stats.every(t=>t.y>=540-m.bottom-eps&&t.y+t.h<=540+eps&&t.x>=-eps&&t.x+t.w<=960+eps),JSON.stringify(m.stats));
     check(label+' stat nonoverlap',m.stats.every((a,i)=>m.stats.every((b,j)=>i===j||!overlap(a,b))));
     check(label+' stats/slots separation',m.stats.every(t=>m.slots.every(b=>!overlap(t,{x:b.x,y:b.y,w:b.size,h:b.size}))));
@@ -132,7 +132,7 @@ for(const c of configs){
   const positions=[];
   for(let i=0;i<7;i++){positions.push(await dropState());await page.waitForTimeout(150);}
   check('float moves square and icon together, integer 0..4 px, stable hitbox',positions.every(p=>p.every((o,i)=>o.x===drops[i].x&&o.y===drops[i].y&&o.borderY===o.img&&o.faceY===o.img&&Number.isInteger(o.img)&&o.img>=-4&&o.img<=0))&&drops.every((_,i)=>new Set(positions.map(p=>p[i].img)).size>=2));
-  check('reference palette and opaque tree-node garden',await page.evaluate(()=>{const L=window.GardenGameLayout,s=window.__benchmarkGame.scene.getScene('Game'),g=L.spec.garden,t=s.textures.get('ui-test:garden-soil:'+g.cell),px=t.getContext().getImageData(4*g.pitch+3,4*g.pitch+3,1,1).data;const border=t.getContext().getImageData(4*g.pitch,4*g.pitch,1,1).data;return L.colors.field===0x0D0D0D&&L.colors.hud===0x161619&&L.colors.gardenSoil===0x343446&&L.colors.gardenSoilAlpha===1&&Array.from(px).join(',')==='52,52,70,255'&&Array.from(border).join(',')==='106,186,44,255'&&L.colors.progressTrack===0x545454&&L.colors.progressFill===0x6ABA2C&&L.colors.progressBorder===0x878796&&L.hud.barHeight===14&&L.hud.barWidth===158&&L.spec.top===32;}));
+  check('reference palette and opaque tree-node garden',await page.evaluate(()=>{const L=window.GardenGameLayout,s=window.__benchmarkGame.scene.getScene('Game'),g=L.spec.garden,t=s.textures.get('ui-test:garden-soil:'+g.cell),px=t.getContext().getImageData(4*g.pitch+3,4*g.pitch+3,1,1).data;const border=t.getContext().getImageData(4*g.pitch,4*g.pitch,1,1).data;return L.colors.field===0x0D0D0D&&L.colors.hud===0x161619&&L.colors.gardenSoil===0x343446&&L.colors.gardenSoilAlpha===1&&Array.from(px).join(',')==='52,52,70,255'&&Array.from(border).join(',')==='106,186,44,255'&&L.colors.progressTrack===0x545454&&L.colors.progressFill===0x6ABA2C&&L.colors.progressBorder===0x878796&&L.hud.barHeight===12&&L.hud.barWidth===158&&L.spec.top===32;}));
 
   // Resize the real browser viewport, then capture the actual canvas at 720p and 1080p.
   for(const [w,h] of viewportSizes){
@@ -179,7 +179,7 @@ for(const c of configs){
             titleBottomGap:header.bottom-title.bottom,gridGap:grid.top-header.bottom-1};
         },{data:png.toString('base64'),hud:m.hud,bp:m.blueprint});
         console.log('PIXEL_REPORT '+JSON.stringify(pixels));
-        check('FHD right-aligned gauge and two left dividers',pixels.leftPadding===20&&pixels.rightPadding===pixels.leftPadding&&pixels.bar.width===316&&JSON.stringify(pixels.dividerRuns)===JSON.stringify([[334,337],[668,671]]),JSON.stringify(pixels));
+        check('FHD right-aligned gauge and two left dividers',pixels.leftPadding===15&&pixels.rightPadding===pixels.leftPadding&&pixels.bar.width===316&&pixels.bar.height===24&&JSON.stringify(pixels.dividerRuns)===JSON.stringify([[324,327],[648,651]]),JSON.stringify(pixels));
         check('FHD actual screenshot alignment and visible gaps',pixels.header.width===182&&pixels.grid.width===182&&pixels.header.left===pixels.grid.left&&Math.abs(pixels.hudBottomGap-pixels.headerTopGap)<=1&&[pixels.titleLeftGap,pixels.titleTopGap,pixels.titleBottomGap].every(g=>Math.abs(g-pixels.gridGap)<=1)&&pixels.gridGap===pixels.timeGap&&pixels.timeGap===15,JSON.stringify(pixels));
       }
     }
@@ -256,9 +256,9 @@ for(const c of configs){
       });
       const key=lang+' '+w+'x'+h;
       check(key+' labels and bounds',m.lang===lang&&m.all.length===7&&m.all.every(t=>t.x>=0&&t.y>=0&&t.x+t.w<=960.1&&t.y+t.h<=32.1),JSON.stringify(m));
-      check(key+' equal widths and fixed gauge',m.metricWidth===initial.hudLayout.metricWidth&&m.gemX===2*m.metricWidth&&m.barX===792&&m.green,JSON.stringify(m));
+      check(key+' equal widths and fixed gauge',m.metricWidth===initial.hudLayout.metricWidth&&m.gemX===2*m.metricWidth&&m.barX===794.5&&m.green,JSON.stringify(m));
       check(key+' gaps and no overlap',m.gaps.every(g=>Math.abs(g-5)<0.01)&&m.all.every((a,i)=>m.all.every((b,j)=>i===j||!overlap(a,b))),JSON.stringify(m));
-      check(key+' reserved column containment',m.all.filter(t=>t.x<3*m.metricWidth).every(t=>t.x+t.w<=Math.ceil(t.x/m.metricWidth)*m.metricWidth-9)&&m.all.find(t=>t.text===m.labels.progress).x>=3*m.metricWidth,JSON.stringify(m));
+      check(key+' reserved column containment',m.all.filter(t=>t.x<3*m.metricWidth).every(t=>t.x+t.w<=Math.ceil(t.x/m.metricWidth)*m.metricWidth-6.5)&&m.all.find(t=>t.text===m.labels.progress).x>=3*m.metricWidth,JSON.stringify(m));
       localeResults.push({lang,viewport:[w,h],width:m.metricWidth,barX:m.barX,gaps:m.gaps,labels:m.labels});
       if(w===1920)await page.screenshot({path:join(out,'hud-'+lang+'-1920.png')});
     }
