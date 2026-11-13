@@ -422,9 +422,12 @@ for(const c of configs){
     const vertical=side==='above',fixed=R((vertical?a.x:a.y)*z);
     const rgb=v=>{const x=vertical?fixed:v,y=vertical?v:fixed,i=(y*cv.width+x)*4;return (px[i]<<16)|(px[i+1]<<8)|px[i+2];};
     const cardColors=[0xB0ACBD,0x51516B],tipColors=[0x676777,0x44445C,0x3B3B4E];
-    const edge=(expected,colors,high)=>{
-      const hits=[];for(let v=expected-1;v<=expected+1;v++)if(colors.includes(rgb(v)))hits.push(v);
-      return hits.length?(high?Math.max(...hits):Math.min(...hits)):null;
+    const edge=(expected,colors,high,limit=Infinity)=>{
+      // Prefer the border itself; when a subpixel border vanishes, use its fill.
+      // In the vertical case exclude the separate HUD boundary, which shares the panel fill.
+      const hits=[];for(let v=expected-1;v<=expected+1&&v<=limit;v++)if(colors.includes(rgb(v)))hits.push(v);
+      const borders=hits.filter(v=>rgb(v)===colors[0]),matches=borders.length?borders:hits;
+      return matches.length?(high?Math.max(...matches):Math.min(...matches)):null;
     };
     let start,end;
     if(side==='right'){
@@ -434,7 +437,8 @@ for(const c of configs){
       start=edge(R((t.x+t.w)*z)-1,tipColors,true);
       end=edge(R((a.x-size/2)*z),cardColors,false);
     }else{
-      start=edge(R((t.y+t.h)*z)-1,tipColors,true);
+      const fieldBottom=window.GardenGameLayout.spec.top+window.GardenGameLayout.spec.fieldHeight;
+      start=edge(R((t.y+t.h)*z)-1,tipColors,true,R(fieldBottom*z)-1);
       end=edge(R((a.y-size/2)*z),cardColors,false);
     }
     const logical=side==='right'?t.x-a.x-size/2:side==='left'?a.x-size/2-t.x-t.w:a.y-size/2-t.y-t.h;
