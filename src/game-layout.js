@@ -19,6 +19,8 @@
   // FHD(2x) 프레임버퍼의 밝은 글리프 실측: 제목 21px, HUD 그룹 마지막 픽셀 Y=40.
   // 투명한 텍스트 객체 여백을 제외한 가시 영역 기준. 1px=0.5 논리 px.
   const hudCenterY = 15, hudInkBottom = 20.5, blueprintInkHeight = 10.5;
+  // 30px 콘텐츠 영역, 15px 실제 텍스트 객체 높이: 상하/좌우 여백 7.5px.
+  const hudTextHeight = 15, hudPadding = hudCenterY - hudTextHeight / 2;
   const blueprintHeader = blueprintInkHeight + 2 * blueprintPadding;
   const width = U.W, height = U.H;
   const topHudHeight = 32;
@@ -38,18 +40,18 @@
     top: topHudHeight, fieldHeight, bottom: bottomHudHeight,
     garden: Object.freeze({ x: (width - gardenSize) / 2, y: Math.floor(topHudHeight + (fieldHeight - gardenSize) / 2), columns: 10, rows: 10, cell: gardenCell, line: cellLine, gap: 0, pitch: gardenPitch }),
     blueprint: Object.freeze({
-      x: 10, y: blueprintY, padding: blueprintPadding, gap: blueprintPadding, topGap: blueprintTopGap, header: blueprintHeader,
+      x: hudPadding, y: blueprintY, padding: blueprintPadding, gap: blueprintPadding, topGap: blueprintTopGap, header: blueprintHeader,
       columns: 10, rows: 10, cell: blueprintCell, line: blueprintLine, pitch: blueprintPitch,
       width: blueprintGrid,
       height: blueprintHeader + blueprintPadding + blueprintGrid,
-      gridX: 10, gridY: blueprintY + blueprintHeader + blueprintPadding
+      gridX: hudPadding, gridY: blueprintY + blueprintHeader + blueprintPadding
     }),
     slots: Object.freeze({ size: slotSize, cell: slotSize - 2 * cellLine, line: cellLine, gap: 3, initial: 4, preview: 9, max: 10, y: height - bottomHudHeight + (bottomHudHeight - slotSize) / 2, exampleCost: 999 })
   });
 
   const hud = Object.freeze({
-    padding: 10, gap: hudGap, labelSize: 12, valueSize: 12, timeSize: 12,
-    centerY: hudCenterY, iconSize: 14, barHeight: 14, barWidth: 158, // 외형 14, 이중 프레임 2px
+    padding: hudPadding, gap: hudGap, labelSize: 12, valueSize: 12, timeSize: 12,
+    centerY: hudCenterY, iconSize: 14, barHeight: 12, barWidth: 158, // 외형 12, 내부 8, 이중 프레임 2px
     columnUnit: 1, minMetricWidth: 0, hourDigits: 4, counterDigits: 12, minBarWidth: tile * 4,
     // 표시 폭 예약 기준이며 게임 데이터의 최대값이 아니다.
     previewProgress: 30,
