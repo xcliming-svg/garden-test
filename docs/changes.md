@@ -2,7 +2,7 @@
 
 ## 2026-11-13 — 전장 1.5×/2× 비교
 
-- 사용자 요청에 따라 현재 SVG devel f853ba4에서 feature/devel-field-zoom을 분기한다. 기본 URL 및 UI는 유지하고 type=1은 1.5×, type=2는 2× 전장 확대. 정원/필드 객체 표시 배율과 입력 역변환, 9종 노출 및 일부 드롭 미리보기 앵커 보완. 색상/원본 에셋/실제 게임 로직 변경 없음. [상세 규격](./field-zoom.md). Chromium 실행 결과는 별도 기록.
+- 사용자 요청에 따라 현재 SVG devel f853ba4에서 feature/devel-field-zoom을 분기한다. 기본 URL 및 UI는 유지하고 type=1은 1.5×, type=2는 2× 전장 확대. 정원/필드 객체 표시 배율과 입력 역변환, 9종 노출 및 일부 드롭 미리보기 앵커 보완. 색상/원본 에셋/실제 게임 로직 변경 없음. [상세 규격](./field-zoom.md). [Chromium 977/977 통과](https://github.com/xcliming-svg/garden-test/actions/runs/43427740350), 코드 707e191. 검증된 코드로 devel 통합, main 유지.
 
 ## 2026-11-13 — SVG 애니메이션 devel 통합
 
