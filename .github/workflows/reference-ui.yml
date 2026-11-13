@@ -1,7 +1,7 @@
 name: Reference UI browser regression
 on:
   push:
-    branches: [feature/reference-ui]
+    branches: [feature/reference-ui, feature/blueprint-gap-3px]
 permissions:
   contents: read
 jobs:
