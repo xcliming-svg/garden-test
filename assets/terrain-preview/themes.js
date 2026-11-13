@@ -19,16 +19,16 @@
     '3':{name:'Rustic Woodland',grass:['#476E45','#41653F','#4D7448','#3D603B','#527C4D','#355831','#5E8856'],
       soil:['#85573E','#A77A56','#6A422F','#946448','#503526'],
       bg:'#211E18',hud:'#3C3228',hudEdge:'#79583D',hudLight:'#B18B5F',divider:'#241D18',
-      tab:'#A98D65',tabBorder:'#725139',panel:'#4C3D30',header:'#68513B',selected:'#765D44',border:'#89694D',
+      tab:'#5C5042',tabBorder:'#A58962',panel:'#4C3D30',header:'#68513B',selected:'#765D44',border:'#89694D',
       gridLine:'#846648',text:'#FAEAD0',label:'#DBC6A5',disabled:'#DBC6A5',disabledFill:'#49382A',disabledBorder:'#8E7050',
-      track:'#231E19',barFrame:'#70583E',green:'#9DBD64',red:'#EF9A83',flowerBorder:'#F6D98B',itemBorder:'#173F56',hover:'#FFE0A3',icon:'#D9C49D',
+      track:'#231E19',barFrame:'#70583E',green:'#9DBD64',red:'#EF9A83',flowerBorder:'#F6D98B',itemBorder:'#8CCDD8',hover:'#FFE0A3',icon:'#D9C49D',
       flowerFace:'#4D6047',flowerEdge:'#BEAA79'},
     '4':{name:'Mint Garden',grass:['#64A58A','#5B9B80','#6DAD91','#55947B','#75B599','#47866D','#82BFA2'],
       soil:['#AD7955','#C99A72','#895E44','#BA8561','#6A4A39'],
       bg:'#203836',hud:'#284E4B',hudEdge:'#518B7D',hudLight:'#98CCAC',divider:'#1A3937',
-      tab:'#D3E7C8',tabBorder:'#689786',panel:'#355D57',header:'#4A7A71',selected:'#56867D',border:'#82AA94',
+      tab:'#3B625B',tabBorder:'#83B5A0',panel:'#355D57',header:'#4A7A71',selected:'#56867D',border:'#82AA94',
       gridLine:'#719F8A',text:'#FFF5DE',label:'#D6EBDD',disabled:'#D6EBDD',disabledFill:'#35564F',disabledBorder:'#6F9A85',
-      track:'#1B3835',barFrame:'#4A7669',green:'#ACD887',red:'#F2A4A1',flowerBorder:'#F9DB89',itemBorder:'#354F9B',hover:'#F9EED0',icon:'#D4E6D6',
+      track:'#1B3835',barFrame:'#4A7669',green:'#ACD887',red:'#F2A4A1',flowerBorder:'#F9DB89',itemBorder:'#C7B9FF',hover:'#F9EED0',icon:'#D4E6D6',
       flowerFace:'#456E63',flowerEdge:'#9AC8B2'}
   };
   const type=new URLSearchParams(location.search).get('type');
