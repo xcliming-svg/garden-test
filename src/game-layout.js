@@ -408,7 +408,7 @@
 
     const header = scene.add.graphics().setDepth(11).setName('blueprint-header');
     frame(header, b.x, b.y, b.width, b.header, R.n.header, R.n.panelBorder);
-    text(scene, b.x + b.padding, b.y + b.header / 2 - 0.25, '도안', b.fontSize, colors.label, 'left').setDepth(12).setName('blueprint-title');
+    text(scene, b.x + b.padding, b.y + b.header / 2 - 0.75, '도안', b.fontSize, colors.label, 'left').setDepth(12).setName('blueprint-title');
     const arrow = scene.add.graphics().setDepth(12).setName('blueprint-chevron');
     let expanded = true;
     function drawArrow() {
