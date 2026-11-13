@@ -13,12 +13,9 @@
   const blueprintCell = 8, blueprintLine = 1, blueprintPitch = blueprintCell + blueprintLine;
   const blueprintGrid = 10 * blueprintPitch + blueprintLine;
   const hudGap = 5;
-  // FHD 실제 시간 레이블 끝~수치 시작은 15 물리 px(7.5 논리 px).
-  // HUD의 객체 간격 5px에 포함되지 않는 글리프 여백까지 반영한다.
-  const blueprintPadding = 7.5;
-  // FHD(2x) 프레임버퍼의 밝은 글리프 실측: 제목 21px, HUD 그룹 마지막 픽셀 Y=40.
-  // 투명한 텍스트 객체 여백을 제외한 가시 영역 기준. 1px=0.5 논리 px.
-  const hudCenterY = 15, hudInkBottom = 20.5, blueprintInkHeight = 10.5;
+  // 도안 제목의 가시 글자와 박스 외곽, 제목 박스와 그리드 사이를 5px로 통일.
+  const blueprintPadding = hudGap, blueprintFontSize = 10;
+  const hudCenterY = 15, blueprintInkHeight = 9;
   // 30px 콘텐츠 영역, 15px 실제 텍스트 객체 높이: 상하/좌우 여백 7.5px.
   const hudTextHeight = 15, hudPadding = hudCenterY - hudTextHeight / 2;
   const blueprintHeader = blueprintInkHeight + 2 * blueprintPadding;
@@ -26,7 +23,7 @@
   const topHudHeight = 32;
   const bottomHudHeight = 44;
   const fieldHeight = height - topHudHeight - bottomHudHeight;
-  const blueprintTopGap = topHudHeight - hudInkBottom;
+  const blueprintTopGap = hudPadding;
   const blueprintY = topHudHeight + blueprintTopGap;
   // 참조 트리 외형 24px = 내부 22px + 1px 프레임. 기존 대형 비교는 내부 32px 유지.
   // 이전 ?garden=36 링크는 대형 비교의 호환 별칭으로 유지한다.
@@ -40,7 +37,7 @@
     top: topHudHeight, fieldHeight, bottom: bottomHudHeight,
     garden: Object.freeze({ x: (width - gardenSize) / 2, y: Math.floor(topHudHeight + (fieldHeight - gardenSize) / 2), columns: 10, rows: 10, cell: gardenCell, line: cellLine, gap: 0, pitch: gardenPitch }),
     blueprint: Object.freeze({
-      x: hudPadding, y: blueprintY, padding: blueprintPadding, gap: blueprintPadding, topGap: blueprintTopGap, header: blueprintHeader,
+      x: hudPadding, y: blueprintY, padding: blueprintPadding, gap: blueprintPadding, topGap: blueprintTopGap, header: blueprintHeader, fontSize: blueprintFontSize,
       columns: 10, rows: 10, cell: blueprintCell, line: blueprintLine, pitch: blueprintPitch,
       width: blueprintGrid,
       height: blueprintHeader + blueprintPadding + blueprintGrid,
@@ -411,7 +408,7 @@
 
     const header = scene.add.graphics().setDepth(11).setName('blueprint-header');
     frame(header, b.x, b.y, b.width, b.header, R.n.header, R.n.panelBorder);
-    text(scene, b.x + b.padding, b.y + b.header / 2 - 0.25, '도안', window.GardenUI.fontSize.base, colors.label, 'left').setDepth(12).setName('blueprint-title');
+    text(scene, b.x + b.padding, b.y + b.header / 2 - 0.25, '도안', b.fontSize, colors.label, 'left').setDepth(12).setName('blueprint-title');
     const arrow = scene.add.graphics().setDepth(12).setName('blueprint-chevron');
     let expanded = true;
     function drawArrow() {
