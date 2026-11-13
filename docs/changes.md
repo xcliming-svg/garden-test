@@ -4,7 +4,7 @@
 
 ## 2026-11-14 — devel 직선 공 공격·랜덤 드롭·정원 확장
 
-- devel d6dc7d9 기준 feature/devel-projectile-loot. 충격파 제거, 0.65초 간격 직선 공, 1개 기본 및 장착 공 카드당 +1(360/N도). 중앙 4꽃부터 인접 빈 칸 드래그로 확장, 기존 손수레 대신 공 카드, 적 처치 시 꽃/공 카드/보석 중 무작위 드롭(25/20/55%), 수호자 보석 자동 획득과 HUD 집계, 외곽선/기존 배율·HUD 유지. [규격](./flower-head-preview.md). 꽃 피해·패배·레벨업·저장 미구현. main 유지.
+- devel d6dc7d9 기준 feature/devel-projectile-loot. 충격파 제거, 0.65초 간격 직선 공, 1개 기본 및 장착 공 카드당 +1(360/N도). 중앙 4꽃부터 인접 빈 칸 드래그로 확장, 기존 손수레 대신 공 카드, 적 처치 시 꽃/공 카드/보석 중 무작위 드롭(25/20/55%), 수호자 보석 자동 획득과 HUD 집계, 외곽선/기존 배율·HUD 유지. [규격](./flower-head-preview.md). 꽃 피해·패배·레벨업·저장 미구현. [Chromium 3/3 통과](https://github.com/xcliming-svg/garden-test/actions/runs/43526778161), 코드 74bed05. 실제 마우스 드래그 및 3발 방사형 검증, devel에 통합. 다른 브라우저 미검증. main 유지.
 
 ## 2026-11-14 — devel 자동 충격파 전투 테스트
 
