@@ -13,7 +13,7 @@
   const blueprintCell = 8, blueprintLine = 1, blueprintPitch = blueprintCell + blueprintLine;
   const blueprintGrid = 10 * blueprintPitch + blueprintLine;
   const hudGap = 5;
-  // 도안 제목의 가시 글자와 박스 외곽, 제목 박스와 그리드 사이를 5px로 통일.
+  // 제목의 가시 여백은 5px. 그리드와 제목 박스는 1px 경계선을 공유한다.
   const blueprintPadding = hudGap, blueprintFontSize = 10;
   const hudCenterY = 15, blueprintInkHeight = 9;
   // 30px 콘텐츠 영역, 15px 실제 텍스트 객체 높이: 상하/좌우 여백 7.5px.
@@ -37,11 +37,11 @@
     top: topHudHeight, fieldHeight, bottom: bottomHudHeight,
     garden: Object.freeze({ x: (width - gardenSize) / 2, y: Math.floor(topHudHeight + (fieldHeight - gardenSize) / 2), columns: 10, rows: 10, cell: gardenCell, line: cellLine, gap: 0, pitch: gardenPitch }),
     blueprint: Object.freeze({
-      x: hudPadding, y: blueprintY, padding: blueprintPadding, gap: blueprintPadding, topGap: blueprintTopGap, header: blueprintHeader, fontSize: blueprintFontSize,
+      x: hudPadding, y: blueprintY, padding: blueprintPadding, gap: 0, topGap: blueprintTopGap, header: blueprintHeader, fontSize: blueprintFontSize,
       columns: 10, rows: 10, cell: blueprintCell, line: blueprintLine, pitch: blueprintPitch,
       width: blueprintGrid,
-      height: blueprintHeader + blueprintPadding + blueprintGrid,
-      gridX: hudPadding, gridY: blueprintY + blueprintHeader + blueprintPadding
+      height: blueprintHeader + blueprintGrid - blueprintLine,
+      gridX: hudPadding, gridY: blueprintY + blueprintHeader - blueprintLine
     }),
     slots: Object.freeze({ size: slotSize, cell: slotSize - 2 * cellLine, line: cellLine, gap: 3, initial: 4, preview: 9, max: 10, y: height - bottomHudHeight + (bottomHudHeight - slotSize) / 2, exampleCost: 999 })
   });
@@ -131,11 +131,11 @@
     g.fillRect(x + size - 1, y + 1, 1, size - 2);
   }
 
-  function grid(g, x, y, b, fill, line) {
+  function grid(g, x, y, b, fill, line, outerBorder = colors.gridBorder) {
     const width = b.columns * b.pitch + b.line;
     const height = b.rows * b.pitch + b.line;
     // 외곽 및 내부 공유선은 1px, 각 칸의 순수 내부는 8×8.
-    frame(g, x, y, width, height, fill, colors.gridBorder);
+    frame(g, x, y, width, height, fill, outerBorder);
     g.fillStyle(line, 1);
     for (let i = 1; i < b.columns; i++) {
       g.fillRect(x + i * b.pitch, y + b.line, b.line, height - 2 * b.line);
@@ -404,7 +404,8 @@
     const b = spec.blueprint;
     // 패널 접기는 화면 UI 상태만 변경한다.
     const body = scene.add.graphics().setDepth(10).setName('blueprint-body');
-    grid(body, b.gridX, b.gridY, b, colors.gridFill, colors.blueprintLine);
+    // 헤더 하단과 그리드 상단을 같은 1px 위치에 겹쳐 하나의 연속 외곽으로 표시.
+    grid(body, b.gridX, b.gridY, b, colors.gridFill, colors.blueprintLine, R.n.panelBorder);
 
     const header = scene.add.graphics().setDepth(11).setName('blueprint-header');
     frame(header, b.x, b.y, b.width, b.header, R.n.header, R.n.panelBorder);
