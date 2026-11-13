@@ -116,7 +116,7 @@ for(const c of configs){
     check(label+' 70px columns, 5px row gap and centered groups',m.side===210&&m.statSpec.columnWidth===70&&m.statSpec.lineGap===5&&statGroups.every(Boolean),JSON.stringify(m.stats));
     check(label+' stat nonoverlap',m.stats.every((a,i)=>m.stats.every((b,j)=>i===j||!overlap(a,b))));
     check(label+' stats/slots separation',m.stats.every(t=>m.slots.every(b=>!overlap(t,{x:b.x,y:b.y,w:b.size,h:b.size}))));
-    let cost=m.cost,b=m.slots[9];check(label+' cost bounds',!!cost&&cost.font===10&&m.costSpec.gap===5&&Math.abs(cost.y-(b.y+(b.size-(m.costSpec.iconSize+5+cost.h))/2+m.costSpec.iconSize+5))<0.01&&Math.abs(cost.x+cost.w/2-(b.x+b.size/2))<0.01&&cost.x>=b.x+1-eps&&cost.y>=b.y+1-eps&&cost.x+cost.w<=b.x+b.size-1+eps&&cost.y+cost.h<=b.y+b.size-1+eps,JSON.stringify(cost));
+    let cost=m.cost,b=m.slots[9];check(label+' cost bounds',!!cost&&cost.font===8&&m.costSpec.gap===5&&m.stats.filter(t=>t.name.startsWith('stat-value:')).every(t=>t.y===cost.y&&t.h===cost.h)&&cost.y-5-m.costSpec.iconSize>=b.y+1&&Math.abs(cost.x+cost.w/2-(b.x+b.size/2))<0.01&&cost.x>=b.x+1-eps&&cost.y>=b.y+1-eps&&cost.x+cost.w<=b.x+b.size-1+eps&&cost.y+cost.h<=b.y+b.size-1+eps,JSON.stringify(cost));
     // A dragged item intentionally follows the pointer into the HUD/slot. Only this specific card
     // is exempt during replacement; independently verify its exact target/alpha below.
     const overflow=m.markerOverflow.filter(n=>label!=='replacement stats'||n!=='placeholder:item:3');
@@ -183,7 +183,7 @@ for(const c of configs){
     if(w===1280||w===1920){
       const png=await page.screenshot({path:join(out,c.id+'-'+w+'.png')});
       if(w===1920){
-        const pixels=await page.evaluate(async ({data,hud,bp})=>{
+        const pixels=await page.evaluate(async ({data,hud,bp,stats,cost,slot})=>{
           const img=await createImageBitmap(await (await fetch('data:image/png;base64,'+data)).blob());
           const cv=document.createElement('canvas');cv.width=img.width;cv.height=img.height;
           const ctx=cv.getContext('2d');ctx.drawImage(img,0,0);
@@ -206,6 +206,8 @@ for(const c of configs){
           const grid=bounds(bp.x*2,Math.floor(bp.gridY*2),(bp.x+bp.width)*2,Math.ceil((bp.gridY+91)*2),exact(103,103,119));
           const seamY=bp.gridY*2, seamX=bp.x*2+8;
           const seam=[-1,0,1,2].map(d=>rgb(seamX,seamY+d));
+          const costInk=box(cost), numberInk=stats.filter(t=>t.name.startsWith('stat-value:')).map(t=>({text:t.text,...box(t)}));
+          const gemInk=bounds(slot.x*2+2,slot.y*2+2,(slot.x+slot.size)*2-2,Math.floor(cost.y*2),exact(170,170,170));
           const bar=bounds(1500,10,1920,54,exact(135,135,150));
           const dividers=bounds(0,10,1920,50,exact(32,32,32));
           const dividerRuns=[];
@@ -215,14 +217,15 @@ for(const c of configs){
             while(x+1<1920&&exact(32,32,32)(rgb(x+1,12)))x++;
             dividerRuns.push([left,x]);
           }
-          return {image:[cv.width,cv.height],label,time,title,header,grid,bar,dividerRuns,seam,
+          return {image:[cv.width,cv.height],label,time,title,header,grid,bar,dividerRuns,seam,costInk,numberInk,gemInk,costVisibleGap:costInk.top-gemInk.bottom-1,
             leftPadding:label.left,rightPadding:cv.width-bar.right-1,
             timeGap:time.left-label.right-1,hudBottomGap:64-Math.max(label.bottom,time.bottom)-1,
             headerTopGap:header.top-64,titleLeftGap:title.left-header.left,titleTopGap:title.top-header.top,
             titleBottomGap:header.bottom-title.bottom,gridGap:grid.top-header.bottom-1};
-        },{data:png.toString('base64'),hud:m.hud,bp:m.blueprint});
+        },{data:png.toString('base64'),hud:m.hud,bp:m.blueprint,stats:m.stats,cost:m.cost,slot:m.slots[9]});
         console.log('PIXEL_REPORT '+JSON.stringify(pixels));
         check('FHD right-aligned gauge and two left dividers',pixels.leftPadding===15&&pixels.rightPadding===pixels.leftPadding&&pixels.bar.width===316&&pixels.bar.height===24&&JSON.stringify(pixels.dividerRuns)===JSON.stringify([[324,327],[648,651]]),JSON.stringify(pixels));
+        check('FHD slot cost and stat digits share visible baseline',pixels.costInk.n>0&&pixels.gemInk.n>0&&pixels.numberInk.every(t=>t.n>0&&Math.abs(t.bottom-pixels.costInk.bottom)<=1),JSON.stringify({cost:pixels.costInk,numbers:pixels.numberInk,gem:pixels.gemInk,gap:pixels.costVisibleGap}));
         check('FHD actual screenshot alignment and visible gaps',pixels.header.width===182&&pixels.grid.width===182&&pixels.header.left===pixels.grid.left&&pixels.header.left===pixels.label.left&&pixels.headerTopGap===15&&[pixels.titleLeftGap,pixels.titleTopGap,pixels.titleBottomGap].every(g=>g===10)&&pixels.gridGap===-2&&pixels.grid.height===182&&JSON.stringify(pixels.seam)===JSON.stringify([[68,68,92],[103,103,119],[103,103,119],[48,46,58]]),JSON.stringify(pixels));
       }
     }
