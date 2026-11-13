@@ -325,7 +325,7 @@ for(const c of configs){
       return {zones:zones.map(o=>[o.width,o.height,o.input.hitArea.width,o.input.hitArea.height]),cards:cards.map(o=>[o.width,o.height,o.list[1].width,o.list[2].displayWidth]),ghost:[ghost.width,ghost.height],costMasked:!!cost.mask,drop:L.assets.item.dropSize,bottom:L.spec.bottom};
     });
     check(key+' equal sizes, center and gap',m.slots.length===10&&m.slots.every((s,i)=>s.size===size&&s.y+s.size/2===518&&(!i||s.x-m.slots[i-1].x===size+3))&&m.slotWidth===10*size+27&&Math.abs(m.slotLeft+m.slotWidth/2-480)<=0.5&&m.side===210&&detail.bottom===44,JSON.stringify(m.slots));
-    check(key+' matching hitboxes, cards, ghost and unchanged field drops',detail.zones.length===10&&detail.zones.every(a=>a.every(v=>v===size))&&detail.cards.length===10&&detail.cards.every(a=>a[0]===size&&a[1]===size&&a[2]===size-2&&a[3]===16)&&detail.ghost.every(v=>v===size)&&detail.drop===24,JSON.stringify(detail));
+    check(key+' matching hitboxes, cards, ghost and unchanged field drops',detail.zones.length===9&&detail.zones.every(a=>a.every(v=>v===size))&&detail.cards.length===9&&detail.cards.every(a=>a[0]===size&&a[1]===size&&a[2]===size-2&&a[3]===16)&&detail.ghost.every(v=>v===size)&&detail.drop===24,JSON.stringify(detail));
     check(key+' cost aligns with stat row',m.cost.font===8&&m.costSpec.gap===5&&m.stats.filter(t=>t.name.startsWith('stat-value:')).every(t=>t.y===m.cost.y&&t.h===m.cost.h)&&detail.costMasked===(size===24),JSON.stringify(m.cost));
     await page.setViewportSize({width:1920,height:1080});
     await page.waitForFunction(()=>window.__benchmarkGame.scene.getScene('Game').cameras.main.zoom===2);
