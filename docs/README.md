@@ -18,6 +18,7 @@
 | [ui-spec.md](./ui-spec.md) | 공통 UI 상태·조작 규칙 및 과거 main 디자인 규격; devel 세부 수치는 960×540 현행 규격 우선 |
 | [ui-decisions.md](./ui-decisions.md) | 2026-11-12 UI 디자인 확정 기록. 레이아웃, HUD, Garden 32, 보더, 폰트·렌더링 최종 결정 및 제약 |
 | [changes.md](./changes.md) | 커밋별 시스템 변경 요약 및 검증 상태. 현재 기준 정리 이후 지속적으로 갱신 |
+| [flower-head-preview.md](./flower-head-preview.md) | 별도 브랜치의 꽃 머리 크기 비교 및 검증 |
 
 상세 좌표·색상·PNG 크기는 [ASSET_SPECS.md](../ASSET_SPECS.md), 실행 방법은 [README.md](../README.md), 개발 범위 및 문서 갱신 규칙은 [AGENTS.md](../AGENTS.md)를 참조한다.
 
