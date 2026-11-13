@@ -123,6 +123,34 @@ for(const c of configs){
     check(label+' zoom',Math.abs(m.zoom-Math.min(m.canvas[0]/960,m.canvas[1]/540))<1e-6&&m.hud.every(t=>Math.abs(t.resolution-Math.max(1,m.zoom))<1e-6));
   };
   const initial=await gameMetrics();inspectGame(initial,'initial');
+
+  // Read-only sizing probe: proposed translation labels, no game localization changes.
+  const proposedStatLabels={
+    ko:['방어력','최대 체력','행운','이동 속도','획득 범위','초당 피해량'],
+    en:['Defense','Max Health','Luck','Movement Speed','Pickup Range','Damage per Second'],
+    ja:['防御力','最大体力','運','移動速度','拾得範囲','毎秒ダメージ'],
+    es:['Defensa','Salud máxima','Suerte','Velocidad de movimiento','Alcance de recogida','Daño por segundo'],
+    zh:['防御力','最大生命值','幸运','移动速度','拾取范围','每秒伤害']
+  };
+  const shortStatLabels={
+    ko:proposedStatLabels.ko,
+    en:['Defense','Max Health','Luck','Move Speed','Pickup Range','DPS'],
+    ja:proposedStatLabels.ja,
+    es:['Defensa','Salud máx.','Suerte','Vel. movimiento','Rango recogida','DPS'],
+    zh:proposedStatLabels.zh
+  };
+  const statWidthReport=await page.evaluate(({full,short})=>{
+    const U=window.GardenUI,L=window.GardenGameLayout,s=window.__benchmarkGame.scene.getScene('Game'),p=U.text(s,0,0,'',L.bottomStats.fontSize,'#FFFFFF');
+    const width=v=>{p.setText(v);return p.width;};
+    const measure=labels=>Object.fromEntries(Object.entries(labels).map(([k,arr])=>[k,arr.map(v=>({label:v,width:width(v)}))]));
+    const numberRows=[['124','+24'],['100','-24'],['999','+999'],['9,999','+9,999'],['999,999','+999,999'],['999,999,999,999','+999,999,999,999']].map(([value,delta])=>({value,delta,width:width(value)+L.bottomStats.deltaGap+width(delta)}));
+    const b=L.bottomLayout(), maxColumnWidth=Math.floor(Math.min(b.slotLeft-b.left,L.spec.width-b.left-(b.slotLeft+b.totalWidth))/L.bottomStats.columns);
+    const result={full:measure(full),short:measure(short),numberRows,currentColumnWidth:L.bottomStats.columnWidth,maxColumnWidth,slotCostFont:L.slotCost.fontSize};
+    p.destroy();return result;
+  },{full:proposedStatLabels,short:shortStatLabels});
+  const missingStatGlyphs=[...new Set([...Object.values(proposedStatLabels).flat(),...Object.values(shortStatLabels).flat()].join(''))].filter(c=>!font.hasGlyphForCodePoint(c.codePointAt(0)));
+  console.log('STAT_WIDTH_REPORT '+JSON.stringify({...statWidthReport,missingStatGlyphs}));
+
   const dropState=()=>page.evaluate(()=>{
     const s=window.__benchmarkGame.scene.getScene('Game');
     return s.children.list.filter(o=>/^placeholder:(item|flower):/.test(o.name||'')).map(o=>({name:o.name,x:o.x,y:o.y,w:o.width,h:o.height,hitW:o.input.hitArea.width,hitH:o.input.hitArea.height,border:o.list[0].visible,borderY:o.list[0].y,borderColor:o.list[0].fillColor,face:o.list[1].visible,faceColor:o.list[1].fillColor,faceW:o.list[1].width,faceH:o.list[1].height,faceY:o.list[1].y,img:o.list[2].y,imgW:o.list[2].displayWidth,shadow:o.list[3].visible,shadowW:o.list[3].width,shadowH:o.list[3].height}));
