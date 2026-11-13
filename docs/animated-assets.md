@@ -24,4 +24,4 @@
 - Boot에서 활성 SVG를 사전 로드하고 애니메이션을 1회 등록한다. 씬 재진입 시 텍스처를 재사용한다. Pause 시 씬의 애니메이션과 이동이 함께 중단된다.
 - 코드: src/animated-assets.js(파일/크롭/크기/FPS/재생), src/scenes.js(Boot), src/game-layout.js(배치/순찰), src/test-sprites.js(기존 카드와 SVG 꽃 연결).
 - 실행: SVG를 HTTP로 로드하므로 프로젝트 폴더에서 정적 웹 서버(예: python -m http.server 8000)를 실행하고 http://localhost:8000/ 로 접속한다. CDN 인터넷 연결은 여전히 필요하다. file:// 직접 열기는 브라우저 로컬 XHR 정책으로 지원하지 않는다.
-- 검증: tests/reference-ui.mjs에 SVG 실제 로드/크롭/프레임 변화/9종 노출/2인 순찰/정지/일시정지 검사를 추가하고 기존 UI 검사를 유지한다. 실행 결과는 변경 이력에 별도 기록한다.
+- 검증: tests/reference-ui.mjs에 SVG 실제 로드/크롭/프레임 변화/9종 노출/2인 순찰/정지/일시정지 검사를 추가하고 기존 UI 검사를 유지한다. 실행 결과: [실제 Chromium 회귀 961/961 통과](https://github.com/xcliming-svg/garden-test/actions/runs/43424399319) (코드 20cd7ad, 2026-11-13). 5개 해상도, 5개 언어, DPR2, 기존 UI/드래그/일시정지, 신규 SVG 60프레임 로드·크롭·실제 반복·2인 순찰·동물 정지 및 9종 노출을 검사했다. 별도 Chromium 픽셀 검사에서도 15종 60장 모두 서로 다른 4프레임 및 크롭 밖 알파 0을 확인했다. 최대 24px 정사각형을 가정한 1,000회 배치 시뮬레이션에서 동물 간 겹침 0회. 다른 브라우저·OS와 실제 전투 밸런스는 미검증.
