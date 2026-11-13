@@ -289,6 +289,11 @@
     const { width, height } = item.canvas;
     const data = item.context.getImageData(0, 0, width, height).data;
     const bg = Math.max((background >> 16) & 255, (background >> 8) & 255, background & 255);
+    const fg = parseInt(item.style.color.slice(1), 16);
+    const foreground = Math.max((fg >> 16) & 255, (fg >> 8) & 255, fg & 255);
+    // Measure foreground at 25% contrast relative to its own color and surface.
+    // A fixed brightness cutoff would miss antialiased gray 999 pixels when scaled down.
+    const threshold = Math.ceil(bg + (foreground - bg) * 0.25);
     let top = height, bottom = 0, fallbackTop = height, fallbackBottom = 0;
     for (let y = 0; y < height; y++) for (let x = 0; x < width; x++) {
       const i = (y * width + x) * 4, alpha = data[i + 3] / 255;
@@ -296,9 +301,7 @@
       if (!alpha || !color) continue;
       fallbackTop = Math.min(fallbackTop, y);
       fallbackBottom = Math.max(fallbackBottom, y + 1);
-      // 축소 배율에서는 안티앨리어싱된 희미한 전경도 인식한다.
-      const threshold = item.style.resolution < 1 ? 75 : 145;
-      if (color * alpha + bg * (1 - alpha) < threshold) continue;
+      if (Math.round(color * alpha + bg * (1 - alpha)) < threshold) continue;
       top = Math.min(top, y);
       bottom = Math.max(bottom, y + 1);
     }
@@ -311,16 +314,32 @@
     const c = slotCost, centerY = y + size / 2;
     const cost = text(scene, x + size / 2, 0, String(value), c.fontSize, colors.disabledText, 'center').setName('slot-cost-value');
     const icon = U.pixelGraphics(scene).setName('slot-cost-icon');
-    reserveIcon(icon, x + (size - c.iconSize) / 2, 0, c.iconSize, R.n.disabled);
+    // The dotted icon uses the same logical 8px dimensions. Rasterize the edge dots
+    // on the actual output grid so a sub-1x scale cannot erase its outermost row.
     // 숫자 및 보석의 실제 픽셀 외접 범위가 HUD 중심에 오도록 배치한다.
     function alignCost() {
       const zoom = scene.cameras.main.zoom;
       const ink = bottomInk(cost, colors.disabledFill);
-      const iconHeight = Math.round(c.iconSize * zoom), gap = Math.round(c.gap * zoom);
+      const iconHeight = Math.max(1, Math.round(c.iconSize * zoom)), gap = Math.round(c.gap * zoom);
       const numberHeight = ink.bottom - ink.top;
       const iconTop = Math.round(centerY * zoom - (iconHeight + gap + numberHeight) / 2);
       const upperBottom = iconTop + iconHeight, numberTop = upperBottom + gap;
-      icon.setY(iconTop / zoom);
+      const iconLeft = Math.round((x + (size - c.iconSize) / 2) * zoom);
+      icon.setPosition(iconLeft / zoom, iconTop / zoom).clear();
+      icon.fillStyle(R.n.disabled, 1);
+      const pixelRange = i => {
+        const start = Math.min(iconHeight - 1, Math.round(i * zoom));
+        const end = Math.min(iconHeight, Math.max(start + 1, Math.round((i + 1) * zoom)));
+        return [start / zoom, (end - start) / zoom];
+      };
+      const dot = (ix, iy) => {
+        const [dx, dw] = pixelRange(ix), [dy, dh] = pixelRange(iy);
+        icon.fillRect(dx, dy, dw, dh);
+      };
+      for (let i = 0; i < c.iconSize; i++) {
+        if (Math.min(i, c.iconSize - 1 - i) % 2 !== 0) continue;
+        dot(i, 0); dot(i, c.iconSize - 1); dot(0, i); dot(c.iconSize - 1, i);
+      }
       cost.setY((numberTop - ink.top) / zoom + cost.displayOriginY);
       return { zoom, upperBottom, numberTop, numberBottom: numberTop + numberHeight };
     }
