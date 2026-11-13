@@ -33,15 +33,17 @@
   // 이전 ?garden=36 링크는 대형 비교의 호환 별칭으로 유지한다.
   const gardenMode = new URLSearchParams(window.location.search).get('garden');
   const gardenCell = gardenMode === '32' || gardenMode === '36' ? unit * 4 : 22;
-  const cellLine = 1, gardenPitch = gardenCell + 2 * cellLine;
+  // 인접한 셀은 1px 경계 하나를 공유한다: 외형 24, 내부 22, 피치 23.
+  const cellLine = 1, gardenPitch = gardenCell + cellLine;
+  const gardenOuter = gardenPitch + cellLine;
   const iconSize = unit * 2, flowerDropSize = 24, itemDropSize = 32;
   // 비교 링크의 실제 실행 규격을 브라우저 탭 제목에서 식별할 수 있게 한다.
   if (['24', '32', '36'].includes(slotMode)) document.title = 'Garden Test | 슬롯 ' + slotSize + 'px';
-  const gardenSize = 10 * gardenPitch;
+  const gardenSize = 10 * gardenPitch + cellLine;
   const spec = Object.freeze({
     width, height,
     top: topHudHeight, fieldHeight, bottom: bottomHudHeight,
-    garden: Object.freeze({ x: (width - gardenSize) / 2, y: Math.floor(topHudHeight + (fieldHeight - gardenSize) / 2), columns: 10, rows: 10, cell: gardenCell, line: cellLine, gap: 0, pitch: gardenPitch }),
+    garden: Object.freeze({ x: Math.floor((width - gardenSize) / 2), y: Math.floor(topHudHeight + (fieldHeight - gardenSize) / 2), columns: 10, rows: 10, cell: gardenCell, line: cellLine, gap: 0, pitch: gardenPitch, outer: gardenOuter, size: gardenSize }),
     blueprint: Object.freeze({
       x: hudPadding, y: blueprintY, padding: blueprintPadding, gap: blueprintGap, topGap: blueprintTopGap, header: blueprintHeader, fontSize: blueprintFontSize,
       columns: 10, rows: 10, cell: blueprintCell, line: blueprintLine, pitch: blueprintPitch,
@@ -841,6 +843,55 @@
     return result;
   }
 
+  // 셀 내부, 가로/세로 공유선, 교차점은 서로 겹치지 않는 영역이다.
+  // 가시 셀을 기준으로 각 격자 경계 및 교차점을 한 번만 생성한다.
+  function gardenGridRects(visible, g = spec.garden) {
+    const { columns, rows, pitch, cell, line } = g;
+    const rects = [];
+    const has = (x,y) => x >= 0 && x < columns && y >= 0 && y < rows && visible.has(y * columns + x);
+    const add = (x,y,w,h,border) => rects.push({ x,y,w,h,border });
+    for (let y = 0; y <= rows; y++) for (let x = 0; x <= columns; x++) {
+      const px = x * pitch, py = y * pitch;
+      const a = has(x,y), b = has(x-1,y), c = has(x,y-1), d = has(x-1,y-1);
+      if (a) add(px+line,py+line,cell,cell,false);
+      if (a || c) add(px+line,py,cell,line,true);
+      if (a || b) add(px,py+line,line,cell,true);
+      if (a || b || c || d) add(px,py,line,line,true);
+    }
+    return rects;
+  }
+
+  // 공통 경계를 물리 픽셀에 한 번만 매핑한다. 축소에서도 선은 최소 1물리 px
+  // (피치가 1물리 px 미만인 극소 창은 예외). 선/면의 끝점을 공유해 겹치지 않는다.
+  function gardenRaster(visible, g, z) {
+    const axis = base => {
+      const start = n => Math.round((base + n*g.pitch)*z);
+      const end = n => Math.min(start(n+1), Math.max(start(n)+1, Math.round((base+n*g.pitch+g.line)*z)));
+      const offset = start(0);
+      return { offset, at: v => {
+        const n = Math.floor(v/g.pitch);
+        return (v % g.pitch === 0 ? start(n) : end(n)) - offset;
+      }};
+    };
+    const ax = axis(g.x), ay = axis(g.y);
+    const width = Math.max(1,ax.at(g.columns*g.pitch+g.line));
+    const height = Math.max(1,ay.at(g.rows*g.pitch+g.line));
+    const rects = gardenGridRects(visible,g).map(r => {
+      const x = ax.at(r.x), y = ay.at(r.y);
+      return { x,y,w:ax.at(r.x+r.w)-x,h:ay.at(r.y+r.h)-y,border:r.border };
+    }).filter(r => r.w>0 && r.h>0);
+    return { x:ax.offset,y:ay.offset,width,height,rects };
+  }
+
+  // 공유선은 오른쪽/아래 셀에 귀속하고 최종 외곽선만 마지막 셀에 포함한다.
+  function gardenHit(x, y, g = spec.garden) {
+    const px = x - g.x, py = y - g.y;
+    if (px < 0 || py < 0 || px >= g.columns*g.pitch+g.line || py >= g.rows*g.pitch+g.line) return -1;
+    const col = Math.min(g.columns-1, Math.floor(px/g.pitch));
+    const row = Math.min(g.rows-1, Math.floor(py/g.pitch));
+    return row*g.columns+col;
+  }
+
   // 점유 영역을 감싸는 사각형에서 양쪽으로 2칸(후보 1칸 + 수호자 1칸)을 띄운 중심 경로.
   // 10×10의 끝에서도 가상 여유 칸을 유지하며, 실제 배치 가능 여부와는 별개다.
   function patrolBounds(occupied) {
@@ -910,38 +961,38 @@
       joining = true;
     }
     scene.events.on('update', updatePatrol);
-    // 10×10 노드 면과 외부 1px 테두리를 단일 텍스처로 합성한다.
+    // 10×10 노드 면과 1px 공유선을 단일 텍스처로 합성한다.
     // 점유 및 후보만 표시하고 나머지 격자는 투명하게 유지한다.
     const soilKey = 'ui-test:garden-soil:' + garden.cell;
-    const soilWidth = garden.columns * garden.pitch, soilHeight = garden.rows * garden.pitch;
+    const soilWidth = garden.columns * garden.pitch + garden.line, soilHeight = garden.rows * garden.pitch + garden.line;
     const soilTexture = scene.textures.exists(soilKey) ? scene.textures.get(soilKey) :
       scene.textures.createCanvas(soilKey, soilWidth, soilHeight);
     soilTexture.setFilter(Phaser.Textures.FilterMode.NEAREST);
     const soil = scene.add.image(garden.x + soilWidth / 2, garden.y + soilHeight / 2, soilKey)
       .setDepth(-1).setName('garden-preview-soil');
+    // 각 공유선을 출력 픽셀 경계에 맞추되 축소 시에도 최소 1물리 px을 확보한다.
+    // 선 끝/면 시작에 동일한 좌표를 사용해 물리 픽셀에서도 중복 그리기를 방지한다.
     function refreshSoil() {
+      const z = scene.cameras.main.zoom;
+      const visible = new Set([...occupied, ...gardenCandidates(occupied)]);
+      const raster = gardenRaster(visible,garden,z), w = raster.width, h = raster.height;
+      if (soilTexture.width !== w || soilTexture.height !== h) soilTexture.setSize(w,h);
+      soil.setTexture(soilKey).setDisplaySize(w/z,h/z).setPosition((raster.x+w/2)/z,(raster.y+h/2)/z);
       const ctx = soilTexture.getContext();
-      ctx.clearRect(0, 0, soilWidth, soilHeight);
-      // 참조 트리 노드: 1px 초록 외곽선과 22px 어두운 면.
-      for (const key of new Set([...occupied, ...gardenCandidates(occupied)])) {
-        const x = (key % garden.columns) * garden.pitch, y = Math.floor(key / garden.columns) * garden.pitch;
-        const l = garden.line, s = garden.pitch;
-        ctx.globalAlpha = 1;
-        ctx.fillStyle = '#' + colors.gardenBorder.toString(16).padStart(6, '0');
-        ctx.fillRect(x, y, s, l);
-        ctx.fillRect(x, y + s - l, s, l);
-        ctx.fillRect(x, y + l, l, garden.cell);
-        ctx.fillRect(x + s - l, y + l, l, garden.cell);
-        ctx.globalAlpha = colors.gardenSoilAlpha;
-        ctx.fillStyle = '#' + colors.gardenSoil.toString(16).padStart(6, '0');
-        ctx.fillRect(x + l, y + l, garden.cell, garden.cell);
+      ctx.clearRect(0, 0, w, h);
+      const border = '#' + colors.gardenBorder.toString(16).padStart(6, '0');
+      const face = '#' + colors.gardenSoil.toString(16).padStart(6, '0');
+      for (const r of raster.rects) {
+        ctx.globalAlpha = r.border ? 1 : colors.gardenSoilAlpha;
+        ctx.fillStyle = r.border ? border : face;
+        ctx.fillRect(r.x,r.y,r.w,r.h);
       }
       ctx.globalAlpha = 1;
       soilTexture.refresh();
       soilTexture.setFilter(Phaser.Textures.FilterMode.NEAREST);
     }
     // 패딩 확대 전 방식: 커서를 따라가는 드래그 카드(30)와 칸 중심 미리보기(15)를 분리한다.
-    const accents = scene.add.graphics().setDepth(31).setName('garden-preview-highlight');
+    const accents = U.pixelGraphics(scene).setDepth(31).setName('garden-preview-highlight');
     const ghost = testSprites.sprite(scene, 0, 0, testSprites.flowers[0], assets.flower.size)
       .setDepth(15).setAlpha(0.45).setVisible(false).setName('garden-preview-ghost');
     let dragging = null, target = -1;
@@ -961,7 +1012,7 @@
       if (dragging) for (const key of candidates) {
         const p = origin(key);
         // 선택 사각형은 기존 외부 1px 프레임 위에 일치한다.
-        if (key === target) dropSquare(accents, p.x, p.y, garden.pitch);
+        if (key === target) dropSquare(accents, p.x, p.y, garden.outer);
         else dropPlus(accents, p.x + garden.line, p.y + garden.line, garden.cell);
       }
       ghost.setVisible(false);
@@ -973,8 +1024,7 @@
     }
     function hit(pointer) {
       const p = scene.cameras.main.getWorldPoint(pointer.x, pointer.y);
-      const x = Math.floor((p.x - garden.x) / garden.pitch), y = Math.floor((p.y - garden.y) / garden.pitch);
-      return x >= 0 && x < garden.columns && y >= 0 && y < garden.rows ? y * garden.columns + x : -1;
+      return gardenHit(p.x, p.y, garden);
     }
     function move(pointer) {
       if (!dragging) return;
@@ -1014,12 +1064,14 @@
       marker.on('dragend', pointer => { if (dragging === flower) finish(pointer, true); });
     });
     const cancel = () => finish(null, false);
+    scene.scale.on('resize', refreshSoil);
     scene.input.on('gameout', cancel);
     scene.events.on('pause', cancel);
     scene.events.once('shutdown', () => {
       scene.input.off('gameout', cancel);
       scene.events.off('pause', cancel);
       scene.events.off('update', updatePatrol);
+      scene.scale.off('resize', refreshSoil);
     });
     refreshSoil();
     refresh();
@@ -1040,5 +1092,5 @@
     text(scene, spec.width - 10, spec.top + spacing.base, '테스트 이미지', bottomStats.fontSize, colors.label, 'right').setDepth(16);
   }
 
-  window.GardenGameLayout = Object.freeze({ spec, assets, colors, spacing, hud, slotCost, formatHudTime, formatHudCount, hudColumns, bottomStats, itemTooltip, replacementTitle, bottomLayout, sumPreviewStats, getPreviewStats, tooltipPosition, gardenCandidates, patrolBounds, patrolPosition, nearestPatrolDistance, draw });
+  window.GardenGameLayout = Object.freeze({ spec, assets, colors, spacing, hud, slotCost, formatHudTime, formatHudCount, hudColumns, bottomStats, itemTooltip, replacementTitle, bottomLayout, sumPreviewStats, getPreviewStats, tooltipPosition, gardenCandidates, gardenGridRects, gardenRaster, gardenHit, patrolBounds, patrolPosition, nearestPatrolDistance, draw });
 }());

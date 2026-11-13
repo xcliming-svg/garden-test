@@ -180,6 +180,80 @@ for(const c of configs){
     check(label+' zoom',Math.abs(m.zoom-Math.min(m.canvas[0]/960,m.canvas[1]/540))<1e-6&&[...m.hud,...m.stats,m.cost].every(t=>Math.abs(t.resolution-m.zoom)<1e-6&&t.frame[0]===t.buffer[0]&&t.frame[1]===t.buffer[1]&&t.uv.every(v=>v===1)));
   };
   const initial=await gameMetrics();inspectGame(initial,'initial');
+  const gardenAudit=async()=>page.evaluate(()=>{
+    const L=window.GardenGameLayout,g=L.spec.garden,s=window.__benchmarkGame.scene.getScene('Game');
+    const occupied=new Set(s.children.list.filter(o=>o.name?.startsWith('garden-preview-flower:')).map(o=>Number(o.name.split(':').at(-1))));
+    const visible=new Set([...occupied,...L.gardenCandidates(occupied)]),tex=s.textures.get('ui-test:garden-soil:'+g.cell),ctx=tex.getContext();
+    const w=g.columns*g.pitch+g.line,h=g.rows*g.pitch+g.line;
+    const pixels=ctx.getImageData(0,0,w,h).data;
+    const expected=(set,x,y)=>{
+      // Independently classify a pixel from every cell's closed outer square.
+      let value=0;
+      for(const key of set){
+        const a=x-key%g.columns*g.pitch,b=y-Math.floor(key/g.columns)*g.pitch;
+        if(a>=0&&a<g.outer&&b>=0&&b<g.outer)value=Math.max(value,a===0||b===0||a===g.outer-1||b===g.outer-1?2:1);
+      }
+      return value;
+    };
+    const layouts=[visible,new Set([0]),new Set([0,1,10,11]),new Set([0,11,99]),new Set(Array.from({length:100},(_,i)=>i))];
+    const coverage=layouts.map(set=>{
+      const counts=new Uint8Array(w*h),kind=new Uint8Array(w*h);
+      let outOfBounds=0;
+      for(const r of L.gardenGridRects(set))for(let y=r.y;y<r.y+r.h;y++)for(let x=r.x;x<r.x+r.w;x++){
+        if(x<0||x>=w||y<0||y>=h){outOfBounds++;continue;}
+        counts[y*w+x]++;kind[y*w+x]=r.border?2:1;
+      }
+      let mismatch=0,overdraw=0;
+      for(let y=0;y<h;y++)for(let x=0;x<w;x++){const i=y*w+x;if(counts[i]>1)overdraw++;if(kind[i]!==expected(set,x,y))mismatch++;}
+      return {cells:set.size,mismatch,overdraw,outOfBounds};
+    });
+    const nativeCoverage=[2/3,1,4/3,5/3,2,25/12].flatMap(z=>layouts.map(set=>{
+      const r=L.gardenRaster(set,g,z),counts=new Uint8Array(r.width*r.height);
+      let overdraw=0,outOfBounds=0;
+      for(const a of r.rects)for(let y=a.y;y<a.y+a.h;y++)for(let x=a.x;x<a.x+a.w;x++){
+        if(x<0||x>=r.width||y<0||y>=r.height){outOfBounds++;continue;}
+        if(++counts[y*r.width+x]>1)overdraw++;
+      }
+      return {z,cells:set.size,overdraw,outOfBounds};
+    }));
+    let textureMismatch=0;
+    for(let y=0;y<h;y++)for(let x=0;x<w;x++){
+      const type=expected(visible,x,y),i=(y*w+x)*4,v=Array.from(pixels.slice(i,i+4)).join(',');
+      if(v!==(type===2?'106,186,44,255':type===1?'59,59,78,255':'0,0,0,0'))textureMismatch++;
+    }
+    const center=key=>({x:g.x+key%g.columns*g.pitch+g.line+g.cell/2,y:g.y+Math.floor(key/g.columns)*g.pitch+g.line+g.cell/2});
+    const centers=[...occupied].every(key=>{const o=s.children.getByName('garden-preview-flower:'+key),p=center(key);return o.x===p.x&&o.y===p.y;});
+    const hit=Array.from({length:100},(_,key)=>{const p=center(key);return L.gardenHit(p.x,p.y)===key;}).every(Boolean)
+      &&L.gardenHit(g.x+g.pitch,g.y+2)===1&&L.gardenHit(g.x+2,g.y+g.pitch)===10
+      &&L.gardenHit(g.x+w-0.5,g.y+h-0.5)===99&&L.gardenHit(g.x+w,g.y+h-0.5)===-1&&L.gardenHit(g.x-0.1,g.y)===-1;
+    return {g,texture:[tex.getSourceImage().width,tex.getSourceImage().height],occupied:[...occupied],visible:visible.size,coverage,nativeCoverage,textureMismatch,centers,hit};
+  });
+  const inspectGarden=async(label,cell=22)=>{
+    const a=await gardenAudit(),outer=cell+2,pitch=cell+1,size=10*pitch+1;
+    check(label+' garden shared geometry',a.g.cell===cell&&a.g.outer===outer&&a.g.pitch===pitch&&a.g.size===size&&a.g.line===1&&a.texture.every(v=>v===size)&&a.centers&&a.hit,JSON.stringify(a));
+    check(label+' garden each pixel drawn once and correct texture',a.coverage.every(v=>v.mismatch===0&&v.overdraw===0&&v.outOfBounds===0)&&a.nativeCoverage.every(v=>v.overdraw===0&&v.outOfBounds===0)&&a.textureMismatch===0,JSON.stringify(a));
+    console.log('GARDEN_GRID '+label+' '+JSON.stringify(a));
+    return a;
+  };
+  await inspectGarden('initial');
+  const captureGardenSeams=async(browserPage,png,g,z)=>browserPage.evaluate(async ({data,g,z})=>{
+    const img=await createImageBitmap(await (await fetch('data:image/png;base64,'+data)).blob()),cv=document.createElement('canvas');
+    cv.width=img.width;cv.height=img.height;const ctx=cv.getContext('2d');ctx.drawImage(img,0,0);
+    const p=ctx.getImageData(0,0,cv.width,cv.height).data,R=Math.round;
+    const rgb=(x,y)=>Array.from(p.slice((y*cv.width+x)*4,(y*cv.width+x)*4+3)).join(',');
+    const green='106,186,44',face='59,59,78';
+    const x=(g.x+5*g.pitch)*z,y=(g.y+5*g.pitch)*z;
+    // Scan the shared lines in an unoccupied strip, away from the 16px flower icons.
+    const scan=(vertical,at,fixed)=>{
+      const lo=Math.floor(at)-3,hi=Math.ceil(at+z)+3,values=[];
+      for(let v=lo;v<=hi;v++)values.push(rgb(vertical?v:fixed,vertical?fixed:v));
+      const hits=values.map((v,i)=>v===green?i:-1).filter(v=>v>=0);
+      const width=hits.length,contiguous=width>0&&hits.at(-1)-hits[0]+1===width;
+      return {width,contiguous,flanks:width>0&&values[hits[0]-1]===face&&values[hits.at(-1)+1]===face,values};
+    };
+    return {vertical:scan(true,x,R((g.y+4*g.pitch+3)*z)),horizontal:scan(false,y,R((g.x+4*g.pitch+3)*z)),expected:z};
+  },{data:png.toString('base64'),g,z});
+  const validSeams=(a,z)=>[a.vertical,a.horizontal].every(v=>v.contiguous&&v.flanks&&v.width>=1&&(Number.isInteger(z)?v.width===z:v.width<=Math.ceil(z)));
 
   // Read-only sizing probe: proposed translation labels, no game localization changes.
   const proposedStatLabels={
@@ -276,6 +350,9 @@ for(const c of configs){
     const m=await gameMetrics();inspectGame(m,w+'x'+h);observations.push(m);
     // Inspect real output pixels at every viewport, not transparent text object bounds.
     const bottomPng=await page.screenshot({path:join(out,'scale-'+w+'x'+h+'.png')});
+    const seams=await captureGardenSeams(page,bottomPng,m.garden,m.zoom);
+    check(w+' garden actual one shared border pixel per logical px',validSeams(seams,m.zoom),JSON.stringify(seams));
+    console.log('GARDEN_SEAMS '+w+' '+JSON.stringify(seams));
     const hudPixels=await captureHudGaps(bottomPng,m.hud,m.zoom,{time:'시간',kills:'처치 수',progress:'정원 완성도'});
     check(w+' actual visible HUD 5px gaps',Object.values(hudPixels.edges).every(e=>e.n>0)&&hudPixels.gaps.every(g=>g===Math.round(5*m.zoom)),JSON.stringify(hudPixels));
     console.log('HUD_VISIBLE '+w+' '+JSON.stringify(hudPixels));
@@ -510,8 +587,14 @@ for(const c of configs){
   const rejectedDropState=()=>{const o=window.__benchmarkGame.scene.getScene('Game').children.getByName('placeholder:item:1');return o.visible&&o.depth===0&&o.list[3].visible&&o.list[0].visible&&o.list[1].visible&&o.list[1].fillColor===0x3B3B4E;};
   const resumed=await page.waitForFunction(rejectedDropState,{}, {timeout:3000}).then(()=>true,()=>false);
   check('rejected drop resumes float',resumed,JSON.stringify(await page.evaluate(()=>{const o=window.__benchmarkGame.scene.getScene('Game').children.getByName('placeholder:item:1');return {visible:o.visible,depth:o.depth,shadow:o.list[3].visible,border:o.list[0].visible,face:o.list[1].visible,fillColor:o.list[1].fillColor};})));
-  let g=initial.garden;await drag('placeholder:flower:0',g.x+4*g.pitch+12,g.y+3*g.pitch+12);
+  let g=initial.garden;
+  const targetFlower={x:g.x+4*g.pitch+g.line+g.cell/2,y:g.y+3*g.pitch+g.line+g.cell/2};
+  await drag('placeholder:flower:0',targetFlower.x,targetFlower.y,false);
+  check('flower ghost centered on shared grid',await page.evaluate(p=>{const s=window.__benchmarkGame.scene.getScene('Game'),o=s.children.getByName('garden-preview-ghost');return o.visible&&o.x===p.x&&o.y===p.y&&s.children.getByName('placeholder:flower:0').alpha===.25;},targetFlower));
+  await page.mouse.up();
   check('plant',await page.evaluate(()=>!!window.__benchmarkGame.scene.getScene('Game').children.getByName('garden-preview-flower:34')));
+  const afterPlant=await inspectGarden('after plant');
+  check('plant extends only adjacent candidates',afterPlant.occupied.length===5&&afterPlant.visible===14,JSON.stringify(afterPlant));
   let b=initial.blueprint;await move(b.x+b.width/2,b.y+b.header/2);await page.mouse.click(b.x+b.width/2,b.y+b.header/2);
   check('blueprint toggle',await page.evaluate(()=>!window.__benchmarkGame.scene.getScene('Game').children.getByName('blueprint-body').visible));
   await page.mouse.click(b.x+b.width/2,b.y+b.header/2);
@@ -616,6 +699,17 @@ for(const c of configs){
     slotVariants.push({size,width:m.slotWidth,slot,detail,pixel});
   }
   console.log('SLOT_VARIANTS '+JSON.stringify(slotVariants));
+  for(const mode of [32,36]){
+    await page.goto(origin+'/'+c.id+'/index.html?garden='+mode+'&preview=1',{waitUntil:'load'});
+    await page.waitForFunction(()=>window.__benchmarkGame?.scene.isActive('MainMenu'),{},{timeout:20000});
+    await button('MainMenu','새 게임');
+    await page.waitForFunction(()=>window.__benchmarkGame.scene.isActive('Game'));
+    const a=await inspectGarden('garden '+mode,32);
+    const p={x:a.g.x+4*a.g.pitch+a.g.line+a.g.cell/2,y:a.g.y+3*a.g.pitch+a.g.line+a.g.cell/2};
+    await drag('placeholder:flower:0',p.x,p.y);
+    const planted=await inspectGarden('garden '+mode+' planted',32);
+    check('garden '+mode+' plant in same cell',planted.occupied.includes(34)&&planted.occupied.length===5);
+  }
   // The displayed CSS size and the native backing store must differ at DPR 2.
   const hi=await browser.newPage({viewport:{width:960,height:540},deviceScaleFactor:2});
   const nativeErrors=[];hi.on('pageerror',e=>nativeErrors.push(String(e)));
@@ -660,6 +754,9 @@ for(const c of configs){
     },{data:png.toString('base64')});
     const nativeTip=await hi.evaluate(()=>{const s=window.__benchmarkGame.scene.getScene('Game'),t=s.children.getByName('item-preview-tooltip'),b=t.list[0];return {x:t.x,y:t.y,w:b.width,h:b.height,zoom:s.cameras.main.zoom};});
     const nativeGap=await captureTipGap(hi,png,nativeTip,marker,'right');
+    const nativeGarden=await hi.evaluate(()=>window.GardenGameLayout.spec.garden);
+    const nativeSeams=await captureGardenSeams(hi,png,nativeGarden,nativeTip.zoom);
+    check('DPR2 fractional garden shared border',validSeams(nativeSeams,nativeTip.zoom),JSON.stringify(nativeSeams));
     check('DPR 2 fractional actual 5px border gap',validTipGap(nativeGap),JSON.stringify(nativeGap));
     check('fractional native output slot/tooltip cuts and exact text frames',nativePixels.slot.every(v=>v==='22,22,25')&&nativePixels.tooltip.every(v=>v==='13,13,13')&&nativePixels.nativeText,JSON.stringify(nativePixels));
     console.log('NATIVE_REPORT '+JSON.stringify({before,after,nativeReport,nativePixels}));

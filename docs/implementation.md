@@ -4,6 +4,7 @@
 
 
 - 과거 기준선: `feature/item-card-ui`에서 확정한 main UI [30dab4f](https://github.com/xcliming-svg/garden-test/commit/30dab4fb9ad43f6472f463442c5a58339a29a9a9). 현재 devel 화면 규격은 [resolution-960x540.md](./resolution-960x540.md), 검증 결과는 [ui-scale-audit.md](./ui-scale-audit.md)를 참조한다.
+- 현행 정원은 `GardenGameLayout.gardenGridRects`와 `gardenRaster`에서 24px 외형/22px 면/1px 공유선/23px 피치로 그린다. 점유·후보·꽃 중심·고스트·입력·순찰은 동일 격자 좌표를 사용한다. 실제 게임 로직은 여전히 미구현이다.
 - 최초 정리: 2026-11-12
 - 개발 단계: 화면 구조 및 전장 크기 검토용 프로토타입
 - 판정 기준: 사용자와 확정한 내용 및 실제 저장소 소스. 실행 테스트 완료를 의미하지 않는다.
