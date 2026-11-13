@@ -51,7 +51,11 @@
           const h=(Math.imul(gx+11,73856093)^Math.imul(gy+17,19349663))>>>0;
           const n=h%37;
           v=n===0?soilColors[1]:n===1?soilColors[2]:n<5?soilColors[3]:soilColors[0];
-        }else if(p[i]===edge[0]&&p[i+1]===edge[1]&&p[i+2]===edge[2])v=soilColors[4];
+        }else if(p[i]===edge[0]&&p[i+1]===edge[1]&&p[i+2]===edge[2]){
+          // Leave the existing 1px shared border transparent, revealing the grass below.
+          if(theme?.borderlessSoil){p[i]=p[i+1]=p[i+2]=p[i+3]=0;continue;}
+          v=soilColors[4];
+        }
         else continue;
         p[i]=v>>16&255;p[i+1]=v>>8&255;p[i+2]=v&255;
       }
