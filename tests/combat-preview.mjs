@@ -126,7 +126,7 @@ try{
    const paused=await page.evaluate(()=>window.__previewGame.scene.getScene('Game').combatPreview.state.elapsed);
    await page.waitForTimeout(300);
    assert.equal(await page.evaluate(()=>window.__previewGame.scene.getScene('Game').combatPreview.state.elapsed),paused);
-   await page.keyboard.press('Escape');await page.waitForFunction(()=>window.__previewGame.scene.getScene('Game').combatPreview.state.elapsed>paused);
+   await page.keyboard.press('Escape');await page.waitForFunction(previous=>window.__previewGame.scene.getScene('Game').combatPreview.state.elapsed>previous,paused);
    if(w===960&&dpr===1&&!query){
     await page.evaluate(()=>window.__previewGame.scene.stop('Game'));
     await page.waitForFunction(()=>!window.__previewGame.scene.getScene('Game').combatPreview);
