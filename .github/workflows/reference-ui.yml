@@ -1,7 +1,7 @@
 name: Reference UI browser regression
 on:
   push:
-    branches: [feature/reference-ui, feature/blueprint-gap-3px, feature/bottom-visible-gap-3px, feature/devel-blueprint-gap-1px, feature/devel-blueprint-gap-restore-3px, feature/devel-unify-panel-style, feature/devel-hud-menu-consistency, feature/devel-ui-palette-16, feature/devel-shared-game16, feature/devel-garden16-reference-tone, feature/tooltip-visible-gap-5px, feature/devel-garden-shared-grid, feature/devel-garden-cut-corners, feature/devel-drag-border-colors, feature/devel-garden-soil-types, feature/devel-blueprint-solid-intersections]
+    branches: [feature/reference-ui, feature/blueprint-gap-3px, feature/bottom-visible-gap-3px, feature/devel-blueprint-gap-1px, feature/devel-blueprint-gap-restore-3px, feature/devel-unify-panel-style, feature/devel-hud-menu-consistency, feature/devel-ui-palette-16, feature/devel-shared-game16, feature/devel-garden16-reference-tone, feature/tooltip-visible-gap-5px, feature/devel-garden-shared-grid, feature/devel-garden-cut-corners, feature/devel-drag-border-colors, feature/devel-garden-soil-types, feature/devel-blueprint-solid-intersections, feature/devel-colorful-card-themes]
 permissions:
   contents: read
 jobs:

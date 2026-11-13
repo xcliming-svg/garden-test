@@ -798,7 +798,7 @@ for(const c of configs){
   // URL-only soil variants: verify the exact palette color, transparent cut corners,
   // unchanged non-garden UI, and real placement/resize rendering.
   const soilVariants=[['default',0x3B3B4E],['1',0x493A34],['2',0xA46444],['3',0x0C9484],['4',0x7C4C24],['invalid',0x3B3B4E]];
-  const inspectSoilTexture=async(expected,dragging=false,target=-1)=>page.evaluate(({expected,dragging,target})=>{
+  const inspectSoilTexture=async(expected,dragging=false,target=-1,style=null)=>page.evaluate(({expected,dragging,target,style})=>{
     const L=window.GardenGameLayout,g=L.spec.garden,s=window.__benchmarkGame.scene.getScene('Game');
     const occupied=new Set(s.children.list.filter(o=>o.name?.startsWith('garden-preview-flower:')).map(o=>Number(o.name.split(':').at(-1))));
     const candidates=L.gardenCandidates(occupied),visible=new Set([...occupied,...candidates]);
@@ -813,15 +813,15 @@ for(const c of configs){
         if(ex&&ey)continue;
         type=Math.max(type,ex||ey?(dragging&&candidates.has(k)&&(target===-1||target===k)?3:2):1);
       }
-      const color=type===3?0x6ABA2C:type===2?0x51516B:expected,i=(y*w+x)*4;
+      const color=type===3?0x6ABA2C:type===2?(style?.gardenBorder??0x51516B):expected,i=(y*w+x)*4;
       const actual=(p[i]<<16)|(p[i+1]<<8)|p[i+2];
       if(type===3)activeCount++;if(type===1)faceCount++;
       if(type===0?(p[i+3]!==0):(p[i+3]!==255||actual!==color))mismatch++;
     }
     return {mismatch,activeCount,faceCount,occupied:occupied.size,candidates:candidates.size,
-      roles:L.colors.gardenSoil===expected&&L.colors.gardenBorder===L.colors.normalBorder&&L.colors.normalBorder===0x51516B&&L.colors.normalFill===0x3B3B4E&&L.colors.gridFill===0x3B3B4E&&L.colors.flowerBorder===0x6ABA2C&&L.colors.itemBorder===0x67A3EE&&L.itemTooltip.accent===0x51516B};
-  },{expected,dragging,target});
-  const inspectSoilPixels=async(png,expected,z)=>page.evaluate(async ({data,expected,z})=>{
+      roles:L.colors.gardenSoil===expected&&L.colors.gardenBorder===(style?.gardenBorder??0x51516B)&&L.colors.normalBorder===(style?.itemBorder??0x51516B)&&L.colors.normalFill===(style?.itemFill??0x3B3B4E)&&L.colors.flowerCardFill===(style?expected:0x3B3B4E)&&L.colors.flowerCardBorder===(style?.gardenBorder??0x51516B)&&L.colors.gridFill===0x3B3B4E&&L.colors.flowerBorder===0x6ABA2C&&L.colors.itemBorder===0x67A3EE&&L.itemTooltip.accent===0x51516B};
+  },{expected,dragging,target,style});
+  const inspectSoilPixels=async(png,expected,z,style=null)=>page.evaluate(async ({data,expected,z,style})=>{
     const L=window.GardenGameLayout,g=L.spec.garden,b=L.spec.blueprint;
     const img=await createImageBitmap(await(await fetch('data:image/png;base64,'+data)).blob()),cv=document.createElement('canvas');
     cv.width=img.width;cv.height=img.height;const ctx=cv.getContext('2d');ctx.drawImage(img,0,0);
@@ -840,8 +840,8 @@ for(const c of configs){
     const line=rgb(R((b.gridX+b.frame+b.pitch)*z),R((b.gridY+b.frame+b.line+3)*z));
     const outer=rgb(R((b.gridX+4)*z),R(b.gridY*z));
     const inner=rgb(R((b.gridX+4)*z),R((b.gridY+1)*z));
-    return {intersections,wrong,soil,pass:soil.slice(0,-1).every(v=>v===expected)&&soil.at(-1)===0x51516B&&cell===0x3B3B4E&&line===0x51516B&&outer===0x3B3B4E&&inner===0x51516B};
-  },{data:png.toString('base64'),expected,z});
+    return {intersections,wrong,soil,pass:soil.slice(0,-1).every(v=>v===expected)&&soil.at(-1)===(style?.gardenBorder??0x51516B)&&cell===0x3B3B4E&&line===0x51516B&&outer===0x3B3B4E&&inner===0x51516B};
+  },{data:png.toString('base64'),expected,z,style});
   for(const [mode,color] of soilVariants){
     await page.setViewportSize({width:960,height:540});
     await page.goto(origin+'/'+c.id+'/index.html?preview=1'+(mode==='default'?'':'&type='+mode),{waitUntil:'load'});
@@ -870,6 +870,73 @@ for(const c of configs){
     await page.mouse.up();
     const planted=await inspectSoilTexture(color);
     check('soil type '+mode+' plant expands with same color and resets borders',planted.mismatch===0&&planted.occupied===5&&planted.activeCount===0&&planted.roles,JSON.stringify(planted));
+  }
+  // New full card/slot themes: all colors are exact Garden 16 members.
+  const themeVariants=[
+    ['5',0x7C4C24,0xA46444,0x44445C,0xF4B404],
+    ['6',0xA46444,0xE9D0AB,0x0C9484,0xB0ACBD],
+    ['7',0x51516B,0xF46C7C,0x676777,0xF4B404],
+    ['8',0x0C9484,0xE9D0AB,0x44445C,0xA46444]
+  ];
+  const inspectThemePixels=async(png,style,z)=>page.evaluate(async ({data,style,z})=>{
+    const img=await createImageBitmap(await(await fetch('data:image/png;base64,'+data)).blob()),cv=document.createElement('canvas');
+    cv.width=img.width;cv.height=img.height;const ctx=cv.getContext('2d');ctx.drawImage(img,0,0);
+    const p=ctx.getImageData(0,0,cv.width,cv.height).data,R=Math.round;
+    const rgb=(x,y)=>{const i=(R(y*z)*cv.width+R(x*z))*4;return(p[i]<<16)|(p[i+1]<<8)|p[i+2];};
+    const s=window.__benchmarkGame.scene.getScene('Game');
+    const pairs=[['placeholder:flower:0',style.gardenFill,style.gardenBorder],['placeholder:item:0',style.itemFill,style.itemBorder],['slot-frame:0',style.itemFill,style.itemBorder],['slot-frame:9',0x161619,0x51516B]];
+    return pairs.map(([name,face,border])=>{
+      const o=s.children.getByName(name),left=o.x-o.width/2;
+      const actual=[rgb(left+2,o.y),rgb(left,o.y)];
+      return {name,actual,expected:[face,border],pass:actual[0]===face&&actual[1]===border};
+    });
+  },{data:png.toString('base64'),style,z});
+  for(const [mode,gardenFill,gardenBorder,itemFill,itemBorder] of themeVariants){
+    const style={gardenFill,gardenBorder,itemFill,itemBorder};
+    await page.setViewportSize({width:960,height:540});
+    await page.goto(origin+'/'+c.id+'/index.html?preview=1&type='+mode,{waitUntil:'load'});
+    await page.waitForFunction(()=>window.__benchmarkGame?.scene.isActive('MainMenu'),{},{timeout:20000});
+    await button('MainMenu','새 게임');
+    await page.waitForFunction(()=>window.__benchmarkGame.scene.isActive('Game'));
+    await move(10,200);
+    const state=await inspectSoilTexture(gardenFill,false,-1,style);
+    check('theme '+mode+' initial full garden texture and palette roles',state.mismatch===0&&state.roles&&state.occupied===4&&state.candidates===8,JSON.stringify(state));
+    check('theme '+mode+' exact 16-color membership',await page.evaluate(style=>Object.values(style).every(v=>Object.values(window.GardenPalette.n).includes(v))&&Object.keys(window.GardenPalette.hex).length===16,style));
+    const slotsMatch=async(target=null)=>slotState().then(a=>a.every((v,i)=>v.single&&v.face===(i===9?0x161619:itemFill)&&v.border===(i===9?0x51516B:target===-1||target===i?0x67A3EE:itemBorder)));
+    const cardMatch=async(name,face,border,alpha=1)=>cardState(name).then(v=>v.face===face&&v.border===border&&v.alpha===alpha);
+    check('theme '+mode+' default cards and slots',await cardMatch('placeholder:flower:0',gardenFill,gardenBorder)&&await cardMatch('placeholder:item:0',itemFill,itemBorder)&&await slotsMatch());
+    for(const [w,h] of [[960,540],[1920,1080]]){
+      await page.setViewportSize({width:w,height:h});
+      await page.waitForFunction(w=>window.__benchmarkGame.scene.getScene('Game').cameras.main.zoom===w/960,w);
+      const png=await page.screenshot({path:join(out,'card-theme-'+mode+'-'+w+'.png')});
+      const soil=await inspectSoilPixels(png,gardenFill,w/960,style);
+      const cards=await inspectThemePixels(png,style,w/960);
+      check('theme '+mode+' '+w+' actual garden, blueprint, cards and slots',soil.pass&&soil.wrong===0&&soil.intersections===81*(w/960)**2&&cards.every(v=>v.pass),JSON.stringify({soil,cards}));
+    }
+    await page.setViewportSize({width:960,height:540});
+    await page.waitForFunction(()=>window.__benchmarkGame.scene.getScene('Game').cameras.main.zoom===1);
+    const g=await page.evaluate(()=>window.GardenGameLayout.spec.garden);
+    await drag('placeholder:flower:0',10,200,false);
+    const active=await inspectSoilTexture(gardenFill,true,-1,style);
+    check('theme '+mode+' all flower candidates and green source card',active.mismatch===0&&active.activeCount>88&&active.roles&&await cardMatch('placeholder:flower:0',gardenFill,0x6ABA2C));
+    await move(g.x+4*g.pitch+g.outer/2-5,g.y+3*g.pitch+g.outer/2-5);
+    const focused=await inspectSoilTexture(gardenFill,true,34,style);
+    check('theme '+mode+' single flower candidate and translucent card',focused.mismatch===0&&focused.activeCount===88&&await cardMatch('placeholder:flower:0',gardenFill,0x6ABA2C,0.25));
+    await page.screenshot({path:join(out,'card-theme-'+mode+'-flower-target.png')});
+    await page.mouse.up();
+    const planted=await inspectSoilTexture(gardenFill,false,-1,style);
+    check('theme '+mode+' planted restores themed borders',planted.mismatch===0&&planted.occupied===5&&planted.roles);
+    await drag('placeholder:item:0',10,200,false);
+    check('theme '+mode+' all item candidates and sky source card',await slotsMatch(-1)&&await cardMatch('placeholder:item:0',itemFill,0x67A3EE));
+    await move(slot.x+3,slot.y+3);
+    check('theme '+mode+' single item target and translucent card',await slotsMatch(0)&&await cardMatch('placeholder:item:0',itemFill,0x67A3EE,0.25));
+    await page.screenshot({path:join(out,'card-theme-'+mode+'-item-target.png')});
+    await move(10,200);
+    check('theme '+mode+' item exit restores all candidates',await slotsMatch(-1));
+    await move(slot.x+3,slot.y+3);
+    await page.mouse.up();
+    await move(10,200);
+    check('theme '+mode+' equipped item matches themed slot',await slotsMatch()&&await cardMatch('preview-equipped:0',itemFill,itemBorder));
   }
     // The displayed CSS size and the native backing store must differ at DPR 2.
   const hi=await browser.newPage({viewport:{width:960,height:540},deviceScaleFactor:2});

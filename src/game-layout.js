@@ -81,14 +81,26 @@
   const soilType = new URLSearchParams(window.location.search).get('type');
   const soilComparison = Object.hasOwn(soilTypes,soilType);
   const soilColor = soilComparison ? soilTypes[soilType] : R.n.tab;
+  // 16색 비교안: 꽃 카드/정원과 아이템 카드/일반 슬롯은 각각 같은 면과 선을 공유한다.
+  const theme = (gardenFill,gardenBorder,itemFill,itemBorder) => Object.freeze({gardenFill,gardenBorder,itemFill,itemBorder});
+  const cardThemes = Object.freeze({
+    '5': theme(P.n.bark,P.n.clay,P.n.header,P.n.gold),
+    '6': theme(P.n.clay,P.n.sand,P.n.teal,P.n.silver),
+    '7': theme(P.n.slate,P.n.red,P.n.stone,P.n.gold),
+    '8': theme(P.n.teal,P.n.sand,P.n.header,P.n.clay)
+  });
+  const comparisonTheme = Object.hasOwn(cardThemes,soilType) ? cardThemes[soilType] : null;
+  const flowerCardStyle = Object.freeze({fill:comparisonTheme?.gardenFill ?? R.n.tab,border:comparisonTheme?.gardenBorder ?? R.n.tabBorder});
+  const itemCardStyle = Object.freeze({fill:comparisonTheme?.itemFill ?? R.n.tab,border:comparisonTheme?.itemBorder ?? R.n.tabBorder});
   const colors = Object.freeze({
     field: R.n.background, hud: R.n.hud, hudBorder: R.n.hudEdge, hudDivider: R.n.divider,
     label: R.hex.label, hudLabel: R.hex.hudLabel, value: R.hex.text,
     gridFill: R.n.tab, gridLine: R.n.gridLine, gridBorder: R.n.tabBorder,
-    normalFill: R.n.tab, normalBorder: R.n.tabBorder,
+    normalFill: itemCardStyle.fill, normalBorder: itemCardStyle.border,
+    flowerCardFill: flowerCardStyle.fill, flowerCardBorder: flowerCardStyle.border,
     progressTrack: R.n.track, progressBorder: R.n.border, progressFill: R.n.green,
     disabledFill: R.n.disabledFill, disabledBorder: R.n.tabBorder, disabledText: R.hex.disabled,
-    gardenSoil: soilColor, gardenSoilAlpha: 1, gardenBorder: R.n.gardenBorder,
+    gardenSoil: comparisonTheme?.gardenFill ?? soilColor, gardenSoilAlpha: 1, gardenBorder: comparisonTheme?.gardenBorder ?? R.n.gardenBorder,
     flowerBorder: R.n.flowerBorder, itemBorder: R.n.itemBorder,
     blueprintLine: R.n.gridLine, reservedIcon: R.n.icon
   });
@@ -438,8 +450,8 @@
         // 도형의 바운딩 박스는 논리 표시 크기와 같다.
         // 추후 동일한 x, y, origin(0.5)에서 해당 크기의 이미지로 교체한다.
         const spriteName = type === 'enemy' ? 'snail' : type === 'item' ? 'wheelbarrow' : type === 'flower' ? testSprites.flowers[i % testSprites.flowers.length] : null;
-        const marker = (type === 'item' ? testSprites.itemCard(scene, x, y, spriteName, asset.dropSize, asset.size) :
-          type === 'flower' ? testSprites.flowerCard(scene, x, y, spriteName, asset.dropSize, asset.size) :
+        const marker = (type === 'item' ? testSprites.itemCard(scene, x, y, spriteName, asset.dropSize, asset.size, itemCardStyle) :
+          type === 'flower' ? testSprites.flowerCard(scene, x, y, spriteName, asset.dropSize, asset.size, flowerCardStyle) :
           spriteName ? testSprites.marker(scene, x, y, spriteName, asset.size) : scene.add.rectangle(x, y, asset.size, asset.size, asset.color))
           .setName('placeholder:' + asset.assetKey + ':' + i);
         if (type === 'item' || type === 'flower') animations.push(floatingDrop(scene, marker, animations.length));
@@ -573,7 +585,7 @@
     const slotItems = [];
     const slots = layout.slots.slice(0, s.preview);
     // 꽃과 동일하게 스냅 미리보기는 아이콘만 표시한다. 외곽선과 면은 슬롯이 담당한다.
-    const ghost = testSprites.itemCard(scene, 0, 0, 'wheelbarrow', assets.item.cardSize, assets.item.size)
+    const ghost = testSprites.itemCard(scene, 0, 0, 'wheelbarrow', assets.item.cardSize, assets.item.size, itemCardStyle)
       .setDepth(22).setAlpha(0.45).setVisible(false).setName('item-preview-ghost');
     ghost.list[0].setVisible(false);
     ghost.list[1].setVisible(false);
@@ -772,7 +784,7 @@
     }
     slots.forEach((slot, index) => {
       const center = slotAnchor(index);
-      slotItems.push(testSprites.itemCard(scene, center.x, center.y, 'wheelbarrow', assets.item.cardSize, assets.item.size)
+      slotItems.push(testSprites.itemCard(scene, center.x, center.y, 'wheelbarrow', assets.item.cardSize, assets.item.size, itemCardStyle)
         .setDepth(20).setName('preview-equipped:' + index).setVisible(false));
       const zone = scene.add.zone(center.x, center.y, slot.size, slot.size).setDepth(21)
         .setName('preview-slot:' + index).setInteractive({ useHandCursor: true });
