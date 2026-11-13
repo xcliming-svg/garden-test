@@ -878,7 +878,7 @@ for(const c of configs){
     ['6',0xA46444,0xE9D0AB,0x0C9484,0xB0ACBD],
     ['7',0x51516B,0xF46C7C,0x676777,0xF4B404],
     ['8',0x0C9484,0xE9D0AB,0x44445C,0xA46444],
-    ['9',0x6ABA2C,0x51516B,0x3B3B4E,0x51516B,0xFFFFFF,0xFFFFFF,0x6ABA2C,0x0D0D0D]
+    ['9',0x6ABA2C,0x51516B,0x3B3B4E,0x51516B,0xFFFFFF,0xFFFFFF,0x7C4C24,0x0D0D0D]
   ];
   const inspectThemePixels=async(png,style,z)=>page.evaluate(async ({data,style,z})=>{
     const img=await createImageBitmap(await(await fetch('data:image/png;base64,'+data)).blob()),cv=document.createElement('canvas');
