@@ -10,7 +10,7 @@ mkdirSync(out, {recursive:true});
 const require = createRequire(import.meta.url);
 const phaserPath = require.resolve('phaser/dist/phaser.min.js');
 const originals = Object.fromEntries(['ui.js','game-layout.js','scenes.js','main.js'].map(n=>[n,readFileSync(join(root,'src',n),'utf8').replace(/\r\n/g,'\n')]));
-const configs=[{id:'R',name:'screenshot-matched UI',top:32,bottom:44,margin:10,label:12,value:12,timer:12,body:12,menu:12,navFont:14,navHeight:24,navGap:3,blueCell:8,bluePad:5,blueHead:19,slotGap:3,statLabel:8,statValue:8,statCol:70,statGap:5,hudGap:5,bar:12,tipW:158,tipPad:6,tipRow:5,tipLine:4,tipFont:10}];
+const configs=[{id:'R',name:'screenshot-matched UI',top:32,bottom:40,margin:10,label:12,value:12,timer:12,body:12,menu:12,navFont:14,navHeight:24,navGap:3,blueCell:8,bluePad:5,blueHead:19,slotGap:3,statLabel:8,statValue:8,statCol:70,statGap:3,hudGap:5,bar:12,tipW:158,tipPad:6,tipRow:5,tipLine:4,tipFont:10}];
 function replace(s,a,b){if(!s.includes(a))throw Error('missing anchor '+a);return s.replaceAll(a,b);}
 const variants={R:originals};
 const mime={'.js':'application/javascript','.html':'text/html; charset=utf-8','.css':'text/css; charset=utf-8','.txt':'text/plain; charset=utf-8','.woff2':'font/woff2'};
@@ -105,18 +105,19 @@ for(const c of configs){
   const overlap=(a,b)=>Math.min(a.x+a.w,b.x+b.w)-Math.max(a.x,b.x)>0.5&&Math.min(a.y+a.h,b.y+b.h)-Math.max(a.y,b.y)>0.5;
   const inspectGame=(m,label)=>{
     const eps=0.6;
-    check(label+' fixed sizes',JSON.stringify(m.fixed)===JSON.stringify({garden:22,slot:34,slotOuter:36,flower:16,item:16,card:36,line:1}));
+    check(label+' fixed sizes',JSON.stringify(m.fixed)===JSON.stringify({garden:22,slot:30,slotOuter:32,flower:16,item:16,card:32,line:1}));
     check(label+' HUD bounds',m.hud.length>=6&&m.hud.every(t=>t.x>=-eps&&t.y>=-eps&&t.x+t.w<=960+eps&&t.y+t.h<=m.top+eps),JSON.stringify(m.hud));
     const bp=m.blueprintMetrics;
     check(label+' blueprint alignment and visible HUD spacing',bp.width===91&&bp.gridX===bp.headerX&&bp.headerX===m.hudLayout.leftPadding&&bp.titlePadX===5&&bp.gridGap===-1&&m.blueprint.gap===0&&bp.titleFont===10&&m.blueprint.cell===8&&m.blueprint.line===1&&m.blueprint.width===91&&m.blueprint.height===m.blueprint.header+91-1&&bp.height===19&&bp.topGap===m.hudLayout.textPadTop,JSON.stringify(bp));
     check(label+' HUD nonoverlap',m.hud.every((a,i)=>m.hud.every((b,j)=>i===j||!overlap(a,b))));
     check(label+' equal HUD widths, center and labels',m.top===32&&m.hudLayout.centerY===15&&m.hudLayout.leftPadding===7.5&&m.hudLayout.rightPadding===7.5&&m.hudLayout.textPadTop===7.5&&m.hudLayout.textPadBottom===7.5&&m.hudLayout.barHeight===12&&Math.abs(m.hudLayout.timeGap-5)<0.01&&Math.abs(m.hudLayout.barGap-5)<0.01&&m.hudLayout.metricWidth>0&&m.hudLayout.gemX===2*m.hudLayout.metricWidth&&3*m.hudLayout.metricWidth<=m.hudLayout.progressX&&m.hudLayout.labelColors.every(c=>c.toLowerCase()==='#b0b0b0')&&m.hudLayout.valueColors.every(c=>c.toLowerCase()==='#ffffff'),JSON.stringify(m.hudLayout));
+    check(label+' bottom HUD 40px and equal 3px clear gaps',m.bottom===40&&m.field===468&&m.slotWidth===347&&m.slots.every((s,i)=>s.y-(540-m.bottom+2)===3&&540-(s.y+s.size)===3&&(!i||s.x-m.slots[i-1].x-m.slots[i-1].size===3)),JSON.stringify(m.slots));
     check(label+' stat bounds',m.stats.length>=12&&m.stats.every(t=>t.font===8&&t.y>=540-m.bottom-eps&&t.y+t.h<=540+eps&&t.x>=-eps&&t.x+t.w<=960+eps),JSON.stringify(m.stats));
-    const statGroups=['defense','hp','luck','moveSpeed','pickupRange','dps'].map((key,i)=>{const a=m.stats.find(t=>t.name==='stat-label:'+key), v=m.stats.find(t=>t.name==='stat-value:'+key),d=m.stats.find(t=>t.name==='stat-delta:'+key);const center=(i<3?m.sideLeft:m.sideRight)+(i%3+0.5)*70;const left=Math.min(v.x,d?.x??v.x),right=Math.max(v.x+v.w,d?d.x+d.w:v.x+v.w);return !!a&&!!v&&Math.abs(a.x+a.w/2-center)<0.01&&Math.abs((left+right)/2-center)<0.01&&left>=center-35&&right<=center+35&&a.x>=center-35&&a.x+a.w<=center+35&&Math.abs(v.y-a.y-a.h-5)<0.01&&Math.abs((a.y+v.y+v.h)/2-(540-m.bottom/2))<0.01&&(!d||Math.abs(d.x-v.x-v.w-2)<0.01&&d.y===v.y);});
-    check(label+' 70px columns, 5px row gap and centered groups',m.side===210&&m.statSpec.columnWidth===70&&m.statSpec.lineGap===5&&statGroups.every(Boolean),JSON.stringify(m.stats));
+    const statGroups=['defense','hp','luck','moveSpeed','pickupRange','dps'].map((key,i)=>{const a=m.stats.find(t=>t.name==='stat-label:'+key), v=m.stats.find(t=>t.name==='stat-value:'+key),d=m.stats.find(t=>t.name==='stat-delta:'+key);const center=(i<3?m.sideLeft:m.sideRight)+(i%3+0.5)*70;const left=Math.min(v.x,d?.x??v.x),right=Math.max(v.x+v.w,d?d.x+d.w:v.x+v.w);return !!a&&!!v&&Math.abs(a.x+a.w/2-center)<0.01&&Math.abs((left+right)/2-center)<0.01&&left>=center-35&&right<=center+35&&a.x>=center-35&&a.x+a.w<=center+35&&Math.abs(v.y-a.y-a.h-3)<0.01&&Math.abs((a.y+v.y+v.h)/2-(m.slots[0].y+m.slots[0].size/2))<0.01&&(!d||Math.abs(d.x-v.x-v.w-2)<0.01&&d.y===v.y);});
+    check(label+' 70px columns, 3px row gap and centered groups',m.side===210&&m.statSpec.columnWidth===70&&m.statSpec.lineGap===3&&statGroups.every(Boolean),JSON.stringify(m.stats));
     check(label+' stat nonoverlap',m.stats.every((a,i)=>m.stats.every((b,j)=>i===j||!overlap(a,b))));
     check(label+' stats/slots separation',m.stats.every(t=>m.slots.every(b=>!overlap(t,{x:b.x,y:b.y,w:b.size,h:b.size}))));
-    let cost=m.cost,b=m.slots[9];check(label+' cost bounds',!!cost&&cost.font===8&&m.costSpec.gap===5&&m.stats.filter(t=>t.name.startsWith('stat-value:')).every(t=>t.y===cost.y&&t.h===cost.h)&&cost.y-5-m.costSpec.iconSize>=b.y+1&&Math.abs(cost.x+cost.w/2-(b.x+b.size/2))<0.01&&cost.x>=b.x+1-eps&&cost.y>=b.y+1-eps&&cost.x+cost.w<=b.x+b.size-1+eps&&cost.y+cost.h<=b.y+b.size-1+eps,JSON.stringify(cost));
+    let cost=m.cost,b=m.slots[9];check(label+' cost bounds',!!cost&&cost.font===8&&m.costSpec.gap===3&&m.stats.filter(t=>t.name.startsWith('stat-value:')).every(t=>t.y===cost.y&&t.h===cost.h)&&m.stats.filter(t=>t.name.startsWith('stat-label:')).every(t=>Math.abs(t.y+t.h/2-(cost.y-3-cost.h/2))<0.01)&&cost.y-3-cost.h/2-m.costSpec.iconSize/2>=b.y+1&&Math.abs(cost.x+cost.w/2-(b.x+b.size/2))<0.01&&cost.x>=b.x+1-eps&&cost.y>=b.y+1-eps&&cost.x+cost.w<=b.x+b.size-1+eps&&cost.y+cost.h<=b.y+b.size-1+eps,JSON.stringify(cost));
     // A dragged item intentionally follows the pointer into the HUD/slot. Only this specific card
     // is exempt during replacement; independently verify its exact target/alpha below.
     const overflow=m.markerOverflow.filter(n=>label!=='replacement stats'||n!=='placeholder:item:3');
@@ -169,7 +170,7 @@ for(const c of configs){
     return s.children.list.filter(o=>/^placeholder:(item|flower):/.test(o.name||'')).map(o=>({name:o.name,x:o.x,y:o.y,w:o.width,h:o.height,hitW:o.input.hitArea.width,hitH:o.input.hitArea.height,border:o.list[0].visible,borderY:o.list[0].y,borderColor:o.list[0].fillColor,face:o.list[1].visible,faceColor:o.list[1].fillColor,faceW:o.list[1].width,faceH:o.list[1].height,faceY:o.list[1].y,img:o.list[2].y,imgW:o.list[2].displayWidth,shadow:o.list[3].visible,shadowW:o.list[3].width,shadowH:o.list[3].height}));
   });
   const drops=await dropState();
-  check('all eight drops have reference 24px frames, 16px icons and matching hit boxes',drops.length===8&&drops.every(o=>o.w===24&&o.h===24&&o.hitW===24&&o.hitH===24&&o.border&&o.face&&o.faceColor===(o.name.includes(':flower:')?0x343446:0x3B3B4E)&&o.borderColor===(o.name.includes(':flower:')?0x6ABA2C:0x51516B)&&o.faceW===22&&o.faceH===22&&o.borderY===o.img&&o.faceY===o.img&&o.imgW===16&&o.shadow&&o.shadowW===12&&o.shadowH===3),JSON.stringify(drops));
+  check('all eight drops have 24px flower or 32px item frames, 16px icons and matching hit boxes',drops.length===8&&drops.every(o=>o.w===(o.name.includes(':flower:')?24:32)&&o.h===o.w&&o.hitW===o.w&&o.hitH===o.w&&o.border&&o.face&&o.faceColor===(o.name.includes(':flower:')?0x343446:0x3B3B4E)&&o.borderColor===(o.name.includes(':flower:')?0x6ABA2C:0x51516B)&&o.faceW===o.w-2&&o.faceH===o.h-2&&o.borderY===o.img&&o.faceY===o.img&&o.imgW===16&&o.shadow&&o.shadowW===12&&o.shadowH===3),JSON.stringify(drops));
   const positions=[];
   for(let i=0;i<7;i++){positions.push(await dropState());await page.waitForTimeout(150);}
   check('float moves square and icon together, integer 0..4 px, stable hitbox',positions.every(p=>p.every((o,i)=>o.x===drops[i].x&&o.y===drops[i].y&&o.borderY===o.img&&o.faceY===o.img&&Number.isInteger(o.img)&&o.img>=-4&&o.img<=0))&&drops.every((_,i)=>new Set(positions.map(p=>p[i].img)).size>=2));
@@ -207,6 +208,7 @@ for(const c of configs){
           const seamY=bp.gridY*2, seamX=bp.x*2+8;
           const seam=[-1,0,1,2].map(d=>rgb(seamX,seamY+d));
           const costInk=box(cost), numberInk=stats.filter(t=>t.name.startsWith('stat-value:')).map(t=>({text:t.text,...box(t)}));
+          const labelInk=stats.filter(t=>t.name.startsWith('stat-label:')).map(t=>({text:t.text,...box(t)}));
           const gemInk=bounds(slot.x*2+2,slot.y*2+2,(slot.x+slot.size)*2-2,Math.floor(cost.y*2),exact(170,170,170));
           const bar=bounds(1500,10,1920,54,exact(135,135,150));
           const dividers=bounds(0,10,1920,50,exact(32,32,32));
@@ -217,7 +219,7 @@ for(const c of configs){
             while(x+1<1920&&exact(32,32,32)(rgb(x+1,12)))x++;
             dividerRuns.push([left,x]);
           }
-          return {image:[cv.width,cv.height],label,time,title,header,grid,bar,dividerRuns,seam,costInk,numberInk,gemInk,costVisibleGap:costInk.top-gemInk.bottom-1,
+          return {image:[cv.width,cv.height],label,time,title,header,grid,bar,dividerRuns,seam,costInk,numberInk,labelInk,gemInk,costVisibleGap:costInk.top-gemInk.bottom-1,
             leftPadding:label.left,rightPadding:cv.width-bar.right-1,
             timeGap:time.left-label.right-1,hudBottomGap:64-Math.max(label.bottom,time.bottom)-1,
             headerTopGap:header.top-64,titleLeftGap:title.left-header.left,titleTopGap:title.top-header.top,
@@ -225,7 +227,7 @@ for(const c of configs){
         },{data:png.toString('base64'),hud:m.hud,bp:m.blueprint,stats:m.stats,cost:m.cost,slot:m.slots[9]});
         console.log('PIXEL_REPORT '+JSON.stringify(pixels));
         check('FHD right-aligned gauge and two left dividers',pixels.leftPadding===15&&pixels.rightPadding===pixels.leftPadding&&pixels.bar.width===316&&pixels.bar.height===24&&JSON.stringify(pixels.dividerRuns)===JSON.stringify([[324,327],[648,651]]),JSON.stringify(pixels));
-        check('FHD slot cost and stat digits share visible baseline',pixels.costInk.n>0&&pixels.gemInk.n>0&&pixels.numberInk.every(t=>t.n>0&&Math.abs(t.bottom-pixels.costInk.bottom)<=1),JSON.stringify({cost:pixels.costInk,numbers:pixels.numberInk,gem:pixels.gemInk,gap:pixels.costVisibleGap}));
+        check('FHD slot cost and stat digits share visible baseline',pixels.costInk.n>0&&pixels.gemInk.n>0&&pixels.numberInk.every(t=>t.n>0&&t.top===pixels.costInk.top&&t.bottom===pixels.costInk.bottom)&&pixels.labelInk.every(t=>t.n>0&&Math.abs((t.top+t.bottom)/2-(pixels.gemInk.top+pixels.gemInk.bottom)/2)<=2),JSON.stringify({cost:pixels.costInk,numbers:pixels.numberInk,labels:pixels.labelInk,gem:pixels.gemInk,gap:pixels.costVisibleGap}));
         check('FHD actual screenshot alignment and visible gaps',pixels.header.width===182&&pixels.grid.width===182&&pixels.header.left===pixels.grid.left&&pixels.header.left===pixels.label.left&&pixels.headerTopGap===15&&[pixels.titleLeftGap,pixels.titleTopGap,pixels.titleBottomGap].every(g=>g===10)&&pixels.gridGap===-2&&pixels.grid.height===182&&JSON.stringify(pixels.seam)===JSON.stringify([[68,68,92],[103,103,119],[103,103,119],[48,46,58]]),JSON.stringify(pixels));
       }
     }
@@ -240,17 +242,17 @@ for(const c of configs){
   const inspectTip=(t,key)=>{check(key+' tooltip bounds',!!t&&t.x>=c.margin-.5&&t.y>=c.top+c.margin-.5&&t.x+t.w<=960-c.margin+.5&&t.y+t.h<=540-c.bottom-8+.5,JSON.stringify(t));if(t){check(key+' tooltip colors and width',t.w===c.tipW&&t.color===0x313142&&t.stroke===0x676777&&t.header===0x43435B,JSON.stringify(t));check(key+' tooltip rows',t.rows.every((r,i)=>r.x>=c.tipPad-.5&&r.x+r.w<=t.w-c.tipPad+.5&&r.y>=c.tipPad-.5&&r.y+r.h<=t.h-c.tipPad+.5&&(!i||r.y>=t.rows[i-1].y+t.rows[i-1].h-.5)),JSON.stringify(t.rows));check(key+' tooltip all rows 10px',t.rows.length>0&&t.rows.every(r=>r.font===10),JSON.stringify(t.rows));tips.push(t);}};
   for(let i=0;i<5;i++){const a=await coords('placeholder:item:'+i);await move(a.x,a.y);await page.waitForTimeout(70);inspectTip(await tip(),'hover '+i);await move(5,200);}
   const slot=initial.slots[0],last=initial.slots[9];
-  await drag('placeholder:item:0',slot.x+18,slot.y+18);
+  await drag('placeholder:item:0',slot.x+slot.size/2,slot.y+slot.size/2);
   check('equip',await page.evaluate(()=>window.__benchmarkGame.scene.getScene('Game').children.getByName('preview-equipped:0').visible));
-  await drag('placeholder:item:3',slot.x+18,slot.y+18,false);await page.waitForTimeout(100);inspectTip(await tip(),'replace');
+  await drag('placeholder:item:3',slot.x+slot.size/2,slot.y+slot.size/2,false);await page.waitForTimeout(100);inspectTip(await tip(),'replace');
   await page.screenshot({path:join(out,c.id+'-replace.png')});
   const delta=await gameMetrics();inspectGame(delta,'replacement stats');
-  check('dragged item follows target',await page.evaluate(({x,y})=>{const s=window.__benchmarkGame.scene.getScene('Game'),o=s.children.getByName('placeholder:item:3'),ghost=s.children.getByName('item-preview-ghost');return Math.abs(o.x-x)<1&&Math.abs(o.y-y)<1&&Math.abs(o.alpha-.25)<.001&&ghost.visible&&Math.abs(ghost.x-x)<1&&Math.abs(ghost.y-y)<1;},{x:slot.x+18,y:slot.y+18}));
+  check('dragged item follows target',await page.evaluate(({x,y})=>{const s=window.__benchmarkGame.scene.getScene('Game'),o=s.children.getByName('placeholder:item:3'),ghost=s.children.getByName('item-preview-ghost');return Math.abs(o.x-x)<1&&Math.abs(o.y-y)<1&&Math.abs(o.alpha-.25)<.001&&ghost.visible&&Math.abs(ghost.x-x)<1&&Math.abs(ghost.y-y)<1;},{x:slot.x+slot.size/2,y:slot.y+slot.size/2}));
   check('dragging image centered and shadow hidden',await page.evaluate(()=>{const o=window.__benchmarkGame.scene.getScene('Game').children.getByName('placeholder:item:3');return o.list[2].y===0&&o.list[1].y===0&&!o.list[3].visible&&o.list[0].visible&&o.list[0].y===0&&o.list[1].visible&&o.list[1].fillColor===0x4F4F69;}));
   await page.mouse.up();
   check('equipped item keeps original slot frame',await page.evaluate(()=>{const o=window.__benchmarkGame.scene.getScene('Game').children.getByName('preview-equipped:0');return o.visible&&o.list.length===3&&o.list[0].visible&&o.list[1].visible&&o.list[2].y===0;}));
   check('replace',await page.evaluate(()=>window.__benchmarkGame.scene.getScene('Game').children.getByName('preview-equipped:0').visible&&!window.__benchmarkGame.scene.getScene('Game').children.getByName('placeholder:item:3').visible));
-  await drag('placeholder:item:1',last.x+18,last.y+18);
+  await drag('placeholder:item:1',last.x+last.size/2,last.y+last.size/2);
   check('locked reject',await page.evaluate(()=>window.__benchmarkGame.scene.getScene('Game').children.getByName('placeholder:item:1').visible));
   // Wait for the next actual update frame after dragend, rather than a fixed wall-clock delay.
   const rejectedDropState=()=>{const o=window.__benchmarkGame.scene.getScene('Game').children.getByName('placeholder:item:1');return o.visible&&o.depth===0&&o.list[3].visible&&o.list[0].visible&&o.list[1].visible&&o.list[1].fillColor===0x3B3B4E;};
@@ -325,9 +327,9 @@ for(const c of configs){
       return {zones:zones.map(o=>[o.width,o.height,o.input.hitArea.width,o.input.hitArea.height]),cards:cards.map(o=>[o.width,o.height,o.list[1].width,o.list[2].displayWidth]),ghost:[ghost.width,ghost.height],costMasked:!!cost.mask,drop:L.assets.item.dropSize,bottom:L.spec.bottom};
     });
     check(key+' browser title identifies selected slot size',await page.title()==='Garden Test | 슬롯 '+size+'px');
-    check(key+' equal sizes, center and gap',m.slots.length===10&&m.slots.every((s,i)=>s.size===size&&s.y+s.size/2===518&&(!i||s.x-m.slots[i-1].x===size+3))&&m.slotWidth===10*size+27&&Math.abs(m.slotLeft+m.slotWidth/2-480)<=0.5&&m.side===210&&detail.bottom===44,JSON.stringify(m.slots));
-    check(key+' matching hitboxes, cards, ghost and unchanged field drops',detail.zones.length===9&&detail.zones.every(a=>a.every(v=>v===size))&&detail.cards.length===9&&detail.cards.every(a=>a[0]===size&&a[1]===size&&a[2]===size-2&&a[3]===16)&&detail.ghost.every(v=>v===size)&&detail.drop===24,JSON.stringify(detail));
-    check(key+' cost aligns with stat row',m.cost.font===8&&m.costSpec.gap===5&&m.stats.filter(t=>t.name.startsWith('stat-value:')).every(t=>t.y===m.cost.y&&t.h===m.cost.h)&&detail.costMasked===(size===24),JSON.stringify(m.cost));
+    check(key+' equal sizes, center and gap',m.slots.length===10&&m.slots.every((s,i)=>s.size===size&&s.y-(540-m.bottom+2)===3&&540-(s.y+s.size)===3&&(!i||s.x-m.slots[i-1].x===size+3))&&m.slotWidth===10*size+27&&Math.abs(m.slotLeft+m.slotWidth/2-480)<=0.5&&m.side===210&&detail.bottom===size+8,JSON.stringify(m.slots));
+    check(key+' matching hitboxes, cards, ghost and 32px field items',detail.zones.length===9&&detail.zones.every(a=>a.every(v=>v===size))&&detail.cards.length===9&&detail.cards.every(a=>a[0]===size&&a[1]===size&&a[2]===size-2&&a[3]===16)&&detail.ghost.every(v=>v===size)&&detail.drop===32,JSON.stringify(detail));
+    check(key+' cost aligns with stat row',m.cost.font===8&&m.costSpec.gap===3&&m.stats.filter(t=>t.name.startsWith('stat-value:')).every(t=>t.y===m.cost.y&&t.h===m.cost.h)&&detail.costMasked===(size===24),JSON.stringify(m.cost));
     await page.setViewportSize({width:1920,height:1080});
     await page.waitForFunction(()=>window.__benchmarkGame.scene.getScene('Game').cameras.main.zoom===2);
     const screenshot=await page.screenshot({path:join(out,'slots-'+size+'-1920.png')});

@@ -21,7 +21,11 @@
   const blueprintHeader = blueprintInkHeight + 2 * blueprintPadding;
   const width = U.W, height = U.H;
   const topHudHeight = 32;
-  const bottomHudHeight = 44;
+  const bottomGap = 3, bottomBoundary = 2;
+  // 32px 기본 슬롯 + 상하 3px 여백 + HUD 경계선 2px. 비교 URL은 유지한다.
+  const slotMode = new URLSearchParams(window.location.search).get('slots');
+  const slotSize = slotMode === '24' ? 24 : slotMode === '36' ? 36 : 32;
+  const bottomHudHeight = bottomBoundary + slotSize + 2 * bottomGap;
   const fieldHeight = height - topHudHeight - bottomHudHeight;
   const blueprintTopGap = hudPadding;
   const blueprintY = topHudHeight + blueprintTopGap;
@@ -30,9 +34,7 @@
   const gardenMode = new URLSearchParams(window.location.search).get('garden');
   const gardenCell = gardenMode === '32' || gardenMode === '36' ? unit * 4 : 22;
   const cellLine = 1, gardenPitch = gardenCell + 2 * cellLine;
-  // 슬롯 크기 비교용 URL 옵션. 기본 36px 및 기존 전장 드롭 24px는 유지한다.
-  const slotMode = new URLSearchParams(window.location.search).get('slots');
-  const iconSize = unit * 2, slotSize = slotMode === '24' ? 24 : slotMode === '32' ? 32 : 36, dropSize = 24;
+  const iconSize = unit * 2, flowerDropSize = 24, itemDropSize = 32;
   // 비교 링크의 실제 실행 규격을 브라우저 탭 제목에서 식별할 수 있게 한다.
   if (['24', '32', '36'].includes(slotMode)) document.title = 'Garden Test | 슬롯 ' + slotSize + 'px';
   const gardenSize = 10 * gardenPitch;
@@ -47,7 +49,7 @@
       height: blueprintHeader + blueprintGrid - blueprintLine,
       gridX: hudPadding, gridY: blueprintY + blueprintHeader - blueprintLine
     }),
-    slots: Object.freeze({ size: slotSize, cell: slotSize - 2 * cellLine, line: cellLine, gap: 3, initial: 4, preview: 9, max: 10, y: height - bottomHudHeight + (bottomHudHeight - slotSize) / 2, exampleCost: 999 })
+    slots: Object.freeze({ size: slotSize, cell: slotSize - 2 * cellLine, line: cellLine, gap: bottomGap, initial: 4, preview: 9, max: 10, y: height - bottomHudHeight + bottomBoundary + bottomGap, exampleCost: 999 })
   });
 
   const hud = Object.freeze({
@@ -57,8 +59,8 @@
     // 표시 폭 예약 기준이며 게임 데이터의 최대값이 아니다.
     previewProgress: 30,
   });
-  // 34px 내부 면에서 비용 아이콘과 숫자를 세로 중앙 배치한다.
-  const slotCost = Object.freeze({ padding: 1, gap: hudGap, iconSize: unit, fontSize: 8, maxDigits: 3 });
+  // 능력치와 동일한 두 행의 높이 및 간격을 사용한다.
+  const slotCost = Object.freeze({ padding: 1, gap: bottomGap, iconSize: unit, fontSize: 8, maxDigits: 3 });
 
   // size = 비교 브랜치의 논리 표시 크기. 기존 저해상도 테스트 원본은 그대로 사용한다.
   // assetKey와 suggestedFile은 이후 에셋 작업 시 참조할 식별자이다.
@@ -67,8 +69,8 @@
     guardian: Object.freeze({ size: 24, color: P.n.teal, assetKey: 'guardian', suggestedFile: 'assets/guardian.png' }),
     enemy: Object.freeze({ size: unit * 2, color: P.n.red, assetKey: 'enemy', suggestedFile: 'assets/enemy.png' }),
     gem: Object.freeze({ size: unit, color: P.n.sky, assetKey: 'gem', suggestedFile: 'assets/gem.png' }),
-    flower: Object.freeze({ size: iconSize, cardSize: spec.slots.size, dropSize, color: P.n.pink, assetKey: 'flower', suggestedFile: 'assets/flower.png' }),
-    item: Object.freeze({ size: iconSize, cardSize: spec.slots.size, dropSize, color: P.n.gold, assetKey: 'item', suggestedFile: 'assets/item.png' })
+    flower: Object.freeze({ size: iconSize, cardSize: spec.slots.size, dropSize: flowerDropSize, color: P.n.pink, assetKey: 'flower', suggestedFile: 'assets/flower.png' }),
+    item: Object.freeze({ size: iconSize, cardSize: spec.slots.size, dropSize: itemDropSize, color: P.n.gold, assetKey: 'item', suggestedFile: 'assets/item.png' })
   });
 
   const colors = Object.freeze({
@@ -283,11 +285,12 @@
     const cost = text(scene, x + size / 2, 0, String(value), c.fontSize, colors.disabledText, 'center').setName('slot-cost-value');
     const textHeight = cost.height;
     const valueY = y + size / 2 + (textHeight + bottomStats.lineGap) / 2;
-    const iconTop = valueY - textHeight / 2 - c.gap - c.iconSize;
+    // 보석 중심을 능력치 레이블 행 중심과 정확히 맞춘다.
+    const iconTop = y + size / 2 - (textHeight + c.gap) / 2 - c.iconSize / 2;
     reserveIcon(g, x + (size - c.iconSize) / 2, iconTop, c.iconSize, R.n.disabled);
     cost.setPosition(x + size / 2, valueY);
     // 24px 비교 슬롯은 글자의 투명 텍스처/그림자 일부가 테두리까지 닿는다.
-    // 숫자 기준선과 5px 객체 간격을 유지하면서 슬롯 내부에서만 그린다.
+    // 숫자 기준선과 3px 행 간격을 유지하면서 슬롯 내부에서만 그린다.
     if (size === 22) {
       const clip = scene.make.graphics({ x: 0, y: 0, add: false });
       clip.fillStyle(0xffffff, 1).fillRect(x, y, size, size);
@@ -327,7 +330,7 @@
     return sumPreviewStats(next);
   }
 
-  const bottomStats = Object.freeze({ fontSize: 8, valueSize: 8, columnWidth: 70, columns: 3, lineGap: hudGap, deltaGap: spacing.micro });
+  const bottomStats = Object.freeze({ fontSize: 8, valueSize: 8, columnWidth: 70, columns: 3, lineGap: bottomGap, deltaGap: spacing.micro });
 
   function bottomLayout() {
     const s = spec.slots;
@@ -336,7 +339,7 @@
     const sideWidth = bottomStats.columnWidth * bottomStats.columns;
     const top = spec.top + spec.fieldHeight;
     return {
-      top, centerY: top + spec.bottom / 2, slotLeft, totalWidth, sideWidth,
+      top, centerY: spec.slots.y + s.size / 2, slotLeft, totalWidth, sideWidth,
       left: 10, right: spec.width - 10 - sideWidth,
       slots: Array.from({ length: s.max }, (_, index) => ({
         x: slotLeft + index * (s.size + s.gap), y: s.y, size: s.size
@@ -359,12 +362,12 @@
   }
 
   // 필드 드롭도 참조 노드의 색/테두리를 적용하고 16px 원본과 함께 부유시킨다.
-  // 26px 히트 영역은 고정하고 장착 슬롯/스냅 고스트는 기존 카드 표현 유지.
+  // 꽃 24px, 아이템 32px 히트 영역은 고정하고 장착 슬롯/스냅 고스트는 기존 카드 표현 유지.
   function floatingDrop(scene, marker, index) {
     const [border, face, image] = marker.list;
     border.setVisible(true);
     face.setVisible(true);
-    const shadow = scene.add.ellipse(0, 15, 12, 3, R.n.shadow, 0.25);
+    const shadow = scene.add.ellipse(0, marker.height / 2 + 3, 12, 3, R.n.shadow, 0.25);
     marker.add(shadow);
     const period = 1800, phase = index * 317;
     function update(time) {
