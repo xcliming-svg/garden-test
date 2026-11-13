@@ -108,7 +108,7 @@ for(const c of configs){
     check(label+' fixed sizes',JSON.stringify(m.fixed)===JSON.stringify({garden:22,slot:34,slotOuter:36,flower:16,item:16,card:36,line:1}));
     check(label+' HUD bounds',m.hud.length>=6&&m.hud.every(t=>t.x>=-eps&&t.y>=-eps&&t.x+t.w<=960+eps&&t.y+t.h<=m.top+eps),JSON.stringify(m.hud));
     const bp=m.blueprintMetrics;
-    check(label+' blueprint alignment and visible HUD spacing',bp.width===91&&bp.gridX===bp.headerX&&bp.headerX===m.hudLayout.leftPadding&&bp.titlePadX===5&&bp.gridGap===5&&bp.titleFont===10&&m.blueprint.cell===8&&m.blueprint.line===1&&m.blueprint.width===91&&m.blueprint.height===m.blueprint.header+5+91&&bp.height===19&&bp.topGap===m.hudLayout.textPadTop,JSON.stringify(bp));
+    check(label+' blueprint alignment and visible HUD spacing',bp.width===91&&bp.gridX===bp.headerX&&bp.headerX===m.hudLayout.leftPadding&&bp.titlePadX===5&&bp.gridGap===-1&&m.blueprint.gap===0&&bp.titleFont===10&&m.blueprint.cell===8&&m.blueprint.line===1&&m.blueprint.width===91&&m.blueprint.height===m.blueprint.header+91-1&&bp.height===19&&bp.topGap===m.hudLayout.textPadTop,JSON.stringify(bp));
     check(label+' HUD nonoverlap',m.hud.every((a,i)=>m.hud.every((b,j)=>i===j||!overlap(a,b))));
     check(label+' equal HUD widths, center and labels',m.top===32&&m.hudLayout.centerY===15&&m.hudLayout.leftPadding===7.5&&m.hudLayout.rightPadding===7.5&&m.hudLayout.textPadTop===7.5&&m.hudLayout.textPadBottom===7.5&&m.hudLayout.barHeight===12&&Math.abs(m.hudLayout.timeGap-5)<0.01&&Math.abs(m.hudLayout.barGap-5)<0.01&&m.hudLayout.metricWidth>0&&m.hudLayout.gemX===2*m.hudLayout.metricWidth&&3*m.hudLayout.metricWidth<=m.hudLayout.progressX&&m.hudLayout.labelColors.every(c=>c.toLowerCase()==='#b0b0b0')&&m.hudLayout.valueColors.every(c=>c.toLowerCase()==='#ffffff'),JSON.stringify(m.hudLayout));
     check(label+' stat bounds',m.stats.length>=12&&m.stats.every(t=>t.y>=540-m.bottom-eps&&t.y+t.h<=540+eps&&t.x>=-eps&&t.x+t.w<=960+eps),JSON.stringify(m.stats));
@@ -162,7 +162,9 @@ for(const c of configs){
           const time=box(hud.find(o=>o.text==='9999:59:59'));
           const title=bounds(bp.x*2,Math.floor(bp.y*2),Math.ceil((bp.x+40)*2),Math.ceil((bp.y+bp.header)*2),ink);
           const header=bounds(bp.x*2,64,(bp.x+bp.width)*2,Math.ceil((bp.y+bp.header)*2),exact(103,103,119));
-          const grid=bounds(bp.x*2,Math.floor((bp.y+bp.header)*2),(bp.x+bp.width)*2,Math.ceil((bp.gridY+91)*2),exact(81,81,107));
+          const grid=bounds(bp.x*2,Math.floor(bp.gridY*2),(bp.x+bp.width)*2,Math.ceil((bp.gridY+91)*2),exact(103,103,119));
+          const seamY=bp.gridY*2, seamX=bp.x*2+8;
+          const seam=[-1,0,1,2].map(d=>rgb(seamX,seamY+d));
           const bar=bounds(1500,10,1920,54,exact(135,135,150));
           const dividers=bounds(0,10,1920,50,exact(32,32,32));
           const dividerRuns=[];
@@ -172,7 +174,7 @@ for(const c of configs){
             while(x+1<1920&&exact(32,32,32)(rgb(x+1,12)))x++;
             dividerRuns.push([left,x]);
           }
-          return {image:[cv.width,cv.height],label,time,title,header,grid,bar,dividerRuns,
+          return {image:[cv.width,cv.height],label,time,title,header,grid,bar,dividerRuns,seam,
             leftPadding:label.left,rightPadding:cv.width-bar.right-1,
             timeGap:time.left-label.right-1,hudBottomGap:64-Math.max(label.bottom,time.bottom)-1,
             headerTopGap:header.top-64,titleLeftGap:title.left-header.left,titleTopGap:title.top-header.top,
@@ -180,7 +182,7 @@ for(const c of configs){
         },{data:png.toString('base64'),hud:m.hud,bp:m.blueprint});
         console.log('PIXEL_REPORT '+JSON.stringify(pixels));
         check('FHD right-aligned gauge and two left dividers',pixels.leftPadding===15&&pixels.rightPadding===pixels.leftPadding&&pixels.bar.width===316&&pixels.bar.height===24&&JSON.stringify(pixels.dividerRuns)===JSON.stringify([[324,327],[648,651]]),JSON.stringify(pixels));
-        check('FHD actual screenshot alignment and visible gaps',pixels.header.width===182&&pixels.grid.width===182&&pixels.header.left===pixels.grid.left&&pixels.header.left===pixels.label.left&&pixels.headerTopGap===15&&[pixels.titleLeftGap,pixels.titleTopGap,pixels.titleBottomGap].every(g=>g===pixels.gridGap)&&pixels.gridGap===10,JSON.stringify(pixels));
+        check('FHD actual screenshot alignment and visible gaps',pixels.header.width===182&&pixels.grid.width===182&&pixels.header.left===pixels.grid.left&&pixels.header.left===pixels.label.left&&pixels.headerTopGap===15&&[pixels.titleLeftGap,pixels.titleTopGap,pixels.titleBottomGap].every(g=>g===10)&&pixels.gridGap===-2&&pixels.grid.height===182&&JSON.stringify(pixels.seam)===JSON.stringify([[68,68,92],[103,103,119],[103,103,119],[48,46,58]]),JSON.stringify(pixels));
       }
     }
   }
