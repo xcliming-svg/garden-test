@@ -197,7 +197,7 @@
     g.fillStyle(colors.hud, 1).fillRect(0, 0, spec.width, spec.top);
     hudBoundary(g, spec.top - 2);
 
-    // 개발용 표시 확인 값만 변경한다. 타이머/집계/저장은 구현하지 않는다.
+    // 전투 테스트의 시간·처치 수만 연동하며 보석·완성도는 표시용 값을 유지한다.
     const stress = new URLSearchParams(window.location.search).get('hud') === 'stress';
     const time = stress ? formatHudTime(9999, 59, 59) : formatHudTime(0, 0, 0);
     const count = stress ? formatHudCount('9'.repeat(hud.counterDigits)) : '0';
@@ -235,6 +235,7 @@
       return { caption, number };
     }
     const pairs = [metric(columns.time, labels.time, time, hud.timeSize), metric(columns.kills, labels.kills, count)];
+    pairs[0].number.setName('hud-time-value');pairs[1].number.setName('hud-kills-value');
 
     const gem = columns.gems, iconX = gem.x + hud.padding, iconY = hud.centerY - hud.iconSize / 2;
     const icon = U.pixelGraphics(scene).setName('hud-gem-icon');
@@ -283,6 +284,15 @@
     align();
     scene.scale.on('resize',align);
     scene.events.once('shutdown',()=>scene.scale.off('resize',align));
+    let lastSecond=-1,lastKills=-1;
+    return (elapsed,kills)=>{
+      if(stress)return;
+      const seconds=Math.floor(elapsed);
+      if(seconds===lastSecond&&kills===lastKills)return;
+      pairs[0].number.setText(formatHudTime(Math.floor(seconds/3600),Math.floor(seconds/60)%60,seconds%60));
+      pairs[1].number.setText(formatHudCount(kills));
+      lastSecond=seconds;lastKills=kills;align();
+    };
   }
 
   const bottomInk = U.inkBounds;
@@ -559,7 +569,7 @@
     return wrapName(previous) + '\n' + wrapName('→ ' + incoming);
   }
 
-  function drawItemPreview(scene, layout, cards) {
+  function drawItemPreview(scene, layout, cards, combatSpeed) {
     const U = window.GardenUI;
     const s = spec.slots;
     const equipped = Array(s.preview).fill(null);
@@ -592,6 +602,7 @@
     function renderStats() {
       const current = sumPreviewStats(equipped);
       const next = dragging && target >= 0 ? getPreviewStats(equipped, target, dragging.item) : current;
+      if(combatSpeed!==undefined){current.moveSpeed=combatSpeed;next.moveSpeed=combatSpeed;}
       const rows = layout.alignCost();
       stats.forEach(row => {
         const d = next[row.key] - current[row.key];
@@ -1065,13 +1076,13 @@
     scene.cameras.main.setBackgroundColor(P.background.hex);
     const g = scene.add.graphics().setDepth(-2).setName('battlefield');
     g.fillStyle(colors.field, 1).fillRect(0, spec.top, spec.width, spec.fieldHeight);
-    // Isolated visual comparison: no field drops, enemies, or gems.
-    drawHud(scene);
+    // Temporary combat preview; item and gem systems remain unimplemented.
+    const updateHud=drawHud(scene);
     const layout = drawSlots(scene);
     drawBlueprint(scene);
-    drawItemPreview(scene, layout, []);
-    window.GardenFlowerHeadPreview.draw(scene, spec, colors, gardenRaster, patrolBounds, patrolPosition);
-    text(scene, spec.width - 10, spec.top + spacing.base, '테스트 이미지', bottomStats.fontSize, colors.label, 'right').setDepth(16);
+    drawItemPreview(scene, layout, [],window.GardenCombatPreview.tuning.walkSpeed);
+    window.GardenFlowerHeadPreview.draw(scene, spec, colors, gardenRaster, patrolBounds, patrolPosition,updateHud);
+    text(scene, spec.width - 10, spec.top + spacing.base, '테스트 전투', bottomStats.fontSize, colors.label, 'right').setDepth(16);
   }
 
   window.GardenGameLayout = Object.freeze({ spec, assets, colors, spacing, hud, slotCost, formatHudTime, formatHudCount, hudColumns, bottomStats, itemTooltip, replacementTitle, bottomLayout, sumPreviewStats, getPreviewStats, tooltipPosition, gardenCandidates, gardenGridRects, gardenRaster, gardenHit, patrolBounds, patrolPosition, nearestPatrolDistance, draw });

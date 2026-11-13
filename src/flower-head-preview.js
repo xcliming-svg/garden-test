@@ -59,6 +59,27 @@
       texture.setFilter(Phaser.Textures.FilterMode.NEAREST);
     }
   }
+  // Preserve the full selected body height; add a one-logical-pixel visible rim.
+  function installGuardian(scene) {
+    const n=guardianSize+2,k=key('guardian-outlined',guardianSize);
+    if(scene.textures.exists(k)) return k;
+    const raw=runs['guardian:24'].split(',').map(run=>run.slice(-1).repeat(Number(run.slice(0,-1)))).join('');
+    const core=new Uint8Array(n*n);
+    for(let y=0;y<guardianSize;y++)for(let x=0;x<guardianSize;x++){
+      const sx=Math.floor((x+0.5)*24/guardianSize),sy=Math.floor((y+0.5)*24/guardianSize);
+      core[(y+1)*n+x+1]=Number(raw[sy*24+sx]);
+    }
+    const texture=scene.textures.createCanvas(k,n,n),ctx=texture.getContext(),image=ctx.createImageData(n,n);
+    for(let y=0;y<n;y++)for(let x=0;x<n;x++){
+      const i=y*n+x,body=core[i];
+      const rim=!body&&[[x-1,y],[x+1,y],[x,y-1],[x,y+1]].some(([a,b])=>a>=0&&a<n&&b>=0&&b<n&&core[b*n+a]);
+      if(!body&&!rim)continue;
+      const c=window.GardenPalette.n[body?'teal':'slate'];
+      image.data.set([(c>>16)&255,(c>>8)&255,c&255,255],i*4);
+    }
+    ctx.putImageData(image,0,0);texture.refresh();texture.setFilter(Phaser.Textures.FilterMode.NEAREST);
+    return k;
+  }
   function installEnemy(scene) {
     const k=key('caterpillar',enemySize);
     if(scene.textures.exists(k)) return;
@@ -68,13 +89,13 @@
     const ctx=texture.getContext(),image=ctx.createImageData(enemySize,enemySize);
     for(let i=0;i<pixels.length;i++){
       if(pixels[i]==='0') continue;
-      const c=window.GardenPalette.n[pixels[i]==='1'?'growth':'ink'];
+      const c=window.GardenPalette.n[pixels[i]==='1'?'growth':'slate'];
       image.data.set([(c>>16)&255,(c>>8)&255,c&255,255],i*4);
     }
     ctx.putImageData(image,0,0);texture.refresh();
     texture.setFilter(Phaser.Textures.FilterMode.NEAREST);
   }
-  function draw(scene, spec, colors, gardenRaster, patrolBounds, patrolPosition) {
+  function draw(scene, spec, colors, gardenRaster, patrolBounds, patrolPosition, updateHud) {
     install(scene);
     installEnemy(scene);
     const g=spec.garden;
@@ -91,20 +112,9 @@
         .setPosition((raster.x+raster.width/2)/z,(raster.y+raster.height/2)/z);
       const ctx=texture.getContext();
       ctx.clearRect(0,0,raster.width,raster.height);
-      // Continuous soil, no internal seams. Preserve only the existing outer frame
-      // and its four cut corners, snapped to native output pixels.
-      const w=raster.width,h=raster.height;
-      const left=Math.max(1,Math.round((g.x+g.line)*z)-raster.x);
-      const top=Math.max(1,Math.round((g.y+g.line)*z)-raster.y);
-      const right=Math.max(1,raster.x+w-Math.round((g.x+g.size-g.line)*z));
-      const bottom=Math.max(1,raster.y+h-Math.round((g.y+g.size-g.line)*z));
-      ctx.fillStyle='#'+colors.gardenBorder.toString(16).padStart(6,'0');
-      ctx.fillRect(left,0,w-left-right,top);
-      ctx.fillRect(left,h-bottom,w-left-right,bottom);
-      ctx.fillRect(0,top,left,h-top-bottom);
-      ctx.fillRect(w-right,top,right,h-top-bottom);
+      // Continuous soil; neither outer frame nor interior grid is drawn.
       ctx.fillStyle='#'+colors.gardenSoil.toString(16).padStart(6,'0');
-      ctx.fillRect(left,top,w-left-right,h-top-bottom);
+      ctx.fillRect(0,0,raster.width,raster.height);
       texture.refresh(); texture.setFilter(Phaser.Textures.FilterMode.NEAREST);
     }
     for(const index of occupied){
@@ -116,32 +126,16 @@
     const bounds=patrolBounds(occupied);
     // Keep larger comparison sprites inside the battlefield, including ?garden=32.
     // Default garden patrol coordinates remain unchanged at every comparison size.
-    const half=guardianSize/2;
+    const half=(guardianSize+2)/2;
     bounds.top=Math.max(bounds.top,spec.top+half);
     bounds.bottom=Math.min(bounds.bottom,spec.height-spec.bottom-half);
-    let distance=(bounds.right-bounds.left)/2;
-    const start=patrolPosition(bounds,distance);
-    const guardian=scene.add.image(start.x,start.y,key('guardian',24))
-      .setDisplaySize(guardianSize,guardianSize).setDepth(2).setName('placeholder:guardian:0');
-    // Static enemy scale samples only: no combat, collisions or spawning logic.
-    const middleY=g.y+g.size/2;
-    [[g.x-85,middleY-55,true],[g.x+g.size+85,middleY+20,false],
-      [g.x-85,middleY+80,true]].forEach(([x,y,flip],i)=>{
-      scene.add.image(x,y,key('caterpillar',enemySize))
-        .setDisplaySize(enemySize,enemySize).setFlipX(flip).setDepth(2)
-        .setName('placeholder:enemy:caterpillar:'+i);
-    });
-    const update=(_time,delta)=>{
-      distance+=Math.max(0,Math.min(delta,100))*0.072;
-      const p=patrolPosition(bounds,distance);guardian.setPosition(p.x,p.y);
-    };
+    const start=patrolPosition(bounds,(bounds.right-bounds.left)/2);
+    const guardian=scene.add.image(start.x,start.y,installGuardian(scene))
+      .setDisplaySize(guardianSize+2,guardianSize+2).setDepth(2).setName('placeholder:guardian:0');
     refreshSoil();
-    scene.events.on('update',update);
     scene.scale.on('resize',refreshSoil);
-    scene.events.once('shutdown',()=>{
-      scene.events.off('update',update);
-      scene.scale.off('resize',refreshSoil);
-    });
+    scene.events.once('shutdown',()=>scene.scale.off('resize',refreshSoil));
+    window.GardenCombatPreview.attach(scene,spec,bounds,patrolPosition,guardian,key('caterpillar',enemySize),enemySize,updateHud);
   }
   window.GardenFlowerHeadPreview=Object.freeze({draw,install,flowers,key,guardianSize,outlinedPixels,enemySize});
 }());
