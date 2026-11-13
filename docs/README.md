@@ -11,7 +11,7 @@
 | [deployment.md](./deployment.md) | main/devel GitHub Pages 배포 구성, 초기 설정 및 검증 방법 |
 | [resolution-960x540.md](./resolution-960x540.md) | 현재 devel 실험 규격, 변경 범위 및 검증 |
 | [ui-spacing-guide.md](./ui-spacing-guide.md) | 용도별 공통 간격 3/5/10/20px, 패딩·정렬 및 예외 적용 가이드 |
-| [ui-color-guide.md](./ui-color-guide.md) | 에셋과 참고 UI의 색상 관계를 고려한 신규 16색 설계 기준(코드 미적용) |
+| [ui-color-guide.md](./ui-color-guide.md) | Garden 16 공통 UI·에셋 색상 원본, 명도/소재/상태 규칙, 신규 객체 제작 및 검증 |
 | [ui-scale-audit.md](./ui-scale-audit.md) | 960×540 논리 규격·실제 화면 간격·배율 감사 |
 | [ui-metrics-benchmark.md](./ui-metrics-benchmark.md) | 실제 브라우저 10개 UI 시안 비교, 측정 기준, 순위 및 J안 선정 |
 | [implementation.md](./implementation.md) | 현재 게임의 설계 및 구현 상태. 시스템별 적용 사항, 확정된 미구현 사항, 코드 위치 |
@@ -27,6 +27,6 @@
 - **적용 구현:** 현재 저장소 소스에 존재하는 기능이나 UI. 실행 검증 여부와 구분한다.
 - **미구현·미정:** 확정 설계의 남은 작업 또는 아직 결정하지 않은 사항. 추가 개발을 승인하는 목록이 아니다.
 
-devel 현행 UI의 크기·색·좌표·패딩은 resolution-960x540.md에서 먼저 확인한다. 용도별 공통 간격 설계 기준은 ui-spacing-guide.md, 배율과 가시 간격 검사 기준은 ui-scale-audit.md, 에셋 상세 규격은 ASSET_SPECS.md, 씬 계약과 모듈 책임은 implementation.md, 최초 엔진 선정 및 외부 자료는 project-foundations.md에 둔다. 변경 이력에는 대체된 시안도 남기되 현행 문서와 구분한다. AGENTS.md는 저장소 전체에 적용되는 지속적인 개발 원칙 및 작업 절차만 관리한다.
+devel 현행 UI의 크기·색·좌표·패딩은 resolution-960x540.md에서 먼저 확인한다. 공통 색상 설계 및 신규 에셋 제작 기준은 ui-color-guide.md, 용도별 공통 간격 설계 기준은 ui-spacing-guide.md, 배율과 가시 간격 검사 기준은 ui-scale-audit.md, 에셋 상세 규격은 ASSET_SPECS.md, 씬 계약과 모듈 책임은 implementation.md, 최초 엔진 선정 및 외부 자료는 project-foundations.md에 둔다. 변경 이력에는 대체된 시안도 남기되 현행 문서와 구분한다. AGENTS.md는 저장소 전체에 적용되는 지속적인 개발 원칙 및 작업 절차만 관리한다.
 
 구현 변경 시 해당 시스템의 현행 문서를 갱신하고 변경 이력에도 동일 작업의 효과를 기록한다. 변경 없는 시스템을 반복해서 기록하지 않는다. 과거 설계가 대체되면 현행 문서에는 최신 확정안을 유지한다.
