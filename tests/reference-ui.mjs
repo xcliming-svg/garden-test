@@ -311,6 +311,50 @@ for(const c of configs){
       if(w===1920)await page.screenshot({path:join(out,'hud-'+lang+'-1920.png')});
     }
   }
+  const slotVariants=[];
+  for(const size of [24,32]){
+    await page.setViewportSize({width:960,height:540});
+    await page.goto(origin+'/'+c.id+'/index.html?slots='+size+'&preview=1&hud=stress',{waitUntil:'load'});
+    await page.waitForFunction(()=>window.__benchmarkGame?.scene.isActive('MainMenu'),{},{timeout:20000});
+    await button('MainMenu','새 게임');
+    await page.waitForFunction(()=>window.__benchmarkGame.scene.isActive('Game'));
+    const m=await gameMetrics(),slot=m.slots[0],last=m.slots[9],key='slots '+size;
+    const detail=await page.evaluate(()=>{
+      const L=window.GardenGameLayout,s=window.__benchmarkGame.scene.getScene('Game'),cost=s.children.getByName('slot-cost-value');
+      const zones=s.children.list.filter(o=>o.name?.startsWith('preview-slot:')),cards=s.children.list.filter(o=>o.name?.startsWith('preview-equipped:')),ghost=s.children.getByName('item-preview-ghost');
+      return {zones:zones.map(o=>[o.width,o.height,o.input.hitArea.width,o.input.hitArea.height]),cards:cards.map(o=>[o.width,o.height,o.list[1].width,o.list[2].displayWidth]),ghost:[ghost.width,ghost.height],costMasked:!!cost.mask,drop:L.assets.item.dropSize,bottom:L.spec.bottom};
+    });
+    check(key+' equal sizes, center and gap',m.slots.length===10&&m.slots.every((s,i)=>s.size===size&&s.y+s.size/2===518&&(!i||s.x-m.slots[i-1].x===size+3))&&m.slotWidth===10*size+27&&Math.abs(m.slotLeft+m.slotWidth/2-480)<=0.5&&m.side===210&&detail.bottom===44,JSON.stringify(m.slots));
+    check(key+' matching hitboxes, cards, ghost and unchanged field drops',detail.zones.length===10&&detail.zones.every(a=>a.every(v=>v===size))&&detail.cards.length===10&&detail.cards.every(a=>a[0]===size&&a[1]===size&&a[2]===size-2&&a[3]===16)&&detail.ghost.every(v=>v===size)&&detail.drop===24,JSON.stringify(detail));
+    check(key+' cost aligns with stat row',m.cost.font===8&&m.costSpec.gap===5&&m.stats.filter(t=>t.name.startsWith('stat-value:')).every(t=>t.y===m.cost.y&&t.h===m.cost.h)&&detail.costMasked===(size===24),JSON.stringify(m.cost));
+    await page.setViewportSize({width:1920,height:1080});
+    await page.waitForFunction(()=>window.__benchmarkGame.scene.getScene('Game').cameras.main.zoom===2);
+    const screenshot=await page.screenshot({path:join(out,'slots-'+size+'-1920.png')});
+    const pixel=await page.evaluate(async ({data,last,cost,stats})=>{
+      const img=await createImageBitmap(await (await fetch('data:image/png;base64,'+data)).blob()), cv=document.createElement('canvas');cv.width=img.width;cv.height=img.height;
+      const ctx=cv.getContext('2d');ctx.drawImage(img,0,0);const p=ctx.getImageData(0,0,cv.width,cv.height).data;
+      const rgb=(x,y)=>Array.from(p.slice((y*cv.width+x)*4,(y*cv.width+x)*4+3));
+      const ink=v=>Math.min(...v)>=145&&Math.max(...v)-Math.min(...v)<=5;
+      const scan=(x0,y0,x1,y1,pred)=>{let top=Infinity,bottom=-1,left=Infinity,right=-1,n=0;for(let y=y0;y<y1;y++)for(let x=x0;x<x1;x++)if(pred(rgb(x,y))){top=Math.min(top,y);bottom=Math.max(bottom,y);left=Math.min(left,x);right=Math.max(right,x);n++;}return {top,bottom,left,right,n};};
+      const number=scan(Math.floor(cost.x*2),Math.floor(cost.y*2),Math.ceil((cost.x+cost.w)*2),Math.ceil((cost.y+cost.h)*2),ink);
+      const gem=scan(last.x*2+2,last.y*2+2,(last.x+last.size)*2-2,Math.floor(cost.y*2),v=>v.every(x=>x===170));
+      const digitRows=stats.filter(t=>t.name.startsWith('stat-value:')).map(t=>scan(Math.floor(t.x*2),Math.floor(t.y*2),Math.ceil((t.x+t.w)*2),Math.ceil((t.y+t.h)*2),ink));
+      const frame=Array.from({length:last.size*2},(_,i)=>rgb(last.x*2+i,(last.y+last.size)*2-1).join(',')).every(v=>v==='81,81,107');
+      return {number,gem,digitRows,frame};
+    },{data:screenshot.toString('base64'),last,cost:m.cost,stats:m.stats});
+    check(key+' actual FHD digits, gem, intact bottom border',pixel.number.n>0&&pixel.gem.n>0&&pixel.digitRows.every(t=>t.top===pixel.number.top&&t.bottom===pixel.number.bottom)&&pixel.number.bottom<(last.y+size)*2-2&&pixel.gem.top>=last.y*2+2&&pixel.gem.bottom<pixel.number.top&&pixel.frame,JSON.stringify(pixel));
+    await page.setViewportSize({width:960,height:540});await page.waitForFunction(()=>window.__benchmarkGame.scene.getScene('Game').cameras.main.zoom===1);
+    await drag('placeholder:item:0',slot.x+size/2,slot.y+size/2);
+    check(key+' equip',await page.evaluate(()=>window.__benchmarkGame.scene.getScene('Game').children.getByName('preview-equipped:0').visible));
+    await drag('placeholder:item:3',slot.x+size/2,slot.y+size/2,false);
+    check(key+' snap ghost',await page.evaluate(({x,y})=>{const o=window.__benchmarkGame.scene.getScene('Game').children.getByName('item-preview-ghost');return o.visible&&o.x===x&&o.y===y;},{x:slot.x+size/2,y:slot.y+size/2}));
+    await page.mouse.up();
+    check(key+' replace',await page.evaluate(()=>!window.__benchmarkGame.scene.getScene('Game').children.getByName('placeholder:item:3').visible));
+    await drag('placeholder:item:1',last.x+size/2,last.y+size/2);
+    check(key+' reject locked slot',await page.evaluate(()=>window.__benchmarkGame.scene.getScene('Game').children.getByName('placeholder:item:1').visible));
+    slotVariants.push({size,width:m.slotWidth,slot,detail,pixel});
+  }
+  console.log('SLOT_VARIANTS '+JSON.stringify(slotVariants));
   check('localized runtime errors',errors.length===0,errors.join('; '));
   results.push({id:c.id,name:c.name,localeResults,passed:checks.filter(x=>x.pass).length,total:checks.length,eligible:checks.every(x=>x.pass),fails:checks.filter(x=>!x.pass),ink:initial.ink,blueprintMetrics:initial.blueprintMetrics,hudLayout:initial.hudLayout,renderer:await page.evaluate(()=>window.__benchmarkGame.renderer.type),observations:observations.map(m=>({canvas:m.canvas,zoom:m.zoom}))});
  }catch(e){results.push({id:c.id,name:c.name,config:c,score:null,eligible:false,passed:checks.filter(x=>x.pass).length,total:checks.length,fails:[...checks.filter(x=>!x.pass),{name:'exception',detail:String(e)}],errors});}
