@@ -502,23 +502,29 @@
     const above = anchor.y - half - gap - height;
     const below = anchor.y + half + gap;
     const centeredX = anchor.x - width / 2;
-    const candidates = anchor.y >= fieldBottom - spacing.base
+    const isSlot = anchor.y >= fieldBottom - spacing.base;
+    const candidates = isSlot
       ? [[centeredX, above], [right, above], [left, above]]
       : [[right, anchor.y - half], [left, anchor.y - half], [centeredX, above], [centeredX, below]];
     const top = spec.top + 10;
-    const bottom = fieldBottom - spacing.base;
+    // 슬롯 위에서는 HUD 경계까지 허용해야 슬롯 외곽과 5px 간격을 유지한다.
+    const bottom = isSlot ? fieldBottom : fieldBottom - spacing.base;
     const clamp = (v, lo, hi) => Math.max(lo, Math.min(v, Math.max(lo, hi)));
     const xFits = x => x >= margin && x + width <= spec.width - margin;
     const yFits = y => y >= top && y + height <= bottom;
-    const best = candidates.find(([x, y]) => xFits(x) && yFits(y)) ||
-      candidates.find(([x]) => xFits(x)) || candidates[0];
-    return { x: Math.round(clamp(best[0], margin, spec.width - margin - width)),
-      y: Math.round(clamp(best[1], top, bottom - height)) };
+    // 전장 드롭은 부유하므로 좌우 외곽 기준을 우선 유지하고, 필요하면 Y만 보정한다.
+    const preferred = isSlot ? candidates : candidates.slice(0, 2);
+    const best = preferred.find(([x, y]) => xFits(x) && yFits(y)) ||
+      preferred.find(([x]) => xFits(x)) ||
+      candidates.find(([x, y]) => xFits(x) && yFits(y)) || candidates[0];
+    // 논리 경계를 그대로 유지하고 최종 물리 픽셀 스냅은 pixelGraphics에 맡긴다.
+    return { x: clamp(best[0], margin, spec.width - margin - width),
+      y: clamp(best[1], top, bottom - height) };
   }
 
   // 정보창의 중성 회색 테두리, 보라색 제목 바와 HUD 공통 회색 본문.
   const itemTooltip = Object.freeze({
-    width: hud.barWidth, padding: blueprintPadding, gap: 8, bottomPadding: blueprintPadding, fontSize: 10, titleSize: 10,
+    width: hud.barWidth, padding: blueprintPadding, gap: blueprintPadding, bottomPadding: blueprintPadding, fontSize: 10, titleSize: 10,
     rowGap: hudGap, lineSpacing: 4, strokeWidth: 1, accent: R.n.panelBorder,
     background: R.n.tab, header: R.n.header,
     title: colors.value, description: colors.hudLabel, hint: colors.disabledText
@@ -697,9 +703,9 @@
       }
       const key = JSON.stringify(rows);
       rebuildTooltip(key, rows);
-      // 중앙 스트로크의 바깥쪽 0.5px까지 경계 안에 두고 정수 좌표를 유지한다.
-      const pos = tooltipPosition(anchor, tooltipSize.width + 2, tooltipSize.height + 2, layout.top);
-      tooltip.setPosition(pos.x + 1, pos.y + 1).setVisible(true);
+      // pixelBox 테두리는 명목 외형 안쪽에 그려지므로 외곽선끼리의 실제 간격을 사용한다.
+      const pos = tooltipPosition(anchor, tooltipSize.width, tooltipSize.height, layout.top);
+      tooltip.setPosition(pos.x, pos.y).setVisible(true);
     }
     function sameFocus(a, b) { return !!a && !!b && (a.card ? a.card === b.card : a.slot === b.slot); }
     function refresh() {

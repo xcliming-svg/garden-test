@@ -392,7 +392,7 @@ for(const c of configs){
   const drag=async(name,x,y,release=true)=>{let a=await coords(name);await move(a.x,a.y);await page.mouse.down();const b=await page.locator('canvas').boundingBox();await page.mouse.move(b.x+x,b.y+y,{steps:8});if(release)await page.mouse.up();};
   const tip=async()=>page.evaluate(()=>{const s=window.__benchmarkGame.scene.getScene('Game'),t=s.children.getByName('item-preview-tooltip'),r=t.list[0];if(!t.visible||!r)return null;return {x:t.x,y:t.y,w:r.width,h:r.height,color:r.fillColor,stroke:r.strokeColor,header:t.list.find(o=>o.name==='item-tooltip-header')?.fillColor,headerHeight:t.list.find(o=>o.name==='item-tooltip-header')?.height+1,zoom:s.cameras.main.zoom,divider:!!t.getByName('item-tooltip-divider'),rows:t.list.filter(o=>o.type==='Text').map(o=>({x:o.x,y:o.y,w:o.width,h:o.height,text:o.text,color:o.style.color,font:parseFloat(o.style.fontSize)}))};});
   let tips=[];
-  const inspectTip=(t,key)=>{check(key+' tooltip bounds',!!t&&t.x>=c.margin-.5&&t.y>=c.top+c.margin-.5&&t.x+t.w<=960-c.margin+.5&&t.y+t.h<=540-c.bottom-8+.5,JSON.stringify(t));if(t){check(key+' tooltip colors and width',t.w===c.tipW&&t.color===0x3B3B4E&&t.stroke===0x676777&&t.header===0x44445C&&!t.divider&&t.rows[1]?.color.toLowerCase()==='#b0acbd',JSON.stringify(t));check(key+' tooltip rows',t.rows.every((r,i)=>r.x>=1&&r.x+r.w<=t.w+1&&r.y>=1&&r.y+r.h<=t.h+1&&(!i||r.y>t.rows[i-1].y)),JSON.stringify(t.rows));check(key+' tooltip all rows 10px',t.rows.length>0&&t.rows.every(r=>r.font===10),JSON.stringify(t.rows));tips.push(t);}};
+  const inspectTip=(t,key,isSlot=false)=>{check(key+' tooltip bounds',!!t&&t.x>=c.margin-.5&&t.y>=c.top+c.margin-.5&&t.x+t.w<=960-c.margin+.5&&t.y+t.h<=540-c.bottom-(isSlot?0:8)+.5,JSON.stringify(t));if(t){check(key+' tooltip colors and width',t.w===c.tipW&&t.color===0x3B3B4E&&t.stroke===0x676777&&t.header===0x44445C&&!t.divider&&t.rows[1]?.color.toLowerCase()==='#b0acbd',JSON.stringify(t));check(key+' tooltip rows',t.rows.every((r,i)=>r.x>=1&&r.x+r.w<=t.w+1&&r.y>=1&&r.y+r.h<=t.h+1&&(!i||r.y>t.rows[i-1].y)),JSON.stringify(t.rows));check(key+' tooltip all rows 10px',t.rows.length>0&&t.rows.every(r=>r.font===10),JSON.stringify(t.rows));tips.push(t);}};
   const captureTipPixels=async(t,png)=>page.evaluate(async ({data,t})=>{
     const img=await createImageBitmap(await (await fetch('data:image/png;base64,'+data)).blob()),cv=document.createElement('canvas');
     cv.width=img.width;cv.height=img.height;const ctx=cv.getContext('2d');ctx.drawImage(img,0,0);
@@ -413,11 +413,46 @@ for(const c of configs){
     let divider=0;for(let x=x0+R(6*z);x<x1-R(6*z);x++)if(rgb(x,y1-R(9*z)).join(',')==='75,75,80')divider++;
     return {edges,divider,headerHeight:headerEnd-y0,headerColor:rgb(x1-R(3*z),y0+R(3*z)),bodyColor:rgb(x1-R(3*z),y1-R(3*z))};
   },{data:png.toString('base64'),t});
+  // Measure the rendered outermost card/tooltip pixels, not just object positions.
+  const captureTipGap=async(browserPage,png,t,a,side,size=32)=>browserPage.evaluate(async ({data,t,a,side,size})=>{
+    const img=await createImageBitmap(await (await fetch('data:image/png;base64,'+data)).blob());
+    const cv=document.createElement('canvas');cv.width=img.width;cv.height=img.height;
+    const ctx=cv.getContext('2d');ctx.drawImage(img,0,0);
+    const px=ctx.getImageData(0,0,cv.width,cv.height).data,z=t.zoom,R=Math.round;
+    const vertical=side==='above',fixed=R((vertical?a.x:a.y)*z);
+    const rgb=v=>{const x=vertical?fixed:v,y=vertical?v:fixed,i=(y*cv.width+x)*4;return (px[i]<<16)|(px[i+1]<<8)|px[i+2];};
+    const cardColors=[0xB0ACBD,0x51516B],tipColors=[0x676777,0x44445C,0x3B3B4E];
+    const edge=(expected,colors,high)=>{
+      const hits=[];for(let v=expected-1;v<=expected+1;v++)if(colors.includes(rgb(v)))hits.push(v);
+      return hits.length?(high?Math.max(...hits):Math.min(...hits)):null;
+    };
+    let start,end;
+    if(side==='right'){
+      start=edge(R((a.x+size/2)*z)-1,cardColors,true);
+      end=edge(R(t.x*z),tipColors,false);
+    }else if(side==='left'){
+      start=edge(R((t.x+t.w)*z)-1,tipColors,true);
+      end=edge(R((a.x-size/2)*z),cardColors,false);
+    }else{
+      start=edge(R((t.y+t.h)*z)-1,tipColors,true);
+      end=edge(R((a.y-size/2)*z),cardColors,false);
+    }
+    const logical=side==='right'?t.x-a.x-size/2:side==='left'?a.x-size/2-t.x-t.w:a.y-size/2-t.y-t.h;
+    return {side,start,end,gap:start===null||end===null?null:end-start-1,logical,expected:R(5*z),tolerance:Number.isInteger(z)?0:1};
+  },{data:png.toString('base64'),t,a,side,size});
+  const validTipGap=p=>!!p&&p.gap!==null&&Math.abs(p.logical-5)<1e-6&&Math.abs(p.gap-p.expected)<=p.tolerance;
   const exactTipPadding=(p,z)=>{
     const gap=Math.round(5*z),tol=Number.isInteger(z)?0:1,near=(a,b)=>Math.abs(a-b)<=tol;
     return p.edges.every(e=>e.n>0&&near(e.left,gap)&&e.right>=gap-tol)&&near(p.edges[0].top,gap)&&near(p.edges.at(-1).bottom,gap)&&near(p.headerHeight-p.edges[0].inkBottom-1,gap)&&near(p.edges[1].top-p.headerHeight,gap)&&p.edges.slice(2).every((e,i)=>near(e.top-p.edges[i+1].inkBottom-1,gap));
   };
-  for(let i=0;i<5;i++){const a=await coords('placeholder:item:'+i);await move(a.x,a.y);await page.waitForTimeout(70);inspectTip(await tip(),'hover '+i);await move(5,200);}
+  for(let i=0;i<5;i++){
+    const a=await coords('placeholder:item:'+i);await move(a.x,a.y);await page.waitForTimeout(70);
+    const t=await tip();inspectTip(t,'hover '+i);
+    const png=await page.screenshot({path:join(out,'tooltip-hover-'+i+'.png')});
+    const gap=t?await captureTipGap(page,png,t,a,t.x>a.x?'right':'left'):null;
+    check('hover '+i+' actual 5px border gap',validTipGap(gap),JSON.stringify(gap));
+    await move(5,200);
+  }
   for(const [w,h] of viewportSizes){
     await page.setViewportSize({width:w,height:h});await page.waitForFunction(w=>Math.abs(window.__benchmarkGame.scene.getScene('Game').cameras.main.zoom-w/960)<1e-6,w);
     const a=await coords('placeholder:item:0'),z=w/960;
@@ -425,15 +460,35 @@ for(const c of configs){
     const t=await tip();const png=await page.screenshot({path:join(out,'tooltip-scale-'+w+'.png')});
     const p=t?await captureTipPixels(t,png):null;
     check(w+' tooltip visible 5px scaled padding and row gaps',!!p&&exactTipPadding(p,z),JSON.stringify(p));
-    console.log('TOOLTIP_SCALE '+w+' '+JSON.stringify(p));
+    const right=t?await captureTipGap(page,png,t,a,'right'):null;
+    check(w+' drop right actual 5px border gap',validTipGap(right),JSON.stringify(right));
+    await move(5*z,200*z);
+    const leftAnchor=await coords('placeholder:item:4');
+    await move(leftAnchor.x*z,leftAnchor.y*z);await page.waitForTimeout(90);
+    const leftTip=await tip(),leftPng=await page.screenshot({path:join(out,'tooltip-left-'+w+'.png')});
+    const left=leftTip?await captureTipGap(page,leftPng,leftTip,leftAnchor,'left'):null;
+    check(w+' drop left actual 5px border gap',validTipGap(left),JSON.stringify(left));
+    console.log('TOOLTIP_SCALE '+w+' '+JSON.stringify({padding:p,right,left}));
     await move(5*z,200*z);
   }
   await page.setViewportSize({width:960,height:540});await page.waitForFunction(()=>window.__benchmarkGame.scene.getScene('Game').cameras.main.zoom===1);
   const slot=initial.slots[0],last=initial.slots[9];
   await drag('placeholder:item:0',slot.x+slot.size/2,slot.y+slot.size/2);
   check('equip',await page.evaluate(()=>window.__benchmarkGame.scene.getScene('Game').children.getByName('preview-equipped:0').visible));
-  await drag('placeholder:item:3',slot.x+slot.size/2,slot.y+slot.size/2,false);await page.waitForTimeout(100);inspectTip(await tip(),'replace');
+  for(const [w,h] of viewportSizes){
+    await page.setViewportSize({width:w,height:h});await page.waitForFunction(w=>Math.abs(window.__benchmarkGame.scene.getScene('Game').cameras.main.zoom-w/960)<1e-6,w);
+    const z=w/960,a={x:slot.x+slot.size/2,y:slot.y+slot.size/2};
+    await move(5*z,200*z);await move(a.x*z,a.y*z);await page.waitForTimeout(90);
+    const t=await tip(),png=await page.screenshot({path:join(out,'tooltip-slot-'+w+'.png')});
+    const above=t?await captureTipGap(page,png,t,a,'above',slot.size):null;
+    check(w+' equipped actual 5px border gap',validTipGap(above),JSON.stringify(above));
+    console.log('TOOLTIP_SLOT '+w+' '+JSON.stringify(above));
+    await move(5*z,200*z);
+  }
+  await page.setViewportSize({width:960,height:540});await page.waitForFunction(()=>window.__benchmarkGame.scene.getScene('Game').cameras.main.zoom===1);
+  await drag('placeholder:item:3',slot.x+slot.size/2,slot.y+slot.size/2,false);await page.waitForTimeout(100);inspectTip(await tip(),'replace',true);
   const replacement=await tip();
+  check('replacement 5px above slot',!!replacement&&Math.abs(slot.y-replacement.y-replacement.h-5)<1e-6,JSON.stringify(replacement));
   const replacementPng=await page.screenshot({path:join(out,c.id+'-replace.png')});
   const tipPixels=await captureTipPixels(replacement,replacementPng);
   check('replacement actual gray description and no bottom divider',tipPixels.edges[1].exact>0&&tipPixels.divider===0&&tipPixels.headerColor.join(',')==='68,68,92'&&tipPixels.bodyColor.join(',')==='59,59,78',JSON.stringify(tipPixels));
@@ -474,7 +529,7 @@ for(const c of configs){
   await button('MainMenu','성공 화면');await page.waitForFunction(()=>window.__benchmarkGame.scene.isActive('Victory'));inspectMenu(await menuMetrics('Victory'),'Victory');await menuAudit('Victory');
   await button('Victory','메인 메뉴');await page.waitForFunction(()=>window.__benchmarkGame.scene.isActive('MainMenu'));await button('MainMenu','실패 화면');await page.waitForFunction(()=>window.__benchmarkGame.scene.isActive('Defeat'));inspectMenu(await menuMetrics('Defeat'),'Defeat');await menuAudit('Defeat');
   check('runtime errors',errors.length===0,errors.join('; '));
-  check('tooltip gap and palette role contract',await page.evaluate(()=>{let L=window.GardenGameLayout,T=L.itemTooltip,p=L.tooltipPosition({x:400,y:200,size:24},T.width,100,L.spec.top+L.spec.fieldHeight);return T.width===L.hud.barWidth&&T.width===158&&T.gap===8&&p.x===420&&T.padding===5&&T.padding===L.spec.blueprint.padding&&T.bottomPadding===T.padding&&T.rowGap===5&&T.lineSpacing===4&&T.strokeWidth===1&&T.background===L.colors.normalFill&&T.header===window.GardenPalette.reference.n.header&&T.description===L.colors.hudLabel&&!('divider' in T)}));
+  check('tooltip gap and palette role contract',await page.evaluate(()=>{let L=window.GardenGameLayout,T=L.itemTooltip,p=L.tooltipPosition({x:400,y:200,size:24},T.width,100,L.spec.top+L.spec.fieldHeight);return T.width===L.hud.barWidth&&T.width===158&&T.gap===T.padding&&p.x===417&&T.padding===5&&T.padding===L.spec.blueprint.padding&&T.bottomPadding===T.padding&&T.rowGap===5&&T.lineSpacing===4&&T.strokeWidth===1&&T.background===L.colors.normalFill&&T.header===window.GardenPalette.reference.n.header&&T.description===L.colors.hudLabel&&!('divider' in T)}));
   const locales=await page.evaluate(()=>window.GardenUI.hudLabels);
   const localeResults=[];
   for(const [lang, labels] of Object.entries(locales)){
@@ -599,6 +654,9 @@ for(const c of configs){
       const textObjects=[...s.children.list.filter(o=>o.type==='Text'&&o.visible),...tip.list.filter(o=>o.type==='Text')];
       return {buffer:[cv.width,cv.height],slot:corners(slot.x,slot.y,slot.size,slot.size),tooltip:corners(tip.x,tip.y,bg.width,bg.height),nativeText:textObjects.every(t=>t.style.resolution===z&&t.frame.width===t.canvas.width&&t.frame.height===t.canvas.height&&t.frame.u1===1&&t.frame.v1===1)};
     },{data:png.toString('base64')});
+    const nativeTip=await hi.evaluate(()=>{const s=window.__benchmarkGame.scene.getScene('Game'),t=s.children.getByName('item-preview-tooltip'),b=t.list[0];return {x:t.x,y:t.y,w:b.width,h:b.height,zoom:s.cameras.main.zoom};});
+    const nativeGap=await captureTipGap(hi,png,nativeTip,marker,'right');
+    check('DPR 2 fractional actual 5px border gap',validTipGap(nativeGap),JSON.stringify(nativeGap));
     check('fractional native output slot/tooltip cuts and exact text frames',nativePixels.slot.every(v=>v==='22,22,25')&&nativePixels.tooltip.every(v=>v==='13,13,13')&&nativePixels.nativeText,JSON.stringify(nativePixels));
     console.log('NATIVE_REPORT '+JSON.stringify({before,after,nativeReport,nativePixels}));
     // A non-16:9 browser must preserve the same logical layout, centered with letterbox.
