@@ -712,7 +712,7 @@
         card.marker.setStrokeStyle(active ? 1 : 0, colors.itemBorder, active ? 1 : 0);
       });
       slots.forEach((slot, index) => {
-        const active = !!dragging || !!(focus && focus.slot===index && equipped[index]);
+        const active = dragging ? target < 0 || target === index : !!(focus && focus.slot===index && equipped[index]);
         const showItem = !!equipped[index] && !(dragging && target===index);
         // 후보는 기존 프레임 색만 변경한다. 장착 카드와 빈 슬롯의 프레임은 동시에 표시하지 않는다.
         layout.slotFrames[index].setStrokeStyle(s.line,active?colors.itemBorder:colors.normalBorder,1).setVisible(!showItem);
@@ -965,8 +965,11 @@
     let dragging = null, target = -1;
     function refreshSoil() {
       const z = scene.cameras.main.zoom;
-      const visible = new Set([...occupied, ...gardenCandidates(occupied)]);
-      const raster = gardenRaster(visible,garden,z,dragging?gardenCandidates(occupied):new Set()), w = raster.width, h = raster.height;
+      const candidates = gardenCandidates(occupied);
+      const visible = new Set([...occupied, ...candidates]);
+      // 목적지 밖에서는 전체 후보, 유효 목적지에서는 해당 셀의 공유선만 강조한다.
+      const active = dragging ? (candidates.has(target) ? new Set([target]) : candidates) : new Set();
+      const raster = gardenRaster(visible,garden,z,active), w = raster.width, h = raster.height;
       if (soilTexture.width !== w || soilTexture.height !== h) soilTexture.setSize(w,h);
       soil.setTexture(soilKey).setDisplaySize(w/z,h/z).setPosition((raster.x+w/2)/z,(raster.y+h/2)/z);
       const ctx = soilTexture.getContext();
@@ -1011,10 +1014,12 @@
     }
     function move(pointer) {
       if (!dragging) return;
+      const previous = target;
       target = hit(pointer);
       const p = scene.cameras.main.getWorldPoint(pointer.x, pointer.y);
       const valid = gardenCandidates(occupied).has(target);
-      // 유효 칸에서는 원본 카드가 커서를 따라가고 중앙에 별도 미리보기를 표시한다.
+      // 후보 강조가 바뀔 때만 바닥 텍스처를 갱신한다. 커서 카드/고스트는 기존 방식 유지.
+      if (previous !== target && (valid || gardenCandidates(occupied).has(previous))) refreshSoil();
       refresh();
       dragging.marker.setPosition(p.x, p.y).setAlpha(valid ? 0.25 : 1);
     }
