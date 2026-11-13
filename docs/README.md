@@ -8,6 +8,7 @@
 | 문서 | 역할 |
 | --- | --- |
 | [project-foundations.md](./project-foundations.md) | 엔진 버전 선정 근거, 초기 화면 구성의 참고 자료 및 개발 단계 이력 |
+| [animated-assets.md](./animated-assets.md) | SVG 애니메이션 실험 브랜치의 원본·크기·재생·배치 규격 |
 | [deployment.md](./deployment.md) | main/devel GitHub Pages 배포 구성, 초기 설정 및 검증 방법 |
 | [resolution-960x540.md](./resolution-960x540.md) | 현재 devel 실험 규격, 변경 범위 및 검증 |
 | [ui-spacing-guide.md](./ui-spacing-guide.md) | 용도별 공통 간격 3/5/10/20px, 패딩·정렬 및 예외 적용 가이드 |
