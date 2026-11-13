@@ -54,7 +54,7 @@
     previewProgress: 30,
   });
   // 34px 내부 면에서 비용 아이콘과 숫자를 세로 중앙 배치한다.
-  const slotCost = Object.freeze({ padding: 1, gap: spacing.micro, iconSize: unit, fontSize: 10, maxDigits: 3 });
+  const slotCost = Object.freeze({ padding: 1, gap: hudGap, iconSize: unit, fontSize: 10, maxDigits: 3 });
 
   // size = 비교 브랜치의 논리 표시 크기. 기존 저해상도 테스트 원본은 그대로 사용한다.
   // assetKey와 suggestedFile은 이후 에셋 작업 시 참조할 식별자이다.
@@ -280,7 +280,7 @@
     const textHeight = Math.ceil(cost.height);
     const gap = Math.max(0, Math.min(c.gap, size - 2 * c.padding - c.iconSize - textHeight));
     const groupHeight = c.iconSize + gap + textHeight;
-    const top = y + Math.floor((size - groupHeight) / 2);
+    const top = y + (size - groupHeight) / 2;
     reserveIcon(g, x + (size - c.iconSize) / 2, top, c.iconSize, R.n.disabled);
     cost.setPosition(x + size / 2, top + c.iconSize + gap + textHeight / 2);
   }
@@ -315,7 +315,7 @@
     return sumPreviewStats(next);
   }
 
-  const bottomStats = Object.freeze({ fontSize: 10, valueSize: 10, columnWidth: 74, columns: 3, lineGap: 3, deltaGap: spacing.micro });
+  const bottomStats = Object.freeze({ fontSize: 8, valueSize: 8, columnWidth: 70, columns: 3, lineGap: hudGap, deltaGap: spacing.micro });
 
   function bottomLayout() {
     const s = spec.slots;
