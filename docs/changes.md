@@ -2,6 +2,10 @@
 
 각 구현 변경의 결과를 시스템 단위로 기록한다. 대화 원문 또는 코드 diff의 복제가 아니라 **어떤 시스템에 무엇이 적용되었으며, 무엇이 아직 구현되지 않았는지**를 설명한다. 최신 구현 상태는 [implementation.md](./implementation.md)를 참조한다.
 
+## 2026-11-14 — 애벌레 적 크기 비교
+
+- devel 5128394 기반 feature/devel-caterpillar-preview. 사용자 제공 애벌레 SVG의 원본 비율을 유지한 30×16px 몸체 및 1px 외곽선(전체 32×18px), 정원 양옆 비교용 적 세 마리. 선호한 수호자 44px 기본 적용, 기존 URL 옵션 유지. 꽃·정원·HUD는 유지. 전투·이동 AI 미구현. [규격](./flower-head-preview.md).
+
 ## 2026-11-14 — 수호자 대형 크기 비교
 
 - devel 6915d5f 기반 feature/devel-guardian-size-compare. 원본 비율 유지, person=36/40/44/48/56 추가, 기본 32 및 이전 옵션 유지. 대형 정원과 조합 시 HUD 겹침만 방지. 정원·꽃·HUD는 변경하지 않는다. [Chromium 17/17 통과](https://github.com/xcliming-svg/garden-test/actions/runs/43522786008), 코드 cb98ef1, FHD 실제 가시 폭·높이 검사 포함. 검증본을 devel에 통합하여 비교 화면 배포. [규격](./flower-head-preview.md). main 변경 없음.

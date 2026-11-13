@@ -25,6 +25,9 @@ for(const [id,rle] of Object.entries(runs)){
  const pixels=rle.split(',').map(r=>r.slice(-1).repeat(Number(r.slice(0,-1)))).join('');
  assert.equal(createHash('sha256').update(pixels).digest('hex'),hashes[id],id+' source pixels');
 }
+const caterpillar=source.match(/const caterpillarRle = '([^']+)';/)[1].split(',').map(r=>r.slice(-1).repeat(Number(r.slice(0,-1)))).join('');
+assert.equal(caterpillar.length,32*32);
+assert.equal(createHash('sha256').update(caterpillar).digest('hex'),'46f0b1ee74d961bccc1fd1e95678289274e7695fafc337e1ed77340eebb21d60');
 const mime={'.js':'application/javascript','.html':'text/html; charset=utf-8','.css':'text/css; charset=utf-8'};
 const server=createServer((req,res)=>{
  try{
@@ -41,7 +44,7 @@ const url='http://127.0.0.1:'+server.address().port;
 const browser=await chromium.launch({channel:'chrome',headless:true,args:['--no-sandbox','--disable-dev-shm-usage','--use-gl=angle','--use-angle=swiftshader','--enable-unsafe-swiftshader']});
 const report=[];
 try{
- for(const [w,h,dpr,cell,query] of [[640,360,1,22,''],[960,540,1,22,''],[1280,720,1,22,''],[1600,900,1,22,''],[1920,1080,1,22,''],[960,540,2,22,''],[960,540,1,32,'?garden=32'],[960,540,1,22,'?slots=24'],[960,540,1,22,'?slots=36'],[1920,1080,1,22,'?person=24'],[1920,1080,1,22,'?person=28'],...([36,40,44,48,56].map(n=>[1920,1080,1,22,'?person='+n])),[960,540,1,32,'?garden=32&person=56']]){
+ for(const [w,h,dpr,cell,query] of [[640,360,1,22,''],[960,540,1,22,''],[1280,720,1,22,''],[1600,900,1,22,''],[1920,1080,1,22,''],[960,540,2,22,''],[960,540,1,32,'?garden=32'],[960,540,1,22,'?slots=24'],[960,540,1,22,'?slots=36'],[1920,1080,1,22,'?person=24'],[1920,1080,1,22,'?person=28'],...([32,36,40,44,48,56].map(n=>[1920,1080,1,22,'?person='+n])),[960,540,1,32,'?garden=32&person=56']]){
   const page=await browser.newPage({viewport:{width:w,height:h},deviceScaleFactor:dpr});
   const errors=[];page.on('pageerror',e=>errors.push(String(e)));
   try {
@@ -54,6 +57,7 @@ try{
     const game=window.__previewGame,s=game.scene.getScene('Game'),g=window.GardenGameLayout.spec.garden,z=s.cameras.main.zoom;
     const list=s.children.list,flowers=list.filter(o=>o.name?.startsWith('garden-preview-flower:'));
     const guardian=list.find(o=>o.name==='placeholder:guardian:0');
+    const enemies=list.filter(o=>o.name?.startsWith('placeholder:enemy:caterpillar:'));
     const allowed=new Set(Object.values(window.GardenPalette.n));
     const sprites=[...new Set(flowers.map(o=>o.texture.key)),guardian.texture.key].map(key=>{
      const t=s.textures.get(key),w=t.width,h=t.height,p=t.getContext().getImageData(0,0,w,h).data;
@@ -76,18 +80,30 @@ try{
     const seamColors=[];
     for(let i=1;i<g.columns;i++) seamColors.push(colorAt(Math.round((g.x+i*g.pitch)*z)-Math.round(g.x*z),Math.floor(soil.texture.height/2)));
     for(let i=1;i<g.rows;i++) seamColors.push(colorAt(Math.floor(soil.texture.width/2),Math.round((g.y+i*g.pitch)*z)-Math.round(g.y*z)));
-    return {g,z,seamColors,count:flowers.length,markers:list.filter(o=>o.name?.startsWith('placeholder:')).map(o=>o.name),
+    const enemyTexture=enemies[0].texture,ep=enemyTexture.getContext().getImageData(0,0,32,32).data;
+    let left=32,right=-1,top=32,bottom=-1,green=0,inkCount=0,valid=true;
+    for(let y=0;y<32;y++)for(let x=0;x<32;x++){
+     const i=(y*32+x)*4,a=ep[i+3],c=(ep[i]<<16)|(ep[i+1]<<8)|ep[i+2];
+     if(a===0)continue;
+     if(a!==255||![0x6aba2c,0x0d0d0d].includes(c))valid=false;
+     if(c===0x6aba2c)green++;else inkCount++;
+     left=Math.min(left,x);right=Math.max(right,x);top=Math.min(top,y);bottom=Math.max(bottom,y);
+    }
+    return {g,z,seamColors,enemyBounds:{w:right-left+1,h:bottom-top+1,green,inkCount,valid},enemies:enemies.map(o=>({x:o.x,y:o.y,w:o.displayWidth,h:o.displayHeight,flip:o.flipX,key:o.texture.key})),count:flowers.length,markers:list.filter(o=>o.name?.startsWith('placeholder:')).map(o=>o.name),
       centers:flowers.every(o=>{const i=Number(o.name.split(':').at(-1));return o.x===g.x+(i%g.columns)*g.pitch+g.line+g.cell/2&&o.y===g.y+Math.floor(i/g.columns)*g.pitch+g.line+g.cell/2&&o.displayWidth===g.cell&&o.displayHeight===g.cell;}),
       guardian:{x:guardian.x,y:guardian.y,w:guardian.displayWidth,h:guardian.displayHeight},sprites,
       grid:[soil.texture.width,soil.texture.height],corner:colorAt(0,0),canvas:[game.canvas.width,game.canvas.height],
       hud:!!list.find(o=>o.name==='top-hud'),slots:list.filter(o=>o.name?.startsWith('slot-frame:')).length};
    });
-   assert.equal(state.count,100);assert.deepEqual(state.markers,['placeholder:guardian:0']);
+   assert.equal(state.count,100);assert.deepEqual(state.markers,['placeholder:guardian:0',...Array.from({length:3},(_,i)=>'placeholder:enemy:caterpillar:'+i)]);
+   assert.equal(state.enemies.length,3);assert.ok(state.enemies.every(e=>e.w===32&&e.h===32&&e.key==='flower-head-preview:caterpillar:32'));
+   assert.deepEqual(state.enemies.map(e=>e.flip),[true,false,true]);
+   assert.ok(state.enemyBounds.valid&&state.enemyBounds.w===32&&state.enemyBounds.h===18&&state.enemyBounds.green>0&&state.enemyBounds.inkCount>0);
    assert.equal(state.g.cell,cell);assert.ok(state.centers);assert.equal(state.sprites.length,5);
    assert.ok(state.sprites.every(t=>t.valid&&t.extent<=t.w&&t.extent>=t.w-2&&t.w===t.h),JSON.stringify(state.sprites));
    assert.ok(state.sprites.filter(t=>!t.key.includes('guardian')).every(t=>t.outline>0&&t.unoutlined===0),JSON.stringify(state.sprites));
    assert.ok(state.seamColors.every(c=>c.join(',')==='22,22,25,255'),JSON.stringify(state.seamColors));
-   const person=Number(new URLSearchParams(query).get('person')||32);
+   const person=Number(new URLSearchParams(query).get('person')||44);
    assert.deepEqual(state.corner,[0,0,0,0]);assert.equal(state.guardian.w,person);assert.equal(state.guardian.h,person);
    assert.ok(state.guardian.y-person/2>=32&&state.guardian.y+person/2<=500,JSON.stringify(state.guardian));
    assert.ok(state.hud);assert.equal(state.slots,10);assert.deepEqual(state.canvas,[w*dpr,h*dpr]);
@@ -119,10 +135,19 @@ try{
      for(let y=0;y<cv.height;y++)for(let x=0;x<cv.width;x++)if(pixel(x,y)===0x0c9484){
       left=Math.min(left,x);right=Math.max(right,x);top=Math.min(top,y);bottom=Math.max(bottom,y);
      }
-     return {seams,wrongSeams,outline,wrongOutline,personWidth:right-left+1,personHeight:bottom-top+1};
+     const enemies=s.children.list.filter(o=>o.name?.startsWith('placeholder:enemy:caterpillar:')).map(o=>{
+      let l=cv.width,r=-1,t=cv.height,b=-1;
+      for(let y=Math.floor((o.y-16)*z);y<Math.ceil((o.y+16)*z);y++)
+       for(let x=Math.floor((o.x-16)*z);x<Math.ceil((o.x+16)*z);x++)if(pixel(x,y)===0x6aba2c){
+        l=Math.min(l,x);r=Math.max(r,x);t=Math.min(t,y);b=Math.max(b,y);
+       }
+      return {w:r-l+1,h:b-t+1};
+     });
+     return {seams,wrongSeams,outline,wrongOutline,personWidth:right-left+1,personHeight:bottom-top+1,enemies};
     },png.toString('base64'));
     assert.ok(actual.seams>0&&actual.wrongSeams===0&&actual.outline>0&&actual.wrongOutline===0,JSON.stringify(actual));
     assert.ok(Math.abs(actual.personWidth-person*2*15/24)<=2&&Math.abs(actual.personHeight-person*2)<=1,JSON.stringify(actual));
+    assert.ok(actual.enemies.length===3&&actual.enemies.every(e=>e.w===60&&e.h===32),JSON.stringify(actual.enemies));
     state.actual=actual;
    }
    await page.keyboard.press('Escape');await page.waitForFunction(()=>window.__previewGame.scene.isActive('Pause'));

@@ -15,11 +15,15 @@
   "hydrangea:22": "290,26,20,26,40,17,100,86,10,47,90,76,77,70,76,97,50,86,107,30,96,107,126,107,146,27,46,17,10,96,28,106,20,76,38,106,30,56,48,106,40,56,48,96,40,46,58,96,40,36,68,96,60,78,96,60,78,86,80,98,170,58,180,38,520",
   "hydrangea:32": "740,36,30,36,220,116,30,57,120,136,10,67,120,116,107,110,106,117,100,106,147,70,116,147,60,126,157,20,156,157,10,176,147,206,47,56,27,10,226,17,76,20,136,48,136,20,116,68,136,30,106,58,146,50,86,58,146,60,76,68,136,60,76,78,126,60,66,78,146,50,56,88,146,70,26,98,146,90,98,146,90,98,136,100,108,56,180,138,240,88,250,68,270,38,770"
 };
+  // User 7(1).svg: all caterpillar parts; 30×16 core, 1px ink outline.
+  // Native 32×32 transparent frame, visible bounds 32×18; preserve source aspect.
+  const caterpillarRle = '2260,22,40,22,230,12,21,12,20,12,21,12,220,12,31,12,10,12,31,12,210,12,31,22,31,12,230,12,21,22,21,12,240,12,61,12,240,12,61,12,10,42,30,42,110,12,81,12,41,32,41,72,30,12,281,12,20,12,291,12,10,12,301,22,301,12,10,12,291,12,10,12,291,12,20,12,271,12,40,82,51,12,131,12,120,52,10,72,41,22,260,42,2280';
   const flowers = Object.freeze(['daisy','tulip','sunflower','hydrangea']);
   const key = (name,size) => 'flower-head-preview:'+name+':'+size;
   const guardianMode = new URLSearchParams(window.location.search).get('person');
   const guardianSizes = Object.freeze([24,28,32,36,40,44,48,56]);
-  const guardianSize = guardianSizes.includes(Number(guardianMode)) ? Number(guardianMode) : 32;
+  const guardianSize = guardianSizes.includes(Number(guardianMode)) ? Number(guardianMode) : 44;
+  const enemySize = 32;
   // Keep the outline inside the cell, so adjacent flowers never overlap.
   function outlinedPixels(pixels, size) {
     const inner = size - 2, result = new Uint8Array(size * size);
@@ -55,8 +59,24 @@
       texture.setFilter(Phaser.Textures.FilterMode.NEAREST);
     }
   }
+  function installEnemy(scene) {
+    const k=key('caterpillar',enemySize);
+    if(scene.textures.exists(k)) return;
+    const pixels=caterpillarRle.split(',').map(run=>run.slice(-1).repeat(Number(run.slice(0,-1)))).join('');
+    if(pixels.length!==enemySize*enemySize) throw new Error('Invalid caterpillar pixels');
+    const texture=scene.textures.createCanvas(k,enemySize,enemySize);
+    const ctx=texture.getContext(),image=ctx.createImageData(enemySize,enemySize);
+    for(let i=0;i<pixels.length;i++){
+      if(pixels[i]==='0') continue;
+      const c=window.GardenPalette.n[pixels[i]==='1'?'growth':'ink'];
+      image.data.set([(c>>16)&255,(c>>8)&255,c&255,255],i*4);
+    }
+    ctx.putImageData(image,0,0);texture.refresh();
+    texture.setFilter(Phaser.Textures.FilterMode.NEAREST);
+  }
   function draw(scene, spec, colors, gardenRaster, patrolBounds, patrolPosition) {
     install(scene);
+    installEnemy(scene);
     const g=spec.garden;
     const occupied=new Set(Array.from({length:g.columns*g.rows},(_,i)=>i));
     const textureKey='flower-head-preview:soil:'+g.cell;
@@ -103,6 +123,14 @@
     const start=patrolPosition(bounds,distance);
     const guardian=scene.add.image(start.x,start.y,key('guardian',24))
       .setDisplaySize(guardianSize,guardianSize).setDepth(2).setName('placeholder:guardian:0');
+    // Static enemy scale samples only: no combat, collisions or spawning logic.
+    const middleY=g.y+g.size/2;
+    [[g.x-85,middleY-55,true],[g.x+g.size+85,middleY+20,false],
+      [g.x-85,middleY+80,true]].forEach(([x,y,flip],i)=>{
+      scene.add.image(x,y,key('caterpillar',enemySize))
+        .setDisplaySize(enemySize,enemySize).setFlipX(flip).setDepth(2)
+        .setName('placeholder:enemy:caterpillar:'+i);
+    });
     const update=(_time,delta)=>{
       distance+=Math.max(0,Math.min(delta,100))*0.072;
       const p=patrolPosition(bounds,distance);guardian.setPosition(p.x,p.y);
@@ -115,5 +143,5 @@
       scene.scale.off('resize',refreshSoil);
     });
   }
-  window.GardenFlowerHeadPreview=Object.freeze({draw,install,flowers,key,guardianSize,outlinedPixels});
+  window.GardenFlowerHeadPreview=Object.freeze({draw,install,flowers,key,guardianSize,outlinedPixels,enemySize});
 }());
