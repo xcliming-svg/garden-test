@@ -161,18 +161,7 @@
     });
   }
 
-  function reserveIcon(g, x, y, size, color) {
-    // 실제 보석 이미지를 넣지 않은 점선 자리.
-    g.fillStyle(color, 1);
-    for (let i = 0; i < size; i++) {
-      // 양쪽 끝에서 같은 패턴을 시작하여 짝수 크기에서도 대칭을 유지한다.
-      if (Math.min(i, size - 1 - i) % 2 !== 0) continue;
-      g.fillRect(x + i, y, 1, 1);
-      g.fillRect(x + i, y + size - 1, 1, 1);
-      g.fillRect(x, y + i, 1, 1);
-      g.fillRect(x + size - 1, y + i, 1, 1);
-    }
-  }
+
 
   // 표시 전용 포맷. 시간의 시 자리는 잘라내지 않고 최소 2자리만 채운다.
   // 정수는 문자열로 유지해 큰 수의 정밀도를 잃지 않는다.
@@ -242,7 +231,6 @@
     }
     const columns = hudColumns(measure, time, count, count, measureLabel, measureTime);
     const labels = U.hudLabels[U.hudLanguage()];
-    const labelWidth = measureLabel(labels.progress);
     probe.destroy();
     labelProbe.destroy();
     timeProbe.destroy();
@@ -254,19 +242,19 @@
     // 참조처럼 시간·수치·레이블을 같은 12px 크기로 표시.
     function metric(column, label, value, valueSize = hud.valueSize) {
       const caption = text(scene, column.x + hud.padding, hud.centerY, label, hud.labelSize, colors.hudLabel, 'left');
-      text(scene, caption.x + Math.ceil(caption.width) + hud.gap, hud.centerY, value, valueSize, colors.value, 'left');
+      const number = text(scene, caption.x + Math.ceil(caption.width) + hud.gap, hud.centerY, value, valueSize, colors.value, 'left');
+      return { caption, number };
     }
-    metric(columns.time, labels.time, time, hud.timeSize);
-    metric(columns.kills, labels.kills, count);
+    const pairs = [metric(columns.time, labels.time, time, hud.timeSize), metric(columns.kills, labels.kills, count)];
 
-    const gem = columns.gems;
-    reserveIcon(g, gem.x + hud.padding, hud.centerY - hud.iconSize / 2, hud.iconSize, colors.reservedIcon);
-    text(scene, gem.x + hud.padding + hud.iconSize + hud.gap, hud.centerY, count, hud.valueSize, colors.value, 'left');
+    const gem = columns.gems, iconX = gem.x + hud.padding, iconY = hud.centerY - hud.iconSize / 2;
+    const icon = U.pixelGraphics(scene).setName('hud-gem-icon');
+    const gemNumber = text(scene, iconX + hud.iconSize + hud.gap, hud.centerY, count, hud.valueSize, colors.value, 'left');
 
     const c = columns.progress;
     // 게이지 오른쪽 끝은 고정. 짧은 번역도 실제 레이블 끝에서 5px 뒤에 게이지를 표시한다.
     const barX = spec.width - hud.padding - c.barWidth;
-    text(scene, barX - hud.gap - labelWidth, hud.centerY, labels.progress, hud.labelSize, colors.hudLabel, 'left');
+    const progressLabel = text(scene, 0, hud.centerY, labels.progress, hud.labelSize, colors.hudLabel, 'left');
     const barY = hud.centerY - hud.barHeight / 2;
     U.pixelFrame(g, barX, barY, c.barWidth, hud.barHeight, R.n.barFrame, colors.progressBorder);
     g.fillStyle(colors.progressTrack, 1).fillRect(barX + 2, barY + 2, c.barWidth - 4, hud.barHeight - 4);
@@ -276,43 +264,39 @@
       g.fillStyle(colors.progressFill, 1).fillRect(barX + 2, barY + 2, fillWidth, hud.barHeight - 4);
     }
     text(scene, barX + c.barWidth / 2, hud.centerY, progress + '%', U.fontSize.compact, colors.value, 'center');
-    // 참조처럼 흰 숫자와 검은 1px 그림자를 그대로 유지.
+    // Actual glyph/outline gaps on the native output grid, with fixed column and gauge anchors.
+    const align = () => {
+      const z = scene.cameras.main.zoom, gap = Math.round(hud.gap * z);
+      const ink = o => U.inkBounds(o, colors.hud);
+      const left = o => Math.round((o.x - o.displayOriginX) * z);
+      const placeLeft = (o, x) => o.setX((x - ink(o).left) / z + o.displayOriginX);
+      pairs.forEach(({caption, number}) => placeLeft(number, left(caption) + ink(caption).right + gap));
+      // Rasterize dots with a minimum one physical pixel so the icon's edge is present at sub-1x.
+      const x0 = Math.round(iconX * z), y0 = Math.round(iconY * z);
+      const w = Math.max(1, Math.round((iconX + hud.iconSize) * z) - x0);
+      const h = Math.max(1, Math.round((iconY + hud.iconSize) * z) - y0);
+      icon.clear().setPosition(x0 / z, y0 / z).fillStyle(colors.reservedIcon, 1);
+      const range = (i, n) => {
+        const start = Math.min(n - 1, Math.round(i * n / hud.iconSize));
+        return [start, Math.min(n, Math.max(start + 1, Math.round((i + 1) * n / hud.iconSize)))];
+      };
+      const dot = (ix, iy) => {
+        const [a,b] = range(ix,w), [c,d] = range(iy,h);
+        icon.fillRect(a/z,c/z,(b-a)/z,(d-c)/z);
+      };
+      for (let i=0;i<hud.iconSize;i++) {
+        if (Math.min(i,hud.iconSize-1-i)%2) continue;
+        dot(i,0); dot(i,hud.iconSize-1); dot(0,i); dot(hud.iconSize-1,i);
+      }
+      placeLeft(gemNumber, x0 + w + gap);
+      progressLabel.setX((Math.round(barX*z)-gap-ink(progressLabel).right)/z + progressLabel.displayOriginX);
+    };
+    align();
+    scene.scale.on('resize',align);
+    scene.events.once('shutdown',()=>scene.scale.off('resize',align));
   }
 
-  // 글자 그림자는 제외하고 실제 전경 픽셀의 가로·세로 범위를 측정한다.
-  // 네이티브 텍스처 해상도가 바뀌면 다시 측정하며 원본 글리프는 수정하지 않는다.
-  const bottomInkCache = new WeakMap();
-  function bottomInk(item, background) {
-    const key = [item.text, item.style.color, item.style.resolution, item.canvas.width, item.canvas.height, background].join('|');
-    const cached = bottomInkCache.get(item);
-    if (cached?.key === key) return cached.ink;
-    const { width, height } = item.canvas;
-    const data = item.context.getImageData(0, 0, width, height).data;
-    const bg = Math.max((background >> 16) & 255, (background >> 8) & 255, background & 255);
-    const fg = parseInt(item.style.color.slice(1), 16);
-    const foreground = Math.max((fg >> 16) & 255, (fg >> 8) & 255, fg & 255);
-    // Measure foreground at 25% contrast relative to its own color and surface.
-    // A fixed brightness cutoff would miss antialiased gray 999 pixels when scaled down.
-    const threshold = Math.ceil(bg + (foreground - bg) * 0.25);
-    let top = height, bottom = 0, left = width, right = 0, fallbackTop = height, fallbackBottom = 0, fallbackLeft = width, fallbackRight = 0;
-    for (let y = 0; y < height; y++) for (let x = 0; x < width; x++) {
-      const i = (y * width + x) * 4, alpha = data[i + 3] / 255;
-      const color = Math.max(data[i], data[i + 1], data[i + 2]);
-      if (!alpha || !color) continue;
-      fallbackTop = Math.min(fallbackTop, y);
-      fallbackBottom = Math.max(fallbackBottom, y + 1);
-      fallbackLeft = Math.min(fallbackLeft, x);
-      fallbackRight = Math.max(fallbackRight, x + 1);
-      if (Math.round(color * alpha + bg * (1 - alpha)) < threshold) continue;
-      top = Math.min(top, y);
-      bottom = Math.max(bottom, y + 1);
-      left = Math.min(left, x);
-      right = Math.max(right, x + 1);
-    }
-    const ink = bottom > top ? { top, bottom, left, right } : { top: fallbackTop, bottom: fallbackBottom, left: fallbackLeft, right: fallbackRight }; 
-    bottomInkCache.set(item, { key, ink });
-    return ink;
-  }
+  const bottomInk = U.inkBounds;
 
   function drawSlotCost(scene, x, y, size, value) {
     const c = slotCost, centerY = y + size / 2;

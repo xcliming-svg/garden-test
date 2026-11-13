@@ -33,7 +33,8 @@
   // Fusion Pixel 원본을 유지하고 가독성 비교 결과에 따라 역할별 크기를 지정한다.
   const fontSize = Object.freeze({ base: 12, compact: 12, heading: 20, title: 40, timer: 12, menuBase: 12, menuAction: 14, menuHeading: 18, menuTitle: 40 });
   // 메뉴와 전장 모두 동일한 960×540 좌표, 기능적 선 1px.
-  const menuStyle = Object.freeze({ strokeWidth: 1, buttonHeight: 24, gap: 4, navHeight: 24, navGap: 3 });
+  const menuGap = 3;
+  const menuStyle = Object.freeze({ strokeWidth: 1, buttonHeight: 24, gap: menuGap, navHeight: 24, navGap: menuGap, panelPadding: 10, headerHeight: 32, sectionGap: 20 });
   async function loadFonts() {
     if (!document.fonts || !document.fonts.load) throw new Error('Font Loading API unavailable');
     const loaded = await document.fonts.load('400 20px ' + fontFamily,
@@ -157,6 +158,50 @@
     return g;
   }
 
+  // 글자 그림자는 제외하고 실제 전경 픽셀의 가로·세로 범위를 측정한다.
+  // 네이티브 텍스처 해상도가 바뀌면 다시 측정하며 원본 글리프는 수정하지 않는다.
+  const inkCache = new WeakMap();
+  function inkBounds(item, background) {
+    const key = [item.text, item.style.color, item.style.resolution, item.canvas.width, item.canvas.height, background].join('|');
+    const cached = inkCache.get(item);
+    if (cached?.key === key) return cached.ink;
+    const { width, height } = item.canvas;
+    const data = item.context.getImageData(0, 0, width, height).data;
+    const bg = Math.max((background >> 16) & 255, (background >> 8) & 255, background & 255);
+    const fg = parseInt(item.style.color.slice(1), 16);
+    const foreground = Math.max((fg >> 16) & 255, (fg >> 8) & 255, fg & 255);
+    // Measure foreground at 25% contrast relative to its own color and surface.
+    // A fixed brightness cutoff would miss antialiased gray 999 pixels when scaled down.
+    const threshold = Math.ceil(bg + (foreground - bg) * 0.25);
+    let top = height, bottom = 0, left = width, right = 0, fallbackTop = height, fallbackBottom = 0, fallbackLeft = width, fallbackRight = 0;
+    for (let y = 0; y < height; y++) for (let x = 0; x < width; x++) {
+      const i = (y * width + x) * 4, alpha = data[i + 3] / 255;
+      const color = Math.max(data[i], data[i + 1], data[i + 2]);
+      if (!alpha || !color) continue;
+      fallbackTop = Math.min(fallbackTop, y);
+      fallbackBottom = Math.max(fallbackBottom, y + 1);
+      fallbackLeft = Math.min(fallbackLeft, x);
+      fallbackRight = Math.max(fallbackRight, x + 1);
+      if (Math.round(color * alpha + bg * (1 - alpha)) < threshold) continue;
+      top = Math.min(top, y);
+      bottom = Math.max(bottom, y + 1);
+      left = Math.min(left, x);
+      right = Math.max(right, x + 1);
+    }
+    const ink = bottom > top ? { top, bottom, left, right } : { top: fallbackTop, bottom: fallbackBottom, left: fallbackLeft, right: fallbackRight }; 
+    inkCache.set(item, { key, ink });
+    return ink;
+  }
+
+  // Opt-in visible alignment for menu text; never changes the glyph or game UI positions.
+  function alignVisible(item, x, y, align, background) {
+    const z = item.style.resolution, ink = inkBounds(item, background);
+    const width = ink.right - ink.left, height = ink.bottom - ink.top;
+    const left = Math.round(x * z - (align === 'center' ? width / 2 : align === 'right' ? width : 0));
+    const top = Math.round(y * z - height / 2);
+    item.setPosition((left - ink.left) / z + item.displayOriginX, (top - ink.top) / z + item.displayOriginY);
+  }
+
   function text(scene, x, y, content, size, color, options) {
     const opts = options || {};
     const item = scene.add.text(x, y, content, {
@@ -175,6 +220,10 @@
     applyFontFilter(item);
     item.setOrigin(opts.originX === undefined ? 0 : opts.originX,
       opts.originY === undefined ? 0 : opts.originY);
+    if (opts.inkAlign) {
+      item.alignVisible = () => alignVisible(item, x, y, opts.inkAlign, opts.inkBackground ?? C.panel);
+      item.alignVisible();
+    }
     if (opts.alpha !== undefined) item.setAlpha(opts.alpha);
     if (scene.layoutTextObjects) {
       const tracked = scene.layoutTextObjects;
@@ -189,8 +238,9 @@
     return pixelBox(scene,x,y,width,height,opts.fill ?? C.panel,{alpha:opts.alpha ?? 1,border:opts.stroke ?? C.border,strokeWidth:opts.strokeWidth ?? menuStyle.strokeWidth,strokeAlpha:opts.strokeAlpha ?? 1});
   }
 
-  function panelHeader(scene, x, top, width, height) {
-    return pixelBox(scene,x,top+1+height/2,width-2,height,C.header,{cut:false});
+  function panelHeader(scene, x, top, width) {
+    const height = menuStyle.headerHeight;
+    return pixelBox(scene,x,top+1+height/2,width-2,height,C.header,{cut:false}).setName('menu-panel-header');
   }
 
   function rule(scene, x1, y1, x2, y2, color, alpha) {
@@ -221,6 +271,7 @@
           // Phaser 3.90 setResolution은 style만 바꾸므로 함께 갱신한다.
           item.frame.source.resolution = resolution;
         }
+        if (item.alignVisible) item.alignVisible();
       });
     }
 
@@ -261,8 +312,8 @@
     const fill = emphasized ? C.panelAlt : C.button;
     const hoverBorder = C.white;
     const base = pixelBox(scene,0,0,width,height,disabled ? R.n.panel : fill,{border:disabled ? C.border : border,strokeWidth:menuStyle.strokeWidth});
-    const caption = text(scene, 0, 0, label, opts.fontSize || fontSize.menuBase,
-      disabled ? C.disabled : opts.danger ? C.redText : C.text, { originX: 0.5, originY: 0.5 });
+    const caption = text(scene, 0, 0, label, opts.fontSize || (opts.primary ? fontSize.menuAction : fontSize.menuBase),
+      disabled ? C.disabled : opts.danger ? C.redText : C.text, { originX: 0.5, originY: 0.5, inkAlign: 'center', inkBackground: disabled ? R.n.panel : fill });
     const group = scene.add.container(x, y, [base, caption]);
     if (!disabled && typeof action === 'function') {
       base.setInteractive(new Phaser.Geom.Rectangle(-width/2,-height/2,width,height),Phaser.Geom.Rectangle.Contains);
@@ -311,7 +362,7 @@
   }
 
   window.GardenUI = Object.freeze({
-    W: W, H: H, C: C, unit, tile, spacing, pixelGraphics, cutFill, pixelFrame, pixelBox, fontFamily, fontSize, menuStyle, hudLabels, hudLanguage, loadFonts, text: text, panel: panel, panelHeader, rule: rule,
+    W: W, H: H, C: C, unit, tile, spacing, inkBounds, pixelGraphics, cutFill, pixelFrame, pixelBox, fontFamily, fontSize, menuStyle, hudLabels, hudLanguage, loadFonts, text: text, panel: panel, panelHeader, rule: rule,
     background: background, button: button, overlay: overlay, fitCamera: fitCamera,
     bindEscape: bindEscape, openSubscene: openSubscene,
     closeSubscene: closeSubscene

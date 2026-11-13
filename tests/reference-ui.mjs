@@ -54,11 +54,12 @@ for(const c of configs){
     const box=await page.locator('canvas').boundingBox();await page.mouse.click(box.x+pos.x,box.y+pos.y);
   };
   const menuMetrics=async key=>page.evaluate(key=>{
-    const s=window.__benchmarkGame.scene.getScene(key), list=s.children.list;
-    const buttons=list.filter(o=>o.type==='Container'&&o.list?.length===2&&o.list[0].pixelBox&&o.list[1].type==='Text').map(o=>{let [r,t]=o.list;return {text:t.text,x:o.x-r.width/2,y:o.y-r.height/2,w:r.width,h:r.height,px:(r.width-t.width)/2,py:(r.height-t.height)/2,font:parseFloat(t.style.fontSize)}});
-    const texts=list.filter(o=>o.type==='Text'&&o.visible).map(o=>({text:o.text,x:o.x-o.displayOriginX,y:o.y-o.displayOriginY,w:o.width,h:o.height}));
+    const s=window.__benchmarkGame.scene.getScene(key), list=s.children.list,U=window.GardenUI,z=s.cameras.main.zoom;
+    const buttons=list.filter(o=>o.type==='Container'&&o.list?.length===2&&o.list[0].pixelBox&&o.list[1].type==='Text').map(o=>{let [r,t]=o.list;return {text:t.text,x:o.x-r.width/2,y:o.y-r.height/2,w:r.width,h:r.height,px:(r.width-t.width)/2,py:(r.height-t.height)/2,font:parseFloat(t.style.fontSize),fill:r.fillColor,color:t.style.color,res:t.style.resolution,tx:o.x+t.x-t.displayOriginX,ty:o.y+t.y-t.displayOriginY,tw:t.width,th:t.height}});
+    const texts=list.filter(o=>o.type==='Text'&&o.visible).map(o=>({text:o.text,x:o.x-o.displayOriginX,y:o.y-o.displayOriginY,w:o.width,h:o.height,font:parseFloat(o.style.fontSize),res:o.style.resolution,color:o.style.color}));
     const panels=list.filter(o=>o.pixelBox&&o.width<960&&o.height>100).map(o=>({x:o.x-o.width/2,y:o.y-o.height/2,w:o.width,h:o.height}));
-    return {buttons,texts,panels,zoom:s.cameras.main.zoom};
+    const h=s.children.getByName('menu-panel-header');
+    return {buttons,texts,panels,zoom:z,header:h?{x:h.x-h.width/2,y:h.y-h.height/2,w:h.width,h:h.height,fill:h.fillColor}:null};
   },key);
   function inspectMenu(m,key){
     const within=o=>o.x>=-0.5&&o.y>=-0.5&&o.x+o.w<=960.5&&o.y+o.h<=540.5;
@@ -66,18 +67,61 @@ for(const c of configs){
     check(key+' button bounds',m.buttons.every(o=>within(o)&&o.px>=2&&o.py>=2),JSON.stringify(m.buttons.filter(o=>!within(o)||o.px<2||o.py<2)));
     check(key+' text bounds',m.texts.every(within));
     const panelSizes={Pause:[240,242],Settings:[480,320],Codex:[480,320],Confirm:[300,150],Victory:[480,280],Defeat:[480,280]};
-    const expectedWidth=b=>key==='MainMenu'?(['성공 화면','실패 화면'].includes(b.text)?168:200):key==='Pause'||key==='Victory'||key==='Defeat'?200:key==='Settings'&&b.text!=='돌아가기'?144:110;
-    check(key+' documented logical button and panel sizes',m.buttons.every(b=>b.w===expectedWidth(b)&&b.h===24)&&(!panelSizes[key]||m.panels.some(p=>p.w===panelSizes[key][0]&&p.h===panelSizes[key][1]))&&(key!=='Codex'||m.panels.some(p=>p.w===448&&p.h===160)),JSON.stringify(m));
+    const expectedWidth=b=>key==='MainMenu'?(['성공 화면','실패 화면'].includes(b.text)?168:200):key==='Pause'||key==='Victory'||key==='Defeat'?200:key==='Settings'&&b.text!=='돌아가기'?454/3:110;
+    check(key+' documented logical button and panel sizes',m.buttons.every(b=>Math.abs(b.w-expectedWidth(b))<1e-6&&b.h===24)&&(!panelSizes[key]||m.panels.some(p=>p.w===panelSizes[key][0]&&p.h===panelSizes[key][1]))&&(key!=='Codex'||m.panels.some(p=>p.w===460&&p.h===160)),JSON.stringify(m));
     if(key==='MainMenu'||key==='Pause'){
       const nav=m.buttons.filter(b=>b.w===200).sort((a,b)=>a.y-b.y);
       check(key+' 3px navigation gaps',nav.length===5&&nav.every((b,i)=>!i||b.y-nav[i-1].y-nav[i-1].h===3),JSON.stringify(nav));
     }
+    check(key+' role font sizes',m.buttons.every(b=>b.font===((b.text==='새 게임'||b.text==='계속하기')?14:12)),JSON.stringify(m.buttons));
+    if(m.header){check(key+' common 32px header and 18px title',m.header.h===32&&m.texts.some(t=>t.font===18&&t.y>=m.header.y&&t.y+t.h<=m.header.y+m.header.h+1),JSON.stringify(m));}
+    if(key==='Settings'){const tabs=m.buttons.filter(b=>b.text!=='돌아가기').sort((a,b)=>a.x-b.x);check(key+' full content width and 3px tab gaps',tabs.length===3&&Math.abs(tabs[0].x-250)<1e-6&&Math.abs(tabs[2].x+tabs[2].w-710)<1e-6&&tabs.slice(1).every((t,i)=>Math.abs(t.x-tabs[i].x-tabs[i].w-3)<1e-6),JSON.stringify(tabs));}
+    if(['Confirm','Victory','Defeat'].includes(key)){const pair=[...m.buttons].sort((a,b)=>a.x-b.x);check(key+' 3px footer action gap',pair.length===2&&Math.abs(pair[1].x-pair[0].x-pair[0].w-3)<1e-6,JSON.stringify(pair));}
     check(key+' button/text nonoverlap',m.buttons.every((b,i)=>m.buttons.every((q,j)=>i===j||!overlap(b,q))&&m.texts.every(t=>!overlap(b,t))),JSON.stringify(m.buttons.flatMap(b=>m.texts.filter(t=>overlap(b,t)).map(t=>[b.text,t.text]))));
     if(key==='Pause'||key==='Settings'||key==='Codex'||key==='Confirm'||key==='Victory'||key==='Defeat'){
       const panel=m.panels[0];check(key+' panel contains buttons',!!panel&&m.buttons.every(b=>b.x>=panel.x&&b.y>=panel.y&&b.x+b.w<=panel.x+panel.w&&b.y+b.h<=panel.y+panel.h));
     }
   }
+  // Actual native-output menu screenshots, not only logical boxes.
+  const menuAudit=async(key,suffix=key)=>{
+    for(const [w,h] of viewportSizes){
+      await page.setViewportSize({width:w,height:h});
+      await page.waitForFunction(({key,w})=>Math.abs(window.__benchmarkGame.scene.getScene(key).cameras.main.zoom-w/960)<1e-6,{key,w},{timeout:8000});
+      await page.waitForTimeout(80);
+      const m=await menuMetrics(key);inspectMenu(m,key);
+      const png=await page.screenshot({path:join(out,'menu-'+suffix+'-'+w+'.png')});
+      const pixels=await page.evaluate(async ({data,m})=>{
+        const img=await createImageBitmap(await(await fetch('data:image/png;base64,'+data)).blob()),cv=document.createElement('canvas');
+        cv.width=img.width;cv.height=img.height;const ctx=cv.getContext('2d');ctx.drawImage(img,0,0);
+        const p=ctx.getImageData(0,0,cv.width,cv.height).data,z=m.zoom,R=Math.round;
+        const maxColor=c=>Math.max((c>>16)&255,(c>>8)&255,c&255);
+        const rgb=(x,y)=>Array.from(p.slice((y*cv.width+x)*4,(y*cv.width+x)*4+3));
+        const buttons=m.buttons.map(b=>{
+          const left=R(b.x*z),right=R((b.x+b.w)*z),top=R(b.y*z),bottom=R((b.y+b.h)*z);
+          const bg=maxColor(b.fill),fg=maxColor(parseInt(b.color.slice(1),16)),threshold=Math.ceil(bg+(fg-bg)*0.25);
+          let x0=Infinity,x1=-1,y0=Infinity,y1=-1,n=0;
+          for(let y=Math.max(top+1,R(b.ty*z));y<Math.min(bottom-1,R(b.ty*z)+Math.ceil(b.th*z));y++)for(let x=Math.max(left+1,R(b.tx*z));x<Math.min(right-1,R(b.tx*z)+Math.ceil(b.tw*z));x++){
+            if(Math.max(...rgb(x,y))<threshold)continue;
+            x0=Math.min(x0,x);x1=Math.max(x1,x);y0=Math.min(y0,y);y1=Math.max(y1,y);n++;
+          }
+          return {text:b.text,n,xCenter:(x0+x1+1-left-right)/2,yCenter:(y0+y1+1-top-bottom)/2};
+        });
+        let header=null;
+        if(m.header){const h=m.header,x=R((h.x+3)*z),start=R(h.y*z),end=R((h.y+h.h)*z),color=[(h.fill>>16)&255,(h.fill>>8)&255,h.fill&255].join(',');
+          const rows=[];for(let y=start-1;y<=end;y++)if(rgb(x,y).join(',')===color)rows.push(y);
+          header={actual:rows.length,expected:end-start};
+        }
+        return {buttons,header};
+      },{data:png.toString('base64'),m});
+      check(suffix+' '+w+' menu native text resolution',m.texts.concat(m.buttons).every(t=>Math.abs(t.res-w/960)<1e-6));
+      check(suffix+' '+w+' actual centered button glyphs',pixels.buttons.every(b=>b.n>0&&Math.abs(b.xCenter)<=1.5&&Math.abs(b.yCenter)<=1.5),JSON.stringify(pixels));
+      if(pixels.header)check(suffix+' '+w+' actual 32px header',pixels.header.actual===pixels.header.expected,JSON.stringify(pixels.header));
+      if(w===960)console.log('MENU_CONSISTENCY '+suffix+' '+JSON.stringify({m,pixels}));
+    }
+    await page.setViewportSize({width:960,height:540});await page.waitForFunction(key=>window.__benchmarkGame.scene.getScene(key).cameras.main.zoom===1,key);
+  };
   let menu=await menuMetrics('MainMenu');inspectMenu(menu,'MainMenu');
+  await menuAudit('MainMenu');
   await page.screenshot({path:join(out,c.id+'-menu.png')});
   await button('MainMenu','새 게임');await page.waitForFunction(()=>window.__benchmarkGame.scene.isActive('Game'));
   // Actual Phaser object dimensions / text bounding boxes and Canvas font metrics.
@@ -90,9 +134,10 @@ for(const c of configs){
     const gemValue=hud.filter(o=>o.text==='999,999,999,999').sort((a,b)=>a.x-b.x).at(-1);
     const metricWidth=kills.x-clock.x;
     const timeValue=hud.find(o=>o.text==='9999:59:59'), percent=hud.find(o=>o.text==='30%');
-    const timeGap=timeValue.x-clock.x-Math.ceil(clock.w);
-    const barGap=percent.x+percent.w/2-L.hud.barWidth/2-gardenLabel.x-Math.ceil(gardenLabel.w);
-    const hudLayout={metricWidth,timeGap,barGap,leftPadding:clock.x,rightPadding:L.spec.width-(percent.x+percent.w/2+L.hud.barWidth/2),textPadTop:clock.y,textPadBottom:L.spec.top-2-clock.y-clock.h,barHeight:L.hud.barHeight,gemX:gemValue.x-L.hud.padding-L.hud.iconSize-L.hud.gap,progressX:gardenLabel.x-L.hud.padding,centerY:L.hud.centerY,labelColors:[clock.color,kills.color,gardenLabel.color],valueColors:hud.filter(o=>!['시간','처치 수','정원 완성도'].includes(o.text)).map(o=>o.color)};
+    const z=s.cameras.main.zoom,ink=o=>{const t=list.find(t=>t.type==='Text'&&t.text===o.text&&Math.abs(t.x-t.displayOriginX-o.x)<.01);const b=U.inkBounds(t,L.colors.hud),x=Math.round(o.x*z);return {left:x+b.left,right:x+b.right};};
+    const timeGap=(ink(timeValue).left-ink(clock).right)/z;
+    const barGap=(Math.round((percent.x+percent.w/2-L.hud.barWidth/2)*z)-ink(gardenLabel).right)/z;
+    const hudLayout={metricWidth,timeGap,barGap,leftPadding:clock.x,rightPadding:L.spec.width-(percent.x+percent.w/2+L.hud.barWidth/2),textPadTop:clock.y,textPadBottom:L.spec.top-2-clock.y-clock.h,barHeight:L.hud.barHeight,gemX:s.children.getByName('hud-gem-icon').x-L.hud.padding,progressX:gardenLabel.x-L.hud.padding,centerY:L.hud.centerY,labelColors:[clock.color,kills.color,gardenLabel.color],valueColors:hud.filter(o=>!['시간','처치 수','정원 완성도'].includes(o.text)).map(o=>o.color)};
     const stats=visibleText.filter(o=>o.name?.startsWith('stat-'));
     const cost=visibleText.find(o=>o.text==='999');
     const context=document.createElement('canvas').getContext('2d');
@@ -117,7 +162,7 @@ for(const c of configs){
     const bp=m.blueprintMetrics;
     check(label+' blueprint alignment and visible HUD spacing',bp.width===91&&bp.gridX===bp.headerX&&bp.headerX===m.hudLayout.leftPadding&&bp.titlePadX===5&&bp.gridGap===3&&m.blueprint.gap===3&&bp.titleFont===10&&bp.titleColor.toLowerCase()==='#b0b0b0'&&m.blueprint.cell===8&&m.blueprint.line===1&&m.blueprint.width===91&&m.blueprint.height===m.blueprint.header+3+91&&bp.height===19&&bp.topGap===m.hudLayout.textPadTop,JSON.stringify(bp));
     check(label+' HUD nonoverlap',m.hud.every((a,i)=>m.hud.every((b,j)=>i===j||!overlap(a,b))));
-    check(label+' equal HUD widths, center and labels',m.top===32&&m.hudLayout.centerY===15&&m.hudLayout.leftPadding===7.5&&m.hudLayout.rightPadding===7.5&&m.hudLayout.textPadTop===7.5&&m.hudLayout.textPadBottom===7.5&&m.hudLayout.barHeight===12&&Math.abs(m.hudLayout.timeGap-5)<0.01&&Math.abs(m.hudLayout.barGap-5)<0.01&&m.hudLayout.metricWidth>0&&m.hudLayout.gemX===2*m.hudLayout.metricWidth&&3*m.hudLayout.metricWidth<=m.hudLayout.progressX&&m.hudLayout.labelColors.every(c=>c.toLowerCase()==='#b0b0b0')&&m.hudLayout.valueColors.every(c=>c.toLowerCase()==='#ffffff'),JSON.stringify(m.hudLayout));
+    check(label+' equal HUD widths, center and labels',m.top===32&&m.hudLayout.centerY===15&&m.hudLayout.leftPadding===7.5&&m.hudLayout.rightPadding===7.5&&m.hudLayout.textPadTop===7.5&&m.hudLayout.textPadBottom===7.5&&m.hudLayout.barHeight===12&&Math.abs(m.hudLayout.timeGap*m.zoom-Math.round(5*m.zoom))<0.01&&Math.abs(m.hudLayout.barGap*m.zoom-Math.round(5*m.zoom))<0.01&&m.hudLayout.metricWidth>0&&Math.abs(m.hudLayout.gemX-2*m.hudLayout.metricWidth)<=1/m.zoom&&3*m.hudLayout.metricWidth<=m.hudLayout.progressX&&m.hudLayout.labelColors.every(c=>c.toLowerCase()==='#b0b0b0')&&m.hudLayout.valueColors.every(c=>c.toLowerCase()==='#ffffff'),JSON.stringify(m.hudLayout));
     check(label+' bottom HUD 40px and equal 3px clear gaps',m.bottom===40&&m.field===468&&m.slotWidth===347&&m.slots.every((s,i)=>s.y-(540-m.bottom+2)===3&&540-(s.y+s.size)===3&&(!i||s.x-m.slots[i-1].x-m.slots[i-1].size===3)),JSON.stringify(m.slots));
     check(label+' stat bounds',m.stats.length>=12&&m.stats.every(t=>t.font===8&&t.y>=540-m.bottom-eps&&t.y+t.h<=540+eps&&t.x>=-eps&&t.x+t.w<=960+eps),JSON.stringify(m.stats));
     const statGroups=['defense','hp','luck','moveSpeed','pickupRange','dps'].map((key,i)=>{const a=m.stats.find(t=>t.name==='stat-label:'+key), v=m.stats.find(t=>t.name==='stat-value:'+key),d=m.stats.find(t=>t.name==='stat-delta:'+key);const center=(i<3?m.sideLeft:m.sideRight)+(i%3+0.5)*70;const left=Math.min(v.x,d?.x??v.x),right=Math.max(v.x+v.w,d?d.x+d.w:v.x+v.w);return !!a&&!!v&&Math.abs(a.x+a.w/2-center)<0.01&&Math.abs((left+right)/2-center)<0.01&&left>=center-35&&right<=center+35&&a.x>=center-35&&a.x+a.w<=center+35&&(!d||Math.abs(d.x-v.x-v.w-2)<0.01);});
@@ -184,6 +229,20 @@ for(const c of configs){
   check('float moves square and icon together, integer 0..4 px, stable hitbox',positions.every(p=>p.every((o,i)=>o.x===drops[i].x&&o.y===drops[i].y&&o.borderY===o.img&&o.faceY===o.img&&Number.isInteger(o.img)&&o.img>=-4&&o.img<=0))&&drops.every((_,i)=>new Set(positions.map(p=>p[i].img)).size>=2));
   check('reference palette and opaque tree-node garden',await page.evaluate(()=>{const L=window.GardenGameLayout,s=window.__benchmarkGame.scene.getScene('Game'),g=L.spec.garden,t=s.textures.get('ui-test:garden-soil:'+g.cell),px=t.getContext().getImageData(4*g.pitch+3,4*g.pitch+3,1,1).data;const border=t.getContext().getImageData(4*g.pitch,4*g.pitch,1,1).data;return L.colors.field===0x0D0D0D&&L.colors.hud===0x161619&&L.colors.gardenSoil===0x3B3B4E&&L.colors.gridFill===L.colors.normalFill&&L.colors.normalFill===L.colors.gardenSoil&&L.itemTooltip.background===L.colors.normalFill&&L.colors.gardenSoilAlpha===1&&Array.from(px).join(',')==='59,59,78,255'&&Array.from(border).join(',')==='106,186,44,255'&&L.colors.progressTrack===0x545454&&L.colors.progressFill===0x6ABA2C&&L.colors.progressBorder===0x878796&&L.hud.barHeight===12&&L.hud.barWidth===158&&L.spec.top===32;}));
 
+  const captureHudGaps=async(png,all,z,labels)=>{
+    return page.evaluate(async ({data,all,z,labels})=>{
+      const img=await createImageBitmap(await(await fetch('data:image/png;base64,'+data)).blob()),cv=document.createElement('canvas');
+      cv.width=img.width;cv.height=img.height;const ctx=cv.getContext('2d');ctx.drawImage(img,0,0);
+      const p=ctx.getImageData(0,0,cv.width,cv.height).data,R=Math.round;
+      const scan=(x0,y0,x1,y1,pred)=>{let left=Infinity,right=-1,n=0;for(let y=Math.max(0,y0);y<Math.min(cv.height,y1);y++)for(let x=Math.max(0,x0);x<Math.min(cv.width,x1);x++){const i=(y*cv.width+x)*4;if(pred(p[i],p[i+1],p[i+2])){left=Math.min(left,x);right=Math.max(right,x);n++;}}return {left,right,n};};
+      const box=o=>{const f=parseInt(o.color.slice(1),16),fg=Math.max((f>>16)&255,(f>>8)&255,f&255),threshold=Math.ceil(25+(fg-25)*.25),x=R(o.x*z),y=R(o.y*z);return scan(x,y,x+Math.ceil(o.w*z),y+Math.ceil(o.h*z),(r,g,b)=>Math.max(r,g,b)>=threshold);};
+      const get=t=>all.find(o=>o.text===t),clock=get(labels.time),kills=get(labels.kills),progress=get(labels.progress),time=all.find(o=>o.text.includes(':'));
+      const values=all.filter(o=>/^\d[\d,]*$/.test(o.text)).sort((a,b)=>a.x-b.x);
+      const gem=scan(R((kills.x-clock.x)*2*z),0,R(((kills.x-clock.x)*2+7.5+14+1)*z),R(30*z),(r,g,b)=>r===179&&g===218&&b===219);
+      const edges={clock:box(clock),time:box(time),kills:box(kills),count:box(values[0]),gem,gems:box(values[1]),progress:box(progress)};
+      return {edges,gaps:[edges.time.left-edges.clock.right-1,edges.count.left-edges.kills.right-1,edges.gems.left-edges.gem.right-1,R(794.5*z)-edges.progress.right-1]};
+    },{data:png.toString('base64'),all,z,labels});
+  };
   // Resize the real browser viewport, then capture the actual canvas at 720p and 1080p.
   for(const [w,h] of viewportSizes){
     await page.setViewportSize({width:w,height:h});
@@ -191,6 +250,9 @@ for(const c of configs){
     const m=await gameMetrics();inspectGame(m,w+'x'+h);observations.push(m);
     // Inspect real output pixels at every viewport, not transparent text object bounds.
     const bottomPng=await page.screenshot({path:join(out,'scale-'+w+'x'+h+'.png')});
+    const hudPixels=await captureHudGaps(bottomPng,m.hud,m.zoom,{time:'시간',kills:'처치 수',progress:'정원 완성도'});
+    check(w+' actual visible HUD 5px gaps',Object.values(hudPixels.edges).every(e=>e.n>0)&&hudPixels.gaps.every(g=>g===Math.round(5*m.zoom)),JSON.stringify(hudPixels));
+    console.log('HUD_VISIBLE '+w+' '+JSON.stringify(hudPixels));
     const bottomPixels=await page.evaluate(async ({data,stats,cost,slot,z})=>{
       const img=await createImageBitmap(await (await fetch('data:image/png;base64,'+data)).blob()), cv=document.createElement('canvas');
       cv.width=img.width;cv.height=img.height;const ctx=cv.getContext('2d');ctx.drawImage(img,0,0);
@@ -372,16 +434,17 @@ for(const c of configs){
   const frozen=await page.evaluate(()=>window.__benchmarkGame.scene.getScene('Game').children.getByName('placeholder:item:1').list[2].y);
   await page.waitForTimeout(250);
   check('pause freezes float',await page.evaluate(v=>window.__benchmarkGame.scene.getScene('Game').children.getByName('placeholder:item:1').list[2].y===v,frozen));
-  let pause=await menuMetrics('Pause');inspectMenu(pause,'Pause');
-  await button('Pause','설정');await page.waitForFunction(()=>window.__benchmarkGame.scene.isActive('Settings'));inspectMenu(await menuMetrics('Settings'),'Settings');
-  await button('Settings','사운드');check('settings audio',await page.evaluate(()=>window.__benchmarkGame.scene.getScene('Settings').activeTab==='audio'));
+  let pause=await menuMetrics('Pause');inspectMenu(pause,'Pause');await menuAudit('Pause');
+  await button('Pause','설정');await page.waitForFunction(()=>window.__benchmarkGame.scene.isActive('Settings'));inspectMenu(await menuMetrics('Settings'),'Settings');await menuAudit('Settings');
+  await button('Settings','사운드');check('settings audio',await page.evaluate(()=>window.__benchmarkGame.scene.getScene('Settings').activeTab==='audio'));await menuAudit('Settings','SettingsAudio');
+  await button('Settings','화면');await menuAudit('Settings','SettingsVideo');
   await page.keyboard.press('Escape');await page.waitForFunction(()=>window.__benchmarkGame.scene.isActive('Pause'));
-  await button('Pause','도감');await page.waitForFunction(()=>window.__benchmarkGame.scene.isActive('Codex'));inspectMenu(await menuMetrics('Codex'),'Codex');
+  await button('Pause','도감');await page.waitForFunction(()=>window.__benchmarkGame.scene.isActive('Codex'));inspectMenu(await menuMetrics('Codex'),'Codex');await menuAudit('Codex');
   await page.keyboard.press('Escape');await page.waitForFunction(()=>window.__benchmarkGame.scene.isActive('Pause'));
-  await button('Pause','메인 메뉴로');await page.waitForFunction(()=>window.__benchmarkGame.scene.isActive('Confirm'));inspectMenu(await menuMetrics('Confirm'),'Confirm');
+  await button('Pause','메인 메뉴로');await page.waitForFunction(()=>window.__benchmarkGame.scene.isActive('Confirm'));inspectMenu(await menuMetrics('Confirm'),'Confirm');await menuAudit('Confirm');
   await button('Confirm','돌아가기');await page.waitForFunction(()=>window.__benchmarkGame.scene.isActive('MainMenu'));
-  await button('MainMenu','성공 화면');await page.waitForFunction(()=>window.__benchmarkGame.scene.isActive('Victory'));inspectMenu(await menuMetrics('Victory'),'Victory');
-  await button('Victory','메인 메뉴');await page.waitForFunction(()=>window.__benchmarkGame.scene.isActive('MainMenu'));await button('MainMenu','실패 화면');await page.waitForFunction(()=>window.__benchmarkGame.scene.isActive('Defeat'));inspectMenu(await menuMetrics('Defeat'),'Defeat');
+  await button('MainMenu','성공 화면');await page.waitForFunction(()=>window.__benchmarkGame.scene.isActive('Victory'));inspectMenu(await menuMetrics('Victory'),'Victory');await menuAudit('Victory');
+  await button('Victory','메인 메뉴');await page.waitForFunction(()=>window.__benchmarkGame.scene.isActive('MainMenu'));await button('MainMenu','실패 화면');await page.waitForFunction(()=>window.__benchmarkGame.scene.isActive('Defeat'));inspectMenu(await menuMetrics('Defeat'),'Defeat');await menuAudit('Defeat');
   check('runtime errors',errors.length===0,errors.join('; '));
   check('tooltip gap and palette role contract',await page.evaluate(()=>{let L=window.GardenGameLayout,T=L.itemTooltip,p=L.tooltipPosition({x:400,y:200,size:24},T.width,100,L.spec.top+L.spec.fieldHeight);return T.width===L.hud.barWidth&&T.width===158&&T.gap===8&&p.x===420&&T.padding===5&&T.padding===L.spec.blueprint.padding&&T.bottomPadding===T.padding&&T.rowGap===5&&T.lineSpacing===4&&T.strokeWidth===1&&T.background===L.colors.normalFill&&T.header===window.GardenPalette.reference.n.header&&T.description===L.colors.hudLabel&&!('divider' in T)}));
   const locales=await page.evaluate(()=>window.GardenUI.hudLabels);
@@ -389,7 +452,7 @@ for(const c of configs){
   for(const [lang, labels] of Object.entries(locales)){
     const missing=[...new Set(Object.values(labels).join(''))].filter(ch=>!font.hasGlyphForCodePoint(ch.codePointAt(0)));
     check(lang+' bundled font coverage',missing.length===0,JSON.stringify(missing));
-    for(const [w,h] of [[960,540],[1600,900],[1920,1080]]){
+    for(const [w,h] of viewportSizes){
       await page.setViewportSize({width:w,height:h});
       await page.goto(origin+'/'+c.id+'/index.html?lang='+lang+'&hud=stress',{waitUntil:'load'});
       await page.waitForFunction(()=>window.__benchmarkGame?.scene.isActive('MainMenu'),{},{timeout:20000});
@@ -402,18 +465,22 @@ for(const c of configs){
         const all=list.map(r), get=t=>all.find(o=>o.text===t);
         const clock=get(labels.time), kills=get(labels.kills), garden=get(labels.progress), time=get('9999:59:59'), percent=get('30%');
         const counts=all.filter(o=>o.text==='999,999,999,999').sort((a,b)=>a.x-b.x);
-        const metricWidth=kills.x-clock.x, gemX=counts[1].x-L.hud.padding-L.hud.iconSize-L.hud.gap;
+        const metricWidth=kills.x-clock.x, gemX=s.children.getByName('hud-gem-icon').x-L.hud.padding;
         const barX=percent.x+percent.w/2-L.hud.barWidth/2;
         const gaps=[time.x-clock.x-Math.ceil(clock.w),counts[0].x-kills.x-Math.ceil(kills.w),barX-garden.x-Math.ceil(garden.w)];
         return {lang:U.hudLanguage(),metricWidth,gemX,barX,gaps,all,labels,green:L.colors.progressFill===0x6ABA2C,top:L.spec.top};
       });
       const key=lang+' '+w+'x'+h;
       check(key+' labels and bounds',m.lang===lang&&m.all.length===7&&m.all.every(t=>t.x>=0&&t.y>=0&&t.x+t.w<=960.1&&t.y+t.h<=32.1),JSON.stringify(m));
-      check(key+' equal widths and fixed gauge',m.metricWidth===initial.hudLayout.metricWidth&&m.gemX===2*m.metricWidth&&m.barX===794.5&&m.green,JSON.stringify(m));
-      check(key+' gaps and no overlap',m.gaps.every(g=>Math.abs(g-5)<0.01)&&m.all.every((a,i)=>m.all.every((b,j)=>i===j||!overlap(a,b))),JSON.stringify(m));
+      check(key+' equal widths and fixed gauge',m.metricWidth===initial.hudLayout.metricWidth&&Math.abs(m.gemX-2*m.metricWidth)<=960/w&&m.barX===794.5&&m.green,JSON.stringify(m));
+      const png=await page.screenshot({path:join(out,'hud-'+lang+'-'+w+'.png')});
+      const actual=await captureHudGaps(png,m.all,w/960,m.labels);
+      check(key+' actual 5px gaps and no overlap',Object.values(actual.edges).every(e=>e.n>0)&&actual.gaps.every(g=>g===Math.round(5*w/960))&&m.all.every((a,i)=>m.all.every((b,j)=>i===j||!overlap(a,b))),JSON.stringify({m,actual}));
+      m.gaps=actual.gaps;
+      console.log('HUD_LOCALE '+key+' '+JSON.stringify(actual));
       check(key+' reserved column containment',m.all.filter(t=>t.x<3*m.metricWidth).every(t=>t.x+t.w<=Math.ceil(t.x/m.metricWidth)*m.metricWidth-6.5)&&m.all.find(t=>t.text===m.labels.progress).x>=3*m.metricWidth,JSON.stringify(m));
       localeResults.push({lang,viewport:[w,h],width:m.metricWidth,barX:m.barX,gaps:m.gaps,labels:m.labels});
-      if(w===1920)await page.screenshot({path:join(out,'hud-'+lang+'-1920.png')});
+
     }
   }
   const slotVariants=[];
