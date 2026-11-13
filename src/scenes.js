@@ -20,8 +20,9 @@
 
   class BootScene extends Phaser.Scene {
     constructor() { super('Boot'); }
+    preload() { window.GardenAnimatedAssets.preload(this); }
     create() {
-      // 외부 이미지·사운드가 없는 현재 단계에는 가짜 로딩 단계를 두지 않는다.
+      window.GardenAnimatedAssets.install(this);
       this.scene.start('MainMenu');
     }
   }
