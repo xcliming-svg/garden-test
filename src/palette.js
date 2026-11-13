@@ -38,20 +38,28 @@
   });
   const n = Object.freeze(Object.fromEntries(Object.entries(hex).map(([key, value]) =>
     [key, Number.parseInt(value.slice(1), 16)])));
-  // 사용자 제공 1920×1080 스크린샷 및 상세 캡처에서 실측한 UI 역할 색.
-  // 기존 Garden 32 및 원본 스프라이트 색은 별도로 보존한다.
-  const referenceHex = Object.freeze({
-    background: '#0D0D0D', hud: '#161619', hudEdge: '#3B404D', hudLight: '#51586A',
-    divider: '#202020', panel: '#302E3A', header: '#44445C', button: '#343446',
-    tab: '#3B3B4E', tabBorder: '#51516B', selected: '#4F4F69', hover: '#A4B2CF',
-    border: '#878796', panelBorder: '#676777', tooltip: '#313142', tooltipHeader: '#43435B',
-    rule: '#4B4B50', disabled: '#AAAAAA', text: '#FFFFFF', label: '#C8C8C8', hudLabel: '#B0B0B0',
-    description: '#F0E7AD', gold: '#DAA520', green: '#6ABA2C', red: '#FF4040',
-    orange: '#FF9664', track: '#545454', barFrame: '#343446', progress: '#968143',
-    skillProgress: '#657F95', shadow: '#000000', icon: '#B3DADB', job: '#324056',
-    garden: '#343446', gardenBorder: '#6ABA2C'
+  // UI 전용 16색. 원본 Garden 32 및 스프라이트는 별도 보존한다.
+  // 실제 색상은 이 표에서만 정하고 의미별 역할은 동일 색상을 참조한다.
+  const uiHex = Object.freeze({
+    background: '#0D0D0D', hud: '#161619', panel: '#302E3A', tab: '#3B3B4E', header: '#44445C',
+    divider: '#202020', tabBorder: '#51516B', panelBorder: '#676777', hover: '#A4B2CF',
+    text: '#FFFFFF', hudLabel: '#B0B0B0', disabled: '#AAAAAA',
+    green: '#6ABA2C', red: '#FF4040', icon: '#B3DADB', shadow: '#000000'
   });
-  const reference = Object.freeze({ hex: referenceHex, n: Object.freeze(Object.fromEntries(
+  const referenceHex = Object.freeze({
+    ...uiHex,
+    hudEdge: uiHex.tab,
+    hudLight: uiHex.tabBorder,
+    button: uiHex.tab,
+    selected: uiHex.tabBorder,
+    border: uiHex.panelBorder,
+    label: uiHex.hudLabel,
+    track: uiHex.panel,
+    barFrame: uiHex.tab,
+    garden: uiHex.tab,
+    gardenBorder: uiHex.green
+  });
+  const reference = Object.freeze({ baseHex: uiHex, hex: referenceHex, n: Object.freeze(Object.fromEntries(
     Object.entries(referenceHex).map(([key, value]) => [key, Number.parseInt(value.slice(1), 16)]))) });
   const background = Object.freeze({ hex: reference.hex.background, n: reference.n.background });
   const demo = Object.freeze({ field: background.n, garden: reference.n.garden });

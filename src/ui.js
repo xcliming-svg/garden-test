@@ -13,7 +13,7 @@
     bg: R.n.background, panel: R.n.panel, panelAlt: R.n.selected,
     border: R.n.panelBorder, subtle: R.n.border, header: R.n.header, button: R.n.button,
     text: R.hex.text, muted: R.hex.label, disabled: R.hex.disabled,
-    gold: R.n.gold, goldText: R.hex.gold, green: R.n.green, greenText: R.hex.green,
+    green: R.n.green, greenText: R.hex.green,
     red: R.n.red, redText: R.hex.red, white: R.n.hover
   });
   // HUD 언어 미리보기 전용. 게임 전체 번역/언어 설정 기능과 분리한다.
