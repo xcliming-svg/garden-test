@@ -75,6 +75,11 @@
     item: Object.freeze({ size: iconSize, cardSize: spec.slots.size, dropSize: itemDropSize, color: P.n.gold, assetKey: 'item', suggestedFile: 'assets/item.png' })
   });
 
+  // URL 비교 실험 전용. 파라미터가 없거나 잘못되면 현행 devel과 동일하다.
+  const soilTypes = Object.freeze({ '1': P.n.bark, '2': P.n.clay, '3': P.n.teal });
+  const soilType = new URLSearchParams(window.location.search).get('type');
+  const soilComparison = Object.hasOwn(soilTypes,soilType);
+  const soilColor = soilComparison ? soilTypes[soilType] : R.n.tab;
   const colors = Object.freeze({
     field: R.n.background, hud: R.n.hud, hudBorder: R.n.hudEdge, hudDivider: R.n.divider,
     label: R.hex.label, hudLabel: R.hex.hudLabel, value: R.hex.text,
@@ -82,7 +87,7 @@
     normalFill: R.n.tab, normalBorder: R.n.tabBorder,
     progressTrack: R.n.track, progressBorder: R.n.border, progressFill: R.n.green,
     disabledFill: R.n.disabledFill, disabledBorder: R.n.tabBorder, disabledText: R.hex.disabled,
-    gardenSoil: R.n.tab, gardenSoilAlpha: 1, gardenBorder: R.n.gardenBorder,
+    gardenSoil: soilColor, gardenSoilAlpha: 1, gardenBorder: soilColor,
     flowerBorder: R.n.flowerBorder, itemBorder: R.n.itemBorder,
     blueprintLine: R.n.gridLine, reservedIcon: R.n.icon
   });
@@ -132,8 +137,15 @@
     for(let row=0;row<b.rows;row++)for(let col=0;col<b.columns;col++){
       g.fillStyle(fill,1).fillRect(x+b.frame+b.line+col*b.pitch,y+b.frame+b.line+row*b.pitch,b.cell,b.cell);
     }
+    // 비교 모드에서는 정원과 동일하게 내부 격자의 교차점을 1×1px 비운다.
+    // 외부 2px 프레임과 기본 화면은 그대로 보존한다.
     for(let i=1;i<b.columns;i++){
-      g.fillStyle(line,1).fillRect(x+b.frame+i*b.pitch,y+b.frame+b.line,b.line,height-2*(b.frame+b.line));
+      g.fillStyle(line,1);
+      if (soilComparison) {
+        for(let row=0;row<b.rows;row++)g.fillRect(x+b.frame+i*b.pitch,y+b.frame+b.line+row*b.pitch,b.line,b.cell);
+      } else {
+        g.fillRect(x+b.frame+i*b.pitch,y+b.frame+b.line,b.line,height-2*(b.frame+b.line));
+      }
     }
     for(let row=1;row<b.rows;row++)for(let col=0;col<b.columns;col++){
       g.fillStyle(line,1).fillRect(x+b.frame+b.line+col*b.pitch,y+b.frame+row*b.pitch,b.cell,b.line);

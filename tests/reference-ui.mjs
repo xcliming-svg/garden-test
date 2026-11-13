@@ -776,7 +776,81 @@ for(const c of configs){
     const planted=await inspectGarden('garden '+mode+' planted',32);
     check('garden '+mode+' plant in same cell',planted.occupied.includes(34)&&planted.occupied.length===5);
   }
-  // The displayed CSS size and the native backing store must differ at DPR 2.
+  // URL-only soil variants: verify the exact palette color, transparent cut corners,
+  // unchanged non-garden UI, and real placement/resize rendering.
+  const soilVariants=[['1',0x7C4C24],['2',0xA46444],['3',0x0C9484],['invalid',0x3B3B4E]];
+  const inspectSoilTexture=async(expected,dragging=false)=>page.evaluate(({expected,dragging})=>{
+    const L=window.GardenGameLayout,g=L.spec.garden,s=window.__benchmarkGame.scene.getScene('Game');
+    const occupied=new Set(s.children.list.filter(o=>o.name?.startsWith('garden-preview-flower:')).map(o=>Number(o.name.split(':').at(-1))));
+    const candidates=L.gardenCandidates(occupied),visible=new Set([...occupied,...candidates]);
+    const t=s.textures.get('ui-test:garden-soil:'+g.cell),w=g.size,p=t.getContext().getImageData(0,0,w,w).data;
+    let mismatch=0,activeCount=0,faceCount=0;
+    for(let y=0;y<w;y++)for(let x=0;x<w;x++){
+      let type=0;
+      for(const k of visible){
+        const u=x-k%g.columns*g.pitch,v=y-Math.floor(k/g.columns)*g.pitch;
+        if(u<0||v<0||u>=g.outer||v>=g.outer)continue;
+        const ex=u===0||u===g.outer-1,ey=v===0||v===g.outer-1;
+        if(ex&&ey)continue;
+        type=Math.max(type,dragging&&(ex||ey)&&candidates.has(k)?2:1);
+      }
+      const color=type===2?0x6ABA2C:expected,i=(y*w+x)*4;
+      const actual=(p[i]<<16)|(p[i+1]<<8)|p[i+2];
+      if(type===2)activeCount++;if(type===1)faceCount++;
+      if(type===0?(p[i+3]!==0):(p[i+3]!==255||actual!==color))mismatch++;
+    }
+    return {mismatch,activeCount,faceCount,occupied:occupied.size,candidates:candidates.size,
+      roles:L.colors.gardenSoil===expected&&L.colors.gardenBorder===expected&&L.colors.normalFill===0x3B3B4E&&L.colors.gridFill===0x3B3B4E&&L.colors.flowerBorder===0x6ABA2C&&L.colors.itemBorder===0x67A3EE&&L.itemTooltip.accent===0x51516B};
+  },{expected,dragging});
+  const inspectSoilPixels=async(png,expected,cut,z)=>page.evaluate(async ({data,expected,cut,z})=>{
+    const L=window.GardenGameLayout,g=L.spec.garden,b=L.spec.blueprint;
+    const img=await createImageBitmap(await(await fetch('data:image/png;base64,'+data)).blob()),cv=document.createElement('canvas');
+    cv.width=img.width;cv.height=img.height;const ctx=cv.getContext('2d');ctx.drawImage(img,0,0);
+    const p=ctx.getImageData(0,0,cv.width,cv.height).data,R=Math.round;
+    const rgb=(x,y)=>{const i=(y*cv.width+x)*4;return(p[i]<<16)|(p[i+1]<<8)|p[i+2];};
+    let intersections=0,wrong=0;
+    for(let row=1;row<b.rows;row++)for(let col=1;col<b.columns;col++){
+      const x=b.gridX+b.frame+col*b.pitch,y=b.gridY+b.frame+row*b.pitch;
+      for(let py=R(y*z);py<R((y+b.line)*z);py++)for(let px=R(x*z);px<R((x+b.line)*z);px++){
+        intersections++;if(rgb(px,py)!==(cut?0x0D0D0D:0x51516B))wrong++;
+      }
+    }
+    const points=[[4,4,3,3],[4,3,3,3],[5,3,3,3],[5,5,3,3],[5,4,0,3]];
+    const soil=points.map(([col,row,dx,dy])=>rgb(R((g.x+col*g.pitch+dx)*z),R((g.y+row*g.pitch+dy)*z)));
+    const cell=rgb(R((b.gridX+4)*z),R((b.gridY+4)*z));
+    const line=rgb(R((b.gridX+b.frame+b.pitch)*z),R((b.gridY+b.frame+b.line+3)*z));
+    const outer=rgb(R((b.gridX+4)*z),R(b.gridY*z));
+    const inner=rgb(R((b.gridX+4)*z),R((b.gridY+1)*z));
+    return {intersections,wrong,soil,pass:soil.every(v=>v===expected)&&cell===0x3B3B4E&&line===0x51516B&&outer===0x3B3B4E&&inner===0x51516B};
+  },{data:png.toString('base64'),expected,cut,z});
+  for(const [mode,color] of soilVariants){
+    await page.setViewportSize({width:960,height:540});
+    await page.goto(origin+'/'+c.id+'/index.html?type='+mode+'&preview=1',{waitUntil:'load'});
+    await page.waitForFunction(()=>window.__benchmarkGame?.scene.isActive('MainMenu'),{},{timeout:20000});
+    await button('MainMenu','새 게임');
+    await page.waitForFunction(()=>window.__benchmarkGame.scene.isActive('Game'));
+    const a=await inspectSoilTexture(color);
+    check('soil type '+mode+' initial occupied and candidate fills, unchanged UI palette',a.mismatch===0&&a.activeCount===0&&a.occupied===4&&a.candidates===8&&a.roles,JSON.stringify(a));
+    for(const [w,h] of [[960,540],[1920,1080]]){
+      await page.setViewportSize({width:w,height:h});
+      await page.waitForFunction(w=>window.__benchmarkGame.scene.getScene('Game').cameras.main.zoom===w/960,w);
+      const png=await page.screenshot({path:join(out,'soil-type-'+mode+'-'+w+'.png')});
+      const v=await inspectSoilPixels(png,color,mode!=='invalid',w/960);
+      check('soil type '+mode+' '+w+' actual soil and 81 blueprint intersections',v.pass&&v.wrong===0&&v.intersections===81*(w/960)**2,JSON.stringify(v));
+    }
+    await page.setViewportSize({width:960,height:540});
+    await page.waitForFunction(()=>window.__benchmarkGame.scene.getScene('Game').cameras.main.zoom===1);
+    const g=await page.evaluate(()=>window.GardenGameLayout.spec.garden);
+    await drag('placeholder:flower:0',10,200,false);
+    const active=await inspectSoilTexture(color,true);
+    check('soil type '+mode+' active borders use growth and retain soil color',active.mismatch===0&&active.activeCount>0&&active.roles,JSON.stringify(active));
+    await page.screenshot({path:join(out,'soil-type-'+mode+'-drag.png')});
+    await move(g.x+4*g.pitch+g.outer/2-5,g.y+3*g.pitch+g.outer/2-5);
+    await page.mouse.up();
+    const planted=await inspectSoilTexture(color);
+    check('soil type '+mode+' plant expands with same color and resets borders',planted.mismatch===0&&planted.occupied===5&&planted.activeCount===0&&planted.roles,JSON.stringify(planted));
+  }
+    // The displayed CSS size and the native backing store must differ at DPR 2.
   const hi=await browser.newPage({viewport:{width:960,height:540},deviceScaleFactor:2});
   const nativeErrors=[];hi.on('pageerror',e=>nativeErrors.push(String(e)));
   try {
