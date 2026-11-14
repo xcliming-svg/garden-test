@@ -23,7 +23,7 @@ await new Promise(r=>server.listen(0,'127.0.0.1',r));
 const url='http://127.0.0.1:'+server.address().port;
 const browser=await chromium.launch({channel:'chrome',headless:true,args:['--no-sandbox','--disable-dev-shm-usage','--use-gl=angle','--use-angle=swiftshader','--enable-unsafe-swiftshader']});
 const report=[];
-const configs=[[960,540,1,''],[1920,1080,1,'?person=38'],[960,540,1,'?garden=32&person=56&slots=24'],[1920,1080,1,'?person=38&full=1']];
+const configs=[[960,540,1,''],[1920,1080,1,'?person=38'],[960,540,1,'?garden=32&person=56&slots=24'],[1920,1080,1,'?person=38&full=1'],[960,540,1,'?flower=21&person=37'],[1920,1080,1,'?flower=23&person=39&full=1']];
 try{
  for(const [w,h,dpr,query] of configs){
   const page=await browser.newPage({viewport:{width:w,height:h},deviceScaleFactor:dpr});
@@ -57,6 +57,19 @@ try{
       colors:[...colors].sort((a,b)=>a-b),invalid,x:o.x,y:o.y};
    });
    const size=Number(new URLSearchParams(query).get('person')||40);
+   const params=new URLSearchParams(query),flowerSize=Number(params.get('flower')||params.get('garden')||22);
+   const sizes=await page.evaluate(()=>{
+    const s=window.__previewGame.scene.getScene('Game'),L=window.GardenGameLayout,g=L.spec.garden,F=window.GardenFlowerHeadPreview;
+    return {cell:g.cell,pitch:g.pitch,outer:g.outer,grid:g.size,top:L.spec.top,bottom:L.spec.bottom,
+      textures:F.flowers.map(name=>{const t=s.textures.get(F.key(name,g.cell)),p=t.getContext().getImageData(0,0,t.width,t.height).data;
+        let ink=0,col=0;for(let i=0;i<p.length;i+=4){if(!p[i+3])continue;if(p[i]===13&&p[i+1]===13&&p[i+2]===13)ink++;else col++;}
+        return {w:t.width,h:t.height,ink,col};
+      })};
+   });
+   assert.deepEqual([sizes.cell,sizes.pitch,sizes.outer,sizes.grid],[flowerSize,flowerSize+1,flowerSize+2,10*(flowerSize+1)+1]);
+   assert.equal(sizes.top,32);assert.equal(sizes.bottom,params.get('slots')==='24'?32:40);
+   assert.ok(sizes.textures.every(t=>t.w===flowerSize&&t.h===flowerSize&&t.ink>0&&t.col>0));
+
    assert.equal(art.key,'flower-head-preview:guardian-sprout:'+size);
    assert.equal(art.w,Math.round(size*0.75));assert.equal(art.h,size);
    assert.deepEqual([art.visibleW,art.visibleH],[art.w,art.h]);
@@ -93,9 +106,9 @@ try{
     });
     assert.deepEqual(full.occupied,Array.from({length:100},(_,i)=>i));
     assert.equal(full.count,100);assert.deepEqual(Object.values(full.counts),[25,25,25,25]);
-    assert.ok(full.correct);assert.equal(full.bad,0);assert.deepEqual(full.soil,[462,462]);
+    assert.ok(full.correct);assert.equal(full.bad,0);assert.deepEqual(full.soil,[sizes.grid*2,sizes.grid*2]);
     assert.equal(full.progress,'100%');assert.equal(full.candidates,0);
-    const png=await page.screenshot({path:join(out,'full-garden-1920.png'),scale:'device'});
+    const png=await page.screenshot({path:join(out,params.has('flower')?'full-garden-parameter-1920.png':'full-garden-1920.png'),scale:'device'});
     const pixels=await page.evaluate(async({b64,info})=>{
       const im=await createImageBitmap(await(await fetch('data:image/png;base64,'+b64)).blob());
       const cv=document.createElement('canvas');cv.width=im.width;cv.height=im.height;
@@ -120,7 +133,7 @@ try{
     });
     assert.ok(combat.kills>0&&combat.shots>0&&combat.spawned>0&&combat.rejected);
     assert.equal(combat.count,100);assert.equal(combat.progress,'100%');assert.deepEqual(errors,[]);
-    report.push({w,h,query,art,border,full,combat,pass:true});
+    report.push({w,h,query,art,sizes,border,full,combat,pass:true});
     console.log('PASS full garden',JSON.stringify({count:full.count,progress:full.progress,kills:combat.kills}));
     continue;
    }
@@ -236,7 +249,7 @@ try{
    assert.equal(await page.evaluate(()=>window.__previewGame.scene.getScene('Game').combatPreview.state.elapsed),paused);
    await page.keyboard.press('Escape');await page.waitForFunction(t=>window.__previewGame.scene.getScene('Game').combatPreview.state.elapsed>t,paused);
    assert.deepEqual(errors,[]);
-   report.push({w,h,query,art,border,initial,loot:loot.types,state,pass:true});
+   report.push({w,h,query,art,sizes,border,initial,loot:loot.types,state,pass:true});
    console.log('PASS',w,h,query,JSON.stringify({kills:state.end.kills,gems:state.end.gems,flowers:state.flowers,balls:state.end.balls}));
   }finally{await page.close();}
  }

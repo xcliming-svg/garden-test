@@ -1,5 +1,7 @@
 # 전장 UI 및 에셋 규격
 
+> **devel 1px 크기 비교:** `flower=12~32`(꽃 텍스처 상자 및 타일), `person=24~56`(수호자 가시 높이) 모든 정수. 타일 외형 F+2, 피치 F+1, 완성 정원 10(F+1)+1. 기본 꽃 22px, 수호자 40px. [규격](./docs/flower-head-preview.md).
+
 > **devel 돌 타일 경계:** JS 픽셀 그래픽, 6px 두께, 약 12px 길이, slate/stone/panel/ink. 흙과 돌 및 돌과 수호자 사이 기본 5px 여백. [규격](./docs/flower-head-preview.md) 우선.
 
 > **devel 분홍 머리 수호자:** [현행 규격](./docs/flower-head-preview.md) 우선. 첨부 PNG의 투명 여백 제거 및 Garden 16 색면 정리, 기본 가시 30×40px(원본 외곽선 포함), FHD 60×80px. 38px 비교 옵션은 29×38px, FHD 약 58×76px(실측 가로 57~58px 허용). 별도 외곽선 미추가. main 유지.

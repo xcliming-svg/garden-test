@@ -31,14 +31,18 @@
   const blueprintY = topHudHeight + blueprintTopGap;
   // 참조 트리 외형 24px = 내부 22px + 1px 프레임. 기존 대형 비교는 내부 32px 유지.
   // 이전 ?garden=36 링크는 대형 비교의 호환 별칭으로 유지한다.
-  const gardenMode = new URLSearchParams(window.location.search).get('garden');
-  const gardenCell = gardenMode === '32' || gardenMode === '36' ? unit * 4 : 22;
+  const params = new URLSearchParams(window.location.search);
+  const gardenMode = params.get('garden');
+  const flowerMode = params.get('flower');
+  const requestedFlower = flowerMode ?? (gardenMode==='36'?'32':gardenMode);
+  const gardenCell = /^\d+$/.test(requestedFlower||'') && Number(requestedFlower)>=12 && Number(requestedFlower)<=32 ? Number(requestedFlower) : 22;
   // 인접한 셀은 1px 경계 하나를 공유한다: 외형 24, 내부 22, 피치 23.
   const cellLine = 1, gardenPitch = gardenCell + cellLine;
   const gardenOuter = gardenPitch + cellLine;
   const iconSize = unit * 2, flowerDropSize = 24, itemDropSize = 32;
   // 비교 링크의 실제 실행 규격을 브라우저 탭 제목에서 식별할 수 있게 한다.
-  if (['24', '32', '36'].includes(slotMode)) document.title = 'Garden Test | 슬롯 ' + slotSize + 'px';
+  if (['24', '32', '36'].includes(slotMode) || params.has('flower') || params.has('garden') || params.has('person'))
+    document.title = 'Garden Test | 꽃 '+gardenCell+'px · 수호자 '+window.GardenFlowerHeadPreview.guardianSize+'px · 슬롯 '+slotSize+'px';
   const gardenSize = 10 * gardenPitch + cellLine;
   const spec = Object.freeze({
     width, height,

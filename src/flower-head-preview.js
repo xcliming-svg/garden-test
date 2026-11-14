@@ -21,8 +21,7 @@
   const flowers = Object.freeze(['daisy','tulip','sunflower','hydrangea']);
   const key = (name,size) => 'flower-head-preview:'+name+':'+size;
   const guardianMode = new URLSearchParams(window.location.search).get('person');
-  const guardianSizes = Object.freeze([24,28,32,36,38,40,44,48,56]);
-  const guardianSize = guardianSizes.includes(Number(guardianMode)) ? Number(guardianMode) : 40;
+  const guardianSize = /^\d+$/.test(guardianMode||'') && Number(guardianMode)>=24 && Number(guardianMode)<=56 ? Number(guardianMode) : 40;
   const enemySize = 32;
   // Keep the outline inside the cell, so adjacent flowers never overlap.
   function outlinedPixels(pixels, size) {
@@ -39,8 +38,21 @@
     }
     return result;
   }
-  function install(scene) {
-    for (const [id,packed] of Object.entries(runs)) {
+  function install(scene,flowerSize=22) {
+    const requested={...runs};
+    for(const name of flowers){
+      const id=name+':'+flowerSize;
+      if(!requested[id]){
+        // Preserve the native 22/32 reference art. Other sizes sample the
+        // 32px source before adding the usual one-pixel outline.
+        const source=runs[name+':32'].split(',').map(run=>run.slice(-1).repeat(Number(run.slice(0,-1)))).join('');
+        let pixels='';
+        for(let y=0;y<flowerSize;y++)for(let x=0;x<flowerSize;x++)
+          pixels+=source[Math.floor((y+0.5)*32/flowerSize)*32+Math.floor((x+0.5)*32/flowerSize)];
+        requested[id]=pixels.split('').map(v=>'1'+v).join(',');
+      }
+    }
+    for (const [id,packed] of Object.entries(requested)) {
       const [name,sizeText] = id.split(':'), size = Number(sizeText), k = key(name,size);
       if (scene.textures.exists(k)) continue;
       const pixels = packed.split(',').map(run=>run.slice(-1).repeat(Number(run.slice(0,-1)))).join('');
@@ -135,7 +147,7 @@
     texture.setFilter(Phaser.Textures.FilterMode.NEAREST);
   }
   function draw(scene, spec, colors, gardenRaster, patrolBounds, patrolPosition, updateHud, itemPreview) {
-    install(scene);installEnemy(scene);
+    install(scene,spec.garden.cell);installEnemy(scene);
     const g=spec.garden,occupied=window.GardenCombatPreview.initialGarden(spec);
     const textureKey='flower-head-preview:soil:'+g.cell;
     const texture=scene.textures.exists(textureKey)?scene.textures.get(textureKey):
