@@ -136,7 +136,7 @@
   }
   function draw(scene, spec, colors, gardenRaster, patrolBounds, patrolPosition, updateHud, itemPreview) {
     install(scene);installEnemy(scene);
-    const g=spec.garden,occupied=new Set([44,45,54,55]);
+    const g=spec.garden,occupied=window.GardenCombatPreview.initialGarden(spec);
     const textureKey='flower-head-preview:soil:'+g.cell;
     const texture=scene.textures.exists(textureKey)?scene.textures.get(textureKey):
       scene.textures.createCanvas(textureKey,g.size,g.size);
@@ -171,7 +171,8 @@
       const p=center(i);
       scene.add.image(p.x,p.y,key(name,g.cell)).setDisplaySize(g.cell,g.cell).setDepth(1).setName('garden-preview-flower:'+i);
     }
-    [...occupied].forEach((i,n)=>addFlower(i,flowers[n]));
+    const full=occupied.size===g.columns*g.rows;
+    [...occupied].forEach((i,n)=>addFlower(i,flowers[full?(i%g.columns+Math.floor(i/g.columns))%flowers.length:n%flowers.length]));
     function clampedBounds(keys){
       const b=patrolBounds(keys),half=guardianSize/2;
       b.top=Math.max(b.top,spec.top+half);b.bottom=Math.min(b.bottom,spec.height-spec.bottom-half);

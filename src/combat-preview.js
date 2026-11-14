@@ -16,6 +16,11 @@
     const t=(-B-Math.sqrt(D))/(2*A);
     return t>=0&&t<=1?t:Infinity;
   }
+  function initialGarden(spec){
+    const g=spec.garden;
+    return new Set(new URLSearchParams(window.location.search).get('full')==='1'
+      ? Array.from({length:g.columns*g.rows},(_,i)=>i) : [44,45,54,55]);
+  }
   function create(spec,initialBounds,patrolPosition,nearestPatrolDistance){
     const g=spec.garden, cx=g.x+g.size/2,cy=g.y+g.size/2;
     const fieldBottom=spec.height-spec.bottom;
@@ -25,7 +30,7 @@
     const random=()=>{seed=(Math.imul(seed,1664525)+1013904223)>>>0;return seed/4294967296;};
     const state={elapsed:0,kills:0,spawned:0,arrived:0,volleys:0,shotsFired:0,gems:0,ballCount:1,
       guardian:patrolPosition(bounds,patrolDistance),enemies:[],bullets:[],drops:[],deaths:[],stage:1,rate:spawnRate(0),lastVolley:[]};
-    const occupied=new Set([44,45,54,55]);
+    const occupied=initialGarden(spec);
     const equipped=new Set();
     function target(){
       const keys=[...occupied],i=keys[Math.floor(random()*keys.length)];
@@ -167,5 +172,5 @@
     });
     render();return controller;
   }
-  window.GardenCombatPreview=Object.freeze({tuning,spawnRate,create,attach,hitTime});
+  window.GardenCombatPreview=Object.freeze({tuning,spawnRate,create,attach,hitTime,initialGarden});
 }());
