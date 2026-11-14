@@ -4,7 +4,7 @@
 
 ## 2026-11-14 — devel 점선 순찰로 비교
 
-- 돌 타일 렌더링 대신 실제 수호자 순찰 중심 경로에 5px 어두운 바닥 및 4px 길이/약 4px 간격/1px 두께 점선. 기존 경로 위치와 성장 연동, 전투 및 HUD 유지. 꽃 20px/수호자 40px 비교 URL. [규격](./flower-head-preview.md). main 유지.
+- 돌 타일 렌더링 대신 실제 수호자 순찰 중심 경로에 5px 어두운 바닥 및 4px 길이/약 4px 간격/1px 두께 점선. 기존 경로 위치와 성장 연동, 전투 및 HUD 유지. 꽃 20px/수호자 40px 비교 URL. [규격](./flower-head-preview.md). [Chromium 7/7 통과](https://github.com/xcliming-svg/garden-test/actions/runs/43539727248), 완성 정원 FHD 점선·바닥 실제 픽셀 및 드래그 후 경로 확장 확인. 2079개 조합 기하 검증, 기타 브라우저 미검증. devel 통합, main 유지.
 
 ## 2026-11-14 — devel 꽃·수호자 1px 비교 파라미터
 
