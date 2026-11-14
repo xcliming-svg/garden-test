@@ -1,5 +1,7 @@
 # 전장 UI 및 에셋 규격
 
+> **devel uitype=1:** 첨부 PNG 색상 기반 별도 UI 비교 역할. 잔디 #83A650 계열 7색, 흙 #A16A3E 계열 4색, 경계 #87512E, HUD #E2B66F, 슬롯 #EBC58F. 기존 Garden 16 캐릭터/적/꽃 및 기본 UI 보존. [규격](./docs/flower-head-preview.md).
+
 > **devel 배경 장식 제거:** 필드 풀·돌 미표시. 기존 검정 배경, 정원 및 점선 유지.
 
 > **devel 확장 후보 점선:** 점유 및 인접 후보만 동일 slate(#51516B) 점선 표시, 드래그 중에만 growth 강조. 수호자 몸체와 표시 영역 외접 사각형 간 5px 논리 간격. [규격](./docs/flower-head-preview.md).

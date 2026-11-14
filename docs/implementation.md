@@ -1,5 +1,7 @@
 # 현재 설계 및 구현 정리
 
+> **devel 테마 비교:** `palette.js`의 `uitype=1` reference 분기와 `light-field-preview.js`로 전장/흙을 렌더링한다. 기존 검정/점선 기본 및 전투 상태와 판정은 공유한다. [규격](./flower-head-preview.md).
+
 > **devel 배경 장식 제거:** `field-decor-preview.js`는 로드/호출하지 않는다. 기존 전장과 정원 판정·순찰·전투 유지.
 
 > **devel 확장 후보 점선/순찰:** `dashed-grid-preview.js`에서 점유 및 후보의 합집합 공유 경계만 렌더링하고, 해당 외접 사각형 기준 5px 몸체 여백의 순찰 경로를 계산한다. 모델의 기존 배치/전투 판정 유지. [규격](./flower-head-preview.md).

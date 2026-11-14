@@ -165,7 +165,8 @@
       if(texture.width!==raster.width||texture.height!==raster.height)texture.setSize(raster.width,raster.height);
       soil.setTexture(textureKey).setDisplaySize(raster.width/z,raster.height/z)
         .setPosition((raster.x+raster.width/2)/z,(raster.y+raster.height/2)/z);
-      grid.draw(texture.getContext(),g,z,raster,occupied,candidates,hover);
+      const renderer=window.GardenPalette.uiType===1?window.GardenLightFieldPreview.garden:grid.draw;
+      renderer(texture.getContext(),g,z,raster,occupied,candidates,hover);
       texture.refresh();texture.setFilter(Phaser.Textures.FilterMode.NEAREST);
     }
     function center(i){return {x:g.x+(i%g.columns)*g.pitch+g.line+g.cell/2,y:g.y+Math.floor(i/g.columns)*g.pitch+g.line+g.cell/2};}

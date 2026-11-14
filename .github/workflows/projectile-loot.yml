@@ -1,7 +1,7 @@
 name: Projectile loot verification
 on:
   push:
-    branches: [feature/devel-projectile-loot, feature/devel-pink-guardian, feature/devel-guardian-38, feature/devel-full-garden, feature/devel-stone-border, feature/devel-size-parameters, feature/devel-dashed-patrol, feature/devel-grass-garden, feature/devel-dashed-grid-decor, feature/devel-local-grid-patrol, feature/devel-clear-field]
+    branches: [feature/devel-projectile-loot, feature/devel-pink-guardian, feature/devel-guardian-38, feature/devel-full-garden, feature/devel-stone-border, feature/devel-size-parameters, feature/devel-dashed-patrol, feature/devel-grass-garden, feature/devel-dashed-grid-decor, feature/devel-local-grid-patrol, feature/devel-clear-field, feature/devel-ui-type-one]
 permissions:
   contents: read
 jobs:
@@ -16,7 +16,7 @@ jobs:
       - run: npm install --no-save --package-lock=false playwright@1.51.1 phaser@3.90.0
         env:
           PLAYWRIGHT_SKIP_BROWSER_DOWNLOAD: '1'
-      - run: node --check src/dashed-grid-preview.js && node --check src/field-decor-preview.js && node --check src/patrol-path-preview.js && node --check src/stone-border-preview.js && node --check src/combat-preview.js && node --check src/loot-preview.js && node --check src/flower-head-preview.js && node --check src/game-layout.js && node --check tests/projectile-loot.mjs
+      - run: node --check src/light-field-preview.js && node --check src/palette.js && node --check src/dashed-grid-preview.js && node --check src/field-decor-preview.js && node --check src/patrol-path-preview.js && node --check src/stone-border-preview.js && node --check src/combat-preview.js && node --check src/loot-preview.js && node --check src/flower-head-preview.js && node --check src/game-layout.js && node --check tests/projectile-loot.mjs
       - run: node tests/projectile-loot.mjs
       - uses: actions/upload-artifact@v4
         if: always()

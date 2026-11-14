@@ -2,6 +2,10 @@
 
 각 구현 변경의 결과를 시스템 단위로 기록한다. 대화 원문 또는 코드 diff의 복제가 아니라 **어떤 시스템에 무엇이 적용되었으며, 무엇이 아직 구현되지 않았는지**를 설명한다. 최신 구현 상태는 [implementation.md](./implementation.md)를 참조한다.
 
+## 2026-11-14 — devel 밝은 잔디 UI 비교 옵션
+
+- `uitype=1`만 첨부 화면의 녹색 잔디·황갈색 HUD·갈색 흙 화단 적용. 첨부 PNG 샘플 색상으로 JS 질감 생성. 기본 검정/점선, 크기·전투·드래그·순찰 유지. [규격](./flower-head-preview.md). main 유지.
+
 ## 2026-11-14 — devel 배경 장식 제거
 
 - 배경 풀/돌 장식 모두 제거, 검정 전장 복귀. 점선 그리드 및 정원 꽃·전투·HUD·순찰은 유지. 이전 장식 모듈은 보존하되 로드하지 않음. [Chromium 8/8 통과](https://github.com/xcliming-svg/garden-test/actions/runs/43543265811), FHD 배경 장식 픽셀 제거 및 기존 전투·드래그 확인. 기타 브라우저 미검증. devel 통합, main 유지.
