@@ -121,7 +121,12 @@
       const col=index%g.columns,row=Math.floor(index/g.columns);
       if(![[1,0],[-1,0],[0,1],[0,-1]].some(([dx,dy])=>col+dx>=0&&col+dx<g.columns&&row+dy>=0&&row+dy<g.rows&&occupied.has((row+dy)*g.columns+col+dx)))return false;
       occupied.add(index);state.drops=state.drops.filter(d=>d.id!==id);
-      if(newBounds){bounds=newBounds;patrolDistance=nearestPatrolDistance(bounds,state.guardian.x,state.guardian.y);joining=true;}
+      if(newBounds){
+        bounds=newBounds;patrolDistance=nearestPatrolDistance(bounds,state.guardian.x,state.guardian.y);
+        // An expanded border may envelop the previous patrol point. Re-anchor on
+        // the new outside path instead of walking through the newly drawn stones.
+        state.guardian=patrolPosition(bounds,patrolDistance);joining=false;
+      }
       return true;
     }
     function equip(id,index){

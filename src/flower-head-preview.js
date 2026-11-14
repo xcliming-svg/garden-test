@@ -142,6 +142,9 @@
       scene.textures.createCanvas(textureKey,g.size,g.size);
     const soil=scene.add.image(g.x+g.size/2,g.y+g.size/2,textureKey)
       .setDepth(-1).setName('garden-preview-soil');
+    const stone=window.GardenStoneBorderPreview;
+    const border=window.GardenUI.pixelGraphics(scene).setDepth(0).setName('garden-stone-border');
+    const geometry=keys=>stone.geometry(spec,keys,guardianWidth,guardianSize);
     let hover=null;
     function refreshSoil(target=hover){
       hover=target;
@@ -172,21 +175,18 @@
       scene.add.image(p.x,p.y,key(name,g.cell)).setDisplaySize(g.cell,g.cell).setDepth(1).setName('garden-preview-flower:'+i);
     }
     [...occupied].forEach((i,n)=>addFlower(i,flowers[n%flowers.length]));
-    function clampedBounds(keys){
-      const b=patrolBounds(keys),half=guardianSize/2;
-      b.top=Math.max(b.top,spec.top+half);b.bottom=Math.min(b.bottom,spec.height-spec.bottom-half);
-      return b;
-    }
+    function clampedBounds(keys){return geometry(keys).patrol;}
     function plant(model,drop,index){
       const next=new Set(occupied);next.add(index);
       if(!model.plant(drop.id,index,clampedBounds(next)))return false;
-      occupied.add(index);addFlower(index,drop.name);refreshSoil(null);return true;
+      occupied.add(index);addFlower(index,drop.name);refreshSoil(null);
+      stone.draw(border,geometry(occupied));return true;
     }
     const bounds=clampedBounds(occupied),start=patrolPosition(bounds,(bounds.right-bounds.left)/2);
     const guardian=scene.add.image(start.x,start.y,installGuardian(scene))
       .setDisplaySize(guardianWidth,guardianSize).setDepth(2).setName('placeholder:guardian:0');
     const loot=window.GardenLootPreview.attach(scene,spec,{occupied,refresh:refreshSoil,center,plant},itemPreview);
-    refreshSoil(null);
+    refreshSoil(null);stone.draw(border,geometry(occupied));
     const resize=()=>refreshSoil();
     scene.scale.on('resize',resize);
     scene.events.once('shutdown',()=>scene.scale.off('resize',resize));
