@@ -4,7 +4,7 @@
 
 ## 2026-11-14 — devel 분홍 머리 수호자 교체
 
-- devel 27864d2 기반 feature/devel-pink-guardian. 사용자 첨부 PNG 외접 영역 511×673px을 30×40px로 축소해 기존 초록 수호자를 교체. 기존 외곽선 포함 높이 40px, Garden 16의 5개 색면, 원본 비율 유지. FHD 60×80px. 기존 전투 및 UI 조작 유지. [규격](./flower-head-preview.md). main 유지.
+- devel 27864d2 기반 feature/devel-pink-guardian. 사용자 첨부 PNG 외접 영역 511×673px을 30×40px로 축소해 기존 초록 수호자를 교체. 기존 외곽선 포함 높이 40px, Garden 16의 5개 색면, 원본 비율 유지. FHD 60×80px. 기존 전투 및 UI 조작 유지. [Chromium 3/3 통과](https://github.com/xcliming-svg/garden-test/actions/runs/43531220657), 코드 1e1188d. [규격](./flower-head-preview.md). devel에 통합, main 유지.
 
 ## 2026-11-14 — devel 직선 공 공격·랜덤 드롭·정원 확장
 
