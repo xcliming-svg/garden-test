@@ -1,5 +1,7 @@
 # 전장 UI 및 에셋 규격
 
+> **devel 점선 그리드/장식:** 1px 공유 점선(3px 길이/2px 간격), panel/slate/stone/growth, 칸 내부 투명. 풀 8~10×7px 14개, 돌 8~12×6px 8개를 기존 팔레트로 JS 렌더링. [규격](./docs/flower-head-preview.md).
+
 > **devel 잔디 화단:** JS 픽셀 패턴, Garden 16 ink/growth 파생 초록 각 3색(점유/후보), 7px 블록·1px 풀잎. 점유 및 인접 후보 칸만 채움. 돌 및 점선 미표시. [규격](./docs/flower-head-preview.md).
 
 > **devel 점선 순찰로:** JS 픽셀 그래픽, 바닥 띠 5px #161619, 점선 길이 4px/두께 1px/간격 약 4px #3B3B4E. 기존 돌 타일 표시 대체. [규격](./docs/flower-head-preview.md).

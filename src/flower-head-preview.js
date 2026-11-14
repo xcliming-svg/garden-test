@@ -155,30 +155,20 @@
     const soil=scene.add.image(g.x+g.size/2,g.y+g.size/2,textureKey)
       .setDepth(-1).setName('garden-preview-soil');
     const path=window.GardenPatrolPathPreview;
-    const grass=window.GardenGrassPreview;
+    const grid=window.GardenDashedGridPreview;
+    window.GardenFieldDecorPreview.draw(scene,spec);
     const geometry=keys=>path.geometry(spec,keys,guardianWidth,guardianSize);
+    const visible=grid.all(g);
     let hover=null;
     function refreshSoil(target=hover){
       hover=target;
       const candidates=window.GardenGameLayout.gardenCandidates(occupied);
-      const z=scene.cameras.main.zoom,raster=gardenRaster(grass.visible(occupied,candidates),g,z);
+      const z=scene.cameras.main.zoom,raster=gardenRaster(visible,g,z);
       if(texture.width!==raster.width||texture.height!==raster.height)texture.setSize(raster.width,raster.height);
       soil.setTexture(textureKey).setDisplaySize(raster.width/z,raster.height/z)
         .setPosition((raster.x+raster.width/2)/z,(raster.y+raster.height/2)/z);
-      const ctx=texture.getContext();
-      grass.draw(ctx,g,z,raster,occupied,candidates);
-      function fill(index,color,alpha){
-        const x=g.x+index%g.columns*g.pitch,y=g.y+Math.floor(index/g.columns)*g.pitch;
-        const x0=Math.round(x*z)-raster.x,y0=Math.round(y*z)-raster.y;
-        const x1=Math.round((x+g.outer)*z)-raster.x,y1=Math.round((y+g.outer)*z)-raster.y;
-        ctx.fillStyle='#'+color.toString(16).padStart(6,'0');ctx.globalAlpha=alpha;
-        ctx.fillRect(x0,y0,x1-x0,y1-y0);
-      }
-      if(hover!==null){
-        if(candidates.has(hover))fill(hover,colors.flowerBorder,0.4);
-        else for(const i of candidates)fill(i,colors.flowerBorder,0.22);
-      }
-      ctx.globalAlpha=1;texture.refresh();texture.setFilter(Phaser.Textures.FilterMode.NEAREST);
+      grid.draw(texture.getContext(),g,z,raster,occupied,candidates,hover);
+      texture.refresh();texture.setFilter(Phaser.Textures.FilterMode.NEAREST);
     }
     function center(i){return {x:g.x+(i%g.columns)*g.pitch+g.line+g.cell/2,y:g.y+Math.floor(i/g.columns)*g.pitch+g.line+g.cell/2};}
     function addFlower(i,name){
