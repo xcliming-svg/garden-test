@@ -4,7 +4,7 @@
 
 ## 2026-11-14 — devel 수호자 38px 비교 옵션
 
-- 기존 분홍 수호자에 `?person=38` 추가. 29×38px(정수 반올림), FHD 약 58×76px(실측 가로 57~58px 허용). 기본 40px 및 나머지 게임 규격 유지. main 변경 없음.
+- 기존 분홍 수호자에 `?person=38` 추가. 29×38px(정수 반올림), FHD 약 58×76px(실측 가로 57~58px 허용). 기본 40px 및 나머지 게임 규격 유지. [Chromium 3/3 통과](https://github.com/xcliming-svg/garden-test/actions/runs/43532831152), 최초 가로 1px 래스터 반올림 차이 반영 후 재검증. main 변경 없음.
 
 ## 2026-11-14 — devel 분홍 머리 수호자 교체
 
