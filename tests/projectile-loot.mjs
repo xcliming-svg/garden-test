@@ -23,7 +23,7 @@ await new Promise(r=>server.listen(0,'127.0.0.1',r));
 const url='http://127.0.0.1:'+server.address().port;
 const browser=await chromium.launch({channel:'chrome',headless:true,args:['--no-sandbox','--disable-dev-shm-usage','--use-gl=angle','--use-angle=swiftshader','--enable-unsafe-swiftshader']});
 const report=[];
-const configs=[[960,540,1,''],[1920,1080,1,'?person=38'],[960,540,1,'?garden=32&person=56&slots=24'],[1920,1080,1,'?person=38&full=1'],[960,540,1,'?flower=21&person=37'],[1920,1080,1,'?flower=23&person=39&full=1'],[1920,1080,1,'?flower=20&person=40&full=1'],[1920,1080,1,'?flower=20&person=40'],[1920,1080,1,'?uitype=1&flower=20&person=40'],[1920,1080,1,'?uitype=1&flower=20&person=40&full=1'],[1920,1080,1,'?personstyle=1&flower=20&person=40'],[1920,1080,1,'?personstyle=2&flower=20&person=40&uitype=1']];
+const configs=[[960,540,1,''],[1920,1080,1,'?person=38'],[960,540,1,'?garden=32&person=56&slots=24'],[1920,1080,1,'?person=38&full=1'],[960,540,1,'?flower=21&person=37'],[1920,1080,1,'?flower=23&person=39&full=1'],[1920,1080,1,'?flower=20&person=40&full=1'],[1920,1080,1,'?flower=20&person=40'],[1920,1080,1,'?uitype=1&flower=20&person=40'],[1920,1080,1,'?uitype=1&flower=20&person=40&full=1'],[1920,1080,1,'?personstyle=1&flower=20&person=40'],[1920,1080,1,'?personstyle=2&flower=20&person=40&uitype=1'],[1920,1080,1,'?personstyle=3&flower=20&person=40'],[960,540,1,'?personstyle=3&flower=20&person=40&uitype=1']];
 try{
  for(const [w,h,dpr,query] of configs){
   const page=await browser.newPage({viewport:{width:w,height:h},deviceScaleFactor:dpr});
@@ -345,7 +345,8 @@ try{
        const frames={right:new Set(),down:new Set(),left:new Set(),up:new Set()},unique={},size=[o.displayWidth,o.displayHeight];
        let dimensions=true,sync=true,directions=true;
        const prefix='guardian-walk:'+W.type+':'+size[1]+':';
-       for(const group of ['side','down','up']){
+       const front=W.type===3;let facing=o.flipX;
+       for(const group of front?['side']:['side','down','up']){
          const pixels=new Set();
          for(let f=0;f<4;f++){
            const t=scene.textures.get(prefix+group+':'+f),p=t.getContext().getImageData(0,0,t.width,t.height).data;
@@ -357,19 +358,21 @@ try{
        for(let i=0;i<240;i++){
          const before=c.state.guardianDirection,x=o.x,y=o.y;c.advance(1/W.fps);
          const d=c.state.guardianDirection,dx=o.x-x,dy=o.y-y;
-         const group=d==='up'||d==='down'?d:'side';
+         if(d==='right'||d==='left')facing=d==='right';
+         const group=front?'side':d==='up'||d==='down'?d:'side';
          frames[d].add(o.texture.key);
          if(o.displayWidth!==size[0]||o.displayHeight!==size[1])dimensions=false;
-         if(o.texture.key!==prefix+group+':'+Math.floor(c.state.elapsed*W.fps+1e-7)%4||o.flipX!==(d==='right'))sync=false;
+         if(o.texture.key!==prefix+group+':'+Math.floor(c.state.elapsed*W.fps+1e-7)%4||o.flipX!==(front?facing:d==='right'))sync=false;
          if(before===d&&Math.hypot(dx,dy)>1e-6){
            const expected=Math.abs(dx)>=Math.abs(dy)?(dx>0?'right':'left'):(dy>0?'down':'up');
            if(d!==expected)directions=false;
          }
        }
-       return {frames:Object.fromEntries(Object.entries(frames).map(([k,v])=>[k,v.size])),unique,dimensions,sync,directions};
+       return {frames:Object.fromEntries(Object.entries(frames).map(([k,v])=>[k,v.size])),unique,dimensions,sync,directions,noVertical:!scene.textures.exists(prefix+'up:0')&&!scene.textures.exists(prefix+'down:0')};
      });
      assert.deepEqual(anim.frames,{right:4,down:4,left:4,up:4});
-     assert.deepEqual(anim.unique,{side:4,down:4,up:4});
+     if(walkType===3){assert.deepEqual(anim.unique,{side:4});assert.ok(anim.noVertical);}
+     else assert.deepEqual(anim.unique,{side:4,down:4,up:4});
      assert.ok(anim.dimensions&&anim.sync&&anim.directions,JSON.stringify(anim));
      art.animation=anim;
    }

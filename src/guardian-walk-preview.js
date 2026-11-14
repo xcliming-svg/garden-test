@@ -33,11 +33,18 @@
     "MCIwIlgyIDJQOhBCSIJQglhyaFqAGyIjaCsiK1iDUItAkzCzGMMI+/v7+zMIwxizKKMwoziTSINoGiMSDHhKJGAUOixYJDokWCQ6JGAUShRwUg2AFSodgF1wNQgtcC0YJXAtIBWAHXg="
   ]
 ];
+  // Generated 1x4 front-facing sheet. Stabilized head and cleaned eye pixels.
+  const front=[
+  "MCI4IlA6GDpIQghCSEIIQkiKUHpgYoATIhOAIyIjYINIk0CTMKsgwwj76xS7JCMUe2RDCCMcESwRFDMYGxwRJBkUKygTHBEkGRQrKBN0IzAbbCNAC2wbYFR4WnAUShRgJDokWCQ6JFgkOiRgFEoccEoNgFWAVYBVgE2QHRAdSA==",
+  "MCI4IlA6GDpIQghCSEIIQkiKUHpgYoATIhOAIyIjYINIk0CTMKsgwwj76xS7JCMUe2RDCCMcESwRFDMYGxwRJBkUKygTHBEkGRQrKBN0IzAbbCNAC2wbYFSAUnAcSgxgLDocWCw6JFgcQhxwUhRwJSoNgFWAVYBVgC0QFZAdcA==",
+  "MCI4IlA6GDpIQghCSEIIQkiKUHpgYoATIhOAIyIjYINIk0CTMKsgwwj76xS7JCMUe2RDCCMcESwRFDMYGxwRJBkUKygTHBEkGRQrKBN0IzAbbCNAC2wbYFSAUnAUUgxgJDokWCQ6JFgkOiRYHEoccEoNgFWAVYBVgE2QHRAdSA==",
+  "MCI4IlA6GDpIQghCSEIIQkiKUHpgYoATIhOAIyIjYINIk0CTMKsgwwj76xS7JCMUe2RDCCMcESwRFDMYGxwRJBkUKygTHBEkGRQrKBN0IzAbbCNAC2wbYFSAUnAUShxYJDosUCQ6LFAcShxgFFIMeA0qJYBVgFWAVagtsB1I"
+];
   const mode=new URLSearchParams(window.location.search).get('personstyle');
-  const type=mode==='1'?1:mode==='2'?2:0;
+  const type=mode==='1'?1:mode==='2'?2:mode==='3'?3:0;
   const fps=6,roles=[null,'slate','growth','red','sand','bark'];
   function pixels(type,frame,w,h,direction='side'){
-    const frames=direction==='down'?vertical[0]:direction==='up'?vertical[1]:sheets[type-1];
+    const frames=type===3?front:direction==='down'?vertical[0]:direction==='up'?vertical[1]:sheets[type-1];
     const data=atob(frames[frame]),src=[];
     for(let i=0;i<data.length;i++){
       const v=data.charCodeAt(i);
@@ -58,7 +65,7 @@
   }
   function install(scene,w,h){
     if(!type)return null;
-    const keys={side:[],down:[],up:[]};
+    const keys=type===3?{side:[]}:{side:[],down:[],up:[]};
     for(const direction of Object.keys(keys))for(let f=0;f<4;f++){
       const key='guardian-walk:'+type+':'+h+':'+direction+':'+f;keys[direction].push(key);
       if(scene.textures.exists(key))continue;
@@ -74,13 +81,15 @@
   }
   function animator(guardian,keys){
     if(!keys)return null;
+    let faceRight=true;
     return state=>{
       const direction=state.guardianDirection;
-      const group=direction==='up'||direction==='down'?direction:'side';
+      if(direction==='left'||direction==='right')faceRight=direction==='right';
+      const group=type===3?'side':direction==='up'||direction==='down'?direction:'side';
       const f=Math.floor(state.elapsed*fps+1e-7)%4;
       const key=keys[group][f];
       if(guardian.texture.key!==key)guardian.setTexture(key);
-      guardian.setFlipX(direction==='right');
+      guardian.setFlipX(type===3?faceRight:direction==='right');
     };
   }
   window.GardenGuardianWalkPreview=Object.freeze({type,fps,pixels,install,animator});

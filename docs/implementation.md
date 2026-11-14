@@ -1,5 +1,7 @@
 # 현재 설계 및 구현 정리
 
+> **devel 정면 공용 걷기:** `personstyle=3`은 `guardian-walk-preview.js`에서 동일 정면 텍스처 4개만 사용해 네 이동 방향을 처리한다. 좌우 반전, 상하에서는 이전 좌우 유지. 모델/기존 스타일 변경 없음.
+
 > **devel 4방향 걷기:** `guardianDirection`은 모델의 실제 순찰 진행 방향을 나타내며 `guardian-walk-preview.js`가 해당 방향의 프레임을 선택한다. 위치/전투 및 기본 정적 캐릭터는 유지한다.
 
 > **devel 수호자 걷기:** `guardian-walk-preview.js`가 선택된 파생 4프레임 텍스처를 생성하며 전투 모델의 경과 시간과 이동 좌표를 이용해 프레임/좌우 반전을 갱신한다. 기존 모델 및 기본 정적 스프라이트 유지. [규격](./flower-head-preview.md).

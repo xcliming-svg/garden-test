@@ -1,5 +1,7 @@
 # 전장 UI 및 에셋 규격
 
+> **devel 정면 공용 걷기:** `personstyle=3` 정면 4프레임, 머리/얼굴 고정, 26×38 코어와 1px 외곽선, 30×40 상자/28×40 가시, 6fps. 기존 스타일 보존. [규격](./docs/flower-head-preview.md).
+
 > **devel 4방향 수호자:** `personstyle=1/2`에 공통 정면·뒷모습 각 4프레임 추가. 26×38 코어, 1px 외곽선, 30×40 상자/28×40 가시, 6fps 유지. [규격](./docs/flower-head-preview.md).
 
 > **devel 걷기 수호자:** `personstyle=1/2` 두 4프레임 파생 픽셀 시트(26×38 코어, 1px 외곽선, 기본 30×40 상자, 가시 28×40), 6fps. `personstyle=0` 기존. [규격](./docs/flower-head-preview.md).
