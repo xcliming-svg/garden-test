@@ -41,6 +41,45 @@ try{
    };
    await click(480,252);
    await page.waitForFunction(()=>!!window.__previewGame.scene.getScene('Game').combatPreview);
+   const art=await page.evaluate(()=>{
+    const scene=window.__previewGame.scene.getScene('Game'),o=scene.children.getByName('placeholder:guardian:0'),t=o.texture;
+    const p=t.getContext().getImageData(0,0,t.width,t.height).data;
+    let left=t.width,right=-1,top=t.height,bottom=-1,invalid=0;
+    const colors=new Set();
+    for(let y=0;y<t.height;y++)for(let x=0;x<t.width;x++){
+     const i=(y*t.width+x)*4,a=p[i+3];
+     if(a!==0&&a!==255)invalid++;
+     if(!a)continue;
+     colors.add((p[i]<<16)|(p[i+1]<<8)|p[i+2]);
+     left=Math.min(left,x);right=Math.max(right,x);top=Math.min(top,y);bottom=Math.max(bottom,y);
+    }
+    return {key:t.key,w:o.displayWidth,h:o.displayHeight,visibleW:right-left+1,visibleH:bottom-top+1,
+      colors:[...colors].sort((a,b)=>a-b),invalid,x:o.x,y:o.y};
+   });
+   const size=Number(new URLSearchParams(query).get('person')||40);
+   assert.equal(art.key,'flower-head-preview:guardian-sprout:'+size);
+   assert.equal(art.w,Math.round(size*0.75));assert.equal(art.h,size);
+   assert.deepEqual([art.visibleW,art.visibleH],[art.w,art.h]);
+   assert.deepEqual(art.colors,[0x51516b,0x6aba2c,0x7c4c24,0xe9d0ab,0xf46c7c]);assert.equal(art.invalid,0);
+   if(w===1920){
+    const png=await page.screenshot({path:join(out,'pink-guardian-1920.png'),scale:'device'});
+    const actual=await page.evaluate(async({b64,art})=>{
+     const im=await createImageBitmap(await(await fetch('data:image/png;base64,'+b64)).blob());
+     const cv=document.createElement('canvas');cv.width=im.width;cv.height=im.height;
+     const ctx=cv.getContext('2d');ctx.drawImage(im,0,0);const p=ctx.getImageData(0,0,cv.width,cv.height).data;
+     let left=cv.width,right=-1,top=cv.height,bottom=-1,pink=0;
+     for(let y=Math.floor(art.y*2-43);y<=Math.ceil(art.y*2+43);y++)
+      for(let x=Math.floor(art.x*2-65);x<=Math.ceil(art.x*2+65);x++){
+       const i=(y*cv.width+x)*4,c=(p[i]<<16)|(p[i+1]<<8)|p[i+2];
+       if(!art.colors.includes(c))continue;
+       if(c===0xf46c7c)pink++;
+       left=Math.min(left,x);right=Math.max(right,x);top=Math.min(top,y);bottom=Math.max(bottom,y);
+      }
+     return {w:right-left+1,h:bottom-top+1,pink};
+    },{b64:png.toString('base64'),art});
+    assert.deepEqual([actual.w,actual.h],[60,80],JSON.stringify(actual));assert.ok(actual.pink>0);
+    art.actual=actual;
+   }
    const initial=await page.evaluate(()=>{
     const game=window.__previewGame,scene=game.scene.getScene('Game'),c=scene.combatPreview,L=window.GardenGameLayout,g=L.spec.garden;
     const soil=scene.children.getByName('garden-preview-soil').texture;
@@ -127,7 +166,7 @@ try{
    assert.equal(await page.evaluate(()=>window.__previewGame.scene.getScene('Game').combatPreview.state.elapsed),paused);
    await page.keyboard.press('Escape');await page.waitForFunction(t=>window.__previewGame.scene.getScene('Game').combatPreview.state.elapsed>t,paused);
    assert.deepEqual(errors,[]);
-   report.push({w,h,query,initial,loot:loot.types,state,pass:true});
+   report.push({w,h,query,art,initial,loot:loot.types,state,pass:true});
    console.log('PASS',w,h,query,JSON.stringify({kills:state.end.kills,gems:state.end.gems,flowers:state.flowers,balls:state.end.balls}));
   }finally{await page.close();}
  }

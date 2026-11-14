@@ -2,6 +2,10 @@
 
 각 구현 변경의 결과를 시스템 단위로 기록한다. 대화 원문 또는 코드 diff의 복제가 아니라 **어떤 시스템에 무엇이 적용되었으며, 무엇이 아직 구현되지 않았는지**를 설명한다. 최신 구현 상태는 [implementation.md](./implementation.md)를 참조한다.
 
+## 2026-11-14 — devel 분홍 머리 수호자 교체
+
+- devel 27864d2 기반 feature/devel-pink-guardian. 사용자 첨부 PNG 외접 영역 511×673px을 30×40px로 축소해 기존 초록 수호자를 교체. 기존 외곽선 포함 높이 40px, Garden 16의 5개 색면, 원본 비율 유지. FHD 60×80px. 기존 전투 및 UI 조작 유지. [규격](./flower-head-preview.md). main 유지.
+
 ## 2026-11-14 — devel 직선 공 공격·랜덤 드롭·정원 확장
 
 - devel d6dc7d9 기준 feature/devel-projectile-loot. 충격파 제거, 0.65초 간격 직선 공, 1개 기본 및 장착 공 카드당 +1(360/N도). 중앙 4꽃부터 인접 빈 칸 드래그로 확장, 기존 손수레 대신 공 카드, 적 처치 시 꽃/공 카드/보석 중 무작위 드롭(25/20/55%), 수호자 보석 자동 획득과 HUD 집계, 외곽선/기존 배율·HUD 유지. [규격](./flower-head-preview.md). 꽃 피해·패배·레벨업·저장 미구현. [Chromium 3/3 통과](https://github.com/xcliming-svg/garden-test/actions/runs/43526778161), 코드 74bed05. 실제 마우스 드래그 및 3발 방사형 검증, devel에 통합. 다른 브라우저 미검증. main 유지.

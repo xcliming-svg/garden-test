@@ -22,7 +22,7 @@
   const key = (name,size) => 'flower-head-preview:'+name+':'+size;
   const guardianMode = new URLSearchParams(window.location.search).get('person');
   const guardianSizes = Object.freeze([24,28,32,36,40,44,48,56]);
-  const guardianSize = guardianSizes.includes(Number(guardianMode)) ? Number(guardianMode) : 44;
+  const guardianSize = guardianSizes.includes(Number(guardianMode)) ? Number(guardianMode) : 40;
   const enemySize = 32;
   // Keep the outline inside the cell, so adjacent flowers never overlap.
   function outlinedPixels(pixels, size) {
@@ -59,23 +59,62 @@
       texture.setFilter(Phaser.Textures.FilterMode.NEAREST);
     }
   }
-  // Preserve the full selected body height; add a one-logical-pixel visible rim.
+  // User-supplied pink-haired sprout guardian. Alpha threshold 128 crop:
+  // 511×673 source pixels, downsampled to 30×40 with Garden 16 color roles.
+  // The existing drawn outline is included in the 40px height, not added outside.
+  const guardianRows = [
+  "000000011111000000111110000000",
+  "000001122222100001222221100000",
+  "000001122222100001222221100000",
+  "000001122222211112222221100000",
+  "000001122222211112222221100000",
+  "000000012222221122222210000000",
+  "000000012222221122222210000000",
+  "000000001111122221111100000000",
+  "000000111133311113331111000000",
+  "000000111133311113331111000000",
+  "000001133333333333333331100000",
+  "000001333333333333333333100000",
+  "001111333333333333333333111100",
+  "001111333333333333333333111100",
+  "111333333311333333113333333111",
+  "113333333311333333113333333311",
+  "113333333311333333113333333311",
+  "113333333144133331441333333311",
+  "113333111444411114444111333311",
+  "001333114444444444444411333100",
+  "001333114441444444144411333100",
+  "000113114441444444144411311000",
+  "000113114441444444144411311000",
+  "000011114444444444444411111000",
+  "000001111444444444444111100000",
+  "000000011444444444444110000000",
+  "000000000114444444411000000000",
+  "000000000111111111111000000000",
+  "000000011112222222211110000000",
+  "000001111222222222222111100000",
+  "000001144222222222222441100000",
+  "000001144222222222222441100000",
+  "000001144122222222221441100000",
+  "000000111122222222221111000000",
+  "000000111122222222221111000000",
+  "000000000111111111111000000000",
+  "000000000155551155551000000000",
+  "000000000155551155551000000000",
+  "000000000155551155551000000000",
+  "000000000011110011110000000000"
+];
+  const guardianRoles = [null,'slate','growth','red','sand','bark'];
+  const guardianWidth = Math.round(guardianSize * 30 / 40);
   function installGuardian(scene) {
-    const n=guardianSize+2,k=key('guardian-outlined',guardianSize);
+    const w=guardianWidth,h=guardianSize,k=key('guardian-sprout',h);
     if(scene.textures.exists(k)) return k;
-    const raw=runs['guardian:24'].split(',').map(run=>run.slice(-1).repeat(Number(run.slice(0,-1)))).join('');
-    const core=new Uint8Array(n*n);
-    for(let y=0;y<guardianSize;y++)for(let x=0;x<guardianSize;x++){
-      const sx=Math.floor((x+0.5)*24/guardianSize),sy=Math.floor((y+0.5)*24/guardianSize);
-      core[(y+1)*n+x+1]=Number(raw[sy*24+sx]);
-    }
-    const texture=scene.textures.createCanvas(k,n,n),ctx=texture.getContext(),image=ctx.createImageData(n,n);
-    for(let y=0;y<n;y++)for(let x=0;x<n;x++){
-      const i=y*n+x,body=core[i];
-      const rim=!body&&[[x-1,y],[x+1,y],[x,y-1],[x,y+1]].some(([a,b])=>a>=0&&a<n&&b>=0&&b<n&&core[b*n+a]);
-      if(!body&&!rim)continue;
-      const c=window.GardenPalette.n[body?'teal':'slate'];
-      image.data.set([(c>>16)&255,(c>>8)&255,c&255,255],i*4);
+    const texture=scene.textures.createCanvas(k,w,h),ctx=texture.getContext(),image=ctx.createImageData(w,h);
+    for(let y=0;y<h;y++)for(let x=0;x<w;x++){
+      const index=Number(guardianRows[Math.floor((y+0.5)*40/h)][Math.floor((x+0.5)*30/w)]);
+      if(!index)continue;
+      const c=window.GardenPalette.n[guardianRoles[index]];
+      image.data.set([(c>>16)&255,(c>>8)&255,c&255,255],(y*w+x)*4);
     }
     ctx.putImageData(image,0,0);texture.refresh();texture.setFilter(Phaser.Textures.FilterMode.NEAREST);
     return k;
@@ -134,7 +173,7 @@
     }
     [...occupied].forEach((i,n)=>addFlower(i,flowers[n]));
     function clampedBounds(keys){
-      const b=patrolBounds(keys),half=(guardianSize+2)/2;
+      const b=patrolBounds(keys),half=guardianSize/2;
       b.top=Math.max(b.top,spec.top+half);b.bottom=Math.min(b.bottom,spec.height-spec.bottom-half);
       return b;
     }
@@ -145,7 +184,7 @@
     }
     const bounds=clampedBounds(occupied),start=patrolPosition(bounds,(bounds.right-bounds.left)/2);
     const guardian=scene.add.image(start.x,start.y,installGuardian(scene))
-      .setDisplaySize(guardianSize+2,guardianSize+2).setDepth(2).setName('placeholder:guardian:0');
+      .setDisplaySize(guardianWidth,guardianSize).setDepth(2).setName('placeholder:guardian:0');
     const loot=window.GardenLootPreview.attach(scene,spec,{occupied,refresh:refreshSoil,center,plant},itemPreview);
     refreshSoil(null);
     const resize=()=>refreshSoil();
