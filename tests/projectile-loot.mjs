@@ -84,11 +84,10 @@ try{
       if(!(g.x+hw<=o.left-info.gap+1e-6||g.x-hw>=o.right+info.gap-1e-6||g.y+hh<=o.top-info.gap+1e-6||g.y-hh>=o.bottom+info.gap-1e-6))clear=false;
       if(g.y-hh<L.spec.top-1e-6||g.y+hh>L.spec.height-L.spec.bottom+1e-6)onPath=false;
     }
-    const graphics=scene.children.getByName('garden-patrol-path');
-    return {info,clear,onPath,drawn:graphics.commandBuffer.length>0,tiles:S.rectangles(info).length,noStone:!scene.children.getByName('garden-stone-border')};
+    return {info,clear,onPath,noTrack:!scene.children.getByName('garden-patrol-path'),noStone:!scene.children.getByName('garden-stone-border')};
    });
-   assert.ok(border.clear&&border.onPath&&border.drawn&&border.tiles>0&&border.noStone);
-   assert.equal(border.info.gap,16);assert.equal(border.info.bandWidth,5);assert.equal(border.info.dashWidth,1);
+   assert.ok(border.clear&&border.onPath&&border.noTrack&&border.noStone);
+   assert.equal(border.info.gap,16);
    if(new URLSearchParams(query).get('full')==='1'){
     const full=await page.evaluate(()=>{
       const scene=window.__previewGame.scene.getScene('Game'),c=scene.combatPreview,L=window.GardenGameLayout,g=L.spec.garden;
@@ -100,13 +99,14 @@ try{
         if(o.x!==g.x+i%g.columns*g.pitch+g.line+g.cell/2||o.y!==g.y+Math.floor(i/g.columns)*g.pitch+g.line+g.cell/2||o.displayWidth!==g.cell)correct=false;
       }
       const soil=scene.children.getByName('garden-preview-soil').texture,p=soil.getContext().getImageData(0,0,soil.width,soil.height).data;
-      let bad=0;for(let i=0;i<p.length;i+=4)if(p[i]!==22||p[i+1]!==22||p[i+2]!==25||p[i+3]!==255)bad++;
-      return {occupied:[...c.model.occupied],count:flowers.length,counts,correct,bad,soil:[soil.width,soil.height],
+      const palette=new Set(window.GardenGrassPreview.colors.planted),used=new Set();
+      let bad=0;for(let i=0;i<p.length;i+=4){const v=(p[i]<<16)|(p[i+1]<<8)|p[i+2];used.add(v);if(!palette.has(v)||p[i+3]!==255)bad++;}
+      return {occupied:[...c.model.occupied],count:flowers.length,counts,correct,bad,grassColors:used.size,soil:[soil.width,soil.height],
         progress:scene.children.getByName('hud-progress-value').text,candidates:L.gardenCandidates(c.model.occupied).size};
     });
     assert.deepEqual(full.occupied,Array.from({length:100},(_,i)=>i));
     assert.equal(full.count,100);assert.deepEqual(Object.values(full.counts),[25,25,25,25]);
-    assert.ok(full.correct);assert.equal(full.bad,0);assert.deepEqual(full.soil,[sizes.grid*2,sizes.grid*2]);
+    assert.ok(full.correct);assert.equal(full.bad,0);assert.equal(full.grassColors,3);assert.deepEqual(full.soil,[sizes.grid*2,sizes.grid*2]);
     assert.equal(full.progress,'100%');assert.equal(full.candidates,0);
     const png=await page.screenshot({path:join(out,params.has('flower')?'full-garden-'+flowerSize+'-'+size+'-1920.png':'full-garden-1920.png'),scale:'device'});
     const pixels=await page.evaluate(async({b64,info})=>{
@@ -114,20 +114,18 @@ try{
       const cv=document.createElement('canvas');cv.width=im.width;cv.height=im.height;
       const ctx=cv.getContext('2d');ctx.drawImage(im,0,0);const p=ctx.getImageData(0,0,cv.width,cv.height).data;
       const at=(x,y)=>{const i=(y*cv.width+x)*4;return (p[i]<<16)|(p[i+1]<<8)|p[i+2];};
-      const b=info.patrol,g=info.garden;
-      // Bottom edge is away from the initial guardian position.
-      const row=Math.round((b.bottom-0.5)*2),left=Math.ceil((b.left+8)*2),right=Math.floor((b.right-8)*2);
-      let dash=0,track=0,wrong=0,gap=0;
-      for(let x=left;x<right;x++){
-        const c=at(x,row);if(c===0x3b3b4e)dash++;else if(c===0x161619)track++;else wrong++;
-        if(at(x,Math.round((b.bottom-2)*2))!==0x161619)wrong++;
+      const b=info.patrol,g=info.garden,colors=new Set(window.GardenGrassPreview.colors.planted),seen=new Set();
+      let grass=0,wrong=0,gap=0;
+      for(let y=g.top*2;y<g.bottom*2;y++)for(let x=g.left*2;x<g.right*2;x++){
+        const color=at(x,y);if(colors.has(color)){grass++;seen.add(color);}
       }
+      // No visible former patrol strip; check the bottom route and gap.
       for(let x=(g.left+2)*2;x<(g.right-2)*2;x++){
-        for(let y=g.bottom*2;y<Math.round((b.bottom-2.5)*2);y++){gap++;if(at(x,y)!==0x0d0d0d)wrong++;}
+        for(let y=g.bottom*2;y<Math.round((b.bottom+3)*2);y++){gap++;if(at(x,y)!==0x0d0d0d)wrong++;}
       }
-      return {dash,track,gap,wrong};
+      return {grass,colors:seen.size,gap,wrong};
     },{b64:png.toString('base64'),info:border.info});
-    assert.ok(pixels.dash>100&&pixels.track>100&&pixels.gap>0&&pixels.wrong===0,JSON.stringify(pixels));
+    assert.ok(pixels.grass>1000&&pixels.colors===3&&pixels.gap>0&&pixels.wrong===0,JSON.stringify(pixels));
     full.pixels=pixels;
     const combat=await page.evaluate(()=>{
       const scene=window.__previewGame.scene.getScene('Game'),c=scene.combatPreview;c.advance(25);
@@ -165,19 +163,27 @@ try{
     const soil=scene.children.getByName('garden-preview-soil').texture;
     const ctx=soil.getContext(),w=soil.width,h=soil.height,p=ctx.getImageData(0,0,w,h).data;
     let opaque=0,bad=0;
-    for(let i=0;i<p.length;i+=4)if(p[i+3]){opaque++;if(p[i]!==22||p[i+1]!==22||p[i+2]!==25||p[i+3]!==255)bad++;}
+    const G=window.GardenGrassPreview,candidates=L.gardenCandidates(c.model.occupied),palettes=new Set([...G.colors.planted,...G.colors.candidate]);
+    const used=new Set();
+    for(let i=0;i<p.length;i+=4)if(p[i+3]){opaque++;const v=(p[i]<<16)|(p[i+1]<<8)|p[i+2];used.add(v);if(!palettes.has(v)||p[i+3]!==255)bad++;}
+    let cellsOK=true;
+    for(let i=0;i<100;i++){
+      const x=Math.floor((i%g.columns*g.pitch+g.line+g.cell/2)*w/g.size),y=Math.floor((Math.floor(i/g.columns)*g.pitch+g.line+g.cell/2)*h/g.size),k=(y*w+x)*4;
+      const v=(p[k]<<16)|(p[k+1]<<8)|p[k+2],expected=c.model.occupied.has(i)?G.colors.planted:candidates.has(i)?G.colors.candidate:null;
+      if(expected?(!expected.includes(v)||p[k+3]!==255):p[k+3]!==0)cellsOK=false;
+    }
     const center=i=>({x:g.x+i%g.columns*g.pitch+g.line+g.cell/2,y:g.y+Math.floor(i/g.columns)*g.pitch+g.line+g.cell/2});
     const layout=L.bottomLayout(),slot=i=>({x:layout.slots[i].x+layout.slots[i].size/2,y:layout.slots[i].y+layout.slots[i].size/2});
     const initial={occupied:[...c.model.occupied],balls:c.state.ballCount,
       flowers:scene.children.list.filter(o=>o.name?.startsWith('garden-preview-flower:')).length,
-      progress:scene.children.getByName('hud-progress-value').text,opaque,bad,corner:p[3],
+      progress:scene.children.getByName('hud-progress-value').text,opaque,bad,cellsOK,candidates:candidates.size,grassColors:used.size,corner:p[3],
       empty:center(0),filled:center(44),target:center(34),slots:[slot(0),slot(1),slot(9)],
       pulse:!!scene.children.getByName('combat-preview-pulses'),canvas:[game.canvas.width,game.canvas.height]};
     c.advance(12);
     return initial;
    });
    assert.deepEqual(initial.occupied,[44,45,54,55]);assert.equal(initial.flowers,4);assert.equal(initial.balls,1);
-   assert.equal(initial.progress,'4%');assert.equal(initial.corner,0);assert.ok(initial.opaque>0&&initial.bad===0&&!initial.pulse);
+   assert.equal(initial.progress,'4%');assert.equal(initial.corner,0);assert.ok(initial.opaque>0&&initial.bad===0&&initial.cellsOK&&initial.candidates===8&&initial.grassColors===6&&!initial.pulse);
    assert.deepEqual(initial.canvas,[w*dpr,h*dpr]);
    const loot=await page.evaluate(()=>{
     const c=window.__previewGame.scene.getScene('Game').combatPreview,s=c.state;
@@ -196,9 +202,12 @@ try{
      const scene=window.__previewGame.scene.getScene('Game'),c=scene.combatPreview,L=window.GardenGameLayout,p=scene.children.getByName('placeholder:guardian:0');
      const info=window.GardenPatrolPathPreview.geometry(L.spec,c.model.occupied,p.displayWidth,p.displayHeight);
      const g=c.state.guardian,o=info.garden,hw=p.displayWidth/2,hh=p.displayHeight/2;
-     return {top:info.garden.top,clear:g.x+hw<=o.left-info.gap+1e-6||g.x-hw>=o.right+info.gap-1e-6||g.y+hh<=o.top-info.gap+1e-6||g.y-hh>=o.bottom+info.gap-1e-6};
+     const t=scene.children.getByName('garden-preview-soil').texture,grid=L.spec.garden,G=window.GardenGrassPreview;
+     const data=t.getContext().getImageData(0,0,t.width,t.height).data;
+     const cellColor=i=>{const x=Math.floor((i%10*grid.pitch+grid.line+grid.cell/2)*t.width/grid.size),y=Math.floor((Math.floor(i/10)*grid.pitch+grid.line+grid.cell/2)*t.height/grid.size),j=(y*t.width+x)*4;return (data[j]<<16)|(data[j+1]<<8)|data[j+2];};
+     return {newCandidate:G.colors.candidate.includes(cellColor(24)),planted:G.colors.planted.includes(cellColor(34)),top:info.garden.top,clear:g.x+hw<=o.left-info.gap+1e-6||g.x-hw>=o.right+info.gap-1e-6||g.y+hh<=o.top-info.gap+1e-6||g.y-hh>=o.bottom+info.gap-1e-6};
    });
-   assert.ok(grown.clear&&grown.top<border.info.garden.top);
+   assert.ok(grown.clear&&grown.top<border.info.garden.top&&grown.newCandidate&&grown.planted);
    await drag(card,initial.slots[2]);
    await page.waitForTimeout(100);
    assert.equal(await page.evaluate(()=>window.__previewGame.scene.getScene('Game').combatPreview.state.ballCount),1);

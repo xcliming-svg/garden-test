@@ -1,5 +1,7 @@
 # 현재 설계 및 구현 정리
 
+> **devel 잔디 화단:** `grass-garden-preview.js`가 점유 및 `gardenCandidates`를 렌더링한다. 꽃 심기 시 갱신, 기존 순찰 경로는 비표시 상태로 유지. [규격](./flower-head-preview.md).
+
 > **devel 점선 순찰로:** `patrol-path-preview.js`가 기존 외곽 순찰 좌표를 그대로 시각화하고, 돌 타일은 렌더링하지 않는다. 꽃 심기와 함께 갱신, 적과 공은 통과한다. [규격](./flower-head-preview.md).
 
 > **devel 돌 경계:** `stone-border-preview.js`가 점유 정원의 외접 사각형과 장식 돌 및 수호자 외곽 순찰 경로를 계산한다. 정원 성장 시 재계산. 적 및 투사체 충돌은 변경하지 않는다. [규격](./flower-head-preview.md).
