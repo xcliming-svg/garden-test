@@ -76,7 +76,7 @@ try{
    assert.deepEqual([art.visibleW,art.visibleH],[art.w,art.h]);
    assert.deepEqual(art.colors,[0x51516b,0x6aba2c,0x7c4c24,0xe9d0ab,0xf46c7c]);assert.equal(art.invalid,0);
    const border=await page.evaluate(()=>{
-    const scene=window.__previewGame.scene.getScene('Game'),c=scene.combatPreview,L=window.GardenGameLayout,S=window.GardenPatrolPathPreview;
+    const scene=window.__previewGame.scene.getScene('Game'),c=scene.combatPreview,L=window.GardenGameLayout,S=window.GardenDashedGridPreview;
     const p=scene.children.getByName('placeholder:guardian:0'),info=S.geometry(L.spec,c.model.occupied,p.displayWidth,p.displayHeight);
     const b=info.patrol,model=window.GardenCombatPreview.create(L.spec,b,L.patrolPosition,L.nearestPatrolDistance);
     let clear=true,onPath=true;
@@ -88,7 +88,7 @@ try{
     return {info,clear,onPath,noTrack:!scene.children.getByName('garden-patrol-path'),noStone:!scene.children.getByName('garden-stone-border')};
    });
    assert.ok(border.clear&&border.onPath&&border.noTrack&&border.noStone);
-   assert.equal(border.info.gap,16);
+   assert.equal(border.info.gap,5);
    const gridCheck=await page.evaluate(()=>{
      const scene=window.__previewGame.scene.getScene('Game'),c=scene.combatPreview,L=window.GardenGameLayout,g=L.spec.garden,G=window.GardenDashedGridPreview;
      const z=scene.cameras.main.zoom,t=scene.children.getByName('garden-preview-soil').texture;
@@ -99,23 +99,30 @@ try{
        const w=Math.round((g.x+r.x+r.w)*z)-raster.x-x,h=Math.round((g.y+r.y+r.h)*z)-raster.y-y;
        for(let yy=y;yy<y+h;yy++)for(let xx=x;xx<x+w;xx++)expected[yy*t.width+xx]=r.color;
      }
-     let opaque=0,bad=0,empty=0;
+     let opaque=0,bad=0,empty=0;const used=new Set();
      for(let i=0;i<expected.length;i++){
        const v=p[i*4+3]?((p[i*4]<<16)|(p[i*4+1]<<8)|p[i*4+2]):0;
        if(v!==expected[i]||(p[i*4+3]!==0&&p[i*4+3]!==255))bad++;
-       if(v)opaque++;else empty++;
+       if(v){opaque++;used.add(v);}else empty++;
      }
-     const at=(x,y)=>p[(Math.floor(y*z)*t.width+Math.floor(x*z))*4+3];
+     const at=(x,y)=>p[((Math.round((g.y+y)*z)-raster.y)*t.width+Math.round((g.x+x)*z)-raster.x)*4+3];
      let centers=true;for(let i=0;i<100;i++)if(at(i%10*g.pitch+g.line+g.cell/2,Math.floor(i/10)*g.pitch+g.line+g.cell/2))centers=false;
+     const shown=new Set([...c.model.occupied,...candidate]);let edgesOK=true;
+     const get=(x,y)=>x>=0&&x<g.columns&&y>=0&&y<g.rows?shown.has(y*g.columns+x):false;
+     for(let y=0;y<=g.rows;y++)for(let x=0;x<g.columns;x++)
+       if(!!at(x*g.pitch+2,y*g.pitch)!==(get(x,y)||get(x,y-1)))edgesOK=false;
+     for(let x=0;x<=g.columns;x++)for(let y=0;y<g.rows;y++)
+       if(!!at(x*g.pitch,y*g.pitch+2)!==(get(x,y)||get(x-1,y)))edgesOK=false;
      const decor=window.GardenFieldDecorPreview.layout(L.spec),bp=L.spec.blueprint;
      const valid=decor.every(d=>d.x>=0&&d.x+d.w<=L.spec.width&&d.y>=L.spec.top&&d.y+d.h<=L.spec.height-L.spec.bottom&&
        (d.x+d.w<=g.x||d.x>=g.x+g.size||d.y+d.h<=g.y||d.y>=g.y+g.size)&&
        (d.x+d.w<=bp.x||d.x>=bp.x+bp.width||d.y+d.h<=bp.y||d.y>=bp.y+bp.height));
-     return {opaque,empty,bad,centers,rects:rects.length,candidates:candidate.size,decor,valid,
+     return {opaque,empty,bad,centers,edgesOK,shown:shown.size,uniform:used.size===1&&used.has(G.colors.base),rects:rects.length,candidates:candidate.size,decor,valid,
        stable:JSON.stringify(decor)===JSON.stringify(window.GardenFieldDecorPreview.layout(L.spec)),
        drawn:scene.children.getByName('field-decor').commandBuffer.length>0};
    });
-   assert.ok(gridCheck.bad===0&&gridCheck.opaque>0&&gridCheck.empty>gridCheck.opaque&&gridCheck.centers&&gridCheck.rects>=220);
+   assert.ok(gridCheck.bad===0&&gridCheck.opaque>0&&gridCheck.empty>gridCheck.opaque&&gridCheck.centers&&gridCheck.edgesOK&&gridCheck.uniform&&gridCheck.rects>0);
+   assert.equal(gridCheck.shown,params.get('full')==='1'?100:12);
    assert.equal(gridCheck.decor.filter(d=>d.kind==='grass').length,14);
    assert.equal(gridCheck.decor.filter(d=>d.kind==='rock').length,8);
    assert.ok(gridCheck.valid&&gridCheck.stable&&gridCheck.drawn);
@@ -236,12 +243,12 @@ try{
    await page.waitForFunction(()=>window.__previewGame.scene.getScene('Game').combatPreview.model.occupied.has(34));
    const grown=await page.evaluate(()=>{
      const scene=window.__previewGame.scene.getScene('Game'),c=scene.combatPreview,L=window.GardenGameLayout,p=scene.children.getByName('placeholder:guardian:0');
-     const info=window.GardenPatrolPathPreview.geometry(L.spec,c.model.occupied,p.displayWidth,p.displayHeight);
+     const info=window.GardenDashedGridPreview.geometry(L.spec,c.model.occupied,p.displayWidth,p.displayHeight);
      const g=c.state.guardian,o=info.garden,hw=p.displayWidth/2,hh=p.displayHeight/2;
      const t=scene.children.getByName('garden-preview-soil').texture,grid=L.spec.garden,G=window.GardenDashedGridPreview,z=scene.cameras.main.zoom;
      const data=t.getContext().getImageData(0,0,t.width,t.height).data;
      const cellColor=i=>{const x=Math.round((grid.x+i%10*grid.pitch+2)*z)-Math.round(grid.x*z),y=Math.round((grid.y+Math.floor(i/10)*grid.pitch)*z)-Math.round(grid.y*z),j=(y*t.width+x)*4;return (data[j]<<16)|(data[j+1]<<8)|data[j+2];};
-     return {newCandidate:G.colors.candidate===cellColor(24),planted:G.colors.planted===cellColor(34),top:info.garden.top,clear:g.x+hw<=o.left-info.gap+1e-6||g.x-hw>=o.right+info.gap-1e-6||g.y+hh<=o.top-info.gap+1e-6||g.y-hh>=o.bottom+info.gap-1e-6};
+     return {newCandidate:G.colors.base===cellColor(24),planted:G.colors.base===cellColor(34),top:info.garden.top,clear:g.x+hw<=o.left-info.gap+1e-6||g.x-hw>=o.right+info.gap-1e-6||g.y+hh<=o.top-info.gap+1e-6||g.y-hh>=o.bottom+info.gap-1e-6};
    });
    assert.ok(grown.clear&&grown.top<border.info.garden.top&&grown.newCandidate&&grown.planted);
    await drag(card,initial.slots[2]);

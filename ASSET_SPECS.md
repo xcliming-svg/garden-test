@@ -1,5 +1,7 @@
 # 전장 UI 및 에셋 규격
 
+> **devel 확장 후보 점선:** 점유 및 인접 후보만 동일 slate(#51516B) 점선 표시, 드래그 중에만 growth 강조. 수호자 몸체와 표시 영역 외접 사각형 간 5px 논리 간격. [규격](./docs/flower-head-preview.md).
+
 > **devel 점선 그리드/장식:** 1px 공유 점선(3px 길이/2px 간격), panel/slate/stone/growth, 칸 내부 투명. 풀 8~10×7px 14개, 돌 8~12×6px 8개를 기존 팔레트로 JS 렌더링. [규격](./docs/flower-head-preview.md).
 
 > **devel 잔디 화단:** JS 픽셀 패턴, Garden 16 ink/growth 파생 초록 각 3색(점유/후보), 7px 블록·1px 풀잎. 점유 및 인접 후보 칸만 채움. 돌 및 점선 미표시. [규격](./docs/flower-head-preview.md).

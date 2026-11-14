@@ -1,5 +1,7 @@
 # 현재 설계 및 구현 정리
 
+> **devel 확장 후보 점선/순찰:** `dashed-grid-preview.js`에서 점유 및 후보의 합집합 공유 경계만 렌더링하고, 해당 외접 사각형 기준 5px 몸체 여백의 순찰 경로를 계산한다. 모델의 기존 배치/전투 판정 유지. [규격](./flower-head-preview.md).
+
 > **devel 점선 그리드 및 필드 장식:** `dashed-grid-preview.js`로 전체 그리드 및 후보 강조, `field-decor-preview.js`로 시드 고정 배경 장식. 기존 잔디 렌더링 비활성, 정원 판정·순찰·전투 유지. [규격](./flower-head-preview.md).
 
 > **devel 잔디 화단:** `grass-garden-preview.js`가 점유 및 `gardenCandidates`를 렌더링한다. 꽃 심기 시 갱신, 기존 순찰 경로는 비표시 상태로 유지. [규격](./flower-head-preview.md).

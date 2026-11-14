@@ -154,10 +154,9 @@
       scene.textures.createCanvas(textureKey,g.size,g.size);
     const soil=scene.add.image(g.x+g.size/2,g.y+g.size/2,textureKey)
       .setDepth(-1).setName('garden-preview-soil');
-    const path=window.GardenPatrolPathPreview;
     const grid=window.GardenDashedGridPreview;
     window.GardenFieldDecorPreview.draw(scene,spec);
-    const geometry=keys=>path.geometry(spec,keys,guardianWidth,guardianSize);
+    const geometry=keys=>grid.geometry(spec,keys,guardianWidth,guardianSize);
     const visible=grid.all(g);
     let hover=null;
     function refreshSoil(target=hover){
