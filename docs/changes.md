@@ -4,7 +4,7 @@
 
 ## 2026-11-14 — devel 밝은 잔디 UI 비교 옵션
 
-- `uitype=1`만 첨부 화면의 녹색 잔디·황갈색 HUD·갈색 흙 화단 적용. 첨부 PNG 샘플 색상으로 JS 질감 생성. 기본 검정/점선, 크기·전투·드래그·순찰 유지. [규격](./flower-head-preview.md). main 유지.
+- `uitype=1`만 첨부 화면의 녹색 잔디·황갈색 HUD·갈색 흙 화단 적용. 첨부 PNG 샘플 색상으로 JS 질감 생성. 기본 검정/점선, 크기·전투·드래그·순찰 유지. 기존 팔레트 동일성 및 잘못된 파라미터 기본값 복귀 확인. [Chromium 10/10 통과](https://github.com/xcliming-svg/garden-test/actions/runs/43543908435), 밝은 테마 FHD 초기/완성 정원 및 실제 드래그 검증. 기타 브라우저 미검증. [규격](./flower-head-preview.md). devel 통합, main 유지.
 
 ## 2026-11-14 — devel 배경 장식 제거
 
