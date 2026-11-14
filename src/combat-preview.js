@@ -30,6 +30,10 @@
     const random=()=>{seed=(Math.imul(seed,1664525)+1013904223)>>>0;return seed/4294967296;};
     const state={elapsed:0,kills:0,spawned:0,arrived:0,volleys:0,shotsFired:0,gems:0,ballCount:1,
       guardian:patrolPosition(bounds,patrolDistance),enemies:[],bullets:[],drops:[],deaths:[],stage:1,rate:spawnRate(0),lastVolley:[]};
+    // Face the next segment of the patrol, including after re-anchoring.
+    function direction(dx,dy){return Math.abs(dx)>=Math.abs(dy)?(dx>=0?'right':'left'):(dy>=0?'down':'up');}
+    function patrolFacing(){const p=patrolPosition(bounds,patrolDistance+0.001);return direction(p.x-state.guardian.x,p.y-state.guardian.y);}
+    state.guardianDirection=patrolFacing();
     const occupied=initialGarden(spec);
     const equipped=new Set();
     function target(){
@@ -83,10 +87,10 @@
       let travel=dt*tuning.walkSpeed;
       if(joining){
         const p=patrolPosition(bounds,patrolDistance),dx=p.x-state.guardian.x,dy=p.y-state.guardian.y,d=Math.hypot(dx,dy);
-        if(d>travel){state.guardian={x:state.guardian.x+dx*travel/d,y:state.guardian.y+dy*travel/d};travel=0;}
+        if(d>travel){state.guardian={x:state.guardian.x+dx*travel/d,y:state.guardian.y+dy*travel/d};state.guardianDirection=direction(dx,dy);travel=0;}
         else{travel-=d;joining=false;state.guardian=p;}
       }
-      if(!joining){patrolDistance+=travel;state.guardian=patrolPosition(bounds,patrolDistance);}
+      if(!joining){patrolDistance+=travel;state.guardian=patrolPosition(bounds,patrolDistance);state.guardianDirection=patrolFacing();}
       credit=Math.min(2,credit+dt*state.rate);
       while(credit>=1&&state.enemies.length<tuning.maxEnemies){credit--;spawn();}
       while(state.elapsed>=nextShot){fire();nextShot+=tuning.shotInterval;}
@@ -125,7 +129,7 @@
         bounds=newBounds;patrolDistance=nearestPatrolDistance(bounds,state.guardian.x,state.guardian.y);
         // Re-anchor on the expanded outside path, keeping the guardian clear of
         // the occupied garden and aligned with the displayed patrol route.
-        state.guardian=patrolPosition(bounds,patrolDistance);joining=false;
+        state.guardian=patrolPosition(bounds,patrolDistance);state.guardianDirection=patrolFacing();joining=false;
       }
       return true;
     }

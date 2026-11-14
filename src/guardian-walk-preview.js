@@ -18,11 +18,27 @@
       "KCpAElA6IDpAQhBCQJJIikiCaFpwGyIrYCsiM1CLSJM4mzCzGMMI+wsMwxS7JCMMawgTFAtEWxgLFBEkCRxLKBQRHBEcQzALNBEcO0BcO0hcK2BMI3BCeBxSYCw6HFgsMixQLDIsWBw6JHANQggMgEWQTYBVgE2ILbAdeA=="
     ]
   ];
+  // Generated two-row sheet, top = down, bottom = up. Same 26x38 palette core.
+  const vertical=[
+  [
+    "MCIwIlgyIDJIQhBCQIpQglhycFKAGyIjaCsiK1iDSJNAkzCzGMMI+yMMMwyLHCMce2RrHAk0CRwzCCscCSwLCRwrGCMcCSwLCRwbMBscCTQJHBswI2QjOCNUI0gjRBtwSoBaeBRCFGgkMiRgJDIkYBw6JGgUQhR4VYBVgFWAVYBNkB0QHUg=",
+    "MCIwIlgyIDJQOhBCSIJQglhycFKAGyIjaCsiK1iDSJNAkzCzGMMI+yMMMwyLHCMce2RrHAk0CRwzCCsUCwk0CQsUKxgjHAk0CQsUGzAbHAtUGzAjZCM4I1QjUBMICjQKG3BScCRKYCxCFFgsOhxgJDocaBRKFHANSng1CiV4XXA1CDVwJRgtcB0gLbAdQA==",
+    "MCIwIlgyIDJIQhBCSIJQglhycFJ4IyIjaCsiK1iDSJNAkzCzGMMI+yMMMwyLHCMce2Q7CCscCTQJHCsQKxwJCywJHCMoGxwJCywJHBswG3QbMCNkG0AjVCNoEiQSiFJ4WngcOhRoLCokYCwqJGgcOhR4DUKITZBFkEWgLagtsB1Y",
+    "MCIwIlgyIDJIQhBCSIJQglhycFKAGyIjaCsiK1iDSJNAkzCzGMMI+yMMMwyLHCMce2RrHAk0CRwzCCscCTQJCxQrGCMcCTQJCxQbMBscC1QbMCNkIzgjVCNQEwgKNAoIE3BSeEokYBQ6LFgcOixYHEIkYBRKFHhCDYhVeGVwLQg1cC0QLXAtGB2AHXg="
+  ],
+  [
+    "MCIwIlgyIDJIQhBCQIpQglhyaGJ4GyIbcCsiK1iDSJNAkzCzGMMQwwj7+/tbCMMYqzCjMKM4k0iDcBIjEohScBxCFGgcQhxgHEIcYBxCHHBSgCUSJYBVgFWAVYBNkB0QHUg=",
+    "MCIwIlgyIDJQOhBCSIJQglhyaFqAGyIjaCsiK1iDSJNAkzCzGMMI+/v7+zMIwxizKKMwoziTSINgFBIjEngkSmAsQhRYLDocWCw6HGgUShRwDUp4JSoVeF1wNQg1cCUYLXAdIC2wHUA=",
+    "MCIwIlgyIDJIQhBCQIpQglhyaFqAGyIbcCsiK1iDSJNAkzCzGMMI+/v7+ysQuyijMKMwoziTUHN4QohSeBw6FGgkOhxgJDocaBRCFIBCkEWQRZg1qC2oLbAdWA==",
+    "MCIwIlgyIDJQOhBCSIJQglhyaFqAGyIjaCsiK1iDUItAkzCzGMMI+/v7+zMIwxizKKMwoziTSINoGiMSDHhKJGAUOixYJDokWCQ6JGAUShRwUg2AFSodgF1wNQgtcC0YJXAtIBWAHXg="
+  ]
+];
   const mode=new URLSearchParams(window.location.search).get('personstyle');
   const type=mode==='1'?1:mode==='2'?2:0;
   const fps=6,roles=[null,'slate','growth','red','sand','bark'];
-  function pixels(type,frame,w,h){
-    const data=atob(sheets[type-1][frame]),src=[];
+  function pixels(type,frame,w,h,direction='side'){
+    const frames=direction==='down'?vertical[0]:direction==='up'?vertical[1]:sheets[type-1];
+    const data=atob(frames[frame]),src=[];
     for(let i=0;i<data.length;i++){
       const v=data.charCodeAt(i);
       for(let n=0;n<(v>>3);n++)src.push(v&7);
@@ -42,11 +58,11 @@
   }
   function install(scene,w,h){
     if(!type)return null;
-    const keys=[];
-    for(let f=0;f<4;f++){
-      const key='guardian-walk:'+type+':'+h+':'+f;keys.push(key);
+    const keys={side:[],down:[],up:[]};
+    for(const direction of Object.keys(keys))for(let f=0;f<4;f++){
+      const key='guardian-walk:'+type+':'+h+':'+direction+':'+f;keys[direction].push(key);
       if(scene.textures.exists(key))continue;
-      const texture=scene.textures.createCanvas(key,w,h),ctx=texture.getContext(),im=ctx.createImageData(w,h),data=pixels(type,f,w,h);
+      const texture=scene.textures.createCanvas(key,w,h),ctx=texture.getContext(),im=ctx.createImageData(w,h),data=pixels(type,f,w,h,direction);
       for(let i=0;i<data.length;i++){
         if(!data[i])continue;
         const c=window.GardenPalette.n[roles[data[i]]];
@@ -58,15 +74,13 @@
   }
   function animator(guardian,keys){
     if(!keys)return null;
-    let lastX=guardian.x,faceRight=true;
-    guardian.setFlipX(true);
     return state=>{
-      const dx=state.guardian.x-lastX;
-      if(Math.abs(dx)>1e-6)faceRight=dx>0;
-      lastX=state.guardian.x;
+      const direction=state.guardianDirection;
+      const group=direction==='up'||direction==='down'?direction:'side';
       const f=Math.floor(state.elapsed*fps+1e-7)%4;
-      if(guardian.texture.key!==keys[f])guardian.setTexture(keys[f]);
-      guardian.setFlipX(faceRight);
+      const key=keys[group][f];
+      if(guardian.texture.key!==key)guardian.setTexture(key);
+      guardian.setFlipX(direction==='right');
     };
   }
   window.GardenGuardianWalkPreview=Object.freeze({type,fps,pixels,install,animator});

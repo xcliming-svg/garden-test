@@ -1,5 +1,7 @@
 # 전장 UI 및 에셋 규격
 
+> **devel 4방향 수호자:** `personstyle=1/2`에 공통 정면·뒷모습 각 4프레임 추가. 26×38 코어, 1px 외곽선, 30×40 상자/28×40 가시, 6fps 유지. [규격](./docs/flower-head-preview.md).
+
 > **devel 걷기 수호자:** `personstyle=1/2` 두 4프레임 파생 픽셀 시트(26×38 코어, 1px 외곽선, 기본 30×40 상자, 가시 28×40), 6fps. `personstyle=0` 기존. [규격](./docs/flower-head-preview.md).
 
 > **devel uitype=1:** 첨부 PNG 색상 기반 별도 UI 비교 역할. 잔디 #83A650 계열 7색, 흙 #A16A3E 계열 4색, 경계 #87512E, HUD #E2B66F, 슬롯 #EBC58F. 기존 Garden 16 캐릭터/적/꽃 및 기본 UI 보존. [규격](./docs/flower-head-preview.md).

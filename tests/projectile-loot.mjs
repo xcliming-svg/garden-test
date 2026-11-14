@@ -342,21 +342,35 @@ try{
    if(walkType){
      const anim=await page.evaluate(()=>{
        const scene=window.__previewGame.scene.getScene('Game'),c=scene.combatPreview,o=scene.children.getByName('placeholder:guardian:0'),W=window.GardenGuardianWalkPreview;
-       const keys=[],faces=new Set(),unique=new Set(),size=[o.displayWidth,o.displayHeight];let dimensions=true,sync=true;
-       for(let i=0;i<4;i++){
-         c.advance(1/W.fps);keys.push(o.texture.key);
-         const t=o.texture,p=t.getContext().getImageData(0,0,t.width,t.height).data;unique.add(Array.from(p).join(','));
+       const frames={right:new Set(),down:new Set(),left:new Set(),up:new Set()},unique={},size=[o.displayWidth,o.displayHeight];
+       let dimensions=true,sync=true,directions=true;
+       const prefix='guardian-walk:'+W.type+':'+size[1]+':';
+       for(const group of ['side','down','up']){
+         const pixels=new Set();
+         for(let f=0;f<4;f++){
+           const t=scene.textures.get(prefix+group+':'+f),p=t.getContext().getImageData(0,0,t.width,t.height).data;
+           pixels.add(Array.from(p).join(','));
+           if(t.width!==size[0]||t.height!==size[1])dimensions=false;
+         }
+         unique[group]=pixels.size;
+       }
+       for(let i=0;i<240;i++){
+         const before=c.state.guardianDirection,x=o.x,y=o.y;c.advance(1/W.fps);
+         const d=c.state.guardianDirection,dx=o.x-x,dy=o.y-y;
+         const group=d==='up'||d==='down'?d:'side';
+         frames[d].add(o.texture.key);
          if(o.displayWidth!==size[0]||o.displayHeight!==size[1])dimensions=false;
-         if(!o.texture.key.endsWith(':'+Math.floor(c.state.elapsed*W.fps+1e-7)%4))sync=false;
+         if(o.texture.key!==prefix+group+':'+Math.floor(c.state.elapsed*W.fps+1e-7)%4||o.flipX!==(d==='right'))sync=false;
+         if(before===d&&Math.hypot(dx,dy)>1e-6){
+           const expected=Math.abs(dx)>=Math.abs(dy)?(dx>0?'right':'left'):(dy>0?'down':'up');
+           if(d!==expected)directions=false;
+         }
        }
-       for(let i=0;i<150;i++){
-         const x=o.x;c.advance(.2);
-         if(Math.abs(o.x-x)>1e-6){faces.add(o.flipX);if(o.flipX!==(o.x>x))sync=false;}
-       }
-       return {keys,unique:unique.size,faces:[...faces],dimensions,sync};
+       return {frames:Object.fromEntries(Object.entries(frames).map(([k,v])=>[k,v.size])),unique,dimensions,sync,directions};
      });
-     assert.equal(new Set(anim.keys).size,4);assert.equal(anim.unique,4);
-     assert.equal(anim.faces.length,2);assert.ok(anim.dimensions&&anim.sync);
+     assert.deepEqual(anim.frames,{right:4,down:4,left:4,up:4});
+     assert.deepEqual(anim.unique,{side:4,down:4,up:4});
+     assert.ok(anim.dimensions&&anim.sync&&anim.directions,JSON.stringify(anim));
      art.animation=anim;
    }
    await page.keyboard.press('Escape');await page.waitForFunction(()=>window.__previewGame.scene.isActive('Pause'));

@@ -1,5 +1,7 @@
 # 현재 설계 및 구현 정리
 
+> **devel 4방향 걷기:** `guardianDirection`은 모델의 실제 순찰 진행 방향을 나타내며 `guardian-walk-preview.js`가 해당 방향의 프레임을 선택한다. 위치/전투 및 기본 정적 캐릭터는 유지한다.
+
 > **devel 수호자 걷기:** `guardian-walk-preview.js`가 선택된 파생 4프레임 텍스처를 생성하며 전투 모델의 경과 시간과 이동 좌표를 이용해 프레임/좌우 반전을 갱신한다. 기존 모델 및 기본 정적 스프라이트 유지. [규격](./flower-head-preview.md).
 
 > **devel 테마 비교:** `palette.js`의 `uitype=1` reference 분기와 `light-field-preview.js`로 전장/흙을 렌더링한다. 기존 검정/점선 기본 및 전투 상태와 판정은 공유한다. [규격](./flower-head-preview.md).

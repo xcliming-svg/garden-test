@@ -184,7 +184,7 @@
     }
     const bounds=clampedBounds(occupied),start=patrolPosition(bounds,(bounds.right-bounds.left)/2);
     const walk=window.GardenGuardianWalkPreview,walkKeys=walk.install(scene,guardianWidth,guardianSize);
-    const guardian=scene.add.image(start.x,start.y,walkKeys?walkKeys[0]:installGuardian(scene))
+    const guardian=scene.add.image(start.x,start.y,walkKeys?walkKeys.side[0]:installGuardian(scene))
       .setDisplaySize(guardianWidth,guardianSize).setDepth(2).setName('placeholder:guardian:0');
     const loot=window.GardenLootPreview.attach(scene,spec,{occupied,refresh:refreshSoil,center,plant},itemPreview);
     refreshSoil(null);
