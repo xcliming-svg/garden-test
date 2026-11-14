@@ -183,14 +183,15 @@
       return true;
     }
     const bounds=clampedBounds(occupied),start=patrolPosition(bounds,(bounds.right-bounds.left)/2);
-    const guardian=scene.add.image(start.x,start.y,installGuardian(scene))
+    const walk=window.GardenGuardianWalkPreview,walkKeys=walk.install(scene,guardianWidth,guardianSize);
+    const guardian=scene.add.image(start.x,start.y,walkKeys?walkKeys[0]:installGuardian(scene))
       .setDisplaySize(guardianWidth,guardianSize).setDepth(2).setName('placeholder:guardian:0');
     const loot=window.GardenLootPreview.attach(scene,spec,{occupied,refresh:refreshSoil,center,plant},itemPreview);
     refreshSoil(null);
     const resize=()=>refreshSoil();
     scene.scale.on('resize',resize);
     scene.events.once('shutdown',()=>scene.scale.off('resize',resize));
-    window.GardenCombatPreview.attach(scene,spec,bounds,patrolPosition,guardian,key('caterpillar',enemySize),enemySize,updateHud,loot);
+    window.GardenCombatPreview.attach(scene,spec,bounds,patrolPosition,guardian,key('caterpillar',enemySize),enemySize,updateHud,loot,walk.animator(guardian,walkKeys));
   }
   window.GardenFlowerHeadPreview=Object.freeze({draw,install,flowers,key,guardianSize,outlinedPixels,enemySize});
 }());

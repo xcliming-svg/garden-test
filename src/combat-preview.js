@@ -135,7 +135,7 @@
     }
     return {state,advance,plant,equip,occupied,equipped};
   }
-  function attach(scene,spec,bounds,patrolPosition,guardian,enemyKey,enemySize,updateHud,loot){
+  function attach(scene,spec,bounds,patrolPosition,guardian,enemyKey,enemySize,updateHud,loot,animateGuardian=null){
     const model=create(spec,bounds,patrolPosition,window.GardenGameLayout.nearestPatrolDistance),P=window.GardenPalette.n;
     const actors=new Map(),bullets=new Map();
     const maskShape=scene.make.graphics({x:0,y:0,add:false});
@@ -144,6 +144,7 @@
     const fx=scene.add.graphics().setDepth(3).setName('combat-preview-hits').setMask(mask);
     function render(){
       const s=model.state;guardian.setPosition(s.guardian.x,s.guardian.y);
+      if(animateGuardian)animateGuardian(s);
       const alive=new Set();
       for(const e of s.enemies){
         alive.add(e.id);

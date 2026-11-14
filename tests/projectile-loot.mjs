@@ -23,7 +23,7 @@ await new Promise(r=>server.listen(0,'127.0.0.1',r));
 const url='http://127.0.0.1:'+server.address().port;
 const browser=await chromium.launch({channel:'chrome',headless:true,args:['--no-sandbox','--disable-dev-shm-usage','--use-gl=angle','--use-angle=swiftshader','--enable-unsafe-swiftshader']});
 const report=[];
-const configs=[[960,540,1,''],[1920,1080,1,'?person=38'],[960,540,1,'?garden=32&person=56&slots=24'],[1920,1080,1,'?person=38&full=1'],[960,540,1,'?flower=21&person=37'],[1920,1080,1,'?flower=23&person=39&full=1'],[1920,1080,1,'?flower=20&person=40&full=1'],[1920,1080,1,'?flower=20&person=40'],[1920,1080,1,'?uitype=1&flower=20&person=40'],[1920,1080,1,'?uitype=1&flower=20&person=40&full=1']];
+const configs=[[960,540,1,''],[1920,1080,1,'?person=38'],[960,540,1,'?garden=32&person=56&slots=24'],[1920,1080,1,'?person=38&full=1'],[960,540,1,'?flower=21&person=37'],[1920,1080,1,'?flower=23&person=39&full=1'],[1920,1080,1,'?flower=20&person=40&full=1'],[1920,1080,1,'?flower=20&person=40'],[1920,1080,1,'?uitype=1&flower=20&person=40'],[1920,1080,1,'?uitype=1&flower=20&person=40&full=1'],[1920,1080,1,'?personstyle=1&flower=20&person=40'],[1920,1080,1,'?personstyle=2&flower=20&person=40&uitype=1']];
 try{
  for(const [w,h,dpr,query] of configs){
   const page=await browser.newPage({viewport:{width:w,height:h},deviceScaleFactor:dpr});
@@ -71,9 +71,12 @@ try{
    assert.equal(sizes.top,32);assert.equal(sizes.bottom,params.get('slots')==='24'?32:40);
    assert.ok(sizes.textures.every(t=>t.w===flowerSize&&t.h===flowerSize&&t.ink>0&&t.col>0));
 
-   assert.equal(art.key,'flower-head-preview:guardian-sprout:'+size);
+   const walkType=Number(params.get('personstyle')||0);
+   if(walkType)assert.ok(art.key.startsWith('guardian-walk:'+walkType+':'+size+':'));
+   else assert.equal(art.key,'flower-head-preview:guardian-sprout:'+size);
    assert.equal(art.w,Math.round(size*0.75));assert.equal(art.h,size);
-   assert.deepEqual([art.visibleW,art.visibleH],[art.w,art.h]);
+   if(walkType)assert.ok(art.visibleW<=art.w&&art.visibleW>=art.w-3&&art.visibleH===art.h);
+   else assert.deepEqual([art.visibleW,art.visibleH],[art.w,art.h]);
    assert.deepEqual(art.colors,[0x51516b,0x6aba2c,0x7c4c24,0xe9d0ab,0xf46c7c]);assert.equal(art.invalid,0);
    const border=await page.evaluate(()=>{
     const scene=window.__previewGame.scene.getScene('Game'),c=scene.combatPreview,L=window.GardenGameLayout,S=window.GardenDashedGridPreview;
@@ -336,10 +339,32 @@ try{
      });
      await page.screenshot({path:join(out,light?'uitype1-combat-1920.png':'projectile-loot-1920.png'),scale:'device'});
    }
+   if(walkType){
+     const anim=await page.evaluate(()=>{
+       const scene=window.__previewGame.scene.getScene('Game'),c=scene.combatPreview,o=scene.children.getByName('placeholder:guardian:0'),W=window.GardenGuardianWalkPreview;
+       const keys=[],faces=new Set(),unique=new Set(),size=[o.displayWidth,o.displayHeight];let dimensions=true,sync=true;
+       for(let i=0;i<4;i++){
+         c.advance(1/W.fps);keys.push(o.texture.key);
+         const t=o.texture,p=t.getContext().getImageData(0,0,t.width,t.height).data;unique.add(Array.from(p).join(','));
+         if(o.displayWidth!==size[0]||o.displayHeight!==size[1])dimensions=false;
+         if(!o.texture.key.endsWith(':'+Math.floor(c.state.elapsed*W.fps+1e-7)%4))sync=false;
+       }
+       for(let i=0;i<150;i++){
+         const x=o.x;c.advance(.2);
+         if(Math.abs(o.x-x)>1e-6){faces.add(o.flipX);if(o.flipX!==(o.x>x))sync=false;}
+       }
+       return {keys,unique:unique.size,faces:[...faces],dimensions,sync};
+     });
+     assert.equal(new Set(anim.keys).size,4);assert.equal(anim.unique,4);
+     assert.equal(anim.faces.length,2);assert.ok(anim.dimensions&&anim.sync);
+     art.animation=anim;
+   }
    await page.keyboard.press('Escape');await page.waitForFunction(()=>window.__previewGame.scene.isActive('Pause'));
    const paused=await page.evaluate(()=>window.__previewGame.scene.getScene('Game').combatPreview.state.elapsed);
+   const pausedFrame=await page.evaluate(()=>window.__previewGame.scene.getScene('Game').children.getByName('placeholder:guardian:0').texture.key);
    await page.waitForTimeout(250);
    assert.equal(await page.evaluate(()=>window.__previewGame.scene.getScene('Game').combatPreview.state.elapsed),paused);
+   assert.equal(await page.evaluate(()=>window.__previewGame.scene.getScene('Game').children.getByName('placeholder:guardian:0').texture.key),pausedFrame);
    await page.keyboard.press('Escape');await page.waitForFunction(t=>window.__previewGame.scene.getScene('Game').combatPreview.state.elapsed>t,paused);
    assert.deepEqual(errors,[]);
    report.push({w,h,query,art,sizes,border,theme,gridCheck,initial,loot:loot.types,state,pass:true});
