@@ -123,8 +123,8 @@
       occupied.add(index);state.drops=state.drops.filter(d=>d.id!==id);
       if(newBounds){
         bounds=newBounds;patrolDistance=nearestPatrolDistance(bounds,state.guardian.x,state.guardian.y);
-        // An expanded border may envelop the previous patrol point. Re-anchor on
-        // the new outside path instead of walking through the newly drawn stones.
+        // Re-anchor on the expanded outside path, keeping the guardian clear of
+        // the occupied garden and aligned with the displayed patrol route.
         state.guardian=patrolPosition(bounds,patrolDistance);joining=false;
       }
       return true;

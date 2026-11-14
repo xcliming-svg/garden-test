@@ -154,9 +154,9 @@
       scene.textures.createCanvas(textureKey,g.size,g.size);
     const soil=scene.add.image(g.x+g.size/2,g.y+g.size/2,textureKey)
       .setDepth(-1).setName('garden-preview-soil');
-    const stone=window.GardenStoneBorderPreview;
-    const border=window.GardenUI.pixelGraphics(scene).setDepth(0).setName('garden-stone-border');
-    const geometry=keys=>stone.geometry(spec,keys,guardianWidth,guardianSize);
+    const path=window.GardenPatrolPathPreview;
+    const track=window.GardenUI.pixelGraphics(scene).setDepth(0).setName('garden-patrol-path');
+    const geometry=keys=>path.geometry(spec,keys,guardianWidth,guardianSize);
     let hover=null;
     function refreshSoil(target=hover){
       hover=target;
@@ -192,13 +192,13 @@
       const next=new Set(occupied);next.add(index);
       if(!model.plant(drop.id,index,clampedBounds(next)))return false;
       occupied.add(index);addFlower(index,drop.name);refreshSoil(null);
-      stone.draw(border,geometry(occupied));return true;
+      path.draw(track,geometry(occupied));return true;
     }
     const bounds=clampedBounds(occupied),start=patrolPosition(bounds,(bounds.right-bounds.left)/2);
     const guardian=scene.add.image(start.x,start.y,installGuardian(scene))
       .setDisplaySize(guardianWidth,guardianSize).setDepth(2).setName('placeholder:guardian:0');
     const loot=window.GardenLootPreview.attach(scene,spec,{occupied,refresh:refreshSoil,center,plant},itemPreview);
-    refreshSoil(null);stone.draw(border,geometry(occupied));
+    refreshSoil(null);path.draw(track,geometry(occupied));
     const resize=()=>refreshSoil();
     scene.scale.on('resize',resize);
     scene.events.once('shutdown',()=>scene.scale.off('resize',resize));

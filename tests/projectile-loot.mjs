@@ -23,7 +23,7 @@ await new Promise(r=>server.listen(0,'127.0.0.1',r));
 const url='http://127.0.0.1:'+server.address().port;
 const browser=await chromium.launch({channel:'chrome',headless:true,args:['--no-sandbox','--disable-dev-shm-usage','--use-gl=angle','--use-angle=swiftshader','--enable-unsafe-swiftshader']});
 const report=[];
-const configs=[[960,540,1,''],[1920,1080,1,'?person=38'],[960,540,1,'?garden=32&person=56&slots=24'],[1920,1080,1,'?person=38&full=1'],[960,540,1,'?flower=21&person=37'],[1920,1080,1,'?flower=23&person=39&full=1']];
+const configs=[[960,540,1,''],[1920,1080,1,'?person=38'],[960,540,1,'?garden=32&person=56&slots=24'],[1920,1080,1,'?person=38&full=1'],[960,540,1,'?flower=21&person=37'],[1920,1080,1,'?flower=23&person=39&full=1'],[1920,1080,1,'?flower=20&person=40&full=1']];
 try{
  for(const [w,h,dpr,query] of configs){
   const page=await browser.newPage({viewport:{width:w,height:h},deviceScaleFactor:dpr});
@@ -75,20 +75,20 @@ try{
    assert.deepEqual([art.visibleW,art.visibleH],[art.w,art.h]);
    assert.deepEqual(art.colors,[0x51516b,0x6aba2c,0x7c4c24,0xe9d0ab,0xf46c7c]);assert.equal(art.invalid,0);
    const border=await page.evaluate(()=>{
-    const scene=window.__previewGame.scene.getScene('Game'),c=scene.combatPreview,L=window.GardenGameLayout,S=window.GardenStoneBorderPreview;
+    const scene=window.__previewGame.scene.getScene('Game'),c=scene.combatPreview,L=window.GardenGameLayout,S=window.GardenPatrolPathPreview;
     const p=scene.children.getByName('placeholder:guardian:0'),info=S.geometry(L.spec,c.model.occupied,p.displayWidth,p.displayHeight);
     const b=info.patrol,model=window.GardenCombatPreview.create(L.spec,b,L.patrolPosition,L.nearestPatrolDistance);
     let clear=true,onPath=true;
     for(let i=0;i<500;i++){
-      const s=model.advance(0.1),g=s.guardian,o=info.outer,hw=p.displayWidth/2,hh=p.displayHeight/2;
+      const s=model.advance(0.1),g=s.guardian,o=info.garden,hw=p.displayWidth/2,hh=p.displayHeight/2;
       if(!(g.x+hw<=o.left-info.gap+1e-6||g.x-hw>=o.right+info.gap-1e-6||g.y+hh<=o.top-info.gap+1e-6||g.y-hh>=o.bottom+info.gap-1e-6))clear=false;
       if(g.y-hh<L.spec.top-1e-6||g.y+hh>L.spec.height-L.spec.bottom+1e-6)onPath=false;
     }
-    const graphics=scene.children.getByName('garden-stone-border');
-    return {info,clear,onPath,drawn:graphics.commandBuffer.length>0,tiles:S.rectangles(info).length};
+    const graphics=scene.children.getByName('garden-patrol-path');
+    return {info,clear,onPath,drawn:graphics.commandBuffer.length>0,tiles:S.rectangles(info).length,noStone:!scene.children.getByName('garden-stone-border')};
    });
-   assert.ok(border.clear&&border.onPath&&border.drawn&&border.tiles>0);
-   assert.equal(border.info.gap,5);assert.equal(border.info.thickness,6);
+   assert.ok(border.clear&&border.onPath&&border.drawn&&border.tiles>0&&border.noStone);
+   assert.equal(border.info.gap,16);assert.equal(border.info.bandWidth,5);assert.equal(border.info.dashWidth,1);
    if(new URLSearchParams(query).get('full')==='1'){
     const full=await page.evaluate(()=>{
       const scene=window.__previewGame.scene.getScene('Game'),c=scene.combatPreview,L=window.GardenGameLayout,g=L.spec.garden;
@@ -108,22 +108,26 @@ try{
     assert.equal(full.count,100);assert.deepEqual(Object.values(full.counts),[25,25,25,25]);
     assert.ok(full.correct);assert.equal(full.bad,0);assert.deepEqual(full.soil,[sizes.grid*2,sizes.grid*2]);
     assert.equal(full.progress,'100%');assert.equal(full.candidates,0);
-    const png=await page.screenshot({path:join(out,params.has('flower')?'full-garden-parameter-1920.png':'full-garden-1920.png'),scale:'device'});
+    const png=await page.screenshot({path:join(out,params.has('flower')?'full-garden-'+flowerSize+'-'+size+'-1920.png':'full-garden-1920.png'),scale:'device'});
     const pixels=await page.evaluate(async({b64,info})=>{
       const im=await createImageBitmap(await(await fetch('data:image/png;base64,'+b64)).blob());
       const cv=document.createElement('canvas');cv.width=im.width;cv.height=im.height;
       const ctx=cv.getContext('2d');ctx.drawImage(im,0,0);const p=ctx.getImageData(0,0,cv.width,cv.height).data;
       const at=(x,y)=>{const i=(y*cv.width+x)*4;return (p[i]<<16)|(p[i+1]<<8)|p[i+2];};
-      const stone=new Set([0x51516b,0x676777,0x3b3b4e]),o=info.outer,g=info.garden;
-      let stones=0,gap=0,outside=0,wrong=0;
-      for(let x=(g.left+2)*2;x<(g.right-2)*2;x++){
-        for(let y=o.top*2;y<(o.top+info.thickness)*2;y++)if(stone.has(at(x,y)))stones++;
-        for(let y=(o.top+info.thickness)*2;y<g.top*2;y++){gap++;if(at(x,y)!==0x0d0d0d)wrong++;}
-        for(let y=(o.top-info.gap)*2;y<o.top*2;y++){outside++;if(at(x,y)!==0x0d0d0d)wrong++;}
+      const b=info.patrol,g=info.garden;
+      // Bottom edge is away from the initial guardian position.
+      const row=Math.round((b.bottom-0.5)*2),left=Math.ceil((b.left+8)*2),right=Math.floor((b.right-8)*2);
+      let dash=0,track=0,wrong=0,gap=0;
+      for(let x=left;x<right;x++){
+        const c=at(x,row);if(c===0x3b3b4e)dash++;else if(c===0x161619)track++;else wrong++;
+        if(at(x,Math.round((b.bottom-2)*2))!==0x161619)wrong++;
       }
-      return {stones,gap,outside,wrong};
+      for(let x=(g.left+2)*2;x<(g.right-2)*2;x++){
+        for(let y=g.bottom*2;y<Math.round((b.bottom-2.5)*2);y++){gap++;if(at(x,y)!==0x0d0d0d)wrong++;}
+      }
+      return {dash,track,gap,wrong};
     },{b64:png.toString('base64'),info:border.info});
-    assert.ok(pixels.stones>1000&&pixels.gap>0&&pixels.outside>0&&pixels.wrong===0,JSON.stringify(pixels));
+    assert.ok(pixels.dash>100&&pixels.track>100&&pixels.gap>0&&pixels.wrong===0,JSON.stringify(pixels));
     full.pixels=pixels;
     const combat=await page.evaluate(()=>{
       const scene=window.__previewGame.scene.getScene('Game'),c=scene.combatPreview;c.advance(25);
@@ -190,8 +194,8 @@ try{
    await page.waitForFunction(()=>window.__previewGame.scene.getScene('Game').combatPreview.model.occupied.has(34));
    const grown=await page.evaluate(()=>{
      const scene=window.__previewGame.scene.getScene('Game'),c=scene.combatPreview,L=window.GardenGameLayout,p=scene.children.getByName('placeholder:guardian:0');
-     const info=window.GardenStoneBorderPreview.geometry(L.spec,c.model.occupied,p.displayWidth,p.displayHeight);
-     const g=c.state.guardian,o=info.outer,hw=p.displayWidth/2,hh=p.displayHeight/2;
+     const info=window.GardenPatrolPathPreview.geometry(L.spec,c.model.occupied,p.displayWidth,p.displayHeight);
+     const g=c.state.guardian,o=info.garden,hw=p.displayWidth/2,hh=p.displayHeight/2;
      return {top:info.garden.top,clear:g.x+hw<=o.left-info.gap+1e-6||g.x-hw>=o.right+info.gap-1e-6||g.y+hh<=o.top-info.gap+1e-6||g.y-hh>=o.bottom+info.gap-1e-6};
    });
    assert.ok(grown.clear&&grown.top<border.info.garden.top);
