@@ -113,19 +113,12 @@ try{
        if(!!at(x*g.pitch+2,y*g.pitch)!==(get(x,y)||get(x,y-1)))edgesOK=false;
      for(let x=0;x<=g.columns;x++)for(let y=0;y<g.rows;y++)
        if(!!at(x*g.pitch,y*g.pitch+2)!==(get(x,y)||get(x-1,y)))edgesOK=false;
-     const decor=window.GardenFieldDecorPreview.layout(L.spec),bp=L.spec.blueprint;
-     const valid=decor.every(d=>d.x>=0&&d.x+d.w<=L.spec.width&&d.y>=L.spec.top&&d.y+d.h<=L.spec.height-L.spec.bottom&&
-       (d.x+d.w<=g.x||d.x>=g.x+g.size||d.y+d.h<=g.y||d.y>=g.y+g.size)&&
-       (d.x+d.w<=bp.x||d.x>=bp.x+bp.width||d.y+d.h<=bp.y||d.y>=bp.y+bp.height));
-     return {opaque,empty,bad,centers,edgesOK,shown:shown.size,uniform:used.size===1&&used.has(G.colors.base),rects:rects.length,candidates:candidate.size,decor,valid,
-       stable:JSON.stringify(decor)===JSON.stringify(window.GardenFieldDecorPreview.layout(L.spec)),
-       drawn:scene.children.getByName('field-decor').commandBuffer.length>0};
+     return {opaque,empty,bad,centers,edgesOK,shown:shown.size,uniform:used.size===1&&used.has(G.colors.base),rects:rects.length,candidates:candidate.size,
+       noDecor:!window.GardenFieldDecorPreview&&!scene.children.getByName('field-decor')};
    });
    assert.ok(gridCheck.bad===0&&gridCheck.opaque>0&&gridCheck.empty>gridCheck.opaque&&gridCheck.centers&&gridCheck.edgesOK&&gridCheck.uniform&&gridCheck.rects>0);
    assert.equal(gridCheck.shown,params.get('full')==='1'?100:12);
-   assert.equal(gridCheck.decor.filter(d=>d.kind==='grass').length,14);
-   assert.equal(gridCheck.decor.filter(d=>d.kind==='rock').length,8);
-   assert.ok(gridCheck.valid&&gridCheck.stable&&gridCheck.drawn);
+   assert.ok(gridCheck.noDecor);
    if(new URLSearchParams(query).get('full')==='1'){
     const full=await page.evaluate(()=>{
       const scene=window.__previewGame.scene.getScene('Game'),c=scene.combatPreview,L=window.GardenGameLayout,g=L.spec.garden;
@@ -156,18 +149,22 @@ try{
         const v=at(x,(g.bottom-1)*2);
         if(colors.has(v))dash++;else if(v===0x0d0d0d)gap++;else wrong++;
       }
-      const decor=window.GardenFieldDecorPreview.layout(window.GardenGameLayout.spec);
-      let grass=0,rock=0;
-      for(const d of decor){let found=0;
-        for(let y=d.y*2;y<(d.y+d.h)*2;y++)for(let x=d.x*2;x<(d.x+d.w)*2;x++){
-          if(d.kind==='grass'&&at(x,y)===0x6aba2c)found++;
-          if(d.kind==='rock'&&at(x,y)===0x676777)found++;
+      // Sample the open field, away from the garden, guardian, blueprint and status label.
+      // The previous decorative palette (green, teal, slate and stone) must not appear.
+      const spec=window.GardenGameLayout.spec,bp=spec.blueprint;
+      let background=0,decorPixels=0;
+      const forbidden=new Set([0x6aba2c,0x0c9484,0x51516b,0x676777,0x3b3b4e]);
+      for(let y=(spec.top+30)*2;y<(spec.height-spec.bottom-12)*2;y++){
+        for(let x=24;x<(spec.width-12)*2;x++){
+          const lx=x/2,ly=y/2;
+          if(lx>=g.left-45&&lx<=g.right+45&&ly>=g.top-50&&ly<=g.bottom+50)continue;
+          if(lx>=bp.x-12&&lx<=bp.x+bp.width+12&&ly>=bp.y-12&&ly<=bp.y+bp.height+12)continue;
+          const v=at(x,y);if(v===0x0d0d0d)background++;if(forbidden.has(v))decorPixels++;
         }
-        if(found>0){if(d.kind==='grass')grass++;else rock++;}
       }
-      return {dash,gap,wrong,grass,rock};
+      return {dash,gap,wrong,background,decorPixels};
     },{b64:png.toString('base64'),info:border.info});
-    assert.ok(pixels.dash>50&&pixels.gap>50&&pixels.wrong===0&&pixels.grass===14&&pixels.rock===8,JSON.stringify(pixels));
+    assert.ok(pixels.dash>50&&pixels.gap>50&&pixels.wrong===0&&pixels.background>10000&&pixels.decorPixels===0,JSON.stringify(pixels));
     full.pixels=pixels;
     const combat=await page.evaluate(()=>{
       const scene=window.__previewGame.scene.getScene('Game'),c=scene.combatPreview;c.advance(25);

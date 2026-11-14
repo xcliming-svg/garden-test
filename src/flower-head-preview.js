@@ -155,7 +155,6 @@
     const soil=scene.add.image(g.x+g.size/2,g.y+g.size/2,textureKey)
       .setDepth(-1).setName('garden-preview-soil');
     const grid=window.GardenDashedGridPreview;
-    window.GardenFieldDecorPreview.draw(scene,spec);
     const geometry=keys=>grid.geometry(spec,keys,guardianWidth,guardianSize);
     const visible=grid.all(g);
     let hover=null;
