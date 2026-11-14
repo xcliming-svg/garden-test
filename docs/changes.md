@@ -4,7 +4,7 @@
 
 ## 2026-11-14 — devel 점선 그리드와 필드 장식
 
-- 잔디 제거, 10×10 공유 경계 1px 점선(3px/2px) 상시 표시 및 드래그 후보 강조. JS 픽셀 풀 14개, 돌 8개, 정원·HUD·도안 회피. 63개 크기/슬롯 조합 배치 수량 확인. 순찰·전투·HUD 유지. [규격](./flower-head-preview.md). main 유지.
+- 잔디 제거, 10×10 공유 경계 1px 점선(3px/2px) 상시 표시 및 드래그 후보 강조. JS 픽셀 풀 14개, 돌 8개, 정원·HUD·도안 회피. 63개 크기/슬롯 조합 배치 수량 확인. 순찰·전투·HUD 유지. [규격](./flower-head-preview.md). [Chromium 8/8 통과](https://github.com/xcliming-svg/garden-test/actions/runs/43542156215), 실제 FHD 점선·풀·돌과 드래그 강조 확인. 축소 외곽선 잘림 보정 후 모의 래스터 252개 조합 통과. 기타 브라우저 미검증. devel 통합, main 유지.
 
 ## 2026-11-14 — devel 잔디 화단과 확장 후보
 
