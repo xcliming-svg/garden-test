@@ -2,6 +2,10 @@
 
 각 구현 변경의 결과를 시스템 단위로 기록한다. 대화 원문 또는 코드 diff의 복제가 아니라 **어떤 시스템에 무엇이 적용되었으며, 무엇이 아직 구현되지 않았는지**를 설명한다. 최신 구현 상태는 [implementation.md](./implementation.md)를 참조한다.
 
+## 2026-11-14 — devel 수호자 38px 비교 옵션
+
+- 기존 분홍 수호자에 `?person=38` 추가. 29×38px(정수 반올림), FHD 58×76px. 기본 40px 및 나머지 게임 규격 유지. main 변경 없음.
+
 ## 2026-11-14 — devel 분홍 머리 수호자 교체
 
 - devel 27864d2 기반 feature/devel-pink-guardian. 사용자 첨부 PNG 외접 영역 511×673px을 30×40px로 축소해 기존 초록 수호자를 교체. 기존 외곽선 포함 높이 40px, Garden 16의 5개 색면, 원본 비율 유지. FHD 60×80px. 기존 전투 및 UI 조작 유지. [Chromium 3/3 통과](https://github.com/xcliming-svg/garden-test/actions/runs/43531220657), 코드 1e1188d. [규격](./flower-head-preview.md). devel에 통합, main 유지.

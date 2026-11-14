@@ -1,7 +1,7 @@
 name: Projectile loot verification
 on:
   push:
-    branches: [feature/devel-projectile-loot, feature/devel-pink-guardian]
+    branches: [feature/devel-projectile-loot, feature/devel-pink-guardian, feature/devel-guardian-38]
 permissions:
   contents: read
 jobs:

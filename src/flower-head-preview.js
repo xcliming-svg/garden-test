@@ -21,7 +21,7 @@
   const flowers = Object.freeze(['daisy','tulip','sunflower','hydrangea']);
   const key = (name,size) => 'flower-head-preview:'+name+':'+size;
   const guardianMode = new URLSearchParams(window.location.search).get('person');
-  const guardianSizes = Object.freeze([24,28,32,36,40,44,48,56]);
+  const guardianSizes = Object.freeze([24,28,32,36,38,40,44,48,56]);
   const guardianSize = guardianSizes.includes(Number(guardianMode)) ? Number(guardianMode) : 40;
   const enemySize = 32;
   // Keep the outline inside the cell, so adjacent flowers never overlap.

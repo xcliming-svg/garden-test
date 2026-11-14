@@ -23,7 +23,7 @@ await new Promise(r=>server.listen(0,'127.0.0.1',r));
 const url='http://127.0.0.1:'+server.address().port;
 const browser=await chromium.launch({channel:'chrome',headless:true,args:['--no-sandbox','--disable-dev-shm-usage','--use-gl=angle','--use-angle=swiftshader','--enable-unsafe-swiftshader']});
 const report=[];
-const configs=[[960,540,1,''],[1920,1080,1,''],[960,540,1,'?garden=32&person=56&slots=24']];
+const configs=[[960,540,1,''],[1920,1080,1,'?person=38'],[960,540,1,'?garden=32&person=56&slots=24']];
 try{
  for(const [w,h,dpr,query] of configs){
   const page=await browser.newPage({viewport:{width:w,height:h},deviceScaleFactor:dpr});
@@ -77,7 +77,7 @@ try{
       }
      return {w:right-left+1,h:bottom-top+1,pink};
     },{b64:png.toString('base64'),art});
-    assert.deepEqual([actual.w,actual.h],[60,80],JSON.stringify(actual));assert.ok(actual.pink>0);
+    assert.deepEqual([actual.w,actual.h],[art.w*2,art.h*2],JSON.stringify(actual));assert.ok(actual.pink>0);
     art.actual=actual;
    }
    const initial=await page.evaluate(()=>{
