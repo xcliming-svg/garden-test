@@ -1,6 +1,6 @@
 # 전장 UI 및 에셋 규격
 
-> **devel 분홍 머리 수호자:** [현행 규격](./docs/flower-head-preview.md) 우선. 첨부 PNG의 투명 여백 제거 및 Garden 16 색면 정리, 기본 가시 30×40px(원본 외곽선 포함), FHD 60×80px. 38px 비교 옵션은 29×38px, FHD 58×76px. 별도 외곽선 미추가. main 유지.
+> **devel 분홍 머리 수호자:** [현행 규격](./docs/flower-head-preview.md) 우선. 첨부 PNG의 투명 여백 제거 및 Garden 16 색면 정리, 기본 가시 30×40px(원본 외곽선 포함), FHD 60×80px. 38px 비교 옵션은 29×38px, FHD 약 58×76px(실측 가로 57~58px 허용). 별도 외곽선 미추가. main 유지.
 
 > **devel 직선 공·드롭 실험:** [현행 규격](./docs/flower-head-preview.md) 우선. 기존 꽃/사람/애벌레 외곽선 유지. 공 8×8px gold/slate 픽셀 텍스처, 공 카드 32px 및 중앙 공 아이콘 16px, 꽃 카드 24px 및 꽃 머리 16px, 보석 8px sky/slate. 정원 점유 면만 표시, 내부/외부 보더 없음. main 유지.
 

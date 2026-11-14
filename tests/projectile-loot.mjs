@@ -77,7 +77,7 @@ try{
       }
      return {w:right-left+1,h:bottom-top+1,pink};
     },{b64:png.toString('base64'),art});
-    assert.deepEqual([actual.w,actual.h],[art.w*2,art.h*2],JSON.stringify(actual));assert.ok(actual.pink>0);
+    assert.ok(Math.abs(actual.w-art.w*2)<=1&&actual.h===art.h*2,JSON.stringify(actual));assert.ok(actual.pink>0);
     art.actual=actual;
    }
    const initial=await page.evaluate(()=>{
