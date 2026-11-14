@@ -31,9 +31,13 @@
   function draw(ctx,g,z,raster,occupied,candidates,hover){
     ctx.clearRect(0,0,raster.width,raster.height);ctx.globalAlpha=1;
     for(const r of rectangles(g,occupied,candidates,hover)){
-      const x=Math.round((g.x+r.x)*z)-raster.x,y=Math.round((g.y+r.y)*z)-raster.y;
+      let x=Math.round((g.x+r.x)*z)-raster.x,y=Math.round((g.y+r.y)*z)-raster.y;
       const right=Math.round((g.x+r.x+r.w)*z)-raster.x,bottom=Math.round((g.y+r.y+r.h)*z)-raster.y;
-      const w=r.w===1?Math.max(1,right-x):right-x,h=r.h===1?Math.max(1,bottom-y):bottom-y;
+      // At fractional zoom the outermost one-pixel edge may round to the
+      // canvas endpoint. Snap it inward rather than clipping the edge away.
+      if(r.w===1)x=Math.min(x,raster.width-1);
+      if(r.h===1)y=Math.min(y,raster.height-1);
+      const w=Math.min(raster.width-x,r.w===1?Math.max(1,right-x):right-x),h=Math.min(raster.height-y,r.h===1?Math.max(1,bottom-y):bottom-y);
       if(w<=0||h<=0)continue;
       ctx.fillStyle='#'+r.color.toString(16).padStart(6,'0');ctx.fillRect(x,y,w,h);
     }
