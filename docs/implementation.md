@@ -1,6 +1,30 @@
 # 현재 설계 및 구현 정리
 
-> **devel 꽃 성장·피격:** [현행 비교 화면](./flower-growth.md). 6종의 4단계 원본 SVG, JS 피격 텍스처 및 80초 반복 시안. 실제 전투·HP·심기 입력은 미구현.
+> **devel 정면 공용 걷기:** `personstyle=3`은 `guardian-walk-preview.js`에서 동일 정면 텍스처 4개만 사용해 네 이동 방향을 처리한다. 좌우 반전, 상하에서는 이전 좌우 유지. 모델/기존 스타일 변경 없음.
+
+> **devel 4방향 걷기:** `guardianDirection`은 모델의 실제 순찰 진행 방향을 나타내며 `guardian-walk-preview.js`가 해당 방향의 프레임을 선택한다. 위치/전투 및 기본 정적 캐릭터는 유지한다.
+
+> **devel 수호자 걷기:** `guardian-walk-preview.js`가 선택된 파생 4프레임 텍스처를 생성하며 전투 모델의 경과 시간과 이동 좌표를 이용해 프레임/좌우 반전을 갱신한다. 기존 모델 및 기본 정적 스프라이트 유지. [규격](./flower-head-preview.md).
+
+> **devel 테마 비교:** `palette.js`의 `uitype=1` reference 분기와 `light-field-preview.js`로 전장/흙을 렌더링한다. 기존 검정/점선 기본 및 전투 상태와 판정은 공유한다. [규격](./flower-head-preview.md).
+
+> **devel 배경 장식 제거:** `field-decor-preview.js`는 로드/호출하지 않는다. 기존 전장과 정원 판정·순찰·전투 유지.
+
+> **devel 확장 후보 점선/순찰:** `dashed-grid-preview.js`에서 점유 및 후보의 합집합 공유 경계만 렌더링하고, 해당 외접 사각형 기준 5px 몸체 여백의 순찰 경로를 계산한다. 모델의 기존 배치/전투 판정 유지. [규격](./flower-head-preview.md).
+
+> **devel 점선 그리드 및 필드 장식:** `dashed-grid-preview.js`로 전체 그리드 및 후보 강조, `field-decor-preview.js`로 시드 고정 배경 장식. 기존 잔디 렌더링 비활성, 정원 판정·순찰·전투 유지. [규격](./flower-head-preview.md).
+
+> **devel 잔디 화단:** `grass-garden-preview.js`가 점유 및 `gardenCandidates`를 렌더링한다. 꽃 심기 시 갱신, 기존 순찰 경로는 비표시 상태로 유지. [규격](./flower-head-preview.md).
+
+> **devel 점선 순찰로:** `patrol-path-preview.js`가 기존 외곽 순찰 좌표를 그대로 시각화하고, 돌 타일은 렌더링하지 않는다. 꽃 심기와 함께 갱신, 적과 공은 통과한다. [규격](./flower-head-preview.md).
+
+> **devel 돌 경계:** `stone-border-preview.js`가 점유 정원의 외접 사각형과 장식 돌 및 수호자 외곽 순찰 경로를 계산한다. 정원 성장 시 재계산. 적 및 투사체 충돌은 변경하지 않는다. [규격](./flower-head-preview.md).
+
+> **devel 수호자 이미지 교체:** 사용자 PNG 기반 분홍 머리·잎새 수호자, 가시 30×40px. 기존 공격 및 순찰 유지. [현행 규격](./flower-head-preview.md).
+
+> **devel 직선 공/드롭 실험:** [현행 규격](./flower-head-preview.md) 우선. 중앙 4꽃, 인접 배치, 직선 자동 공, 공 카드 장착당 발사체 +1, 처치 꽃/공 카드/보석 드롭 및 보석 자동 획득. 꽃 피해·패배·레벨업·재화 소비·저장 미구현. 아래 충격파 테스트는 이전 상태.
+
+> **devel 추가 전투 실험:** [현행 전투 테스트 규격](./flower-head-preview.md) 참조. 정원 100꽃, 외부 보더 제거, 수호자 느린 순찰 및 자동 원형 충격파, 애벌레 점증 출현·이동·처치, 시간·처치 수 HUD. 꽃 피해/패배/보상·성장 미구현. 아래 main 승격 이력과 구분한다.
 
 > **main/devel 현행 실행 화면:** 사용자 승인으로 꽃·수호자·애벌레 비교 화면을 main에 승격했다. [꽃 머리 비교 화면 규격](./flower-head-preview.md)이 아래 기존 정원·드롭·배치 데모 설명보다 우선한다. 10×10 꽃 머리, 내부 그리드 없음, 수호자 기본 44px 및 순찰, 애벌레 32×18px 세 마리 정적 배치. 꽃/아이템 드롭 및 장착·배치 데모는 현재 화면에서 동작하지 않으며 전투·적 이동·충돌은 미구현이다. 기존 기능의 코드는 보존한다.
 

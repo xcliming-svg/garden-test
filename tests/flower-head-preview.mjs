@@ -48,7 +48,7 @@ try{
   const page=await browser.newPage({viewport:{width:w,height:h},deviceScaleFactor:dpr});
   const errors=[];page.on('pageerror',e=>errors.push(String(e)));
   try {
-   await page.goto(url+'/index.html'+(query?query+'&':'?')+'flowerheads=1');
+   await page.goto(url+'/index.html'+query);
    await page.waitForFunction(()=>window.__previewGame?.scene.isActive('MainMenu'));
    const box=await page.locator('canvas').boundingBox();
    await page.mouse.click(box.x+box.width/2,box.y+box.height*252/540);
