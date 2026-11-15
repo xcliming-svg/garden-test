@@ -107,7 +107,8 @@
       ctx.fillRect(left,top,w-left-right,h-top-bottom);
       texture.refresh(); texture.setFilter(Phaser.Textures.FilterMode.NEAREST);
     }
-    for(const index of occupied){
+    if(window.GardenFlowerGrowth.enabled) window.GardenFlowerGrowth.draw(scene,g);
+    else for(const index of occupied){
       const col=index%g.columns,row=Math.floor(index/g.columns);
       const name=flowers[(col+row)%flowers.length];
       scene.add.image(g.x+col*g.pitch+g.line+g.cell/2,g.y+row*g.pitch+g.line+g.cell/2,key(name,g.cell))
