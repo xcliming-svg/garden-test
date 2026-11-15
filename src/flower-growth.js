@@ -45,9 +45,13 @@
         const pixels=[];
         for(let y=Math.max(top,mid-radius);y<=Math.min(limit,mid+radius);y++){
           const xs=rows[y];if(xs.length<2)continue;
-          const weight=Math.max(0,1-Math.abs(y-mid)/(radius+1));
-          const jag=[1,.60,.90,.50][(y-top+side)%4];
-          const count=Math.min(Math.floor(xs.length*.60),Math.max(0,Math.round(xs.length*strength*weight*jag)));
+          // Coarse, connected notches: interpolate irregular vertices instead of
+          // alternating individual rows (which looks like a scan-line glitch).
+          const profile=side?[0,.30,.78,.48,1,.68,.22,0]:[0,.25,.67,1,.57,.81,.30,0];
+          const t=Math.max(0,Math.min(profile.length-1,(y-mid+radius)/(2*radius)*(profile.length-1)));
+          const a=Math.floor(t),b=Math.min(profile.length-1,a+1);
+          const weight=profile[a]+(profile[b]-profile[a])*(t-a);
+          const count=Math.min(Math.floor(xs.length*.60),Math.max(0,Math.round(xs.length*strength*weight)));
           for(let i=0;i<count;i++)pixels.push(y*n+xs[side?xs.length-1-i:i]);
         }
         if(pixels.length)candidates.push({side,mid,pixels});
