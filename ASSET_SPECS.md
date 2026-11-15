@@ -1,33 +1,5 @@
 # 전장 UI 및 에셋 규격
 
-> **devel 정면 공용 걷기:** `personstyle=3` 정면 4프레임, 머리/얼굴 고정, 26×38 코어와 1px 외곽선, 30×40 상자/28×40 가시, 6fps. 기존 스타일 보존. [규격](./docs/flower-head-preview.md).
-
-> **devel 4방향 수호자:** `personstyle=1/2`에 공통 정면·뒷모습 각 4프레임 추가. 26×38 코어, 1px 외곽선, 30×40 상자/28×40 가시, 6fps 유지. [규격](./docs/flower-head-preview.md).
-
-> **devel 걷기 수호자:** `personstyle=1/2` 두 4프레임 파생 픽셀 시트(26×38 코어, 1px 외곽선, 기본 30×40 상자, 가시 28×40), 6fps. `personstyle=0` 기존. [규격](./docs/flower-head-preview.md).
-
-> **devel uitype=1:** 첨부 PNG 색상 기반 별도 UI 비교 역할. 잔디 #83A650 계열 7색, 흙 #A16A3E 계열 4색, 경계 #87512E, HUD #E2B66F, 슬롯 #EBC58F. 기존 Garden 16 캐릭터/적/꽃 및 기본 UI 보존. [규격](./docs/flower-head-preview.md).
-
-> **devel 배경 장식 제거:** 필드 풀·돌 미표시. 기존 검정 배경, 정원 및 점선 유지.
-
-> **devel 확장 후보 점선:** 점유 및 인접 후보만 동일 slate(#51516B) 점선 표시, 드래그 중에만 growth 강조. 수호자 몸체와 표시 영역 외접 사각형 간 5px 논리 간격. [규격](./docs/flower-head-preview.md).
-
-> **devel 점선 그리드/장식:** 1px 공유 점선(3px 길이/2px 간격), panel/slate/stone/growth, 칸 내부 투명. 풀 8~10×7px 14개, 돌 8~12×6px 8개를 기존 팔레트로 JS 렌더링. [규격](./docs/flower-head-preview.md).
-
-> **devel 잔디 화단:** JS 픽셀 패턴, Garden 16 ink/growth 파생 초록 각 3색(점유/후보), 7px 블록·1px 풀잎. 점유 및 인접 후보 칸만 채움. 돌 및 점선 미표시. [규격](./docs/flower-head-preview.md).
-
-> **devel 점선 순찰로:** JS 픽셀 그래픽, 바닥 띠 5px #161619, 점선 길이 4px/두께 1px/간격 약 4px #3B3B4E. 기존 돌 타일 표시 대체. [규격](./docs/flower-head-preview.md).
-
-> **devel 1px 크기 비교:** `flower=12~32`(꽃 텍스처 상자 및 타일), `person=24~56`(수호자 가시 높이) 모든 정수. 타일 외형 F+2, 피치 F+1, 완성 정원 10(F+1)+1. 기본 꽃 22px, 수호자 40px. [규격](./docs/flower-head-preview.md).
-
-> **devel 돌 타일 경계:** JS 픽셀 그래픽, 6px 두께, 약 12px 길이, slate/stone/panel/ink. 흙과 돌 및 돌과 수호자 사이 기본 5px 여백. [규격](./docs/flower-head-preview.md) 우선.
-
-> **devel 분홍 머리 수호자:** [현행 규격](./docs/flower-head-preview.md) 우선. 첨부 PNG의 투명 여백 제거 및 Garden 16 색면 정리, 기본 가시 30×40px(원본 외곽선 포함), FHD 60×80px. 38px 비교 옵션은 29×38px, FHD 약 58×76px(실측 가로 57~58px 허용). 별도 외곽선 미추가. main 유지.
-
-> **devel 직선 공·드롭 실험:** [현행 규격](./docs/flower-head-preview.md) 우선. 기존 꽃/사람/애벌레 외곽선 유지. 공 8×8px gold/slate 픽셀 텍스처, 공 카드 32px 및 중앙 공 아이콘 16px, 꽃 카드 24px 및 꽃 머리 16px, 보석 8px sky/slate. 정원 점유 면만 표시, 내부/외부 보더 없음. main 유지.
-
-> **devel 전투 테스트:** [규격](./docs/flower-head-preview.md) 우선. 수호자 몸체 44px에 가시 slate 외곽선 1px(전체 높이 46px), 애벌레 기존 32×18px 및 slate 외곽선, 꽃 기존 ink 외곽선. 정원 면 유지, 외곽 보더 없음. 금색 원형 충격파는 ink 테두리. main은 이전 정적 비교 규격 유지.
-
 > **main/devel 꽃·수호자·애벌레 비교 화면:** [현행 실험 규격](./docs/flower-head-preview.md)이 아래 기존 테스트 에셋 설명보다 우선한다. 꽃 최대 22px, 사람 기본 44px, 애벌레 32×18px(몸체 30×16 및 ink 외곽선), 원본 비율 유지. 전투 규격 확정이 아니다.
 
 > **devel 현행:** UI 및 신규 객체의 공통 설계 색은 [Garden 16 색상 가이드](./docs/ui-color-guide.md)와 `GardenPalette.hex`를 참조한다. 기존 원본 에셋의 RGBA·인덱스·알파·형태·배치는 보관하며 실제 표시 색은 원본에 가까운 공통 16색을 사용한다. 전장 #0D0D0D, HUD #161619, 일반 UI 면 #3B3B4E, 제목 #44445C, 그리드/슬롯 선 #51516B, 외곽선 #676777, 보조 글자 #B0ACBD. 상세 좌표·크기·패딩·간격은 [960×540 문서](./docs/resolution-960x540.md)가 현행 기준이다. 아래 main 수치와 Garden 32는 역사적 기준으로 보존한다.
