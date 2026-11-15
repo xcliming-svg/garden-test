@@ -40,14 +40,14 @@
       }
     }
   }
-  // Maximum original bloom width is <85% of the 1000px artboard.
-  // Keep the common authored root at y=856 and fit within the existing cell.
-  const displaySize=cell=>cell/.85;
+  // Stage 1 only: double both axes about the authored root (500,856).
+  // Other stages keep the original display frame and root.
+  const displaySize=(cell,stage=4)=>cell/.85*(stage===1?2:1);
   function attach(scene,g){
     install(scene);
     const entries=new Map();
     function plant(index,name,center,born=0){
-      const size=displaySize(g.cell);
+      const size=displaySize(g.cell,1);
       const image=scene.add.image(center.x,center.y+g.cell/2-1,key(name,1))
         .setOrigin(.5,.856).setDisplaySize(size,size).setDepth(1).setName('garden-preview-flower:'+index);
       entries.set(index,{name,born,image,last:'1:100'});
@@ -58,7 +58,7 @@
         const {stage,hp}=stateAt(elapsed-entry.born),state=stage+':'+hp;
         if(state===entry.last)continue;
         entry.last=state;
-        const size=displaySize(g.cell);
+        const size=displaySize(g.cell,stage);
         entry.image.setTexture(key(entry.name,stage,hp)).setDisplaySize(size,size);
       }
     }

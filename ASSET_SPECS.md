@@ -1,6 +1,6 @@
 # 전장 UI 및 에셋 규격
 
-> **devel 꽃 성장·피격:** [SVG 규격](./docs/flower-growth-svg.md). 1000×1000 원본 SVG 24개만 저장, 피격 30개는 JS 벡터 그리기로 생성, 512px AA/LINEAR 텍스처로 표시. 원본 색상·비율·기준점 유지.
+> **devel 꽃 성장·피격:** [SVG 규격](./docs/flower-growth-svg.md). 1000×1000 원본 SVG 24개만 저장, 피격 30개는 JS 벡터 그리기로 생성, 512px AA/LINEAR 텍스처로 표시. 원본 색상·비율·기준점 유지. 1단계 정상·피격 및 심기 고스트만 기존 표시 크기의 2배.
 
 > **devel 정면 공용 걷기:** `personstyle=3` 정면 4프레임, 머리/얼굴 고정, 26×38 코어와 1px 외곽선, 30×40 상자/28×40 가시, 6fps. 기존 스타일 보존. [규격](./docs/flower-head-preview.md).
 

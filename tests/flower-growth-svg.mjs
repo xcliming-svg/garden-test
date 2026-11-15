@@ -53,12 +53,12 @@ try{
     }
     return {names:G.names,occupied:[...c.model.occupied],entries:[...g.entries].map(([i,e])=>[i,e.name,e.image.x,e.image.y,e.image.originX,e.image.originY,e.image.displayWidth]),tex,
      states:Array.from({length:60},(_,i)=>G.stateAt(i)),start:c.state.elapsed,
-     hud:s.children.getByName('hud-progress-value').text};
+     cell:window.GardenGameLayout.spec.garden.cell,hud:s.children.getByName('hud-progress-value').text};
    });
    assert.deepEqual(first.occupied,[43,44,45,53,54,55]);
    assert.deepEqual(first.entries.map(e=>e[1]),first.names);
    assert.equal(first.hud,'6%');
-   assert.ok(first.entries.every(e=>e[4]===.5&&e[5]===.856));
+   assert.ok(first.entries.every(e=>e[4]===.5&&e[5]===.856&&Math.abs(e[6]-first.cell/.85*2)<1e-8));
    assert.equal(first.tex.length,54);assert.equal(loaded.size,24);
    for(const t of first.tex)assert.ok(t.area>0&&t.aa>0&&t.w===512&&t.h===512,JSON.stringify(t));
    for(const name of first.names)for(let stage=1;stage<=4;stage++){
@@ -71,11 +71,13 @@ try{
     const actual=await page.evaluate(({t})=>{
      const s=window.__previewGame.scene.getScene('Game'),c=s.combatPreview,G=s.flowerGrowth;
      c.advance(Math.max(0,t+.1-c.state.elapsed));
-     return {keys:[...G.entries.values()].map(e=>e.image.texture.key),anchors:[...G.entries.values()].map(e=>[e.image.x,e.image.y,e.image.originX,e.image.originY])};
+     return {keys:[...G.entries.values()].map(e=>e.image.texture.key),anchors:[...G.entries.values()].map(e=>[e.image.x,e.image.y,e.image.originX,e.image.originY]),sizes:[...G.entries.values()].map(e=>[e.image.displayWidth,e.image.displayHeight])};
     },{t:i*5});
     const [stage,hp]=expected[i%12];
     assert.ok(actual.keys.every(k=>k.endsWith(':'+stage+':'+hp)),JSON.stringify(actual.keys));
     assert.deepEqual(actual.anchors,first.entries.map(e=>e.slice(2,6)));
+    const size=first.cell/.85*(stage===1?2:1);
+    assert.ok(actual.sizes.every(([w,h])=>Math.abs(w-size)<1e-8&&Math.abs(h-size)<1e-8),JSON.stringify(actual.sizes));
     if(w===1920&&i<12)await page.screenshot({path:join(out,'svg-growth-'+String(i).padStart(2,'0')+'.png')});
    }
    // Test a newly planted flower through the existing real drop drag interaction.
@@ -89,15 +91,18 @@ try{
    await page.mouse.move(box.x+drop.x*box.width/960,box.y+drop.y*box.height/540);
    await page.mouse.down();
    await page.mouse.move(box.x+drop.tx*box.width/960,box.y+drop.ty*box.height/540,{steps:8});
+   const ghost=await page.evaluate(()=>{const s=window.__previewGame.scene.getScene('Game'),o=s.children.getByName('combat-flower-ghost');return {visible:o.visible,w:o.displayWidth,h:o.displayHeight,x:o.x,y:o.y,ox:o.originX,oy:o.originY};});
+   assert.ok(ghost.visible&&Math.abs(ghost.w-first.cell/.85*2)<1e-8&&Math.abs(ghost.h-ghost.w)<1e-8&&ghost.ox===.5&&ghost.oy===.856,JSON.stringify(ghost));
    await page.mouse.up();
    await page.waitForFunction(i=>window.__previewGame.scene.getScene('Game').flowerGrowth.entries.has(i),drop.target);
    const planted=await page.evaluate(i=>{
     const s=window.__previewGame.scene.getScene('Game'),c=s.combatPreview,e=s.flowerGrowth.entries.get(i);
-    const initial=e.image.texture.key,age=c.state.elapsed-e.born;
+    const initial=e.image.texture.key,age=c.state.elapsed-e.born,width=e.image.displayWidth;
     c.advance(5.1);
-    return {initial,age,next:e.image.texture.key,count:c.model.occupied.size,progress:s.children.getByName('hud-progress-value').text};
+    return {initial,age,width,nextWidth:e.image.displayWidth,next:e.image.texture.key,count:c.model.occupied.size,progress:s.children.getByName('hud-progress-value').text};
    },drop.target);
    assert.ok(planted.initial.endsWith(':1:100')&&planted.next.endsWith(':2:100')&&planted.age<1,JSON.stringify(planted));
+   assert.ok(Math.abs(planted.width-first.cell/.85*2)<1e-8&&Math.abs(planted.nextWidth-first.cell/.85)<1e-8);
    assert.equal(planted.count,7);assert.equal(planted.progress,'7%');
    await page.keyboard.press('Escape');await page.waitForFunction(()=>window.__previewGame.scene.isActive('Pause'));
    const time=await page.evaluate(()=>window.__previewGame.scene.getScene('Game').combatPreview.state.elapsed);
