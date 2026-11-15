@@ -1104,6 +1104,7 @@
     const itemPreview=drawItemPreview(scene,layout,[],window.GardenCombatPreview.tuning.walkSpeed,true);
     const status=text(scene,spec.width-10,spec.top+spacing.base,'테스트 전투 · 공 1개',bottomStats.fontSize,colors.label,'right').setDepth(16).setName('combat-ball-count');
     window.GardenFlowerHeadPreview.draw(scene,spec,colors,gardenRaster,patrolBounds,patrolPosition,(elapsed,kills,gems,occupied)=>{
+      if(scene.flowerGrowth)scene.flowerGrowth.render(elapsed);
       updateHud(elapsed,kills,gems,occupied);
       const count=scene.combatPreview.state.ballCount;
       const label='테스트 전투 · 공 '+count+'개';

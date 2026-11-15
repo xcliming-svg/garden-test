@@ -57,6 +57,8 @@
   class GameScene extends Phaser.Scene {
     constructor() { super('Game'); }
 
+    preload() { window.GardenFlowerGrowth.preload(this); }
+
     create() {
       window.GardenGameLayout.draw(this);
       U.bindEscape(this, () => {

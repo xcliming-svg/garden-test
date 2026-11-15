@@ -12,12 +12,15 @@
     }
     ctx.putImageData(im,0,0);t.refresh();t.setFilter(Phaser.Textures.FilterMode.NEAREST);
   }
+  function flowerKey(name,size,stage=4){
+    return window.GardenFlowerGrowth.enabled?window.GardenFlowerGrowth.key(name,stage):window.GardenFlowerHeadPreview.key(name,size);
+  }
   function card(scene,x,y,size,iconSize,kind='card',name,flowerSize=22){
     installBall(scene);
     const R=window.GardenPalette.reference.n;
     const border=U.pixelBox(scene,0,0,size,size,R.tabBorder);
     const face=U.pixelBox(scene,0,0,size-2,size-2,R.tab,{cut:false});
-    const tex=kind==='flower'?window.GardenFlowerHeadPreview.key(name,flowerSize):'combat:ball';
+    const tex=kind==='flower'?flowerKey(name,flowerSize):'combat:ball';
     const image=scene.add.image(0,0,tex).setDisplaySize(iconSize,iconSize);
     const group=scene.add.container(x,y,[border,face,image]).setSize(size,size);
     group.setStrokeStyle=(_width,_color,alpha)=>{
@@ -30,7 +33,7 @@
     installBall(scene);
     const L=window.GardenGameLayout,g=spec.garden,actors=new Map();
     let dragging=null,target=-1;
-    const ghost=scene.add.image(0,0,window.GardenFlowerHeadPreview.key('daisy',g.cell))
+    const ghost=scene.add.image(0,0,flowerKey('daisy',g.cell,1))
       .setDepth(15).setAlpha(0.45).setVisible(false).setName('combat-flower-ghost');
     const point=p=>scene.cameras.main.getWorldPoint(p.x,p.y);
     const hit=p=>L.gardenHit(p.x,p.y,g);
@@ -39,8 +42,10 @@
       ghost.setVisible(false);
       if(dragging&&L.gardenCandidates(garden.occupied).has(target)){
         const p=garden.center(target);
-        ghost.setTexture(window.GardenFlowerHeadPreview.key(dragging.data.name,g.cell))
-          .setDisplaySize(g.cell,g.cell).setPosition(p.x,p.y).setVisible(true);
+        const G=window.GardenFlowerGrowth, size=G.enabled?G.displaySize(g.cell):g.cell;
+        ghost.setTexture(flowerKey(dragging.data.name,g.cell,1))
+          .setOrigin(.5,G.enabled ? .856 : .5).setDisplaySize(size,size)
+          .setPosition(p.x,G.enabled?p.y+g.cell/2-1:p.y).setVisible(true);
       }
     }
     function move(pointer){

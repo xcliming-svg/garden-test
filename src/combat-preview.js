@@ -19,7 +19,7 @@
   function initialGarden(spec){
     const g=spec.garden;
     return new Set(new URLSearchParams(window.location.search).get('full')==='1'
-      ? Array.from({length:g.columns*g.rows},(_,i)=>i) : [44,45,54,55]);
+      ? Array.from({length:g.columns*g.rows},(_,i)=>i) : window.GardenFlowerGrowth.enabled?[43,44,45,53,54,55]:[44,45,54,55]);
   }
   function create(spec,initialBounds,patrolPosition,nearestPatrolDistance){
     const g=spec.garden, cx=g.x+g.size/2,cy=g.y+g.size/2;
@@ -51,7 +51,8 @@
     }
     function addDrop(e){
       const r=random(),kind=r<tuning.flowerChance?'flower':r<tuning.flowerChance+tuning.cardChance?'card':'gem';
-      const name=kind==='flower'?['daisy','tulip','sunflower','hydrangea'][Math.floor(random()*4)]:kind;
+      const types=window.GardenFlowerGrowth.enabled?window.GardenFlowerGrowth.names:['daisy','tulip','sunflower','hydrangea'];
+      const name=kind==='flower'?types[Math.floor(random()*types.length)]:kind;
       // Never put draggable loot underneath the HUD or the blueprint.
       const half=kind==='card'?16:kind==='flower'?12:4;
       let x=clamp(e.x,half,spec.width-half),y=clamp(e.y,spec.top+half,fieldBottom-half);
