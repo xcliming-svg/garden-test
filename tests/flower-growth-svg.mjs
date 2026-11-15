@@ -9,7 +9,7 @@ mkdirSync(out,{recursive:true});
 const require=createRequire(import.meta.url),phaser=require.resolve('phaser/dist/phaser.min.js');
 const folder=join(root,'assets/flowers');
 assert.equal(readdirSync(folder).filter(n=>n.endsWith('.svg')).length,24);
-assert.equal(readdirSync(join(folder,'damage')).filter(n=>n.endsWith('.svg')).length,30);
+assert.equal(readdirSync(folder).length,24);
 const mime={'.js':'application/javascript','.html':'text/html; charset=utf-8','.css':'text/css; charset=utf-8','.svg':'image/svg+xml'};
 const server=createServer((req,res)=>{
  try{
@@ -59,7 +59,7 @@ try{
    assert.deepEqual(first.entries.map(e=>e[1]),first.names);
    assert.equal(first.hud,'6%');
    assert.ok(first.entries.every(e=>e[4]===.5&&e[5]===.856));
-   assert.equal(first.tex.length,54);assert.equal(loaded.size,54);
+   assert.equal(first.tex.length,54);assert.equal(loaded.size,24);
    for(const t of first.tex)assert.ok(t.area>0&&t.aa>0&&t.w===512&&t.h===512,JSON.stringify(t));
    for(const name of first.names)for(let stage=1;stage<=4;stage++){
     const a=first.tex.filter(t=>t.name===name&&t.stage===stage);
@@ -106,7 +106,7 @@ try{
    await page.keyboard.press('Escape');await page.waitForFunction(()=>window.__previewGame.scene.isActive('Game'));
    assert.deepEqual(errors,[]);assert.deepEqual(failed,[]);
    report.push({w,h,dpr,query,loaded:loaded.size,tex:first.tex,planted,pass:true});
-   console.log('PASS SVG',w,h,query,'54 assets, 12 states, 7 flowers, pause');
+   console.log('PASS SVG',w,h,query,'24 SVG files, 54 textures, 12 states, 7 flowers, pause');
   }finally{await page.close();}
  }
 }finally{await browser.close();server.close();writeFileSync(join(out,'svg-growth-report.json'),JSON.stringify(report,null,2));}

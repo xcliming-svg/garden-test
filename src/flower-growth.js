@@ -8,11 +8,10 @@
   const sequence=Object.freeze([[1,100],[2,100],[3,100],[4,100],[4,66],[4,33],[3,100],[3,50],[2,100],[2,50],[1,100],[1,50]].map(Object.freeze));
   const stepSeconds=5,period=sequence.length*stepSeconds,sourceSize=512;
   const key=(name,stage,hp=100)=>'flower-svg:'+name+':'+stage+':'+hp;
-  function path(name,stage,hp=100){
-    if(!names.includes(name)||!Number.isInteger(stage)||stage<1||stage>4||
-       !(hp===100||(stage===4?[66,33]:[50]).includes(hp)))throw Error('Unknown flower state');
+  function path(name,stage){
+    if(!names.includes(name)||!Number.isInteger(stage)||stage<1||stage>4)throw Error('Unknown flower state');
     const stem='0'+(names.indexOf(name)+1)+'_'+name+'_0'+stage;
-    return 'assets/flowers/'+(hp===100?stem+'.svg':'damage/'+stem+'_hp'+hp+'.svg');
+    return 'assets/flowers/'+stem+'.svg';
   }
   function stateAt(seconds){
     const [stage,hp]=sequence[Math.floor((Math.max(0,seconds)+1e-7)/stepSeconds)%sequence.length];
@@ -20,19 +19,26 @@
   }
   function preload(scene){
     if(!enabled)return;
-    for(const name of names)for(let stage=1;stage<=4;stage++)
-      for(const hp of stage===4?[100,66,33]:[100,50]){
-        const id=key(name,stage,hp);
-        if(!scene.textures.exists(id))scene.load.svg(id,path(name,stage,hp),{width:sourceSize,height:sourceSize});
-      }
+    for(const name of names)for(let stage=1;stage<=4;stage++){
+      const id=key(name,stage);
+      if(!scene.textures.exists(id))scene.load.svg(id,path(name,stage),{width:sourceSize,height:sourceSize});
+      if(!scene.cache.text.exists(id))scene.load.text(id,path(name,stage));
+    }
   }
   function install(scene){
-    for(const name of names)for(let stage=1;stage<=4;stage++)
-      for(const hp of stage===4?[100,66,33]:[100,50]){
-        const id=key(name,stage,hp);
-        if(!scene.textures.exists(id))throw Error('Missing SVG texture: '+id);
-        scene.textures.get(id).setFilter(Phaser.Textures.FilterMode.LINEAR);
+    for(const name of names)for(let stage=1;stage<=4;stage++){
+      const id=key(name,stage);
+      if(!scene.textures.exists(id))throw Error('Missing original SVG: '+id);
+      scene.textures.get(id).setFilter(Phaser.Textures.FilterMode.LINEAR);
+      const D=window.GardenFlowerDamage,parts=D.parse(scene.cache.text.get(id));
+      for(const hp of stage===4?[66,33]:[50]){
+        const k=key(name,stage,hp);
+        if(scene.textures.exists(k))continue;
+        const t=scene.textures.createCanvas(k,sourceSize,sourceSize);
+        D.draw(t.getContext(),parts,name,stage,hp,sourceSize);
+        t.refresh();t.setFilter(Phaser.Textures.FilterMode.LINEAR);
       }
+    }
   }
   // Maximum original bloom width is <85% of the 1000px artboard.
   // Keep the common authored root at y=856 and fit within the existing cell.
