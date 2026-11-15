@@ -2,7 +2,7 @@
 
 ## 2026-11-16 — 현재 devel main 승격 및 꽃 성장 SVG 실험
 
-- 사용자 승인으로 복구된 devel `ca0e891`을 main에 fast-forward 승격. 현재 main 기준 별도 `feature/flower-growth-svg-damage`에서 원본 SVG 24개만 보존 및 JS 피격 텍스처 30개 생성, 5초 간격 성장·피격 60초 순환, 6종 초기 정원 및 독립 심기 시각 적용. 기존 전투·드롭·수호자 유지. [상세 규격](./flower-growth-svg.md). 브라우저 검증은 전용 workflow에서 진행.
+- 사용자 승인으로 복구된 devel `ca0e891`을 main에 fast-forward 승격. 현재 main 기준 별도 `feature/flower-growth-svg-damage`에서 원본 SVG 24개만 보존 및 JS 피격 텍스처 30개 생성, 5초 간격 성장·피격 60초 순환, 6종 초기 정원 및 독립 심기 시각 적용. 기존 전투·드롭·수호자 유지. [상세 규격](./flower-growth-svg.md). [Chromium 검증](https://github.com/xcliming-svg/garden-test/actions/runs/43736825130) 신규 3/3 및 이전 꽃/전투 회귀 14/14 통과. 원본 SVG 24개만 저장, JS Path2D 피격 30개 생성 확인. PR #11로 devel 병합, main은 승격 기준 유지. 기타 브라우저 및 Pages 실제 응답 미검증.
 
 각 구현 변경의 결과를 시스템 단위로 기록한다. 대화 원문 또는 코드 diff의 복제가 아니라 **어떤 시스템에 무엇이 적용되었으며, 무엇이 아직 구현되지 않았는지**를 설명한다. 최신 구현 상태는 [implementation.md](./implementation.md)를 참조한다.
 
