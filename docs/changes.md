@@ -1,5 +1,9 @@
 # 시스템별 변경 이력
 
+## 2026-11-16 — 현재 devel main 승격 및 꽃 성장 SVG 실험
+
+- 사용자 승인으로 복구된 devel `ca0e891`을 main에 fast-forward 승격. 현재 main 기준 별도 `feature/flower-growth-svg-damage`에서 원본 24개 및 피격 30개 SVG 보존, 5초 간격 성장·피격 60초 순환, 6종 초기 정원 및 독립 심기 시각 적용. 기존 전투·드롭·수호자 유지. [상세 규격](./flower-growth-svg.md). 브라우저 검증은 전용 workflow에서 진행.
+
 각 구현 변경의 결과를 시스템 단위로 기록한다. 대화 원문 또는 코드 diff의 복제가 아니라 **어떤 시스템에 무엇이 적용되었으며, 무엇이 아직 구현되지 않았는지**를 설명한다. 최신 구현 상태는 [implementation.md](./implementation.md)를 참조한다.
 
 ## 2026-11-14 — devel 정면 공용 걷기 비교
