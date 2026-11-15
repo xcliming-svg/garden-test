@@ -87,9 +87,19 @@ try{
    // Test a newly planted flower through the existing real drop drag interaction.
    const drop=await page.evaluate(()=>{
     const s=window.__previewGame.scene.getScene('Game'),c=s.combatPreview;
-    const d=c.state.drops.find(d=>d.kind==='flower');
-    if(!d){c.state.drops.push({id:99999,kind:'flower',name:'rose',x:150,y:210,dragging:false});c.advance(0);}
-    const f=c.state.drops.find(d=>d.kind==='flower'),g=window.GardenGameLayout.spec.garden;
+    // Place a known flower card away from overlapping loot so pointer hit-testing
+    // selects the exact card under test, not another card at the same location.
+    const spec=window.GardenGameLayout.spec,g=spec.garden;
+    let point;
+    for(let y=spec.top+45;y<spec.height-spec.bottom-45&&!point;y+=45)
+     for(let x=150;x<spec.width-45;x+=45){
+      if(x>g.x-40&&x<g.x+g.size+40&&y>g.y-40&&y<g.y+g.size+40)continue;
+      const b=spec.blueprint;if(b&&x<b.x+b.width+40&&y<b.y+b.height+40)continue;
+      if(c.state.drops.every(d=>Math.hypot(d.x-x,d.y-y)>50)){point={x,y};break;}
+     }
+    if(!point)throw Error('No isolated test flower position');
+    const f={id:99999,kind:'flower',name:'rose',...point,dragging:false};
+    c.state.drops.push(f);c.advance(0);
     const card=s.children.getByName('combat-drop:flower:'+f.id);
     return {id:f.id,name:f.name,cardKey:card.list[2].texture.key,x:f.x,y:f.y,target:33,tx:g.x+3*g.pitch+g.line+g.cell/2,ty:g.y+3*g.pitch+g.line+g.cell/2};
    });
