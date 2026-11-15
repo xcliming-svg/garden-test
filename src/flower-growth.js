@@ -5,12 +5,18 @@
   // high-resolution rasterization for the GPU with linear sampling.
   const names=Object.freeze(['daisy','sunflower','tulip','hydrangea','rose','lavender']);
   const enabled=new URLSearchParams(window.location.search).get('flowerheads')!=='1';
-  const sequence=Object.freeze([[1,100],[2,100],[3,100],[4,100],[4,66],[4,33],[3,100],[3,50],[2,100],[2,50],[1,100],[1,50]].map(Object.freeze));
+  const maxStage=3;
+  const sequence=Object.freeze([[1,100],[2,100],[3,100],[3,66],[3,33],[2,100],[2,50],[1,100],[1,50]].map(Object.freeze));
   const stepSeconds=5,period=sequence.length*stepSeconds,sourceSize=512;
   const key=(name,stage,hp=100)=>'flower-svg:'+name+':'+stage+':'+hp;
+  // Preserve the original filenames and damage plans: logical stages 1–3 use art 2–4.
+  function sourceStage(stage){
+    if(!Number.isInteger(stage)||stage<1||stage>maxStage)throw Error('Unknown flower stage');
+    return stage+1;
+  }
   function path(name,stage){
-    if(!names.includes(name)||!Number.isInteger(stage)||stage<1||stage>4)throw Error('Unknown flower state');
-    const stem='0'+(names.indexOf(name)+1)+'_'+name+'_0'+stage;
+    if(!names.includes(name))throw Error('Unknown flower name');
+    const stem='0'+(names.indexOf(name)+1)+'_'+name+'_0'+sourceStage(stage);
     return 'assets/flowers/'+stem+'.svg';
   }
   function stateAt(seconds){
@@ -19,35 +25,34 @@
   }
   function preload(scene){
     if(!enabled)return;
-    for(const name of names)for(let stage=1;stage<=4;stage++){
+    for(const name of names)for(let stage=1;stage<=maxStage;stage++){
       const id=key(name,stage);
       if(!scene.textures.exists(id))scene.load.svg(id,path(name,stage),{width:sourceSize,height:sourceSize});
       if(!scene.cache.text.exists(id))scene.load.text(id,path(name,stage));
     }
   }
   function install(scene){
-    for(const name of names)for(let stage=1;stage<=4;stage++){
+    for(const name of names)for(let stage=1;stage<=maxStage;stage++){
       const id=key(name,stage);
       if(!scene.textures.exists(id))throw Error('Missing original SVG: '+id);
       scene.textures.get(id).setFilter(Phaser.Textures.FilterMode.LINEAR);
       const D=window.GardenFlowerDamage,parts=D.parse(scene.cache.text.get(id));
-      for(const hp of stage===4?[66,33]:[50]){
+      for(const hp of stage===maxStage?[66,33]:[50]){
         const k=key(name,stage,hp);
         if(scene.textures.exists(k))continue;
         const t=scene.textures.createCanvas(k,sourceSize,sourceSize);
-        D.draw(t.getContext(),parts,name,stage,hp,sourceSize);
+        D.draw(t.getContext(),parts,name,sourceStage(stage),hp,sourceSize);
         t.refresh();t.setFilter(Phaser.Textures.FilterMode.LINEAR);
       }
     }
   }
-  // Stage 1 only: double both axes about the authored root (500,856).
-  // Other stages keep the original display frame and root.
-  const displaySize=(cell,stage=4)=>cell/.85*(stage===1?2:1);
+  // Every retained stage keeps its previous art size and root (500,856).
+  const displaySize=cell=>cell/.85;
   function attach(scene,g){
     install(scene);
     const entries=new Map();
     function plant(index,name,center,born=0){
-      const size=displaySize(g.cell,1);
+      const size=displaySize(g.cell);
       const image=scene.add.image(center.x,center.y+g.cell/2-1,key(name,1))
         .setOrigin(.5,.856).setDisplaySize(size,size).setDepth(1).setName('garden-preview-flower:'+index);
       entries.set(index,{name,born,image,last:'1:100'});
@@ -58,7 +63,7 @@
         const {stage,hp}=stateAt(elapsed-entry.born),state=stage+':'+hp;
         if(state===entry.last)continue;
         entry.last=state;
-        const size=displaySize(g.cell,stage);
+        const size=displaySize(g.cell);
         entry.image.setTexture(key(entry.name,stage,hp)).setDisplaySize(size,size);
       }
     }
@@ -67,5 +72,5 @@
     scene.events.once('shutdown',()=>{entries.clear();delete scene.flowerGrowth;});
     return controller;
   }
-  window.GardenFlowerGrowth=Object.freeze({enabled,names,sequence,stepSeconds,period,sourceSize,key,path,stateAt,preload,attach,displaySize});
+  window.GardenFlowerGrowth=Object.freeze({enabled,names,maxStage,sequence,stepSeconds,period,sourceSize,key,path,sourceStage,stateAt,preload,attach,displaySize});
 }());
