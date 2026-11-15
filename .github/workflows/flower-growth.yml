@@ -2,6 +2,8 @@ name: Flower growth verification
 on:
   push:
     branches: [feature/flower-growth-damage]
+  pull_request:
+    branches: [devel]
 permissions:
   contents: read
 jobs:
