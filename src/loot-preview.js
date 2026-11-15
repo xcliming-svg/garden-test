@@ -42,7 +42,7 @@
       ghost.setVisible(false);
       if(dragging&&L.gardenCandidates(garden.occupied).has(target)){
         const p=garden.center(target);
-        const G=window.GardenFlowerGrowth, size=G.enabled?G.displaySize(g.cell):g.cell;
+        const G=window.GardenFlowerGrowth, size=G.enabled?G.displaySize(g.cell,1):g.cell;
         ghost.setTexture(flowerKey(dragging.data.name,g.cell,1))
           .setOrigin(.5,G.enabled ? .856 : .5).setDisplaySize(size,size)
           .setPosition(p.x,G.enabled?p.y+g.cell/2-1:p.y).setVisible(true);

@@ -1,5 +1,9 @@
 # 시스템별 변경 이력
 
+## 2026-11-16 — 꽃 1단계 크기 2배
+
+- 현재 devel 기반으로 1단계 정상·HP50 및 심기 고스트 표시를 200%로 변경. 하단 원점과 2~4단계 크기, 5초 순환, SVG 원본 24개 및 피격 방식 유지. [규격](./flower-growth-svg.md). 브라우저 테스트에서 단계별 표시 크기와 드래그 미리보기를 추가 검사한다.
+
 ## 2026-11-16 — 현재 devel main 승격 및 꽃 성장 SVG 실험
 
 - 사용자 승인으로 복구된 devel `ca0e891`을 main에 fast-forward 승격. 현재 main 기준 별도 `feature/flower-growth-svg-damage`에서 원본 SVG 24개만 보존 및 JS 피격 텍스처 30개 생성, 5초 간격 성장·피격 60초 순환, 6종 초기 정원 및 독립 심기 시각 적용. 기존 전투·드롭·수호자 유지. [상세 규격](./flower-growth-svg.md). [Chromium 검증](https://github.com/xcliming-svg/garden-test/actions/runs/43736825130) 신규 3/3 및 이전 꽃/전투 회귀 14/14 통과. 원본 SVG 24개만 저장, JS Path2D 피격 30개 생성 확인. PR #11로 devel 병합, main은 승격 기준 유지. 기타 브라우저 및 Pages 실제 응답 미검증.
