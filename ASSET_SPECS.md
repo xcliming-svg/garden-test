@@ -1,5 +1,7 @@
 # 전장 UI 및 에셋 규격
 
+> **devel 정원 경계 돌:** 정원 영역 경계용 돌 에셋만 등록한다. 원본 32×32 SVG 보존, 눈 표정 1프레임과 동일한 256×256 정사각형 에셋 2종(stone #676777, silver #B0ACBD). viewBox와 path는 원본 그대로, 중심 기준. 가시 알파 범위 176×130px(256px 렌더 기준), 기본 40px 주인공의 눈 프레임 배율(40/716) 적용 시 논리 표시 상자 약 14.30×14.30px, 가시 약 9.83×7.26px. 향후 테두리 배치에 사용하며 이번 변경에서 순찰/충돌/경계 표시 구현은 하지 않는다. 경로: `assets/pebbles/`.
+
 > **devel SVG 16색 실험:** 원본 SVG 29개 보존, `assets/palette16/`에는 동일 경로/변환의 색상 복사본 29개. `src/palette.js`의 Garden 16만 사용. `?svgcolors=original` 비교/복구. [규격](./docs/ui-color-guide.md).
 
 > **devel 요정:** [현행 규격](./docs/fairy-patrol.md). 원본 SVG 4개/manifest 보존. 원본 1000×1000 몸체, 발끝 (500,858), 주인공 40px/물 요정 약 28px, 512px 합성 텍스처 normal/closed, LINEAR.
