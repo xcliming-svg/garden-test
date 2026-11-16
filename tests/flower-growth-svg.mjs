@@ -27,7 +27,7 @@ const browser=await chromium.launch({channel:'chrome',headless:true,args:['--no-
 const expected=[[1,100],[2,100],[3,100],[3,66],[3,33],[2,100],[2,66],[2,33],[1,100],[1,66],[1,33]];
 const report=[];
 try{
- for(const [w,h,dpr,query] of [[960,540,1,''],[1920,1080,1,'?flower=32&personstyle=3'],[960,540,2,'?uitype=1&personstyle=3'],[960,540,1,'?svgcolors=original']]){
+ for(const [w,h,dpr,query] of [[960,540,1,''],[1920,1080,1,'?flower=32&personstyle=3'],[960,540,2,'?uitype=1&personstyle=3'],[960,540,1,'?svgcolors=palette16']]){
   const page=await browser.newPage({viewport:{width:w,height:h},deviceScaleFactor:dpr});
   const errors=[],failed=[],loaded=new Set();
   page.on('pageerror',e=>errors.push(String(e)));
@@ -61,7 +61,7 @@ try{
    assert.ok(first.entries.every(e=>e[4]===.5&&e[5]===.856&&Math.abs(e[6]-first.cell/.85)<1e-8));
    assert.equal(first.period,55);assert.equal(first.maxStage,3);
    assert.equal(first.tex.length,54);assert.equal(loaded.size,18);
-   const original=query.includes('svgcolors=original');
+   const original=!query.includes('svgcolors=palette16');
    assert.equal(first.paletteEnabled,!original);
    const expectedPaths=first.names.flatMap((n,i)=>[2,3,4].map(stage=>'assets/'+(original?'':'palette16/')+'flowers/0'+(i+1)+'_'+n+'_0'+stage+'.svg'));
    assert.deepEqual(first.paths,expectedPaths);
@@ -78,7 +78,7 @@ try{
     assert.ok(a.every(t=>Math.abs(t.bottom-a[0].bottom)<=3),JSON.stringify(a));
    }
    for(let t=0;t<55;t++)assert.deepEqual(first.states[t],{stage:expected[Math.floor(t/5)][0],hp:expected[Math.floor(t/5)][1]});
-   if(w===1920||original){
+   if(w===1920||!original){
     const png=await page.evaluate(()=>{
      const s=window.__previewGame.scene.getScene('Game'),G=window.GardenFlowerGrowth;
      const c=document.createElement('canvas');c.width=1440;c.height=960;const ctx=c.getContext('2d');
