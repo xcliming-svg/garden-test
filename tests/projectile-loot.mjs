@@ -23,7 +23,7 @@ await new Promise(r=>server.listen(0,'127.0.0.1',r));
 const url='http://127.0.0.1:'+server.address().port;
 const browser=await chromium.launch({channel:'chrome',headless:true,args:['--no-sandbox','--disable-dev-shm-usage','--use-gl=angle','--use-angle=swiftshader','--enable-unsafe-swiftshader']});
 const report=[];
-const configs=[[960,540,1,''],[1920,1080,1,'?person=38'],[960,540,1,'?garden=32&person=56&slots=24'],[1920,1080,1,'?person=38&full=1'],[960,540,1,'?flower=21&person=37'],[1920,1080,1,'?flower=23&person=39&full=1'],[1920,1080,1,'?flower=20&person=40&full=1'],[1920,1080,1,'?flower=20&person=40'],[1920,1080,1,'?uitype=1&flower=20&person=40'],[1920,1080,1,'?uitype=1&flower=20&person=40&full=1'],[1920,1080,1,'?personstyle=1&flower=20&person=40'],[1920,1080,1,'?personstyle=2&flower=20&person=40&uitype=1'],[1920,1080,1,'?personstyle=3&flower=20&person=40'],[960,540,1,'?personstyle=3&flower=20&person=40&uitype=1']];
+const configs=[[960,540,1,''],[1920,1080,1,'?person=38'],[960,540,1,'?garden=32&person=56&slots=24'],[1920,1080,1,'?person=38&full=1&bgtype=0'],[960,540,1,'?flower=21&person=37'],[1920,1080,1,'?flower=23&person=39&full=1'],[1920,1080,1,'?flower=20&person=40&full=1'],[1920,1080,1,'?flower=20&person=40'],[1920,1080,1,'?uitype=1&flower=20&person=40'],[1920,1080,1,'?uitype=1&flower=20&person=40&full=1'],[1920,1080,1,'?personstyle=1&flower=20&person=40'],[1920,1080,1,'?personstyle=2&flower=20&person=40&uitype=1'],[1920,1080,1,'?personstyle=3&flower=20&person=40'],[960,540,1,'?personstyle=3&flower=20&person=40&uitype=1']];
 try{
  for(const [w,h,dpr,query] of configs){
   const page=await browser.newPage({viewport:{width:w,height:h},deviceScaleFactor:dpr});
@@ -185,10 +185,16 @@ try{
         }
         return {light:true,grassPixels,dirtPixels,hudPixels,grassColors:grassColors.size};
       }
+      // The approved default is night grass; explicit bgtype=0 is still black.
+      const scene=window.__previewGame.scene.getScene('Game');
+      const bg=scene.children.getByName('dark-field-pattern');
+      const fieldColors=new Set([0x0d0d0d]);
+      if(bg){const im=bg.texture.getSourceImage(),d=im.getContext('2d').getImageData(0,0,im.width,im.height).data;
+        for(let i=0;i<d.length;i+=4)fieldColors.add((d[i]<<16)|(d[i+1]<<8)|d[i+2]);}
       let dash=0,gap=0,wrong=0;
       for(let x=(g.left+2)*2;x<(g.right-2)*2;x++){
         const v=at(x,(g.bottom-1)*2);
-        if(colors.has(v))dash++;else if(v===0x0d0d0d)gap++;else wrong++;
+        if(colors.has(v))dash++;else if(fieldColors.has(v))gap++;else wrong++;
       }
       // Sample the open field, away from the garden, guardian, blueprint and status label.
       // The previous decorative palette (green, teal, slate and stone) must not appear.
@@ -200,7 +206,7 @@ try{
           const lx=x/2,ly=y/2;
           if(lx>=g.left-45&&lx<=g.right+45&&ly>=g.top-50&&ly<=g.bottom+50)continue;
           if(lx>=bp.x-12&&lx<=bp.x+bp.width+12&&ly>=bp.y-12&&ly<=bp.y+bp.height+12)continue;
-          const v=at(x,y);if(v===0x0d0d0d)background++;if(forbidden.has(v))decorPixels++;
+          const v=at(x,y);if(fieldColors.has(v))background++;if(forbidden.has(v))decorPixels++;
         }
       }
       return {dash,gap,wrong,background,decorPixels};
