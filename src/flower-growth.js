@@ -1,8 +1,7 @@
 (function () {
   'use strict';
-  // Preserve the supplied vector files; never quantize to a pixel palette or
-  // cut away botanical parts. Phaser's SVG loader performs ordinary
-  // high-resolution rasterization for the GPU with linear sampling.
+  // Preserve the original vector files. The optional palette copies change only
+  // vector fills, not shape or resolution. Phaser rasterizes with linear sampling.
   const names=Object.freeze(['daisy','sunflower','tulip','hydrangea','rose','lavender']);
   const enabled=new URLSearchParams(window.location.search).get('flowerheads')!=='1';
   const maxStage=3;
@@ -17,7 +16,7 @@
   function path(name,stage){
     if(!names.includes(name))throw Error('Unknown flower name');
     const stem='0'+(names.indexOf(name)+1)+'_'+name+'_0'+sourceStage(stage);
-    return 'assets/flowers/'+stem+'.svg';
+    return window.GardenSvgPalette.path('flowers/'+stem+'.svg');
   }
   function stateAt(seconds){
     const [stage,hp]=sequence[Math.floor((Math.max(0,seconds)+1e-7)/stepSeconds)%sequence.length];
