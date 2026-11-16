@@ -1,7 +1,7 @@
 name: SVG flower growth verification
 on:
   push:
-    branches: [feature/flower-growth-svg-damage, feature/devel-flower-stage1-double, feature/devel-flower-three-stages, feature/devel-flower-wilt]
+    branches: [feature/flower-growth-svg-damage, feature/devel-flower-stage1-double, feature/devel-flower-three-stages, feature/devel-flower-wilt, feature/devel-fairy-patrol]
   pull_request:
     branches: [devel]
 permissions:
@@ -18,8 +18,9 @@ jobs:
       - run: npm install --no-save --package-lock=false playwright@1.51.1 phaser@3.90.0
         env:
           PLAYWRIGHT_SKIP_BROWSER_DOWNLOAD: '1'
-      - run: for file in src/*.js tests/flower-growth-svg.mjs; do node --check "$file"; done
+      - run: for file in src/*.js tests/flower-growth-svg.mjs tests/fairy-patrol.mjs; do node --check "$file"; done
       - run: node tests/flower-growth-svg.mjs
+      - run: node tests/fairy-patrol.mjs
       - uses: actions/upload-artifact@v4
         if: always()
         with:

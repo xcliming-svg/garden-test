@@ -1,0 +1,170 @@
+{
+  "version": 1,
+  "canvas": {
+    "width": 1000,
+    "height": 1000
+  },
+  "anchor": {
+    "x": 500,
+    "y": 858
+  },
+  "expressions": [
+    "normal",
+    "happy",
+    "closed",
+    "squeeze",
+    "angry",
+    "wink",
+    "dizzy"
+  ],
+  "sheets": {
+    "eyes": {
+      "svg": "eyes.svg",
+      "png": "eyes.png",
+      "width": 1792,
+      "height": 256,
+      "frames": {
+        "normal": {
+          "x": 0,
+          "y": 0,
+          "width": 256,
+          "height": 256
+        },
+        "happy": {
+          "x": 256,
+          "y": 0,
+          "width": 256,
+          "height": 256
+        },
+        "closed": {
+          "x": 512,
+          "y": 0,
+          "width": 256,
+          "height": 256
+        },
+        "squeeze": {
+          "x": 768,
+          "y": 0,
+          "width": 256,
+          "height": 256
+        },
+        "angry": {
+          "x": 1024,
+          "y": 0,
+          "width": 256,
+          "height": 256
+        },
+        "wink": {
+          "x": 1280,
+          "y": 0,
+          "width": 256,
+          "height": 256
+        },
+        "dizzy": {
+          "x": 1536,
+          "y": 0,
+          "width": 256,
+          "height": 256
+        }
+      }
+    },
+    "tears": {
+      "svg": "tears.svg",
+      "png": "tears.png",
+      "width": 256,
+      "height": 256,
+      "frames": {
+        "tears": {
+          "x": 0,
+          "y": 0,
+          "width": 256,
+          "height": 256
+        }
+      }
+    }
+  },
+  "sourceEyeCenters": {
+    "left": {
+      "x": 72.55300499999998,
+      "y": 127.84807300000006
+    },
+    "right": {
+      "x": 183.44699399999996,
+      "y": 128.15192600000006
+    }
+  },
+  "characters": {
+    "garden": {
+      "svg": "garden.svg",
+      "png": "garden.png",
+      "visibleHeight": 716,
+      "eyeCenters": {
+        "left": {
+          "x": 447.651909,
+          "y": 532.811227
+        },
+        "right": {
+          "x": 558.545898,
+          "y": 533.11508
+        }
+      },
+      "eyeScale": {
+        "x": 1,
+        "y": 1
+      },
+      "colors": {},
+      "destinationRects": {
+        "left": {
+          "x": 375.098904,
+          "y": 404.963154,
+          "width": 128,
+          "height": 256
+        },
+        "right": {
+          "x": 503.098904,
+          "y": 404.963154,
+          "width": 128,
+          "height": 256
+        }
+      }
+    },
+    "water": {
+      "svg": "water.svg",
+      "png": "water.png",
+      "visibleHeight": 502,
+      "eyeCenters": {
+        "left": {
+          "x": 442.2583184320758,
+          "y": 596.3753464797398
+        },
+        "right": {
+          "x": 560.9770570787573,
+          "y": 596.4033986202546
+        }
+      },
+      "eyeScale": {
+        "x": 0.7906648451730418,
+        "y": 0.6950736876966385
+      },
+      "colors": {
+        "head": "#7A9DC0",
+        "body": "#617DA0",
+        "skin": "#FCD6BA"
+      },
+      "destinationRects": {
+        "left": {
+          "x": 384.89320796691186,
+          "y": 507.5115149147208,
+          "width": 101.20510018214935,
+          "height": 177.93886405033945
+        },
+        "right": {
+          "x": 517.1370681524368,
+          "y": 507.32836683000784,
+          "width": 101.20510018214935,
+          "height": 177.93886405033945
+        }
+      }
+    }
+  }
+}

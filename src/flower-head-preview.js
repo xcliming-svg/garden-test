@@ -147,7 +147,8 @@
     texture.setFilter(Phaser.Textures.FilterMode.NEAREST);
   }
   function draw(scene, spec, colors, gardenRaster, patrolBounds, patrolPosition, updateHud, itemPreview) {
-    install(scene,spec.garden.cell);installEnemy(scene);
+    const fairy=window.GardenFairyPatrol.enabled;
+    install(scene,spec.garden.cell);if(!fairy)installEnemy(scene);
     const g=spec.garden,occupied=window.GardenCombatPreview.initialGarden(spec);
     const textureKey='flower-head-preview:soil:'+g.cell;
     const texture=scene.textures.exists(textureKey)?scene.textures.get(textureKey):
@@ -155,7 +156,7 @@
     const soil=scene.add.image(g.x+g.size/2,g.y+g.size/2,textureKey)
       .setDepth(-1).setName('garden-preview-soil');
     const grid=window.GardenDashedGridPreview;
-    const geometry=keys=>grid.geometry(spec,keys,guardianWidth,guardianSize);
+    const geometry=(keys,w=guardianWidth,h=guardianSize)=>grid.geometry(spec,keys,w,h);
     const visible=grid.all(g);
     let hover=null;
     function refreshSoil(target=hover){
@@ -185,15 +186,19 @@
       occupied.add(index);addFlower(index,drop.name,model.state.elapsed);refreshSoil(null);
       return true;
     }
+    refreshSoil(null);
+    const resize=()=>refreshSoil();
+    scene.scale.on('resize',resize);
+    scene.events.once('shutdown',()=>scene.scale.off('resize',resize));
+    if(fairy){
+      window.GardenFairyPatrol.attach(scene,spec,occupied,geometry,patrolPosition,updateHud,guardianSize);
+      return;
+    }
     const bounds=clampedBounds(occupied),start=patrolPosition(bounds,(bounds.right-bounds.left)/2);
     const walk=window.GardenGuardianWalkPreview,walkKeys=walk.install(scene,guardianWidth,guardianSize);
     const guardian=scene.add.image(start.x,start.y,walkKeys?walkKeys.side[0]:installGuardian(scene))
       .setDisplaySize(guardianWidth,guardianSize).setDepth(2).setName('placeholder:guardian:0');
     const loot=window.GardenLootPreview.attach(scene,spec,{occupied,refresh:refreshSoil,center,plant},itemPreview);
-    refreshSoil(null);
-    const resize=()=>refreshSoil();
-    scene.scale.on('resize',resize);
-    scene.events.once('shutdown',()=>scene.scale.off('resize',resize));
     window.GardenCombatPreview.attach(scene,spec,bounds,patrolPosition,guardian,key('caterpillar',enemySize),enemySize,updateHud,loot,walk.animator(guardian,walkKeys));
   }
   window.GardenFlowerHeadPreview=Object.freeze({draw,install,flowers,key,guardianSize,outlinedPixels,enemySize});
