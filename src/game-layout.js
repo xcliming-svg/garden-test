@@ -1098,6 +1098,7 @@
     const g = scene.add.graphics().setDepth(-2).setName('battlefield');
     g.fillStyle(colors.field, 1).fillRect(0, spec.top, spec.width, spec.fieldHeight);
     if(P.uiType===1)window.GardenLightFieldPreview.field(scene,spec);
+    else window.GardenDarkFieldPreview.field(scene,spec);
     const updateHud=drawHud(scene);
     const layout=drawSlots(scene);
     drawBlueprint(scene);

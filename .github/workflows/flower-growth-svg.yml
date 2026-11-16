@@ -18,10 +18,11 @@ jobs:
       - run: npm install --no-save --package-lock=false playwright@1.51.1 phaser@3.90.0
         env:
           PLAYWRIGHT_SKIP_BROWSER_DOWNLOAD: '1'
-      - run: for file in src/*.js tests/flower-growth-svg.mjs tests/fairy-patrol.mjs; do node --check "$file"; done
+      - run: for file in src/*.js tests/flower-growth-svg.mjs tests/fairy-patrol.mjs tests/dark-field-preview.mjs; do node --check "$file"; done
       - run: node scripts/recolor-svg.mjs
       - run: node tests/flower-growth-svg.mjs
       - run: node tests/fairy-patrol.mjs
+      - run: node tests/dark-field-preview.mjs
       - uses: actions/upload-artifact@v4
         if: always()
         with:
