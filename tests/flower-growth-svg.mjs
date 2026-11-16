@@ -24,7 +24,7 @@ const server=createServer((req,res)=>{
 await new Promise(r=>server.listen(0,'127.0.0.1',r));
 const url='http://127.0.0.1:'+server.address().port;
 const browser=await chromium.launch({channel:'chrome',headless:true,args:['--no-sandbox','--disable-dev-shm-usage','--use-gl=angle','--use-angle=swiftshader','--enable-unsafe-swiftshader']});
-const expected=[[1,100],[2,100],[3,100],[4,100],[4,66],[4,33],[3,100],[3,50],[2,100],[2,50],[1,100],[1,50]];
+const expected=[[1,100],[2,100],[3,100],[3,66],[3,33],[2,100],[2,50],[1,100],[1,50]];
 const report=[];
 try{
  for(const [w,h,dpr,query] of [[960,540,1,''],[1920,1080,1,'?flower=32&personstyle=3'],[960,540,2,'?uitype=1&personstyle=3']]){
@@ -43,7 +43,7 @@ try{
    const first=await page.evaluate(()=>{
     const s=window.__previewGame.scene.getScene('Game'),G=window.GardenFlowerGrowth,c=s.combatPreview,g=s.flowerGrowth,tex=[];
     const cv=document.createElement('canvas');cv.width=cv.height=G.sourceSize;const ctx=cv.getContext('2d',{willReadFrequently:true});
-    for(const name of G.names)for(let stage=1;stage<=4;stage++)for(const hp of stage===4?[100,66,33]:[100,50]){
+    for(const name of G.names)for(let stage=1;stage<=3;stage++)for(const hp of stage===3?[100,66,33]:[100,50]){
      const t=s.textures.get(G.key(name,stage,hp)),im=t.getSourceImage();
      ctx.clearRect(0,0,cv.width,cv.height);ctx.drawImage(im,0,0);
      const data=ctx.getImageData(0,0,cv.width,cv.height).data;
@@ -52,47 +52,64 @@ try{
      tex.push({name,stage,hp,area,aa,colors:colors.size,w:im.width,h:im.height});
     }
     return {names:G.names,occupied:[...c.model.occupied],entries:[...g.entries].map(([i,e])=>[i,e.name,e.image.x,e.image.y,e.image.originX,e.image.originY,e.image.displayWidth]),tex,
-     states:Array.from({length:60},(_,i)=>G.stateAt(i)),start:c.state.elapsed,
+     states:Array.from({length:45},(_,i)=>G.stateAt(i)),period:G.period,maxStage:G.maxStage,paths:G.names.flatMap(n=>[1,2,3].map(stage=>G.path(n,stage))),start:c.state.elapsed,
      cell:window.GardenGameLayout.spec.garden.cell,hud:s.children.getByName('hud-progress-value').text};
    });
    assert.deepEqual(first.occupied,[43,44,45,53,54,55]);
    assert.deepEqual(first.entries.map(e=>e[1]),first.names);
    assert.equal(first.hud,'6%');
-   assert.ok(first.entries.every(e=>e[4]===.5&&e[5]===.856&&Math.abs(e[6]-first.cell/.85*2)<1e-8));
-   assert.equal(first.tex.length,54);assert.equal(loaded.size,24);
+   assert.ok(first.entries.every(e=>e[4]===.5&&e[5]===.856&&Math.abs(e[6]-first.cell/.85)<1e-8));
+   assert.equal(first.period,45);assert.equal(first.maxStage,3);
+   assert.equal(first.tex.length,42);assert.equal(loaded.size,18);
+   const expectedPaths=first.names.flatMap((n,i)=>[2,3,4].map(stage=>'assets/flowers/0'+(i+1)+'_'+n+'_0'+stage+'.svg'));
+   assert.deepEqual(first.paths,expectedPaths);
+   assert.deepEqual([...loaded].map(u=>new URL(u).pathname.slice(1)).sort(),expectedPaths.slice().sort());
    for(const t of first.tex)assert.ok(t.area>0&&t.aa>0&&t.w===512&&t.h===512,JSON.stringify(t));
-   for(const name of first.names)for(let stage=1;stage<=4;stage++){
+   for(const name of first.names)for(let stage=1;stage<=3;stage++){
     const a=first.tex.filter(t=>t.name===name&&t.stage===stage);
     assert.ok(a[0].area>a[1].area&&(!a[2]||a[1].area>a[2].area),JSON.stringify(a));
    }
-   for(let t=0;t<60;t++)assert.deepEqual(first.states[t],{stage:expected[Math.floor(t/5)][0],hp:expected[Math.floor(t/5)][1]});
-   // Real scene clock, not a separate timer; verify all 12 frame transitions.
-   for(let i=0;i<=12;i++){
+   for(let t=0;t<45;t++)assert.deepEqual(first.states[t],{stage:expected[Math.floor(t/5)][0],hp:expected[Math.floor(t/5)][1]});
+   // Real scene clock, not a separate timer; verify all 9 frame transitions.
+   for(let i=0;i<=9;i++){
     const actual=await page.evaluate(({t})=>{
      const s=window.__previewGame.scene.getScene('Game'),c=s.combatPreview,G=s.flowerGrowth;
      c.advance(Math.max(0,t+.1-c.state.elapsed));
      return {keys:[...G.entries.values()].map(e=>e.image.texture.key),anchors:[...G.entries.values()].map(e=>[e.image.x,e.image.y,e.image.originX,e.image.originY]),sizes:[...G.entries.values()].map(e=>[e.image.displayWidth,e.image.displayHeight])};
     },{t:i*5});
-    const [stage,hp]=expected[i%12];
+    const [stage,hp]=expected[i%9];
     assert.ok(actual.keys.every(k=>k.endsWith(':'+stage+':'+hp)),JSON.stringify(actual.keys));
     assert.deepEqual(actual.anchors,first.entries.map(e=>e.slice(2,6)));
-    const size=first.cell/.85*(stage===1?2:1);
+    const size=first.cell/.85;
     assert.ok(actual.sizes.every(([w,h])=>Math.abs(w-size)<1e-8&&Math.abs(h-size)<1e-8),JSON.stringify(actual.sizes));
-    if(w===1920&&i<12)await page.screenshot({path:join(out,'svg-growth-'+String(i).padStart(2,'0')+'.png')});
+    if(w===1920&&i<9)await page.screenshot({path:join(out,'svg-growth-'+String(i).padStart(2,'0')+'.png')});
    }
    // Test a newly planted flower through the existing real drop drag interaction.
    const drop=await page.evaluate(()=>{
     const s=window.__previewGame.scene.getScene('Game'),c=s.combatPreview;
-    const d=c.state.drops.find(d=>d.kind==='flower');
-    if(!d){c.state.drops.push({id:99999,kind:'flower',name:'rose',x:150,y:210,dragging:false});c.advance(0);}
-    const f=c.state.drops.find(d=>d.kind==='flower'),g=window.GardenGameLayout.spec.garden;
-    return {id:f.id,x:f.x,y:f.y,target:33,tx:g.x+3*g.pitch+g.line+g.cell/2,ty:g.y+3*g.pitch+g.line+g.cell/2};
+    // Place a known flower card away from overlapping loot so pointer hit-testing
+    // selects the exact card under test, not another card at the same location.
+    const spec=window.GardenGameLayout.spec,g=spec.garden;
+    let point;
+    for(let y=spec.top+45;y<spec.height-spec.bottom-45&&!point;y+=45)
+     for(let x=150;x<spec.width-45;x+=45){
+      if(x>g.x-40&&x<g.x+g.size+40&&y>g.y-40&&y<g.y+g.size+40)continue;
+      const b=spec.blueprint;if(b&&x<b.x+b.width+40&&y<b.y+b.height+40)continue;
+      if(c.state.drops.every(d=>Math.hypot(d.x-x,d.y-y)>50)){point={x,y};break;}
+     }
+    if(!point)throw Error('No isolated test flower position');
+    const f={id:99999,kind:'flower',name:'rose',...point,dragging:false};
+    c.state.drops.push(f);c.advance(0);
+    const card=s.children.getByName('combat-drop:flower:'+f.id);
+    return {id:f.id,name:f.name,cardKey:card.list[2].texture.key,x:f.x,y:f.y,target:33,tx:g.x+3*g.pitch+g.line+g.cell/2,ty:g.y+3*g.pitch+g.line+g.cell/2};
    });
+   assert.equal(drop.cardKey,'flower-svg:'+drop.name+':3:100');
    await page.mouse.move(box.x+drop.x*box.width/960,box.y+drop.y*box.height/540);
    await page.mouse.down();
    await page.mouse.move(box.x+drop.tx*box.width/960,box.y+drop.ty*box.height/540,{steps:8});
-   const ghost=await page.evaluate(()=>{const s=window.__previewGame.scene.getScene('Game'),o=s.children.getByName('combat-flower-ghost');return {visible:o.visible,w:o.displayWidth,h:o.displayHeight,x:o.x,y:o.y,ox:o.originX,oy:o.originY};});
-   assert.ok(ghost.visible&&Math.abs(ghost.w-first.cell/.85*2)<1e-8&&Math.abs(ghost.h-ghost.w)<1e-8&&ghost.ox===.5&&ghost.oy===.856,JSON.stringify(ghost));
+   const ghost=await page.evaluate(()=>{const s=window.__previewGame.scene.getScene('Game'),o=s.children.getByName('combat-flower-ghost');return {key:o.texture.key,visible:o.visible,w:o.displayWidth,h:o.displayHeight,x:o.x,y:o.y,ox:o.originX,oy:o.originY};});
+   assert.equal(ghost.key,'flower-svg:'+drop.name+':1:100');
+   assert.ok(ghost.visible&&Math.abs(ghost.w-first.cell/.85)<1e-8&&Math.abs(ghost.h-ghost.w)<1e-8&&ghost.ox===.5&&ghost.oy===.856,JSON.stringify(ghost));
    await page.mouse.up();
    await page.waitForFunction(i=>window.__previewGame.scene.getScene('Game').flowerGrowth.entries.has(i),drop.target);
    const planted=await page.evaluate(i=>{
@@ -102,7 +119,7 @@ try{
     return {initial,age,width,nextWidth:e.image.displayWidth,next:e.image.texture.key,count:c.model.occupied.size,progress:s.children.getByName('hud-progress-value').text};
    },drop.target);
    assert.ok(planted.initial.endsWith(':1:100')&&planted.next.endsWith(':2:100')&&planted.age<1,JSON.stringify(planted));
-   assert.ok(Math.abs(planted.width-first.cell/.85*2)<1e-8&&Math.abs(planted.nextWidth-first.cell/.85)<1e-8);
+   assert.ok(Math.abs(planted.width-first.cell/.85)<1e-8&&Math.abs(planted.nextWidth-first.cell/.85)<1e-8);
    assert.equal(planted.count,7);assert.equal(planted.progress,'7%');
    await page.keyboard.press('Escape');await page.waitForFunction(()=>window.__previewGame.scene.isActive('Pause'));
    const time=await page.evaluate(()=>window.__previewGame.scene.getScene('Game').combatPreview.state.elapsed);
@@ -111,7 +128,7 @@ try{
    await page.keyboard.press('Escape');await page.waitForFunction(()=>window.__previewGame.scene.isActive('Game'));
    assert.deepEqual(errors,[]);assert.deepEqual(failed,[]);
    report.push({w,h,dpr,query,loaded:loaded.size,tex:first.tex,planted,pass:true});
-   console.log('PASS SVG',w,h,query,'24 SVG files, 54 textures, 12 states, 7 flowers, pause');
+   console.log('PASS SVG',w,h,query,'24 preserved SVG files, 18 loaded, 42 textures, 9 states, 7 flowers, pause');
   }finally{await page.close();}
  }
 }finally{await browser.close();server.close();writeFileSync(join(out,'svg-growth-report.json'),JSON.stringify(report,null,2));}

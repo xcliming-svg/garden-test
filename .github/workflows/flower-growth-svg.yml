@@ -1,7 +1,7 @@
 name: SVG flower growth verification
 on:
   push:
-    branches: [feature/flower-growth-svg-damage, feature/devel-flower-stage1-double]
+    branches: [feature/flower-growth-svg-damage, feature/devel-flower-stage1-double, feature/devel-flower-three-stages]
   pull_request:
     branches: [devel]
 permissions:

@@ -12,7 +12,7 @@
     }
     ctx.putImageData(im,0,0);t.refresh();t.setFilter(Phaser.Textures.FilterMode.NEAREST);
   }
-  function flowerKey(name,size,stage=4){
+  function flowerKey(name,size,stage=window.GardenFlowerGrowth.maxStage){
     return window.GardenFlowerGrowth.enabled?window.GardenFlowerGrowth.key(name,stage):window.GardenFlowerHeadPreview.key(name,size);
   }
   function card(scene,x,y,size,iconSize,kind='card',name,flowerSize=22){
@@ -42,7 +42,7 @@
       ghost.setVisible(false);
       if(dragging&&L.gardenCandidates(garden.occupied).has(target)){
         const p=garden.center(target);
-        const G=window.GardenFlowerGrowth, size=G.enabled?G.displaySize(g.cell,1):g.cell;
+        const G=window.GardenFlowerGrowth, size=G.enabled?G.displaySize(g.cell):g.cell;
         ghost.setTexture(flowerKey(dragging.data.name,g.cell,1))
           .setOrigin(.5,G.enabled ? .856 : .5).setDisplaySize(size,size)
           .setPosition(p.x,G.enabled?p.y+g.cell/2-1:p.y).setVisible(true);
