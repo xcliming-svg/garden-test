@@ -25,9 +25,9 @@ const browser=await chromium.launch({channel:'chrome',headless:true,args:['--no-
 const report=[];
 try{
  for(const [name,query,mode,w,h,dpr] of [
-  ['original','',0,960,540,1],...Array.from({length:5},(_,i)=>['pattern-'+(i+1),'?bgtype='+(i+1),i+1,960,540,1]),
+  ['original','',0,960,540,1],...Array.from({length:6},(_,i)=>['pattern-'+(i+1),'?bgtype='+(i+1),i+1,960,540,1]),
   ['invalid','?bgtype=99',0,960,540,1],['light','?uitype=1&bgtype=2',0,960,540,1],
-  ['fhd','?bgtype=2',2,1920,1080,1],['dpr2','?bgtype=5',5,960,540,2]
+  ['fhd','?bgtype=2',2,1920,1080,1],['dpr2','?bgtype=5',5,960,540,2],['grass-fhd','?bgtype=6',6,1920,1080,1],['grass-dpr2','?bgtype=6',6,960,540,2],['grass-light','?uitype=1&bgtype=6',0,960,540,1]
  ]){
   const page=await browser.newPage({viewport:{width:w,height:h},deviceScaleFactor:dpr});
   const errors=[],failed=[];page.on('pageerror',e=>errors.push(String(e)));page.on('requestfailed',r=>failed.push(r.url()));
@@ -42,15 +42,15 @@ try{
     const result={active:B.active,pattern:!!o,light:!!light,actors:s.fairyPatrol.actors.length,stones:s.fairyPatrol.border.images.length,flowers:s.flowerGrowth.entries.size,original:!window.GardenSvgPalette.enabled};
     if(!o)return result;
     const im=o.texture.getSourceImage(),ctx=im.getContext('2d'),d=ctx.getImageData(0,0,im.width,im.height).data;
-    const counts={};let min=255,max=0,neutral=true,opaque=true;
-    for(let i=0;i<d.length;i+=4){const v=d[i];min=Math.min(min,v);max=Math.max(max,v);counts[v]=(counts[v]||0)+1;neutral&&=v===d[i+1]&&v===d[i+2];opaque&&=d[i+3]===255;}
+    const counts={};let min=255,max=0,neutral=true,opaque=true,green=true,maxChannel=0;
+    for(let i=0;i<d.length;i+=4){const v=d[i];min=Math.min(min,v);max=Math.max(max,v);counts[v]=(counts[v]||0)+1;neutral&&=v===d[i+1]&&v===d[i+2];opaque&&=d[i+3]===255;green&&=d[i+1]>d[i]&&d[i+1]>d[i+2];maxChannel=Math.max(maxChannel,d[i],d[i+1],d[i+2]);}
     const cv=document.createElement('canvas');cv.width=im.width;cv.height=im.height;B.paint(cv.getContext('2d'),cv.width,cv.height,B.active);
     const d2=cv.getContext('2d').getImageData(0,0,cv.width,cv.height).data;
-    return {...result,min,max,neutral,opaque,counts,stable:d.every((v,i)=>v===d2[i]),depth:o.depth,interactive:!!o.input,body:!!o.body,rect:[o.x-o.displayWidth/2,o.y-o.displayHeight/2,o.displayWidth,o.displayHeight],expected:[0,L.top,L.width,L.fieldHeight]};
+    return {...result,min,max,neutral,opaque,green,maxChannel,counts,stable:d.every((v,i)=>v===d2[i]),depth:o.depth,interactive:!!o.input,body:!!o.body,rect:[o.x-o.displayWidth/2,o.y-o.displayHeight/2,o.displayWidth,o.displayHeight],expected:[0,L.top,L.width,L.fieldHeight]};
    });
-   assert.equal(info.active,mode);assert.equal(info.pattern,!!mode);assert.equal(info.light,name==='light');
+   assert.equal(info.active,mode);assert.equal(info.pattern,!!mode);assert.equal(info.light,name==='light'||name==='grass-light');
    assert.equal(info.actors,11);assert.equal(info.flowers,6);assert.ok(info.stones>20&&info.original);
-   if(mode){assert.ok(info.neutral&&info.opaque&&info.stable);assert.ok(info.min>=13&&info.max<=40&&info.max>info.min);assert.ok(Object.keys(info.counts).length>=2);assert.equal(info.depth,-1.8);assert.ok(!info.interactive&&!info.body);assert.deepEqual(info.rect,info.expected);}
+   if(mode){assert.ok((mode===6?info.green:info.neutral)&&info.opaque&&info.stable);assert.ok(info.maxChannel<=40);assert.ok(info.min>=13&&info.max<=40&&info.max>info.min);assert.ok(Object.keys(info.counts).length>=2);assert.equal(info.depth,-1.8);assert.ok(!info.interactive&&!info.body);assert.deepEqual(info.rect,info.expected);}
    const png=await page.screenshot({path:join(out,'bg-'+name+'.png')});
    // Check actual rendered pixels in an empty field patch, not just texture data.
    const pixels=await page.evaluate(async ({data,mode})=>{
@@ -61,7 +61,7 @@ try{
     return {min,max,colors:values.size};
    },{data:png.toString('base64'),mode});
    if(mode)assert.ok(pixels.colors>=2&&pixels.min>=12&&pixels.max<=41,JSON.stringify(pixels));
-   else if(name!=='light')assert.deepEqual(pixels,{min:13,max:13,colors:1});
+   else if(!name.includes('light'))assert.deepEqual(pixels,{min:13,max:13,colors:1});
    assert.deepEqual(errors,[]);assert.deepEqual(failed,[]);
    report.push({name,query,info,pixels});console.log('PASS background',name,JSON.stringify(pixels));
   }finally{await page.close();}
