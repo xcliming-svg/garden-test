@@ -19,6 +19,7 @@ jobs:
         env:
           PLAYWRIGHT_SKIP_BROWSER_DOWNLOAD: '1'
       - run: for file in src/*.js tests/flower-growth-svg.mjs tests/fairy-patrol.mjs; do node --check "$file"; done
+      - run: node scripts/recolor-svg.mjs
       - run: node tests/flower-growth-svg.mjs
       - run: node tests/fairy-patrol.mjs
       - uses: actions/upload-artifact@v4

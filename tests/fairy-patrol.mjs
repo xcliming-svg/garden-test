@@ -35,9 +35,10 @@ const url='http://127.0.0.1:'+server.address().port;
 const browser=await chromium.launch({channel:'chrome',headless:true,args:['--no-sandbox','--disable-dev-shm-usage','--use-gl=angle','--use-angle=swiftshader','--enable-unsafe-swiftshader']});
 const report=[];
 try{
- for(const [w,h,dpr,query] of [[960,540,1,''],[1920,1080,1,'?uitype=1'],[960,540,2,'?flower=32&person=56&full=1&slots=36'],[960,540,1,'?flower=12&person=56']]){
+ for(const [w,h,dpr,query] of [[960,540,1,''],[1920,1080,1,'?uitype=1'],[960,540,2,'?flower=32&person=56&full=1&slots=36'],[960,540,1,'?flower=12&person=56'],[960,540,1,'?svgcolors=original']]){
   const page=await browser.newPage({viewport:{width:w,height:h},deviceScaleFactor:dpr});
-  const errors=[],failed=[];
+  const errors=[],failed=[],loaded=new Set();
+  page.on('response',r=>{if(/\/assets\/(?:palette16\/)?fairies\/[^/]+\.svg$/.test(r.url())&&r.ok())loaded.add(new URL(r.url()).pathname.slice(1));});
   page.on('pageerror',e=>errors.push(String(e)));
   page.on('requestfailed',r=>failed.push(r.url()));
   try{
@@ -53,20 +54,27 @@ try{
     for(const type of ['garden','water']){
      function pixels(k){ctx.clearRect(0,0,512,512);ctx.drawImage(s.textures.get(k).getSourceImage(),0,0);return ctx.getImageData(0,0,512,512).data;}
      const base=pixels('fairy:base:'+type),normal=pixels('fairy:'+type+':normal'),closed=pixels('fairy:'+type+':closed');
-     let changed=0,eyeDelta=0,other=0,aa=0;
+     let changed=0,eyeDelta=0,other=0,aa=0,opaque=0,offPalette=0;const allowed=new Set(Object.values(window.GardenPalette.n));
      for(let i=0;i<base.length;i+=4){
       const x=(i/4)%512,y=Math.floor(i/4/512);
       const region=x>180&&x<335&&y>200&&y<355;
       if([0,1,2,3].some(j=>normal[i+j]!==closed[i+j])){changed++;if(!region)other++;}
       if([0,1,2,3].some(j=>base[i+j]!==normal[i+j]))eyeDelta++;
       if(normal[i+3]>0&&normal[i+3]<255)aa++;
+      if(normal[i+3]===255){opaque++;if(!allowed.has((normal[i]<<16)|(normal[i+1]<<8)|normal[i+2]))offPalette++;}
      }
-     stats[type]={changed,eyeDelta,other,aa};
+     stats[type]={changed,eyeDelta,other,aa,opaque,offPalette};
     }
-    return {counts:c.actors.map(a=>a.type),heights:c.actors.map(a=>a.visibleHeight),origins:c.actors.map(a=>[a.image.originX,a.image.originY]),stats,
+    return {paletteEnabled:window.GardenSvgPalette.enabled,counts:c.actors.map(a=>a.type),heights:c.actors.map(a=>a.visibleHeight),origins:c.actors.map(a=>[a.image.originX,a.image.originY]),stats,
       length:c.length,spacing:c.spacing,bounds:c.bounds,field:{top:L.spec.top,bottom:L.spec.height-L.spec.bottom},garden:L.spec.garden,
       flowers:s.flowerGrowth.entries.size,combat:!!s.combatPreview,status:s.children.getByName('fairy-patrol-status')?.text};
    });
+   const original=query.includes('svgcolors=original');
+   assert.equal(initial.paletteEnabled,!original);
+   const prefix='assets/'+(original?'':'palette16/')+'fairies/';
+   assert.deepEqual([...loaded].sort(),['eyes.svg','garden.svg','water.svg'].map(n=>prefix+n));
+   for(const v of Object.values(initial.stats))if(!original)assert.ok(v.opaque>0&&v.offPalette<=v.opaque*.05,JSON.stringify(v));
+   if(original)assert.ok(Object.values(initial.stats).every(v=>v.offPalette>0));
    assert.deepEqual(initial.counts,['garden',...Array(10).fill('water')]);
    assert.equal(initial.combat,false);assert.equal(initial.status,'정원 순찰 · 요정 11명');
    assert.equal(initial.flowers,query.includes('full=1')?100:6);
@@ -120,7 +128,7 @@ try{
    assert.equal(await page.evaluate(()=>window.__previewGame.scene.getScene('Game').fairyPatrol.elapsed),paused);
    await page.keyboard.press('Escape');await page.waitForFunction(t=>window.__previewGame.scene.getScene('Game').fairyPatrol.elapsed>t,paused);
    assert.deepEqual(errors,[]);assert.deepEqual(failed,[]);
-   if(!query)await page.screenshot({path:join(out,'fairy-patrol-dark.png')});
+   if(!query||original)await page.screenshot({path:join(out,original?'fairy-patrol-original.png':'fairy-patrol-dark.png')});
    report.push({w,h,dpr,query,initial,results,pass:true});
    console.log('PASS fairy',w,h,query,'11 actors, 4 directions, independent blinks, no combat, pause');
   }finally{await page.close();}

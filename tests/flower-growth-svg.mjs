@@ -27,12 +27,12 @@ const browser=await chromium.launch({channel:'chrome',headless:true,args:['--no-
 const expected=[[1,100],[2,100],[3,100],[3,66],[3,33],[2,100],[2,66],[2,33],[1,100],[1,66],[1,33]];
 const report=[];
 try{
- for(const [w,h,dpr,query] of [[960,540,1,''],[1920,1080,1,'?flower=32&personstyle=3'],[960,540,2,'?uitype=1&personstyle=3']]){
+ for(const [w,h,dpr,query] of [[960,540,1,''],[1920,1080,1,'?flower=32&personstyle=3'],[960,540,2,'?uitype=1&personstyle=3'],[960,540,1,'?svgcolors=original']]){
   const page=await browser.newPage({viewport:{width:w,height:h},deviceScaleFactor:dpr});
   const errors=[],failed=[],loaded=new Set();
   page.on('pageerror',e=>errors.push(String(e)));
   page.on('requestfailed',r=>failed.push(r.url()));
-  page.on('response',r=>{if(r.url().includes('/assets/flowers/')&&r.ok())loaded.add(r.url());});
+  page.on('response',r=>{if(/\/assets\/(?:palette16\/)?flowers\//.test(r.url())&&r.ok())loaded.add(r.url());});
   try{
    await page.goto(url+'/index.html'+(query?query+'&':'?')+'combat=1');
    await page.waitForFunction(()=>window.__previewGame?.scene.isActive('MainMenu'));
@@ -47,11 +47,11 @@ try{
      const t=s.textures.get(G.key(name,stage,hp)),im=t.getSourceImage();
      ctx.clearRect(0,0,cv.width,cv.height);ctx.drawImage(im,0,0);
      const data=ctx.getImageData(0,0,cv.width,cv.height).data;
-     let area=0,aa=0,top=cv.height,bottom=-1;const colors=new Set();
-     for(let i=0;i<data.length;i+=4){const a=data[i+3];if(a)area+=a/255;if(a>0&&a<255)aa++;if(a>=128){const y=Math.floor((i/4)/cv.width);top=Math.min(top,y);bottom=Math.max(bottom,y);}if(a===255)colors.add((data[i]<<16)|(data[i+1]<<8)|data[i+2]);}
-     tex.push({name,stage,hp,area,aa,top,bottom,colors:colors.size,w:im.width,h:im.height});
+     let area=0,aa=0,top=cv.height,bottom=-1,opaque=0,offPalette=0;const colors=new Set(),allowed=new Set(Object.values(window.GardenPalette.n));
+     for(let i=0;i<data.length;i+=4){const a=data[i+3];if(a)area+=a/255;if(a>0&&a<255)aa++;if(a>=128){const y=Math.floor((i/4)/cv.width);top=Math.min(top,y);bottom=Math.max(bottom,y);}if(a===255){const color=(data[i]<<16)|(data[i+1]<<8)|data[i+2];colors.add(color);opaque++;if(!allowed.has(color))offPalette++;}}
+     tex.push({name,stage,hp,area,aa,top,bottom,colors:colors.size,opaque,offPalette,w:im.width,h:im.height});
     }
-    return {names:G.names,occupied:[...c.model.occupied],entries:[...g.entries].map(([i,e])=>[i,e.name,e.image.x,e.image.y,e.image.originX,e.image.originY,e.image.displayWidth]),tex,
+    return {paletteEnabled:window.GardenSvgPalette.enabled,names:G.names,occupied:[...c.model.occupied],entries:[...g.entries].map(([i,e])=>[i,e.name,e.image.x,e.image.y,e.image.originX,e.image.originY,e.image.displayWidth]),tex,
      states:Array.from({length:55},(_,i)=>G.stateAt(i)),period:G.period,maxStage:G.maxStage,paths:G.names.flatMap(n=>[1,2,3].map(stage=>G.path(n,stage))),start:c.state.elapsed,
      cell:window.GardenGameLayout.spec.garden.cell,hud:s.children.getByName('hud-progress-value').text};
    });
@@ -61,10 +61,16 @@ try{
    assert.ok(first.entries.every(e=>e[4]===.5&&e[5]===.856&&Math.abs(e[6]-first.cell/.85)<1e-8));
    assert.equal(first.period,55);assert.equal(first.maxStage,3);
    assert.equal(first.tex.length,54);assert.equal(loaded.size,18);
-   const expectedPaths=first.names.flatMap((n,i)=>[2,3,4].map(stage=>'assets/flowers/0'+(i+1)+'_'+n+'_0'+stage+'.svg'));
+   const original=query.includes('svgcolors=original');
+   assert.equal(first.paletteEnabled,!original);
+   const expectedPaths=first.names.flatMap((n,i)=>[2,3,4].map(stage=>'assets/'+(original?'':'palette16/')+'flowers/0'+(i+1)+'_'+n+'_0'+stage+'.svg'));
    assert.deepEqual(first.paths,expectedPaths);
    assert.deepEqual([...loaded].map(u=>new URL(u).pathname.slice(1)).sort(),expectedPaths.slice().sort());
-   for(const t of first.tex)assert.ok(t.area>0&&t.aa>0&&t.w===512&&t.h===512,JSON.stringify(t));
+   for(const t of first.tex){
+    assert.ok(t.area>0&&t.aa>0&&t.w===512&&t.h===512,JSON.stringify(t));
+    if(!original)assert.ok(t.opaque>0&&t.offPalette<=(t.hp===100?t.opaque*.05:0),JSON.stringify(t));
+   }
+   if(original)assert.ok(first.tex.some(t=>t.hp===100&&t.offPalette>0));
    for(const name of first.names)for(let stage=1;stage<=3;stage++){
     const a=first.tex.filter(t=>t.name===name&&t.stage===stage);
     assert.ok(a[0].area>a[1].area&&a[1].area>a[2].area,JSON.stringify(a));
@@ -72,7 +78,7 @@ try{
     assert.ok(a.every(t=>Math.abs(t.bottom-a[0].bottom)<=3),JSON.stringify(a));
    }
    for(let t=0;t<55;t++)assert.deepEqual(first.states[t],{stage:expected[Math.floor(t/5)][0],hp:expected[Math.floor(t/5)][1]});
-   if(w===1920){
+   if(w===1920||original){
     const png=await page.evaluate(()=>{
      const s=window.__previewGame.scene.getScene('Game'),G=window.GardenFlowerGrowth;
      const c=document.createElement('canvas');c.width=1440;c.height=960;const ctx=c.getContext('2d');
@@ -93,7 +99,7 @@ try{
      });
      return c.toDataURL('image/png').split(',')[1];
     });
-    writeFileSync(join(out,'wilt-comparison.png'),Buffer.from(png,'base64'));
+    writeFileSync(join(out,original?'wilt-comparison-original.png':'wilt-comparison.png'),Buffer.from(png,'base64'));
    }
    // Real scene clock, not a separate timer; verify all 11 frame transitions.
    for(let i=0;i<=11;i++){

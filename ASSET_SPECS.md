@@ -1,5 +1,7 @@
 # 전장 UI 및 에셋 규격
 
+> **devel SVG 16색 실험:** 원본 SVG 29개 보존, `assets/palette16/`에는 동일 경로/변환의 색상 복사본 29개. `src/palette.js`의 Garden 16만 사용. `?svgcolors=original` 비교/복구. [규격](./docs/ui-color-guide.md).
+
 > **devel 요정:** [현행 규격](./docs/fairy-patrol.md). 원본 SVG 4개/manifest 보존. 원본 1000×1000 몸체, 발끝 (500,858), 주인공 40px/물 요정 약 28px, 512px 합성 텍스처 normal/closed, LINEAR.
 
 > **devel 꽃 성장·시듦:** [SVG 규격](./docs/flower-growth-svg.md). 1000×1000 원본 SVG 24개 보존, 활성 18개 및 JS 연속 변형 36개. 512px AA/LINEAR, 기준점 유지. 새 1~3단계 각각 HP100/66/33. 찢김 대신 휘어짐·수축·처짐·황변/갈변.

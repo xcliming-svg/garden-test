@@ -1,7 +1,8 @@
 (function () {
   'use strict';
   // Continuous wilt deformation of the existing SVG-derived texture.
-  // No path deletion, holes, sprite-sheet recropping or palette quantization.
+  // No path deletion, holes or sprite-sheet recropping. Palette experiment
+  // maps only the final RGB colors; geometry and alpha remain unchanged.
   // Geometry is measured in the existing artboard, with root (500,856) fixed.
   const severity=Object.freeze({100:0,66:.45,33:.90});
   const clamp=(x,lo=0,hi=1)=>Math.min(hi,Math.max(lo,x));
@@ -78,7 +79,7 @@
         if(alpha<=0)continue;
         r/=alpha;g/=alpha;b/=alpha;
         // Reference-inspired yellowing and desaturation, with a gentle dry-tip
-        // gradient. No arbitrary damage speckles or hard color quantization.
+        // gradient. No arbitrary damage speckles; optional Garden 16 RGB mapping follows.
         const edge=clamp(Math.abs(u)),rise=clamp(v);
         const mix=d*(.32+.16*edge+.13*rise);
         const lum=.2126*r+.7152*g+.0722*b;
@@ -93,7 +94,7 @@
         dst[p+3]=alpha*255;
       }
     }
-    ctx.putImageData(out,0,0);
+    ctx.putImageData(window.GardenSvgPalette.apply(out),0,0);
   }
   window.GardenFlowerDamage=Object.freeze({prepare,draw,severity});
 }());

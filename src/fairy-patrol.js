@@ -14,8 +14,8 @@
     if(!enabled)return;
     if(!scene.cache.json.exists(manifestKey))scene.load.json(manifestKey,root+'manifest.json');
     for(const type of types)if(!scene.textures.exists(baseKey(type)))
-      scene.load.svg(baseKey(type),root+type+'.svg',{width:size,height:size});
-    if(!scene.textures.exists(atlas))scene.load.svg(atlas,root+'eyes.svg',{width:1792,height:256});
+      scene.load.svg(baseKey(type),window.GardenSvgPalette.path('fairies/'+type+'.svg'),{width:size,height:size});
+    if(!scene.textures.exists(atlas))scene.load.svg(atlas,window.GardenSvgPalette.path('fairies/eyes.svg'),{width:1792,height:256});
   }
   function install(scene){
     const m=scene.cache.json.get(manifestKey),eyeImage=scene.textures.get(atlas).getSourceImage();
