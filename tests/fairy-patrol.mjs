@@ -35,7 +35,7 @@ const url='http://127.0.0.1:'+server.address().port;
 const browser=await chromium.launch({channel:'chrome',headless:true,args:['--no-sandbox','--disable-dev-shm-usage','--use-gl=angle','--use-angle=swiftshader','--enable-unsafe-swiftshader']});
 const report=[];
 try{
- for(const [w,h,dpr,query] of [[960,540,1,''],[1920,1080,1,'?uitype=1'],[960,540,2,'?flower=32&person=56&full=1&slots=36'],[960,540,1,'?flower=12&person=56'],[960,540,1,'?svgcolors=original']]){
+ for(const [w,h,dpr,query] of [[960,540,1,''],[1920,1080,1,'?uitype=1'],[960,540,2,'?flower=32&person=56&full=1&slots=36'],[960,540,1,'?flower=12&person=56'],[960,540,1,'?svgcolors=palette16']]){
   const page=await browser.newPage({viewport:{width:w,height:h},deviceScaleFactor:dpr});
   const errors=[],failed=[],loaded=new Set();
   page.on('response',r=>{if(/\/assets\/(?:palette16\/)?fairies\/[^/]+\.svg$/.test(r.url())&&r.ok())loaded.add(new URL(r.url()).pathname.slice(1));});
@@ -78,7 +78,7 @@ try{
       length:c.length,spacing:c.spacing,bounds:c.bounds,field:{top:L.spec.top,bottom:L.spec.height-L.spec.bottom},garden:L.spec.garden,
       flowers:s.flowerGrowth.entries.size,combat:!!s.combatPreview,status:s.children.getByName('fairy-patrol-status')?.text};
    });
-   const original=query.includes('svgcolors=original');
+   const original=!query.includes('svgcolors=palette16');
    assert.equal(initial.paletteEnabled,!original);
    const prefix='assets/'+(original?'':'palette16/')+'fairies/';
    assert.deepEqual([...loaded].sort(),['eyes.svg','garden.svg','water.svg'].map(n=>prefix+n));
@@ -161,7 +161,7 @@ try{
    assert.equal(await page.evaluate(()=>window.__previewGame.scene.getScene('Game').fairyPatrol.elapsed),paused);
    await page.keyboard.press('Escape');await page.waitForFunction(t=>window.__previewGame.scene.getScene('Game').fairyPatrol.elapsed>t,paused);
    assert.deepEqual(errors,[]);assert.deepEqual(failed,[]);
-   if(!query||original)await page.screenshot({path:join(out,original?'fairy-patrol-original.png':'fairy-patrol-dark.png')});
+   if(!query||!original)await page.screenshot({path:join(out,original?'fairy-patrol-dark.png':'fairy-patrol-palette16.png')});
    report.push({w,h,dpr,query,initial,results,pass:true});
    console.log('PASS fairy',w,h,query,'11 actors, 4 directions, independent blinks, no combat, pause');
   }finally{await page.close();}

@@ -1,7 +1,7 @@
 (function () {
   'use strict';
-  // Reversible display-only palette experiment. Original vector files stay intact.
-  const enabled=new URLSearchParams(window.location.search).get('svgcolors')!=='original';
+  // Original SVG colors are the default. The archived palette experiment is opt-in only.
+  const enabled=new URLSearchParams(window.location.search).get('svgcolors')==='palette16';
   const path=relative=>'assets/'+(enabled?'palette16/':'')+relative;
   const rgb=Object.values(window.GardenPalette.n).map(n=>[n>>16&255,n>>8&255,n&255]);
   const cache=new Map();
