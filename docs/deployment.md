@@ -1,7 +1,7 @@
 # GitHub Pages — main/devel 동시 배포
 
 - 2026-11-12: main `7198cba`에서 `devel` 생성 후 `feature/resolution-960x540`의 `b18a6c6`을 fast-forward 병합했다. main의 게임 소스는 변경하지 않는다.
-- [배포 워크플로](../.github/workflows/deploy-pages.yml)는 devel push 시 main/devel 최신 커밋을 각각 가져와 정적 실행 파일만 하나의 Pages artifact에 조립한다. 원본 브랜치 간 파일 복제나 main 병합을 수행하지 않는다. `assets/fonts`의 라이선스 파일도 함께 복사한다.
+- [배포 워크플로](../.github/workflows/deploy-pages.yml)는 main 또는 devel push 시 main/devel 최신 커밋을 각각 가져와 정적 실행 파일만 하나의 Pages artifact에 조립한다. 원본 브랜치 간 파일 복제나 main 병합을 수행하지 않는다. `assets/fonts`의 라이선스 파일도 함께 복사한다.
 
 | 배포 위치 | 소스 | 실행 주소 |
 | --- | --- | --- |
@@ -14,12 +14,12 @@
 
 1. [Settings → Pages](https://github.com/xcliming-svg/garden-test/settings/pages)에서 Source를 GitHub Actions로 변경한다. 기존 branch-based main 배포 설정에서는 사용자 정의 워크플로 배포가 완료되지 않을 수 있다.
 2. [Settings → Environments](https://github.com/xcliming-svg/garden-test/settings/environments)에서 github-pages 환경이 main에 한정돼 있다면 devel 배포도 허용한다.
-3. [Actions](https://github.com/xcliming-svg/garden-test/actions)에서 devel의 Deploy main and devel to GitHub Pages 실행을 확인한다. 설정 변경 전에 실패한 경우 해당 실행의 재실행 또는 devel에 새 push로 배포한다.
+3. [Actions](https://github.com/xcliming-svg/garden-test/actions)에서 main 또는 devel의 Deploy main and devel to GitHub Pages 실행을 확인한다. 설정 변경 전에 실패한 경우 해당 실행의 재실행 또는 devel에 새 push로 배포한다.
 4. 두 경로의 version.txt 및 실제 게임 시작을 확인한다.
 
 ## 자동 갱신 범위
 
-워크플로는 main을 수정하지 않기 위해 devel에만 둔다. devel에 push하면 두 버전이 최신 상태로 함께 배포된다. main만 변경된 경우 다음 devel push(또는 이전 실행 재실행)가 있어야 루트 사이트에 반영된다. main push 독립 배포까지 필요하다면 main에도 동일한 배포 워크플로를 추가하는 별도 변경이 필요하다.
+2026-11-16: main 배포 워크플로의 push 대상에 main을 추가했다. main 또는 devel에 push하면 두 버전이 최신 상태로 함께 배포된다. main에서 실행한 배포는 두 버전의 로컬 JS URL에 각각 커밋 SHA를 추가한다. 기존 devel 워크플로도 두 버전을 배포하지만 main JS 캐시 갱신은 main 워크플로에서 적용된다. 게임 소스 및 에셋은 변경하지 않는다.
 
 ## 근거
 
