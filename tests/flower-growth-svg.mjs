@@ -34,7 +34,7 @@ try{
   page.on('requestfailed',r=>failed.push(r.url()));
   page.on('response',r=>{if(r.url().includes('/assets/flowers/')&&r.ok())loaded.add(r.url());});
   try{
-   await page.goto(url+'/index.html'+query);
+   await page.goto(url+'/index.html'+(query?query+'&':'?')+'combat=1');
    await page.waitForFunction(()=>window.__previewGame?.scene.isActive('MainMenu'));
    const box=await page.locator('canvas').boundingBox();
    const click=(x,y)=>page.mouse.click(box.x+x*box.width/960,box.y+y*box.height/540);

@@ -1,5 +1,7 @@
 # 전장 UI 및 에셋 규격
 
+> **devel 요정:** [현행 규격](./docs/fairy-patrol.md). 원본 SVG 4개/manifest 보존. 원본 1000×1000 몸체, 발끝 (500,858), 주인공 40px/물 요정 약 28px, 512px 합성 텍스처 normal/closed, LINEAR.
+
 > **devel 꽃 성장·시듦:** [SVG 규격](./docs/flower-growth-svg.md). 1000×1000 원본 SVG 24개 보존, 활성 18개 및 JS 연속 변형 36개. 512px AA/LINEAR, 기준점 유지. 새 1~3단계 각각 HP100/66/33. 찢김 대신 휘어짐·수축·처짐·황변/갈변.
 
 > **devel 정면 공용 걷기:** `personstyle=3` 정면 4프레임, 머리/얼굴 고정, 26×38 코어와 1px 외곽선, 30×40 상자/28×40 가시, 6fps. 기존 스타일 보존. [규격](./docs/flower-head-preview.md).

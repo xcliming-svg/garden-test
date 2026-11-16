@@ -1102,10 +1102,12 @@
     const layout=drawSlots(scene);
     drawBlueprint(scene);
     const itemPreview=drawItemPreview(scene,layout,[],window.GardenCombatPreview.tuning.walkSpeed,true);
-    const status=text(scene,spec.width-10,spec.top+spacing.base,'테스트 전투 · 공 1개',bottomStats.fontSize,colors.label,'right').setDepth(16).setName('combat-ball-count');
+    const fairy=window.GardenFairyPatrol.enabled;
+    const status=text(scene,spec.width-10,spec.top+spacing.base,fairy?'정원 순찰 · 요정 11명':'테스트 전투 · 공 1개',bottomStats.fontSize,colors.label,'right').setDepth(16).setName(fairy?'fairy-patrol-status':'combat-ball-count');
     window.GardenFlowerHeadPreview.draw(scene,spec,colors,gardenRaster,patrolBounds,patrolPosition,(elapsed,kills,gems,occupied)=>{
       if(scene.flowerGrowth)scene.flowerGrowth.render(elapsed);
       updateHud(elapsed,kills,gems,occupied);
+      if(fairy)return;
       const count=scene.combatPreview.state.ballCount;
       const label='테스트 전투 · 공 '+count+'개';
       if(status.text!==label)status.setText(label);

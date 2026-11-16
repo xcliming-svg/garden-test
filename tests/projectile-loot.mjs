@@ -29,7 +29,7 @@ try{
   const page=await browser.newPage({viewport:{width:w,height:h},deviceScaleFactor:dpr});
   const errors=[];page.on('pageerror',e=>errors.push(String(e)));
   try{
-   await page.goto(url+'/index.html'+(query?query+'&':'?')+'flowerheads=1');
+   await page.goto(url+'/index.html'+(query?query+'&':'?')+'flowerheads=1&combat=1');
    await page.waitForFunction(()=>window.__previewGame?.scene.isActive('MainMenu'));
    const box=await page.locator('canvas').boundingBox();
    const click=(x,y)=>page.mouse.click(box.x+x*box.width/960,box.y+y*box.height/540);
