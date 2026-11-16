@@ -116,7 +116,7 @@ try{
    const paused=await page.evaluate(()=>window.__previewGame.scene.getScene('Game').fairyPatrol.elapsed);
    await page.waitForTimeout(250);
    assert.equal(await page.evaluate(()=>window.__previewGame.scene.getScene('Game').fairyPatrol.elapsed),paused);
-   await page.keyboard.press('Escape');await page.waitForFunction(()=>window.__previewGame.scene.getScene('Game').fairyPatrol.elapsed>paused);
+   await page.keyboard.press('Escape');await page.waitForFunction(t=>window.__previewGame.scene.getScene('Game').fairyPatrol.elapsed>t,paused);
    assert.deepEqual(errors,[]);assert.deepEqual(failed,[]);
    if(!query)await page.screenshot({path:join(out,'fairy-patrol-dark.png')});
    report.push({w,h,dpr,query,initial,results,pass:true});
