@@ -25,8 +25,8 @@ const browser=await chromium.launch({channel:'chrome',headless:true,args:['--no-
 const report=[];
 try{
  for(const [name,query,mode,w,h,dpr] of [
-  ['original','',0,960,540,1],...Array.from({length:6},(_,i)=>['pattern-'+(i+1),'?bgtype='+(i+1),i+1,960,540,1]),
-  ['invalid','?bgtype=99',0,960,540,1],['light','?uitype=1&bgtype=2',0,960,540,1],
+  ['default','',6,960,540,1],['original','?bgtype=0',0,960,540,1],...Array.from({length:6},(_,i)=>['pattern-'+(i+1),'?bgtype='+(i+1),i+1,960,540,1]),
+  ['invalid','?bgtype=99',6,960,540,1],['empty','?bgtype=',6,960,540,1],['light','?uitype=1&bgtype=2',0,960,540,1],
   ['fhd','?bgtype=2',2,1920,1080,1],['dpr2','?bgtype=5',5,960,540,2],['grass-fhd','?bgtype=6',6,1920,1080,1],['grass-dpr2','?bgtype=6',6,960,540,2],['grass-light','?uitype=1&bgtype=6',0,960,540,1]
  ]){
   const page=await browser.newPage({viewport:{width:w,height:h},deviceScaleFactor:dpr});

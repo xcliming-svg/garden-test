@@ -3,7 +3,8 @@
   // Static, low-contrast field experiments. No changes to game entities or HUD.
   const P=window.GardenPalette;
   const raw=new URLSearchParams(window.location.search).get('bgtype');
-  const type=/^[1-6]$/.test(raw||'')?Number(raw):0;
+  // Night grass is the approved default; explicit 0 retains the plain black comparison.
+  const type=/^[0-6]$/.test(raw||'')?Number(raw):6;
   const active=P.uiType===0?type:0;
   const base=P.n.ink,neutral=P.n.paper;
   const color=(t,target=neutral)=>{
