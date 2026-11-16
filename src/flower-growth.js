@@ -1,15 +1,15 @@
 (function () {
   'use strict';
   // Preserve the supplied vector files; never quantize to a pixel palette or
-  // synthesize damage from raster pixels. Phaser's SVG loader performs ordinary
+  // cut away botanical parts. Phaser's SVG loader performs ordinary
   // high-resolution rasterization for the GPU with linear sampling.
   const names=Object.freeze(['daisy','sunflower','tulip','hydrangea','rose','lavender']);
   const enabled=new URLSearchParams(window.location.search).get('flowerheads')!=='1';
   const maxStage=3;
-  const sequence=Object.freeze([[1,100],[2,100],[3,100],[3,66],[3,33],[2,100],[2,50],[1,100],[1,50]].map(Object.freeze));
+  const sequence=Object.freeze([[1,100],[2,100],[3,100],[3,66],[3,33],[2,100],[2,66],[2,33],[1,100],[1,66],[1,33]].map(Object.freeze));
   const stepSeconds=5,period=sequence.length*stepSeconds,sourceSize=512;
   const key=(name,stage,hp=100)=>'flower-svg:'+name+':'+stage+':'+hp;
-  // Preserve the original filenames and damage plans: logical stages 1–3 use art 2–4.
+  // Preserve the original filenames: logical stages 1–3 use art 2–4.
   function sourceStage(stage){
     if(!Number.isInteger(stage)||stage<1||stage>maxStage)throw Error('Unknown flower stage');
     return stage+1;
@@ -28,7 +28,6 @@
     for(const name of names)for(let stage=1;stage<=maxStage;stage++){
       const id=key(name,stage);
       if(!scene.textures.exists(id))scene.load.svg(id,path(name,stage),{width:sourceSize,height:sourceSize});
-      if(!scene.cache.text.exists(id))scene.load.text(id,path(name,stage));
     }
   }
   function install(scene){
@@ -36,12 +35,12 @@
       const id=key(name,stage);
       if(!scene.textures.exists(id))throw Error('Missing original SVG: '+id);
       scene.textures.get(id).setFilter(Phaser.Textures.FilterMode.LINEAR);
-      const D=window.GardenFlowerDamage,parts=D.parse(scene.cache.text.get(id));
-      for(const hp of stage===maxStage?[66,33]:[50]){
+      const D=window.GardenFlowerDamage,source=D.prepare(scene.textures.get(id).getSourceImage(),sourceSize);
+      for(const hp of [66,33]){
         const k=key(name,stage,hp);
         if(scene.textures.exists(k))continue;
         const t=scene.textures.createCanvas(k,sourceSize,sourceSize);
-        D.draw(t.getContext(),parts,name,sourceStage(stage),hp,sourceSize);
+        D.draw(t.getContext(),source,hp,names.indexOf(name),stage);
         t.refresh();t.setFilter(Phaser.Textures.FilterMode.LINEAR);
       }
     }
