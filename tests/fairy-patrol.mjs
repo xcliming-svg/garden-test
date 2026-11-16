@@ -108,7 +108,9 @@ try{
    assert.ok(results.dirs.every(d=>d.length===4),JSON.stringify(results.dirs));
    assert.ok(results.blinks.every(n=>n>=8),JSON.stringify(results.blinks));
    assert.ok(results.allNormal&&results.asynchronous);
-   assert.ok(results.angles.every(([a,b])=>b-a>6)&&results.lifts.every(([a,b])=>b-a>.5));
+   // Keep a visible but gentle gait, including the directional lean at corners.
+   assert.ok(results.angles.every(([a,b])=>a>=-1.751&&b<=1.751&&b-a>2),JSON.stringify(results.angles));
+   assert.ok(results.lifts.every(([a,b],i)=>a>=-1e-6&&b<=.5*initial.heights[i]/40+1e-6&&b-a>.15*initial.heights[i]/40),JSON.stringify(results.lifts));
    assert.ok(results.minGap>=initial.heights[0]*.8,JSON.stringify(results));
    assert.equal(results.violations,0);assert.equal(results.missing,0);assert.equal(results.enemy,0);
    assert.ok(results.flowerKeys.every(k=>k.startsWith('flower-svg:')));

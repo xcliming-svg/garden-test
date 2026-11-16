@@ -7,6 +7,7 @@
   const root='assets/fairies/',size=512,atlas='fairy:eyes',manifestKey='fairy:manifest';
   const types=['garden','water'],expressions=['normal','closed'];
   const count=11,speed=24;
+  const gait=Object.freeze({frequency:1.6,lift:.5,tilt:1.25,lean:.5});
   const key=(type,expression)=>'fairy:'+type+':'+expression;
   const baseKey=type=>'fairy:base:'+type;
   function preload(scene){
@@ -74,15 +75,15 @@
         const dx=q.x-p.x,dy=q.y-p.y;
         a.direction=Math.abs(dx)>Math.abs(dy)?(dx>0?'right':'left'):(dy>0?'down':'up');
         a.center=p;
-        const phase=elapsed*2.3*Math.PI*2+a.phase;
-        const lift=Math.abs(Math.sin(phase))*1.45*(a.visibleHeight/40);
-        const tilt=Math.sin(phase)*4;
+        const phase=elapsed*gait.frequency*Math.PI*2+a.phase;
+        const lift=Math.abs(Math.sin(phase))*gait.lift*(a.visibleHeight/40);
+        const tilt=Math.sin(phase)*gait.tilt;
         const facing=a.direction==='left'?-1:a.direction==='right'?1:0;
         // The base art is front-facing only. Mirror horizontally on left/right;
         // up/down retain a front view, with gait and directional lean.
         if(facing)a.image.setFlipX(facing<0);
         a.image.setPosition(p.x,p.y+a.visibleHeight/2-lift)
-          .setAngle(tilt+facing*2)
+          .setAngle(tilt+facing*gait.lean)
           .setDepth(2+p.y/spec.height);
         const expression=a.blink(elapsed);
         if(expression!==a.expression){a.expression=expression;a.image.setTexture(key(a.type,expression));}
