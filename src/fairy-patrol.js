@@ -12,6 +12,7 @@
   const baseKey=type=>'fairy:base:'+type;
   function preload(scene){
     if(!enabled)return;
+    window.GardenPebbleBoundary.preload(scene);
     if(!scene.cache.json.exists(manifestKey))scene.load.json(manifestKey,root+'manifest.json');
     for(const type of types)if(!scene.textures.exists(baseKey(type)))
       scene.load.svg(baseKey(type),window.GardenSvgPalette.path('fairies/'+type+'.svg'),{width:size,height:size});
@@ -46,17 +47,12 @@
     };
   }
   function attach(scene,spec,occupied,geometry,patrolPosition,updateHud,heroHeight){
-    const m=install(scene),scale=heroHeight/m.characters.garden.visibleHeight;
-    const width=430*scale,height=heroHeight;
-    // Allow for foot-pivot rotation and the small step lift. Route uses the
-    // largest character envelope. Expand horizontally if 11 would crowd.
-    const shape=geometry(occupied,width+10,height+4);
-    const b={...shape.patrol};
-    const required=count*(heroHeight*1.2+4);
-    const perimeter=()=>2*(b.right-b.left+b.bottom-b.top);
-    const extra=Math.max(0,(required-perimeter())/4);
-    b.left-=extra;b.right+=extra;
-    const length=perimeter(),spacing=length/count;
+    const m=install(scene),B=window.GardenPebbleBoundary,border=B.attach(scene);
+    const compute=()=>B.layout(spec,geometry(occupied,0,0).garden,heroHeight,gait,count);
+    let info=compute(),b=info.patrol,length=info.length,spacing=length/count;
+    let scale=info.height/m.characters.garden.visibleHeight;
+    let signature=[...occupied].sort((a,b)=>a-b).join(',');
+    border.render(info);
     const actors=Array.from({length:count},(_,index)=>{
       const type=index===0?'garden':'water';
       const visibleHeight=m.characters[type].visibleHeight*scale;
@@ -67,8 +63,20 @@
       return {index,type,image,visibleHeight,blink:blinkSchedule(index),expression:'normal',direction:'right',center:{x:0,y:0},phase:index*1.83};
     });
     let elapsed=0;
-    const start=(b.right-b.left)/2;
+    let start=(b.right-b.left)/2;
+    function refreshBoundary(){
+      const next=[...occupied].sort((a,b)=>a-b).join(',');
+      if(next===signature)return;
+      signature=next;
+      const progress=((start+elapsed*speed)%length+length)%length/length;
+      info=compute();b=info.patrol;length=info.length;spacing=length/count;
+      start=progress*length-elapsed*speed;
+      scale=info.height/m.characters.garden.visibleHeight;
+      for(const a of actors){a.visibleHeight=m.characters[a.type].visibleHeight*scale;a.image.setDisplaySize(m.canvas.width*scale,m.canvas.height*scale);}
+      border.render(info);
+    }
     function render(){
+      refreshBoundary();
       for(const a of actors){
         const distance=start+elapsed*speed+a.index*spacing;
         const p=patrolPosition(b,distance),q=patrolPosition(b,distance+.01);
@@ -91,7 +99,7 @@
       updateHud(elapsed,0,0,occupied.size);
     }
     function advance(seconds){elapsed+=Math.max(0,seconds);render();return elapsed;}
-    const controller={actors,bounds:b,length,spacing,speed,advance,get elapsed(){return elapsed;}};
+    const controller={actors,border,advance,speed,get bounds(){return b;},get length(){return length;},get spacing(){return spacing;},get boundary(){return info;},get elapsed(){return elapsed;}};
     scene.fairyPatrol=controller;
     const update=(_time,delta)=>advance(Math.min(.1,Math.max(0,delta/1000)));
     scene.events.on('update',update);
