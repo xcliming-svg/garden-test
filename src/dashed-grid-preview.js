@@ -2,6 +2,11 @@
   'use strict';
   const P=window.GardenPalette.roles.n;
   const colors=Object.freeze({base:P.slate,active:P.growth});
+  const rawFill=new URLSearchParams(window.location.search).get('gardenfill');
+  const fillMode=['soil','green'].includes(rawFill)?rawFill:'none';
+  const palette=window.GardenPalette.hex;
+  const mix=(a,b,t)=>'#'+[1,3,5].map(i=>Math.round(parseInt(a.slice(i,i+2),16)*(1-t)+parseInt(b.slice(i,i+2),16)*t).toString(16).padStart(2,'0')).join('').toUpperCase();
+  const fills=Object.freeze({soil:mix(palette.bark,palette.clay,.3),green:mix(window.GardenPalette.roles.hex.ink,palette.growth,.55)});
   const all=g=>new Set(Array.from({length:g.columns*g.rows},(_,i)=>i));
   const visible=(occupied,candidates)=>new Set([...occupied,...candidates]);
   // The guardian's full sprite stays outside the visible grid, not merely
@@ -42,6 +47,16 @@
   }
   function draw(ctx,g,z,raster,occupied,candidates,hover){
     ctx.clearRect(0,0,raster.width,raster.height);ctx.globalAlpha=1;
+    if(fillMode!=='none'){
+      // Only planted cells are filled; expansion candidates remain dashed and transparent.
+      ctx.fillStyle=fills[fillMode];
+      for(const i of occupied){
+        const x=(i%g.columns)*g.pitch+g.line,y=Math.floor(i/g.columns)*g.pitch+g.line;
+        const l=Math.round((g.x+x)*z)-raster.x,t=Math.round((g.y+y)*z)-raster.y;
+        const r=Math.round((g.x+x+g.cell)*z)-raster.x,b=Math.round((g.y+y+g.cell)*z)-raster.y;
+        ctx.fillRect(l,t,r-l,b-t);
+      }
+    }
     for(const r of rectangles(g,occupied,candidates,hover)){
       let x=Math.round((g.x+r.x)*z)-raster.x,y=Math.round((g.y+r.y)*z)-raster.y;
       const right=Math.round((g.x+r.x+r.w)*z)-raster.x,bottom=Math.round((g.y+r.y+r.h)*z)-raster.y;
@@ -54,5 +69,5 @@
       ctx.fillStyle='#'+r.color.toString(16).padStart(6,'0');ctx.fillRect(x,y,w,h);
     }
   }
-  window.GardenDashedGridPreview=Object.freeze({colors,all,visible,geometry,rectangles,draw});
+  window.GardenDashedGridPreview=Object.freeze({colors,all,visible,geometry,rectangles,draw,fillMode,fills});
 }());

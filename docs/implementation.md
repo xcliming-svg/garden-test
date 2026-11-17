@@ -1,5 +1,7 @@
 # 현재 설계 및 구현 정리
 
+> **devel 지형 비교:** `pebbles=0`, `gardenfill=soil|green`, `bgtype=7` 독립 옵션. 기존 기본값, 순찰·공격·겹침 판정 유지. [규격](./ui-color-guide.md).
+
 > **devel 요정 외곽선:** 새싹·물방울 모두 1px paper 실루엣 외곽선. 기존 Z축 및 겹침 감쇠와 동기화. [규격](./fairy-patrol.md).
 
 > **devel 자동 공격 비교:** 기본 실행에 새싹 요정 5발 빨강·물 요정 2발 노랑 자동 발사 및 적 피격/처치가 추가됐다. `?attack=0`은 이전 비전투 군집 비교, `?occlusion=fairy`는 요정 전면, `?full=1`은 100칸으로 조합 가능하다. [공격 규격](./enemy-preview.md). 꽃 피해·실제 웨이브·보상 미구현.

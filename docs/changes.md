@@ -1,5 +1,9 @@
 # 시스템별 변경 이력
 
+## 2026-11-18 — 독립 지형 색상/돌담 비교
+
+- `pebbles=0` 돌 표시만 숨김, `gardenfill=soil|green` 식재 셀 갈색/녹색, `bgtype=7` 완화된 초록 잔디 전장. 기본 및 전투/순찰/원본 에셋 유지. Chromium 색상·투명 셀·외곽선·실제 화면 검사 추가. [규격](./ui-color-guide.md).
+
 ## 2026-11-18 — 요정 흰색 외곽선
 
 - 새싹·물방울 11명 1px paper 외곽선. 두 Z축 비교 유지, 몸체·공격·적·꽃 원본 및 판정 불변. 팔레트 Chromium 5환경에서 색상·폭·겹침 알파·동기화 검사 통과 ([CI](https://github.com/xcliming-svg/garden-test/actions/runs/44110588416)). 전체 장시간 전투 재검증은 별도.
