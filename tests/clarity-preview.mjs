@@ -89,7 +89,7 @@ try{
      enemyOK&&=im.texture.key===(cfg.enemyOutline?C.enemyOutlineKey(body,a.entry.scale):body)&&Math.abs(im.depth-((cfg.ySort?2:3)+a.pose.ground/L.height))<1e-9;
     }
     const tex=(k)=>{const src=s.textures.get(k).getSourceImage();if(typeof src.getContext==='function')return src.getContext('2d').getImageData(0,0,src.width,src.height).data;
-      const canvas=document.createElement('canvas');canvas.width=src.width;canvas.height=src.height;const ctx=canvas.getContext('2d');ctx.drawImage(src,0,0);return ctx.getImageData(0,0,src.width,src.height).data;};
+      const canvas=document.createElement('canvas');canvas.width=src.width;canvas.height=src.height;const ctx=canvas.getContext('2d',{willReadFrequently:true});ctx.drawImage(src,0,0);return ctx.getImageData(0,0,src.width,src.height).data;};
     let enemyOutlineAdded=0,enemyBodyChanged=0,enemyOutlineCount=0,enemyClipped=0;
     if(cfg.enemyOutline)for(const e of c.entries)for(const expression of ['normal','closed','angry','dizzy']){
       const k=window.GardenEnemyPreview.key(e.id,expression),body=cfg.enemyTone?C.toneKey(k):k,outlined=C.enemyOutlineKey(body,e.scale);
