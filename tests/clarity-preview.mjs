@@ -40,19 +40,7 @@ try{
   ['all-occlusion',640,360,'?full=1&clarity=1&waterOcclusion=1&flowerOcclusion=1&occlusionAlpha=40',[true,true,true,true,true,true,true,true]],
   ['flower-heads',960,540,'?flowerheads=1&flowerOcclusion=1',[false,false,false,false,false,false,false,true]],
   ['explicit-off',960,540,'?full=1&clarity=1&heroOcclusion=0&waterOcclusion=0&flowerOcclusion=0',[true,true,true,true,true,false,false,false]],
-  ['shadow-off',960,540,'?full=1&shadows=0',[false,false,false,false,false,false,false,false]],
-  ['shadow-enemy',960,540,'?shadows=0&enemyShadow=1',[false,false,false,false,false,false,false,false]],
-  ['shadow-fairy',640,360,'?shadows=0&fairyShadow=1',[false,false,false,false,false,false,false,false]],
-  ['shadow-legacy',960,540,'?full=1&shadowStyle=dark',[false,false,false,false,false,false,false,false]],
-  ['shadow-light',960,540,'?uitype=1',[false,false,false,false,false,false,false,false]],
-  ['flower-tone',960,540,'?full=1&flowerTone=1',[false,false,false,false,false,false,false,false]],
-  ['flower-tone-subtle',640,360,'?flowerTone=1&flowerBrightness=95&flowerSaturation=80&flowerContrast=95',[false,false,false,false,false,false,false,false]],
-  ['flower-tone-heads',960,540,'?flowerheads=1&flowerTone=1',[false,false,false,false,false,false,false,false]],
-  ['enemy-outline',960,540,'?full=1&enemyOutline=1',[false,false,false,false,false,false,false,false]],
-  ['enemy-outline-light',640,360,'?enemyOutline=1&enemyOutlineColor=light&enemyOutlineWidth=1.5',[false,false,false,false,false,false,false,false]],
-  ['flower-enemy-combined',960,540,'?full=1&clarity=1&flowerTone=1&enemyOutline=1&flowerOcclusion=1',[true,true,true,true,true,true,false,true]],
-  ['new-options-off',960,540,'?full=1&clarity=1&flowerTone=0&enemyOutline=0',[true,true,true,true,true,true,false,false]],
-  ['combat',960,540,'?combat=1&clarity=1&flowerTone=1&enemyOutline=1',[true,true,true,true,true,true,false,false]]
+  ['combat',960,540,'?combat=1&clarity=1',[true,true,true,true,true,true,false,false]]
  ]){
   const page=await browser.newPage({viewport:{width:w,height:h}});
   const errors=[],failed=[];page.on('pageerror',e=>errors.push(String(e)));page.on('requestfailed',r=>failed.push(r.url()));
@@ -65,42 +53,18 @@ try{
    const result=await page.evaluate(({name,expected})=>{
     const s=window.__previewGame.scene.getScene('Game'),C=window.GardenClarityPreview,c=s.enemyPreview,F=s.fairyPatrol,L=window.GardenGameLayout.spec;
     const cfg=C.config,flags=['enemyTone','fairyOutline','ySort','heroMarker','flowerFocus','heroOcclusion','waterOcclusion','flowerOcclusion'].map(k=>cfg[k]);
-    if(name==='combat')return {flags,combat:!!s.combatPreview,marker:!!s.children.getByName('clarity:hero-marker'),focus:!!s.children.getByName('clarity:flower-focus'),enemies:!!c,flowerToneApplied:s.children.list.some(im=>im.name?.startsWith('garden-preview-flower:')&&im.texture?.key?.startsWith('clarity:flower-tone:'))};
+    if(name==='combat')return {flags,combat:!!s.combatPreview,marker:!!s.children.getByName('clarity:hero-marker'),focus:!!s.children.getByName('clarity:flower-focus'),enemies:!!c};
     // Advance only model and render once, rather than 7,500 synchronous GPU
     // render calls. Capture real WebGL scene at the same elapsed population.
     c.advance(Math.max(0,120-c.elapsed));F.advance(Math.max(0,120-F.elapsed));s.flowerGrowth?.render(F.elapsed);c.advance(0);
-    const actors=c.actors,hero=F.actors[0],fairies=F.actors,S=window.GardenGroundShadow;
-    const close=(a,b)=>Math.abs(a-b)<1e-5,style=S.style(),base=style.alpha;
-    let enemyShadows=0,fairyShadows=0,shadowOK=true;
-    for(const a of actors){const {shadow,image}=c.sprites.get(a.id),p=a.pose;
-      enemyShadows+=Number(shadow.visible);
-      shadowOK&&=shadow.visible===S.config.enemy&&shadow.depth===.75&&shadow.depth<image.depth&&shadow.mask===image.mask&&close(shadow.x,p.x)&&close(shadow.y,p.ground+style.offset)&&close(shadow.displayWidth,a.entry.width*.72*style.scaleX*Math.max(.5,1-p.lift*.009))&&close(shadow.displayHeight,Math.max(3,a.entry.height*.16)*style.scaleY)&&close(shadow.alpha,base/(1+p.lift*.055));
-    }
-    for(const a of fairies){const {shadow,image}=a,lift=a.center.y+a.visibleHeight/2-image.y;
-      fairyShadows+=Number(shadow.visible);
-      shadowOK&&=shadow.visible===S.config.fairy&&shadow.depth===.75&&shadow.depth<image.depth&&close(shadow.x,image.x)&&close(shadow.y,a.center.y+a.visibleHeight/2+style.offset)&&close(shadow.displayWidth,a.visibleHeight*.48*style.scaleX*Math.max(.5,1-lift*.009))&&close(shadow.displayHeight,a.visibleHeight*.15*style.scaleY)&&close(shadow.alpha,base/(1+lift*.055));
-    }
-    const shadowSizes={hero:[hero.shadow.displayWidth,hero.shadow.displayHeight],water:[fairies[1].shadow.displayWidth,fairies[1].shadow.displayHeight]};
+    const actors=c.actors,hero=F.actors[0],fairies=F.actors;
     const marker=s.children.getByName('clarity:hero-marker'),focus=s.children.getByName('clarity:flower-focus');
     let enemyOK=true,fairyOK=true,alphaOK=true,toneChanged=0,outlineAdded=0,bodyChanged=0;
     for(const a of actors){
      const im=c.sprites.get(a.id).image,k=window.GardenEnemyPreview.key(a.entry.id,a.expression);
-     const body=cfg.enemyTone?C.toneKey(k):k;
-     enemyOK&&=im.texture.key===(cfg.enemyOutline?C.enemyOutlineKey(body,a.entry.scale):body)&&Math.abs(im.depth-((cfg.ySort?2:3)+a.pose.ground/L.height))<1e-9;
+     enemyOK&&=im.texture.key===(cfg.enemyTone?C.toneKey(k):k)&&Math.abs(im.depth-((cfg.ySort?2:3)+a.pose.ground/L.height))<1e-9;
     }
-    const tex=(k)=>{const src=s.textures.get(k).getSourceImage();if(typeof src.getContext==='function')return src.getContext('2d').getImageData(0,0,src.width,src.height).data;
-      const canvas=document.createElement('canvas');canvas.width=src.width;canvas.height=src.height;const ctx=canvas.getContext('2d',{willReadFrequently:true});ctx.drawImage(src,0,0);return ctx.getImageData(0,0,src.width,src.height).data;};
-    let enemyOutlineAdded=0,enemyBodyChanged=0,enemyOutlineCount=0,enemyClipped=0;
-    if(cfg.enemyOutline)for(const e of c.entries)for(const expression of ['normal','closed','angry','dizzy']){
-      const k=window.GardenEnemyPreview.key(e.id,expression),body=cfg.enemyTone?C.toneKey(k):k,outlined=C.enemyOutlineKey(body,e.scale);
-      const a=tex(body),b=tex(outlined),w=s.textures.get(body).getSourceImage().width,h=s.textures.get(body).getSourceImage().height;
-      let added=0;
-      for(let i=0;i<a.length;i+=4){
-        if(a[i+3]===0&&b[i+3]>0){added++;const x=i/4%w,y=Math.floor(i/4/w);if(x===0||x===w-1||y===0||y===h-1)enemyClipped++;}
-        if(a[i+3]===255&&[0,1,2,3].some(j=>a[i+j]!==b[i+j]))enemyBodyChanged++;
-      }
-      if(added>0)enemyOutlineCount++;enemyOutlineAdded+=added;
-    }
+    const tex=(k)=>{const t=s.textures.get(k);return t.getContext().getImageData(0,0,t.width,t.height).data;};
     if(cfg.enemyTone){
       const k=window.GardenEnemyPreview.key(c.entries[0].id,'normal'),a=tex(k),b=tex(C.toneKey(k));
       for(let i=0;i<a.length;i+=4){if(a[i+3]!==b[i+3])alphaOK=false;if(a[i+3]===255&&[0,1,2].some(j=>a[i+j]!==b[i+j]))toneChanged++;}
@@ -115,30 +79,6 @@ try{
       for(let i=0;i<a.length;i+=4){if(a[i+3]===0&&b[i+3]>0)outlineAdded++;if(a[i+3]===255&&[0,1,2,3].some(j=>a[i+j]!==b[i+j]))bodyChanged++;}
     }
     const flowers=s.flowerGrowth?[...s.flowerGrowth.entries.values()].map(e=>e.image):s.children.list.filter(im=>im.name?.startsWith('garden-preview-flower:'));
-    let flowerToneOK=true,flowerAlphaChanged=0,flowerChanged=0,flowerChromaBefore=0,flowerChromaAfter=0,flowerPeakBefore=0,flowerPeakAfter=0,flowerStates=0;
-    const prefix='clarity:flower-tone:';
-    for(const im of flowers)flowerToneOK&&=im.texture.key.startsWith(prefix)===cfg.flowerTone;
-    if(cfg.flowerTone){
-      const keys=new Set(flowers.map(im=>im.texture.key.slice(prefix.length)));
-      // Check every growth stage and HP expression, without altering live state.
-      if(s.flowerGrowth)for(const name of window.GardenFlowerGrowth.names)for(const stage of [1,2,3])for(const hp of [100,66,33])keys.add(window.GardenFlowerGrowth.key(name,stage,hp));
-      for(const k of keys){
-        const target=C.flowerTexture(s,k),a=tex(k),b=tex(target);flowerStates++;
-        const expected=C.flowerPixels(new Uint8ClampedArray(a));
-        for(let i=0;i<a.length;i+=4){
-          if(a[i+3]!==b[i+3])flowerAlphaChanged++;
-          if(!a[i+3])continue;
-          // Browser canvas premultiplies partially transparent AA pixels.
-          // Alpha must be exact; compare color math on fully opaque pixels.
-          if(a[i+3]!==255)continue;
-          if([0,1,2].some(j=>b[i+j]!==expected[i+j]))flowerToneOK=false;
-          if([0,1,2].some(j=>a[i+j]!==b[i+j]))flowerChanged++;
-          const av=[a[i],a[i+1],a[i+2]],bv=[b[i],b[i+1],b[i+2]];
-          flowerChromaBefore+=Math.max(...av)-Math.min(...av);flowerChromaAfter+=Math.max(...bv)-Math.min(...bv);
-          flowerPeakBefore=Math.max(flowerPeakBefore,...av);flowerPeakAfter=Math.max(flowerPeakAfter,...bv);
-        }
-      }
-    }
     const groups=[[hero.image],fairies.slice(1).map(a=>a.image),flowers];
     const enabled=[cfg.heroOcclusion,cfg.waterOcclusion,cfg.flowerOcclusion];
     const targets=groups.flatMap((g,i)=>enabled[i]?g.map(C.occlusionShape):[]);
@@ -177,25 +117,16 @@ try{
     const shape=(m,depth)=>({m,sx:1,sy:1,cos:1,sin:0,ox:0,oy:0,x:0,y:0,l:0,t:0,r:4,b:4,depth});
     const transparentRejected=!C.coversHero(shape(mask(0),2),shape(mask(15),3));
     const opaqueAccepted=C.coversHero(shape(mask(0),2),shape(mask(0),3));
-    return {flags,enemyOK,flowerTone:cfg.flowerTone,enemyOutline:cfg.enemyOutline,flowerToneOK,flowerAlphaChanged,flowerChanged,flowerChromaBefore,flowerChromaAfter,flowerPeakBefore,flowerPeakAfter,flowerStates,enemyOutlineAdded,enemyBodyChanged,enemyOutlineCount,enemyClipped,outlineWidth:cfg.enemyOutlineWidth,outlineColor:cfg.enemyOutlineColor,flowerBrightness:cfg.flowerBrightness,flowerSaturation:cfg.flowerSaturation,flowerContrast:cfg.flowerContrast,shadowOK,enemyShadows,fairyShadows,shadowSizes,faded,alphaMismatch,behindFaded,testResults,targetCount,allUnchanged,transparentRejected,opaqueAccepted,occlusionAlpha:cfg.occlusionAlpha,fairyOK,alphaOK,toneChanged,outlineAdded,bodyChanged,count:actors.length,flowers:flowers.length,
+    return {flags,enemyOK,faded,alphaMismatch,behindFaded,testResults,targetCount,allUnchanged,transparentRejected,opaqueAccepted,occlusionAlpha:cfg.occlusionAlpha,fairyOK,alphaOK,toneChanged,outlineAdded,bodyChanged,count:actors.length,flowers:flowers.length,
      heroHeight:hero.visibleHeight,waterHeight:fairies[1].visibleHeight,marker:!!marker,focus:!!focus,markerDepth:marker?.depth,
      markerX:marker?.x,heroX:hero.image.x,focusDepth:focus?.depth,brightness:cfg.brightness,saturation:cfg.saturation,
+     shadows:s.children.list.filter(o=>o.name?.startsWith('enemy:shadow:')||o.name?.startsWith('fairy:shadow:')).length,
      rings:s.children.list.filter(o=>o.name?.startsWith('clarity:')&&o.name.includes('ring')).length};
    },{name,expected});
    assert.deepEqual(result.flags,expected);
-   if(name==='combat'){assert.ok(result.combat&&!result.marker&&!result.focus&&!result.enemies&&!result.flowerToneApplied);}
+   if(name==='combat'){assert.ok(result.combat&&!result.marker&&!result.focus&&!result.enemies);}
    else{
     assert.ok(result.enemyOK&&result.fairyOK&&result.alphaOK,JSON.stringify(result));assert.equal(result.count,200);assert.equal(result.flowers,query.includes('full=1')?100:4);
-    assert.equal(result.flowerTone,query.includes('flowerTone=1'));
-    assert.equal(result.enemyOutline,query.includes('enemyOutline=1'));
-    assert.ok(result.flowerToneOK&&result.flowerAlphaChanged===0,JSON.stringify(result));
-    if(result.flowerTone){assert.ok(result.flowerChanged>0&&result.flowerChromaAfter<result.flowerChromaBefore&&result.flowerPeakAfter<result.flowerPeakBefore,JSON.stringify(result));assert.ok(result.flowerStates===(name==='flower-tone-heads'?4:54));}
-    if(result.enemyOutline){assert.equal(result.enemyOutlineCount,48);assert.ok(result.enemyOutlineAdded>0&&result.enemyBodyChanged===0&&result.enemyClipped===0,JSON.stringify(result));}
-    if(name==='enemy-outline-light'){assert.equal(result.outlineColor,'light');assert.equal(result.outlineWidth,1.5);}
-    if(name==='flower-tone-subtle'){assert.equal(result.flowerBrightness,.95);assert.equal(result.flowerSaturation,.8);assert.equal(result.flowerContrast,.95);}
-    assert.ok(result.shadowOK,JSON.stringify(result));
-    assert.equal(result.enemyShadows,['shadow-off','shadow-fairy'].includes(name)?0:200);
-    assert.equal(result.fairyShadows,['shadow-off','shadow-enemy'].includes(name)?0:11);
     assert.equal(result.alphaMismatch,0);assert.equal(result.behindFaded,0);
     assert.ok(result.transparentRejected&&result.opaqueAccepted&&result.allUnchanged,JSON.stringify(result));
     assert.equal(result.targetCount,(expected[5]?1:0)+(expected[6]?10:0)+(expected[7]?result.flowers:0));
@@ -206,39 +137,12 @@ try{
     }
     if(name==='occlusion-sort')assert.equal(result.occlusionAlpha,.40);
     assert.equal(result.heroHeight,40);assert.ok(Math.abs(result.waterHeight-40*502/716)<.001);
-    assert.equal(result.marker,expected[3]);assert.equal(result.focus,expected[4]);assert.equal(result.rings,0);
+    assert.equal(result.marker,expected[3]);assert.equal(result.focus,expected[4]);assert.equal(result.rings,0);assert.equal(result.shadows,0);
     if(expected[0])assert.ok(result.toneChanged>0);if(expected[1])assert.ok(result.outlineAdded>0&&result.bodyChanged===0,JSON.stringify(result));
     if(expected[3])assert.ok(result.markerDepth>3&&Math.abs(result.markerX-result.heroX)<.001);
     if(expected[4])assert.equal(result.focusDepth,.8);
     if(name==='overrides'){assert.equal(result.brightness,.85);assert.equal(result.saturation,.65);}
     await page.screenshot({path:join(out,'clarity-'+name+'.png'),scale:'device'});
-    if(['off','shadow-light','shadow-legacy'].includes(name)){
-      // Freeze simulation while preserving scene rendering. Compare actual
-      // framebuffer pixels with each group independently hidden.
-      await page.evaluate(()=>{window.__previewGame.scene.pause('Game');});
-      await page.waitForFunction(()=>window.__previewGame.scene.isPaused('Game'));
-      await page.waitForTimeout(100);
-      const foot=await page.evaluate(()=>{const s=window.__previewGame.scene.getScene('Game'),sh=s.fairyPatrol.actors[0].shadow,canvas=document.querySelector('canvas'),r=canvas.getBoundingClientRect();return {x:r.x+sh.x*r.width/960,y:r.y+sh.y*r.height/540,w:sh.displayWidth*r.width/960,h:sh.displayHeight*r.height/540};});
-      const both=await page.screenshot({path:join(out,'shadow-'+name+'-both.png')});
-      await page.evaluate(()=>{const s=window.__previewGame.scene.getScene('Game');for(const a of s.fairyPatrol.actors)a.shadow.setVisible(false);});
-      await page.waitForTimeout(100);
-      const enemyOnly=await page.screenshot({path:join(out,'shadow-'+name+'-enemy.png')});
-      await page.evaluate(()=>{const s=window.__previewGame.scene.getScene('Game');for(const a of s.enemyPreview.sprites.values())a.shadow.setVisible(false);});
-      await page.waitForTimeout(100);
-      const neither=await page.screenshot({path:join(out,'shadow-'+name+'-none.png')});
-      const pixels=await page.evaluate(async ({shots,foot})=>{
-        const arrays=[];let width=0,height=0;
-        for(const base64 of shots){const im=new Image();im.src='data:image/png;base64,'+base64;await im.decode();const c=document.createElement('canvas');c.width=im.width;c.height=im.height;width=c.width;height=c.height;const ctx=c.getContext('2d');ctx.drawImage(im,0,0);arrays.push(ctx.getImageData(0,0,c.width,c.height).data);}
-        function diff(a,b){let changed=0,maxDelta=0;for(let i=0;i<a.length;i+=4){const d=Math.max(...[0,1,2].map(j=>Math.abs(a[i+j]-b[i+j])));if(d>1)changed++;maxDelta=Math.max(maxDelta,d);}return {changed,maxDelta};}
-        const hero={changed:0,maxDelta:0,strong:0};for(let y=Math.max(0,Math.floor(foot.y-foot.h/2));y<Math.min(height,Math.ceil(foot.y+foot.h/2));y++)for(let x=Math.max(0,Math.floor(foot.x-foot.w/2));x<Math.min(width,Math.ceil(foot.x+foot.w/2));x++){
-          const i=(y*width+x)*4,d=Math.max(...[0,1,2].map(j=>Math.abs(arrays[0][i+j]-arrays[1][i+j])));if(d>1)hero.changed++;if(d>=40)hero.strong++;hero.maxDelta=Math.max(hero.maxDelta,d);
-        }
-        return {fairy:diff(arrays[0],arrays[1]),enemy:diff(arrays[1],arrays[2]),hero};
-      },{shots:[both,enemyOnly,neither].map(b=>b.toString('base64')),foot});
-      assert.ok(pixels.fairy.changed>20&&pixels.enemy.changed>20,JSON.stringify(pixels));
-      if(name==='off'){assert.ok(pixels.hero.strong>=12&&pixels.hero.maxDelta>=45,JSON.stringify(pixels));assert.ok(pixels.fairy.maxDelta>=45,JSON.stringify(pixels));}
-      result.shadowPixels=pixels;
-    }
    }
    assert.deepEqual(errors,[]);assert.deepEqual(failed,[]);
    report.push({name,...result,pass:true});console.log('PASS',name,JSON.stringify(result));
