@@ -2,7 +2,7 @@
 
 ## 2026-11-17 — devel 그림자 대비 개선
 
-- 기존 검정 타원은 어두운 필드에서 요정 그림자 최대 RGB 차이 25/255로 약했다([이전 Chromium 검사](https://github.com/xcliming-svg/garden-test/actions/runs/44082513697)). 기본을 채워진 부드러운 stone 회색 접지 타원으로 변경, 폭×1.25/높이×1.5/발 위치+3px, 밝은 테마 갈색 암영 유지. `shadowStyle=dark` 이전 비교, ON/OFF·군집·몸체·이동 불변. [규격](./enemy-preview.md#devel-발밑-그림자).
+- 기존 검정 타원은 어두운 필드에서 요정 그림자 최대 RGB 차이 25/255로 약했다([이전 Chromium 검사](https://github.com/xcliming-svg/garden-test/actions/runs/44082513697)). 기본을 채워진 부드러운 stone 회색 접지 타원으로 변경, 폭×1.25/높이×1.5/발 위치+3px, 밝은 테마 갈색 암영 유지. `shadowStyle=dark` 이전 비교, ON/OFF·군집·몸체·이동 불변. Chromium 22/22 통과, 주인공 발밑 최대 RGB 차이 15→88/255. [규격](./enemy-preview.md#devel-발밑-그림자).
 
 ## 2026-11-17 — devel 적·요정 발밑 그림자
 
