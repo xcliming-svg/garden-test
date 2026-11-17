@@ -191,6 +191,9 @@ try{
      update(.1);check(close(underHero.alpha,.5),'multiple fairies do not multiply fade');
      water.setPosition(beforeWater.x,beforeWater.y).setOrigin(beforeWater.ox,beforeWater.oy).setScale(beforeWater.sx,beforeWater.sy).setAngle(beforeWater.angle).setFlip(beforeWater.fx,beforeWater.fy);
      F.advance(0);
+     // Restore the individual contact before timing a fresh exit: moving water
+     // for the double-contact check already started underWater's recovery.
+     update(.1);check(close(underHero.alpha,.5)&&close(underWater.alpha,.5)&&close(flower.alpha,.4),'fresh contact before recovery');
      for(const p of probes)p.setPosition(-100,-100);
      update(.1);check(close(underHero.alpha,.75)&&close(underWater.alpha,.75)&&close(flower.alpha,.7),'recovery midpoint');
      update(.1);check(probes.every(p=>close(p.alpha,1))&&flowers.every(f=>close(f.alpha,1)),'full recovery');
