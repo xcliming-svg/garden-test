@@ -198,7 +198,9 @@ try{
     await page.keyboard.press('Escape');await page.waitForFunction(()=>window.__previewGame.scene.getScene('Game').enemyPreview.elapsed>0&&window.__previewGame.scene.isActive('Game'));
     assert.equal(await page.locator('#enemy-preview-controls').isVisible(),true);
     await page.setViewportSize({width:800,height:450});
-    const resized=await page.locator('#enemy-preview-controls').boundingBox();assert.ok(Math.abs(resized.width-226*800/960)<2);
+    // Window resize and Phaser's scale event are asynchronous in Chromium.
+    await page.waitForFunction(()=>Math.abs(document.getElementById('game').getBoundingClientRect().width-800)<1&&Math.abs(document.getElementById('enemy-preview-controls').getBoundingClientRect().width-226*800/960)<2,{},{timeout:8000});
+    const resized=await page.locator('#enemy-preview-controls').boundingBox();assert.ok(Math.abs(resized.width-226*800/960)<2,JSON.stringify(resized));
     await page.evaluate(()=>window.__previewGame.scene.stop('Game'));
     await page.waitForFunction(()=>!document.getElementById('enemy-preview-controls'));
    }
