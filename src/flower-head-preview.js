@@ -191,7 +191,8 @@
     scene.scale.on('resize',resize);
     scene.events.once('shutdown',()=>scene.scale.off('resize',resize));
     if(fairy){
-      window.GardenFairyPatrol.attach(scene,spec,occupied,geometry,patrolPosition,updateHud,guardianSize);
+      const patrol=window.GardenFairyPatrol.attach(scene,spec,occupied,geometry,patrolPosition,updateHud,guardianSize);
+      window.GardenEnemyPreview.attach(scene,spec,patrol);
       return;
     }
     const bounds=clampedBounds(occupied),start=patrolPosition(bounds,(bounds.right-bounds.left)/2);

@@ -57,7 +57,7 @@
   class GameScene extends Phaser.Scene {
     constructor() { super('Game'); }
 
-    preload() { window.GardenFlowerGrowth.preload(this); window.GardenFairyPatrol.preload(this); }
+    preload() { window.GardenFlowerGrowth.preload(this); window.GardenFairyPatrol.preload(this); window.GardenEnemyPreview.preload(this); }
 
     create() {
       window.GardenGameLayout.draw(this);

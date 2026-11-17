@@ -106,5 +106,5 @@
     scene.events.once('shutdown',()=>{scene.events.off('update',update);delete scene.fairyPatrol;});
     render();return controller;
   }
-  window.GardenFairyPatrol=Object.freeze({enabled,preload,install,attach,key,count,speed});
+  window.GardenFairyPatrol=Object.freeze({enabled,preload,install,attach,key,count,speed,blinkSchedule});
 }());
