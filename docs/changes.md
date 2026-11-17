@@ -2,7 +2,7 @@
 
 ## 2026-11-18 — 요정 전면·돌담 없음 확정 및 외곽선 비교
 
-- 직전 지형 비교 `pebbles`, `gardenfill`, `bgtype=7`, Z축 `occlusion` 제거. 돌담 미표시, 요정 전면, 기존 어두운 잔디·투명 점선 고정. 기존 순찰·적 경로·공격 유지. 기본 stone 1px, Garden 16 실제 역할명과 0.5~1.5px 파라미터, 끄기 지원. Chromium 집중 검사 예정.
+- 직전 지형 비교 `pebbles`, `gardenfill`, `bgtype=7`, Z축 `occlusion` 제거. 돌담 미표시, 요정 전면, 기존 어두운 잔디·투명 점선 고정. 기존 순찰·적 경로·공격 유지. 기본 stone 1px, Garden 16 실제 역할명과 0.5~1.5px 파라미터, 끄기 지원. 실제 16색 × 5개 두께 80조합 및 잘못된 값 복귀 검사 통과. Chromium 8환경 외곽선 폭·색상·끄기·기존 옵션 무효화·Z/투명도 검사 통과 ([CI](https://github.com/xcliming-svg/garden-test/actions/runs/44116236737)). 장시간 전투 전체 검증은 별도.
 
 ## 2026-11-18 — 독립 지형 색상/돌담 비교
 
