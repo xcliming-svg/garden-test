@@ -52,19 +52,22 @@ try{
       const enemies=[];
       if(c)for(const a of c.entries){
        choose('enemy-character',a.id);choose('enemy-motion-mode','move');
-       const route=window.GardenEnemyPreview.route(L,F.boundary,a);
+       const route=window.GardenEnemyPreview.route(L,F.boundary,a,F.occupied);
        for(const erank of [0,5]){
         choose('enemy-speed',erank);
-        const speed=c.speed,travel=M.travelTime(a,route,erank),start=c.pose.x;
+        const speed=c.speed,travel=M.travelTime(a,route,erank,'move'),start=c.pose.x;
         c.advance(travel/2);c.advance(travel/2);const end=c.pose.x;
-        const profile=M.profiles[a.id],impact=travel+profile.windup+profile.strike;
-        let bounded=true;
-        for(let i=0;i<=300;i++){
-         const p=M.sample(a,'auto',M.duration(a,'auto',route,erank)*i/300,route,erank),rad=p.angle*Math.PI/180,hw=a.width*p.sx/2,hh=a.height*p.sy/2;
+        const profile=M.profiles[a.id],impact=M.travelTime(a,route,erank)+profile.windup+profile.strike;
+        let bounded=true,inside=true;
+        for(const mode of M.modes){
+        const hit=mode==='move'?travel:mode==='auto'?impact:profile.windup+profile.strike;
+        for(let i=0;i<=301;i++){
+         const p=M.sample(a,mode,i===301?hit:M.duration(a,mode,route,erank)*i/300,route,erank),rad=p.angle*Math.PI/180,hw=a.width*p.sx/2,hh=a.height*p.sy/2;
          const ex=Math.abs(Math.cos(rad))*hw+Math.abs(Math.sin(rad))*hh,ey=Math.abs(Math.sin(rad))*hw+Math.abs(Math.cos(rad))*hh,y=route.ground-a.height*p.sy/2-p.lift;
-         bounded&&=p.x-ex>=F.boundary.border.right+F.boundary.frame/2+9&&p.x+ex<=L.width-8&&y-ey>=L.top&&y+ey<=L.height-L.bottom;
-        }
-        enemies.push({id:a.id,rank:erank,speed,travel,start,end,expectedStart:route.start,expectedEnd:route.stage,impact,passes:impact/(F.spacing/F.speed),bounded,attackUnchanged:JSON.stringify(M.sample(a,'attack',.3,route,erank))===JSON.stringify(M.sample(a,'attack',.3,route,0)),fairySpeed:F.speed});
+         bounded&&=p.x-ex>=8&&p.x+ex<=L.width-8&&y-ey>=L.top&&y+ey<=L.height-L.bottom;
+         if(i===301){const b=F.boundary.border,m=F.boundary.frame/2;inside&&=Math.abs(p.x-route.target)<1e-6&&F.occupied.includes(route.flower)&&p.x-ex>=b.left+m&&p.x+ex<=b.right-m&&y-ey>=b.top+m&&y+ey<=b.bottom-m;}
+        }}
+        enemies.push({id:a.id,rank:erank,speed,travel,start,end,expectedStart:route.start,expectedEnd:route.target,inside,impact,passes:impact/(F.spacing/F.speed),bounded,attackUnchanged:JSON.stringify(M.sample(a,'attack',.3,route,erank))===JSON.stringify(M.sample(a,'attack',.3,route,0)),fairySpeed:F.speed});
        }
       }
       rows.push({gardenSize,actual:s.flowerGrowth.entries.size,rank,speed:F.speed,moved,time:F.elapsed-e,same,length:F.length,spacing:F.spacing,lap:F.length/F.speed,gap:F.spacing/F.speed,enemies});
@@ -80,7 +83,7 @@ try{
     for(const x of row.enemies){
      const expected=baseById[x.id]*(x.rank===0?1:1.5);
      assert.equal(x.speed,expected);assert.equal(x.fairySpeed,row.speed);
-     assert.ok(Math.abs(x.start-x.expectedStart)<1e-6&&Math.abs(x.end-x.expectedEnd)<1e-6&&Math.abs((x.expectedStart-x.expectedEnd)/x.travel-expected)<1e-6&&x.attackUnchanged&&x.bounded&&x.passes>=1,JSON.stringify({garden:row.gardenSize,...x}));
+     assert.ok(Math.abs(x.start-x.expectedStart)<1e-6&&Math.abs(x.end-x.expectedEnd)<1e-6&&Math.abs((x.expectedStart-x.expectedEnd)/x.travel-expected)<1e-6&&x.attackUnchanged&&x.bounded&&x.inside&&x.passes>=1,JSON.stringify({garden:row.gardenSize,...x}));
     }
    }
    assert.ok(matrix[3].lap<=matrix[0].lap+1e-6);

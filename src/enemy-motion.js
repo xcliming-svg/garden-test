@@ -11,7 +11,7 @@
     '6_rabbit':[2.25,.6,6,.05,18,44,35,.30,.40,27,12],
     '2_gray_bug':[3.2,.6,4,.04,0,24,42,.42,.23,0,15],
     '1_cat':[2.6,0.65,2.2,.035,0,30,48,.52,.22,0,9],
-    '5_bulldog':[3.8,1.2,3,.035,0,36,56,.48,.27,0,11],
+    '5_bulldog':[3.8,.9,2.3,.035,0,36,56,.48,.27,0,11],
     '1_butterfly':[4.8,2.2,5,.018,15,40,27,.27,.37,8,12],
     '6_sparrow':[5.2,1.0,3,.015,18,46,34,.23,.26,11,16],
     '6_pigeon':[3.2,1.5,3,.018,20,48,39,.33,.34,12,11]
@@ -19,8 +19,8 @@
   const modes=Object.freeze(['auto','move','attack']),clamp=x=>Math.max(0,Math.min(1,x)),smooth=x=>{x=clamp(x);return x*x*(3-2*x);};
   const lerp=(a,b,t)=>a+(b-a)*t,pi=Math.PI;
   const speed=(e,rank=0)=>window.GardenFairyPatrol.speedAt(profiles[e.id].baseSpeed,rank);
-  const travelTime=(e,route,rank=0)=>Math.max(.01,Math.abs(route.start-route.stage)/speed(e,rank));
-  function duration(e,mode,route,rank=0){const p=profiles[e.id],move=travelTime(e,route,rank),attack=p.windup+p.strike+.55;return mode==='move'?2*move:mode==='attack'?attack+.8:2*move+attack;}
+  const travelTime=(e,route,rank=0,mode='auto')=>Math.max(.01,Math.abs(route.start-(mode==='move'?route.target:route.stage))/speed(e,rank));
+  function duration(e,mode,route,rank=0){const p=profiles[e.id],move=travelTime(e,route,rank,mode),attack=p.windup+p.strike+.55;return mode==='move'?2*move:mode==='attack'?attack+.8:2*move+attack;}
   function gait(e,t,progress,returning,route,moveTime){
     const p=profiles[e.id],phase=t*p.hz*2*pi,wave=Math.sin(phase);
     const direction=returning?-1:1;
@@ -43,9 +43,12 @@
   }
   function sample(e,mode,time,route,rank=0){
     const p=profiles[e.id],recovery=.55,retreat=.8;
-    const moveTime=travelTime(e,route,rank),period=duration(e,mode,route,rank);
+    const moveTime=travelTime(e,route,rank,mode),period=duration(e,mode,route,rank);
     let t=((time%period)+period)%period;
-    if(mode==='move')return t<moveTime?gait(e,t,t/moveTime,false,route,moveTime):gait(e,t-moveTime,(t-moveTime)/moveTime,true,route,moveTime);
+    if(mode==='move'){
+      const path={...route,stage:route.target};
+      return t<moveTime?gait(e,t,t/moveTime,false,path,moveTime):gait(e,t-moveTime,(t-moveTime)/moveTime,true,path,moveTime);
+    }
     if(mode==='auto'){
       if(t<moveTime)return gait(e,t,t/moveTime,false,route,moveTime);
       t-=moveTime;

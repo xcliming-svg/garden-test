@@ -82,13 +82,26 @@
       return {...e,name:art.name,bounds:b};
     });
   }
-  function route(spec,boundary,e){
-    // Reserve the complete transformed body outside the outermost stones.
-    const margin=e.span*.74+12;
-    const target=boundary.border.right+boundary.frame/2+margin;
-    const start=spec.width-margin;
-    const reach=Math.min(window.GardenEnemyMotion.profiles[e.id].reach,(start-target)*.55);
-    return {start,stage:target+reach,target,ground:spec.top+spec.fieldHeight*.58};
+  function route(spec,boundary,e,occupied){
+    // Stones are decorative. Target an occupied flower, not the outside of the wall.
+    const g=spec.garden,mid=(boundary.garden.top+boundary.garden.bottom)/2;
+    const cells=occupied.map(index=>({index,x:g.x+(index%g.columns)*g.pitch+g.line+g.cell/2,y:g.y+Math.floor(index/g.columns)*g.pitch+g.line+g.cell-1}));
+    if(!cells.length)throw Error('Enemy preview needs a planted flower');
+    cells.sort((a,b)=>b.x-a.x||Math.abs(a.y-mid)-Math.abs(b.y-mid)||a.index-b.index);
+    const M=window.GardenEnemyMotion,p=M.profiles[e.id],margin=e.span*.74+12,start=spec.width-margin;
+    const path=flower=>({start,stage:flower.x+Math.min(p.reach,(start-flower.x)*.55),target:flower.x,ground:flower.y,flower:flower.index});
+    // Prefer a planted flower that can contain the full sprite at arrival,
+    // including flight altitude. A lower row may be needed in tiny previews.
+    const b=boundary.border,m=boundary.frame/2;
+    const fits=r=>[0,5].every(rank=>M.modes.every(mode=>{
+      const hit=mode==='move'?M.travelTime(e,r,rank,mode):p.windup+p.strike+(mode==='auto'?M.travelTime(e,r,rank):0);
+      const q=M.sample(e,mode,hit,r,rank),a=q.angle*Math.PI/180,hw=e.span*q.sx/2,hh=e.span*q.sy/2;
+      const ex=Math.abs(Math.cos(a))*hw+Math.abs(Math.sin(a))*hh,ey=Math.abs(Math.sin(a))*hw+Math.abs(Math.cos(a))*hh;
+      const y=r.ground-hh-q.lift;
+      return q.x-ex>=b.left+m-1e-6&&q.x+ex<=b.right-m+1e-6&&y-ey>=b.top+m-1e-6&&r.ground+Math.abs(Math.sin(a))*hw<=b.bottom-m+1e-6;
+    }));
+    const paths=cells.map(path);
+    return paths.find(fits)||paths[0];
   }
   function controls(scene,spec,entries,onSelect,onMode){
     const parent=document.getElementById('game'),P=window.GardenPalette.reference.hex;
@@ -127,17 +140,19 @@
       return {...e,scale,width:e.bounds.width*scale,height:e.bounds.height*scale};
     });
     const M=window.GardenEnemyMotion,F=window.GardenFairyPatrol;
-    let selected=entries.find(e=>e.id==='3_caterpillar'),mode='auto',elapsed=0,motionTime=0,expression='normal',pose=null,speedRank=0;
+    let selected=entries.find(e=>e.id==='3_caterpillar'),mode='auto',elapsed=0,motionTime=0,expression='normal',pose=null,speedRank=0,cachedBoundary=null,cachedEntry=null,cachedRoute=null;
     const speedSelect=patrol.speedUI.add('enemy-speed','적',M.profiles[selected.id].baseSpeed,setSpeedRank);
     function setSpeedRank(rank){
       if(!F.validRank(rank))return false;
       speedRank=rank;motionTime=0;speedSelect.refresh(M.profiles[selected.id].baseSpeed,rank);render();return true;
     }
-    const image=scene.add.image(0,0,key(selected.id,'normal')).setDepth(2).setName('enemy-preview:actor');
+    const image=scene.add.image(0,0,key(selected.id,'normal')).setDepth(3).setName('enemy-preview:actor');
     const shadow=scene.add.ellipse(0,0,1,1,window.GardenPalette.n.ink,.35).setDepth(.75).setName('enemy-preview:shadow');
     let blink=window.GardenFairyPatrol.blinkSchedule(11);
     function render(){
-      const a=selected,r=a.bounds,path=route(spec,patrol.boundary,a);
+      const a=selected,r=a.bounds;
+      if(cachedBoundary!==patrol.boundary||cachedEntry!==a){cachedBoundary=patrol.boundary;cachedEntry=a;cachedRoute=route(spec,cachedBoundary,a,patrol.occupied);}
+      const path=cachedRoute;
       pose=M.sample(a,mode,motionTime,path,speedRank);
       const {x,lift,angle,sx,sy,flip}=pose;
       image.setPosition(x,path.ground-a.height*sy/2-lift)

@@ -126,22 +126,23 @@ try{
      await page.evaluate(mode=>{const e=document.getElementById('enemy-motion-mode');e.value=mode;e.dispatchEvent(new Event('change',{bubbles:true}));},mode);
      const checked=await page.evaluate(({id,mode})=>{
       const s=window.__previewGame.scene.getScene('Game'),c=s.enemyPreview,a=c.selected,L=window.GardenGameLayout.spec,B=s.fairyPatrol.boundary;
-      const path=window.GardenEnemyPreview.route(L,B,a),profile=window.GardenEnemyMotion.profiles[id];
-      const states=new Set(),xs=[],lifts=[],angles=[],scales=[],closed=new Set();let reopened=false,valid=true;
-      const bound=B.border.right+B.frame/2;
-      const samples=Math.ceil(Math.max(14,window.GardenEnemyMotion.duration(a,mode,path,c.speedRank)+.1)/.02);
+      const path=window.GardenEnemyPreview.route(L,B,a,s.fairyPatrol.occupied),profile=window.GardenEnemyMotion.profiles[id];
+      const states=new Set(),xs=[],lifts=[],angles=[],scales=[],closed=new Set();let reopened=false,valid=true,entered=false;
+      const bound=B.border,margin=B.frame/2;
+      const samples=Math.ceil(Math.max(14,window.GardenEnemyMotion.duration(a,mode,path,c.speedRank)+.1)/.04);
       for(let i=0;i<samples;i++){
-       c.advance(.02);const p=c.pose,img=c.image;
+       c.advance(.04);const p=c.pose,img=c.image;
        states.add(p.phase);xs.push(img.x);lifts.push(p.lift);angles.push(img.angle);scales.push(img.scaleY);
        if(c.expression==='closed')closed.add(id);else if(closed.has(id))reopened=true;
        const rad=img.rotation,hw=a.width*p.sx/2,hh=a.height*p.sy/2;
        const ex=Math.abs(Math.cos(rad))*hw+Math.abs(Math.sin(rad))*hh,ey=Math.abs(Math.sin(rad))*hw+Math.abs(Math.cos(rad))*hh;
-       valid=valid&&img.x-ex>=bound+9&&img.x+ex<=L.width-8&&img.y-ey>=L.top&&img.y+ey<=L.height-L.bottom&&img.visible&&!img.input&&!img.body&&img.texture.source[0].scaleMode===Phaser.Textures.FilterMode.LINEAR&&img.texture.key==='enemy-preview:'+id+':'+c.expression;
+       entered ||= img.x-ex>=bound.left+margin&&img.x+ex<=bound.right-margin&&img.y-ey>=bound.top+margin&&img.y+ey<=bound.bottom-margin&&Math.abs(img.x-path.target)<=2;
+       valid=valid&&img.x-ex>=8&&img.x+ex<=L.width-8&&img.y-ey>=L.top&&img.y+ey<=L.height-L.bottom&&img.visible&&!img.input&&!img.body&&img.texture.source[0].scaleMode===Phaser.Textures.FilterMode.LINEAR&&img.texture.key==='enemy-preview:'+id+':'+c.expression;
       }
       const range=v=>Math.max(...v)-Math.min(...v);
-      return {id:a.id,mode:c.mode,states:[...states],xRange:range(xs),lift:Math.max(...lifts),angleRange:range(angles),scaleRange:range(scales),valid,reopened,visible:s.children.list.filter(o=>o.name==='enemy-preview:actor'&&o.visible).length,profile};
+      return {id:a.id,mode:c.mode,states:[...states],xRange:range(xs),lift:Math.max(...lifts),angleRange:range(angles),scaleRange:range(scales),valid,reopened,entered,visible:s.children.list.filter(o=>o.name==='enemy-preview:actor'&&o.visible).length,profile};
      },{id:a.id,mode});
-     assert.equal(checked.id,a.id);assert.equal(checked.mode,mode);assert.equal(checked.visible,1);assert.ok(checked.valid&&checked.reopened,JSON.stringify(checked));
+     assert.equal(checked.id,a.id);assert.equal(checked.mode,mode);assert.equal(checked.visible,1);assert.ok(checked.valid&&checked.reopened&&checked.entered,JSON.stringify(checked));
      assert.ok(checked.xRange>10&&checked.angleRange>0&&checked.scaleRange>0,JSON.stringify(checked));
      if(mode!=='attack')assert.ok(checked.states.includes('move')&&checked.states.includes('return'),JSON.stringify(checked));
      if(mode!=='move')assert.ok(['windup','strike','recover'].every(x=>checked.states.includes(x)),JSON.stringify(checked));

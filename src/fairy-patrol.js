@@ -130,7 +130,7 @@
       updateHud(elapsed,0,0,occupied.size);
     }
     function advance(seconds){const dt=Math.max(0,seconds);elapsed+=dt;distance=(distance+dt*currentSpeed)%length;render();return elapsed;}
-    const controller={actors,border,advance,setSpeedRank,speedUI,get speed(){return currentSpeed;},get speedRank(){return rank;},get distance(){return distance;},get bounds(){return b;},get length(){return length;},get spacing(){return spacing;},get boundary(){return info;},get elapsed(){return elapsed;}};
+    const controller={actors,border,advance,setSpeedRank,speedUI,get speed(){return currentSpeed;},get speedRank(){return rank;},get distance(){return distance;},get bounds(){return b;},get length(){return length;},get spacing(){return spacing;},get boundary(){return info;},get occupied(){return [...occupied];},get elapsed(){return elapsed;}};
     scene.fairyPatrol=controller;
     const update=(_time,delta)=>advance(Math.min(.1,Math.max(0,delta/1000)));
     scene.events.on('update',update);
