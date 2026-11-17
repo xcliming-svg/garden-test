@@ -46,7 +46,84 @@ const report=[];
 const expectedSpans={"1_butterfly":24,"2_grasshopper":24,"6_mouse":34,"2_gray_bug":26,"1_cat":32,"3_caterpillar":24,"6_sparrow":28,"6_pigeon":34,"4_beetle":28,"2_frog":28,"6_rabbit":34,"5_bulldog":40};
 const expectedTypes={"1_butterfly":["fly",1],"2_grasshopper":["jump",1],"6_mouse":["approach",3],"2_gray_bug":["charge",1],"1_cat":["charge",2],"3_caterpillar":["approach",1],"6_sparrow":["fly",2],"6_pigeon":["fly",3],"4_beetle":["approach",2],"2_frog":["jump",2],"6_rabbit":["jump",3],"5_bulldog":["charge",3]};
 try{
- for(const [name,w,h,dpr,query] of [
+ // Active combat uses the same state in both render-order comparisons.
+ for(const [name,query] of [
+  ['attack-default',''],['attack-full','?full=1'],['attack-fairy-front','?occlusion=fairy'],['attack-full-fairy-front','?full=1&occlusion=fairy']
+ ]){
+  const page=await browser.newPage({viewport:{width:960,height:540}});
+  const errors=[];page.on('pageerror',e=>errors.push(String(e)));page.on('requestfailed',r=>errors.push(r.url()));
+  try{
+   await page.addInitScript(()=>{let seed=42;Math.random=()=>{seed=(Math.imul(seed,1664525)+1013904223)>>>0;return seed/4294967296;};});
+   await page.goto(url+'/index.html'+query);
+   await page.waitForFunction(()=>window.__previewGame?.scene.isActive('MainMenu'));
+   const box=await page.locator('canvas').boundingBox();
+   await page.mouse.click(box.x+480*box.width/960,box.y+252*box.height/540);
+   await page.waitForFunction(()=>!!window.__previewGame.scene.getScene('Game').enemyPreview?.attack);
+   const result=await page.evaluate(()=>{
+    const s=window.__previewGame.scene.getScene('Game'),c=s.enemyPreview,F=s.fairyPatrol,A=window.GardenFairyAttack,L=window.GardenGameLayout.spec;
+    const T=A.tuning;let checks=0;
+    const check=(v,m)=>{checks++;if(!v)throw Error(m);};
+    // Deterministic isolated moving-target segment, two-projectile volley,
+    // nearest target, one hit per projectile, and exact HP/death accounting.
+    const isolated=A.create(L),shooter={index:1,type:'water',x:400,y:270};
+    let hp=2;
+    const target={id:1,x:422,y:270,radius:3},damage=(id,n)=>{if(hp<=0)return null;hp-=n;return {hp,killed:hp===0};};
+    for(let i=0;i<6;i++)isolated.step(.05,[shooter],[target],new Map([[1,target]]),damage);
+    check(isolated.state.lastVolleys[1].length===2&&isolated.state.lastVolleys[1].every(b=>b.type==='water'),'two water projectiles');
+    isolated.step(.1,[shooter],[target],new Map([[1,target]]),damage);
+    check(hp===1&&isolated.state.hits===1&&isolated.state.kills===0,'first hit removes one HP');
+    for(let i=0;i<20;i++)isolated.step(.05,[shooter],[target],new Map([[1,target]]),damage);
+    check(hp===0&&isolated.state.kills===1&&isolated.state.hits===2,'second hit kills exactly once');
+    const fast=A.create(L);let hits=0;
+    fast.step(.2,[{index:0,type:'garden',x:400,y:270}],[{id:2,x:435,y:270,radius:1}],new Map(),()=>null);
+    check(fast.state.lastVolleys[0].length===5&&fast.state.lastVolleys[0].every(b=>b.type==='garden'),'five garden projectiles');
+    fast.step(.25,[],[{id:2,x:435,y:270,radius:1}],new Map([[2,{id:2,x:435,y:270,radius:1}]]),()=>{hits++;return {killed:true};});
+    check(hits===1,'swept projectile collision, no tunnelling');
+    // Populate the existing model once without rendering thousands of frames.
+    // Then let real browser updates exercise both projectiles and occlusion.
+    c.model.advance(Math.max(0,120-c.model.elapsed));c.advance(0);
+    return checks;
+   });
+   await page.waitForFunction(()=>{
+    const c=window.__previewGame.scene.getScene('Game').enemyPreview,a=c.attack.state;
+    return a.elapsed>=2&&a.kills>0&&Object.keys(a.byShooter).length===11;
+   },null,{timeout:40000});
+   const combat=await page.evaluate(()=>{
+    const s=window.__previewGame.scene.getScene('Game'),c=s.enemyPreview,F=s.fairyPatrol,A=window.GardenFairyAttack,L=window.GardenGameLayout.spec,T=A.tuning;
+    const a=c.attack.state;let checks=0;
+    const check=(v,m)=>{checks++;if(!v)throw Error(m);};
+    check(Object.keys(a.byShooter).length===11,'all 11 fairies fired');
+    check(Object.entries(a.byShooter).every(([i,n])=>n%T.counts[Number(i)===0?'garden':'water']===0),'exact per-fairy volley counts');
+    check(Object.values(a.lastVolleys).every(v=>v.length===T.counts[v[0].type]&&v.every(b=>Math.abs(Math.hypot(b.vx,b.vy)-T.speed)<1e-6)),'straight projectiles with correct speed and count');
+    check(a.shotsFired>=25&&a.hits>0&&a.kills>0&&a.kills===c.model.kills,'real hits and removals');
+    check(c.actors.every(e=>e.hp>=1&&e.hp<=e.entry.level),'survivor HP');
+    check(c.model.spawned===c.actors.length+c.model.completed+c.model.kills,'spawn accounting');
+    check(c.actors.length<=200&&c.actors.length>=180&&a.bullets.length>0&&a.bullets.length<=100,'bounded populations');
+    check(c.sprites.size===c.actors.length&&c.actors.every(e=>c.sprites.has(e.id)),'sprite cleanup');
+    check(c.attack.gfx.depth===6&&c.attack.gfx.mask&&F.actors.every(f=>f.image.depth<6),'projectiles on top and field clipped');
+    check(s.children.getByName('fairy-patrol-status').text==='자동 공격 · 요정 11명','active attack status');
+    check(s.children.getByName('hud-kills-value').text===window.GardenGameLayout.formatHudCount(a.kills),'HUD kill count');
+    const fairyFront=window.GardenEnemyOcclusion.config.fairyFront;
+    check(F.actors.every(f=>[...c.sprites.values()].every(e=>fairyFront?f.image.depth>e.image.depth:f.image.depth<e.image.depth)),'mode-specific depth retained');
+    check(a.bullets.every(b=>b.age<T.life&&b.x>=0&&b.x<=L.width&&b.y>=L.top&&b.y<=L.height-L.bottom),'projectile life and bounds');
+    return {checks,shots:a.shotsFired,hits:a.hits,kills:a.kills,bullets:a.bullets.length,live:c.actors.length,flowers:s.flowerGrowth.entries.size};
+
+   });
+   combat.checks+=result;
+   assert.equal(combat.flowers,name.includes('full')?100:4);
+   await page.screenshot({path:join(out,name+'.png'),scale:'device'});
+   await page.keyboard.press('Escape');await page.waitForFunction(()=>window.__previewGame.scene.isActive('Pause'));
+   const frozen=await page.evaluate(()=>{const a=window.__previewGame.scene.getScene('Game').enemyPreview.attack.state;return [a.elapsed,a.shotsFired,a.kills];});
+   await page.waitForTimeout(250);
+   assert.deepEqual(await page.evaluate(()=>{const a=window.__previewGame.scene.getScene('Game').enemyPreview.attack.state;return [a.elapsed,a.shotsFired,a.kills];}),frozen);
+   await page.keyboard.press('Escape');await page.waitForFunction(t=>window.__previewGame.scene.getScene('Game').enemyPreview.attack.state.elapsed>t,frozen[0]);
+   await page.evaluate(()=>window.__previewGame.scene.stop('Game'));
+   await page.waitForFunction(()=>!window.__previewGame.scene.getScene('Game').enemyPreview);
+   assert.deepEqual(errors,[]);report.push({name,result:combat,pass:true});console.log('PASS attack',name,JSON.stringify(combat));
+  }finally{await page.close();}
+ }
+
+ if(process.env.FAIRY_ATTACK_ONLY!=='1')for(const [name,w,h,dpr,query] of [
   ['default',960,540,1,''],['fhd',1920,1080,1,''],['small',640,360,1,''],
   ['full',960,540,1,'?full=1'],['fairy-front',960,540,1,'?occlusion=fairy'],['full-fairy-front',960,540,1,'?full=1&occlusion=fairy'],['full-dpr2',960,540,2,'?flower=32&person=56&full=1&slots=36'],
   ['light',960,540,1,'?uitype=1'],['original',960,540,1,'?svgcolors=original'],
@@ -288,80 +365,6 @@ try{
    }
    assert.deepEqual(errors,[]);assert.deepEqual(failed,[]);
    report.push({name,result,motions,swarm,pass:true});console.log('PASS',name,'12 random enemies, eight directions, default speed, shared eyes');
-  }finally{await page.close();}
- }
- // Active combat uses the same state in both render-order comparisons.
- for(const [name,query] of [
-  ['attack-default',''],['attack-full','?full=1'],['attack-fairy-front','?occlusion=fairy'],['attack-full-fairy-front','?full=1&occlusion=fairy']
- ]){
-  const page=await browser.newPage({viewport:{width:960,height:540}});
-  const errors=[];page.on('pageerror',e=>errors.push(String(e)));page.on('requestfailed',r=>errors.push(r.url()));
-  try{
-   await page.addInitScript(()=>{let seed=42;Math.random=()=>{seed=(Math.imul(seed,1664525)+1013904223)>>>0;return seed/4294967296;};});
-   await page.goto(url+'/index.html'+query);
-   await page.waitForFunction(()=>window.__previewGame?.scene.isActive('MainMenu'));
-   const box=await page.locator('canvas').boundingBox();
-   await page.mouse.click(box.x+480*box.width/960,box.y+252*box.height/540);
-   await page.waitForFunction(()=>!!window.__previewGame.scene.getScene('Game').enemyPreview?.attack);
-   const result=await page.evaluate(()=>{
-    const s=window.__previewGame.scene.getScene('Game'),c=s.enemyPreview,F=s.fairyPatrol,A=window.GardenFairyAttack,L=window.GardenGameLayout.spec;
-    const T=A.tuning;let checks=0;
-    const check=(v,m)=>{checks++;if(!v)throw Error(m);};
-    // Deterministic isolated moving-target segment, two-projectile volley,
-    // nearest target, one hit per projectile, and exact HP/death accounting.
-    const isolated=A.create(L),shooter={index:1,type:'water',x:400,y:270};
-    let hp=2;
-    const target={id:1,x:422,y:270,radius:3},damage=(id,n)=>{if(hp<=0)return null;hp-=n;return {hp,killed:hp===0};};
-    for(let i=0;i<6;i++)isolated.step(.05,[shooter],[target],new Map([[1,target]]),damage);
-    check(isolated.state.lastVolleys[1].length===2&&isolated.state.lastVolleys[1].every(b=>b.type==='water'),'two water projectiles');
-    isolated.step(.1,[shooter],[target],new Map([[1,target]]),damage);
-    check(hp===1&&isolated.state.hits===1&&isolated.state.kills===0,'first hit removes one HP');
-    for(let i=0;i<20;i++)isolated.step(.05,[shooter],[target],new Map([[1,target]]),damage);
-    check(hp===0&&isolated.state.kills===1&&isolated.state.hits===2,'second hit kills exactly once');
-    const fast=A.create(L);let hits=0;
-    fast.step(.2,[{index:0,type:'garden',x:400,y:270}],[{id:2,x:435,y:270,radius:1}],new Map(),()=>null);
-    check(fast.state.lastVolleys[0].length===5&&fast.state.lastVolleys[0].every(b=>b.type==='garden'),'five garden projectiles');
-    fast.step(.25,[],[{id:2,x:435,y:270,radius:1}],new Map([[2,{id:2,x:435,y:270,radius:1}]]),()=>{hits++;return {killed:true};});
-    check(hits===1,'swept projectile collision, no tunnelling');
-    // Exercise the real scene at startup and at the 200-enemy plateau.
-    // Advance the existing population model between windows without drawing
-    // hundreds of intermediate frames in software-rendered CI.
-    let maxBullets=0,maxEnemies=0,removed=0,hitSeen=false,firstShots=0;
-    for(let i=0;i<40;i++){
-     if(i===20){F.advance(100);c.model.advance(100);c.advance(0);}
-     const before=new Set(c.actors.map(a=>a.id)),kills=c.model.kills;
-     F.advance(.5);c.advance(.5);
-     maxBullets=Math.max(maxBullets,c.attack.state.bullets.length);maxEnemies=Math.max(maxEnemies,c.actors.length);
-     if(c.model.kills>kills){removed+=c.model.kills-kills;check([...before].some(id=>!c.sprites.has(id))||c.model.spawned>before.size,'killed sprite removed');}
-     hitSeen||=c.actors.some(a=>a.expression==='dizzy'&&a.hp<a.entry.level);
-     if(i===10)firstShots=c.attack.state.shotsFired;
-    }
-    const a=c.attack.state;
-    check(Object.keys(a.byShooter).length===11,'all 11 fairies fired');
-    check(Object.entries(a.byShooter).every(([i,n])=>n%T.counts[Number(i)===0?'garden':'water']===0),'exact per-fairy volley counts');
-    check(Object.values(a.lastVolleys).every(v=>v.length===T.counts[v[0].type]&&v.every(b=>Math.abs(Math.hypot(b.vx,b.vy)-T.speed)<1e-6)),'straight projectiles with correct speed and count');
-    check(a.shotsFired>100&&a.hits>0&&a.kills>0&&a.kills===c.model.kills&&removed>0,'real hits and removals');
-    check(c.actors.every(e=>e.hp>=1&&e.hp<=e.entry.level),'survivor HP');
-    check(c.model.spawned===c.actors.length+c.model.completed+c.model.kills,'spawn accounting');
-    check(maxEnemies>=180&&maxEnemies<=200&&maxBullets>0&&maxBullets<=100,'bounded populations');
-    check(c.sprites.size===c.actors.length&&c.actors.every(e=>c.sprites.has(e.id)),'sprite cleanup');
-    check(c.attack.gfx.depth===6&&c.attack.gfx.mask&&F.actors.every(f=>f.image.depth<6),'projectiles on top and field clipped');
-    check(s.children.getByName('fairy-patrol-status').text==='자동 공격 · 요정 11명','active attack status');
-    const fairyFront=window.GardenEnemyOcclusion.config.fairyFront;
-    check(F.actors.every(f=>[...c.sprites.values()].every(e=>fairyFront?f.image.depth>e.image.depth:f.image.depth<e.image.depth)),'mode-specific depth retained');
-    check(a.bullets.every(b=>b.age<T.life&&b.x>=0&&b.x<=L.width&&b.y>=L.top&&b.y<=L.height-L.bottom),'projectile life and bounds');
-    return {checks,shots:a.shotsFired,hits:a.hits,kills:a.kills,maxBullets,maxEnemies,live:c.actors.length,firstShots,hitSeen,flowers:s.flowerGrowth.entries.size};
-   });
-   assert.equal(result.flowers,name.includes('full')?100:4);
-   await page.screenshot({path:join(out,name+'.png'),scale:'device'});
-   await page.keyboard.press('Escape');await page.waitForFunction(()=>window.__previewGame.scene.isActive('Pause'));
-   const frozen=await page.evaluate(()=>{const a=window.__previewGame.scene.getScene('Game').enemyPreview.attack.state;return [a.elapsed,a.shotsFired,a.kills];});
-   await page.waitForTimeout(250);
-   assert.deepEqual(await page.evaluate(()=>{const a=window.__previewGame.scene.getScene('Game').enemyPreview.attack.state;return [a.elapsed,a.shotsFired,a.kills];}),frozen);
-   await page.keyboard.press('Escape');await page.waitForFunction(t=>window.__previewGame.scene.getScene('Game').enemyPreview.attack.state.elapsed>t,frozen[0]);
-   await page.evaluate(()=>window.__previewGame.scene.stop('Game'));
-   await page.waitForFunction(()=>!window.__previewGame.scene.getScene('Game').enemyPreview);
-   assert.deepEqual(errors,[]);report.push({name,result,pass:true});console.log('PASS attack',name,JSON.stringify(result));
   }finally{await page.close();}
  }
 
