@@ -11,7 +11,7 @@
     * { box-sizing: border-box; }
     html, body { margin: 0; width: 100%; height: 100%; background: #0D0D0D; /* GardenPalette.background: startup fallback */ }
     body { display: flex; align-items: center; justify-content: center; font-family: "Garden Fusion", sans-serif; overflow: hidden; }
-    #game { width: 960px; height: 540px; flex: none; }
+    #game { width: 960px; height: 540px; flex: none; position: relative; }
     #game canvas { display: block; image-rendering: auto; }
   </style>
 </head>
@@ -34,6 +34,7 @@
   <script src="./src/guardian-walk-preview.js"></script>
   <script src="./src/pebble-boundary.js"></script>
   <script src="./src/fairy-patrol.js"></script>
+  <script src="./src/enemy-motion.js"></script>
   <script src="./src/enemy-preview.js"></script>
   <script src="./src/flower-head-preview.js"></script>
   <script src="./src/game-layout.js"></script>
