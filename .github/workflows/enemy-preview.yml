@@ -2,6 +2,8 @@ name: Enemy animal preview verification
 on:
   push:
     branches: [feature/enemy-animal-preview]
+  pull_request:
+    branches: [devel]
 permissions:
   contents: read
 jobs:
@@ -19,6 +21,7 @@ jobs:
       - run: for file in src/*.js tests/enemy-preview.mjs; do node --check "$file"; done
       - run: node tests/enemy-preview.mjs
       - run: node tests/fairy-patrol.mjs
+      - run: node tests/dark-field-preview.mjs
       - uses: actions/upload-artifact@v4
         if: always()
         with:
