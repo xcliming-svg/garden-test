@@ -8,9 +8,18 @@
     const value=params.get(name);
     return value!==null&&/^\d+$/.test(value)?Math.max(0,Math.min(100,Number(value)))/100:fallback;
   }
+  function outlineWidth(){
+    const v=params.get('enemyOutlineWidth');
+    return v!==null&&/^\d+(?:\.\d+)?$/.test(v)?Math.max(.25,Math.min(2,Number(v))):1;
+  }
   const config=Object.freeze({preset,enemyTone:flag('enemyTone'),fairyOutline:flag('fairyOutline'),
     ySort:flag('ySort'),heroMarker:flag('heroMarker'),flowerFocus:flag('flowerFocus'),heroOcclusion:flag('heroOcclusion'),
     waterOcclusion:params.get('waterOcclusion')==='1',flowerOcclusion:params.get('flowerOcclusion')==='1',
+    flowerTone:params.get('flowerTone')==='1',enemyOutline:params.get('enemyOutline')==='1',
+    flowerBrightness:percent('flowerBrightness',.85),flowerSaturation:percent('flowerSaturation',.65),
+    flowerContrast:percent('flowerContrast',.85),
+    enemyOutlineWidth:outlineWidth(),
+    enemyOutlineColor:params.get('enemyOutlineColor')==='light'?'light':'dark',
     occlusionAlpha:percent('occlusionAlpha',.50),
     brightness:percent('enemyBrightness',.90),saturation:percent('enemySaturation',.75)});
   const toneKey=k=>'clarity:tone:'+k;
@@ -31,6 +40,53 @@
       ctx.drawImage(src,0,0);
       const img=ctx.getImageData(0,0,src.width,src.height);
       tonePixels(img.data);ctx.putImageData(img,0,0);t.refresh();t.setFilter(Phaser.Textures.FilterMode.LINEAR);
+    }
+    return target;
+  }
+  // Muted flower material: lower chroma, highlights and internal contrast
+  // without changing transparency, growth geometry, or the original textures.
+  const flowerToneKey=k=>'clarity:flower-tone:'+k;
+  function flowerPixels(data,brightness=config.flowerBrightness,saturation=config.flowerSaturation,contrast=config.flowerContrast){
+    for(let i=0;i<data.length;i+=4){
+      if(!data[i+3])continue;
+      const l=.2126*data[i]+.7152*data[i+1]+.0722*data[i+2];
+      for(let c=0;c<3;c++)data[i+c]=Math.round((96+(l+(data[i+c]-l)*saturation-96)*contrast)*brightness);
+    }
+    return data;
+  }
+  function flowerTexture(scene,k){
+    if(!config.flowerTone)return k;
+    const target=flowerToneKey(k);
+    if(!scene.textures.exists(target)){
+      const src=scene.textures.get(k).getSourceImage();
+      const t=scene.textures.createCanvas(target,src.width,src.height),ctx=t.getContext();
+      ctx.drawImage(src,0,0);
+      const img=ctx.getImageData(0,0,src.width,src.height);
+      flowerPixels(img.data);ctx.putImageData(img,0,0);t.refresh();
+      t.setFilter(scene.textures.get(k).source[0].scaleMode===Phaser.Textures.FilterMode.NEAREST?Phaser.Textures.FilterMode.NEAREST:Phaser.Textures.FilterMode.LINEAR);
+    }
+    return target;
+  }
+  // A separate outline around enemies, not a tint on their bodies.
+  // Keep the original 512px coordinate system/anchor and cache each pose key.
+  const enemyOutlineKey=(k,scale)=>'clarity:enemy-outline:'+Math.max(1,Math.round(config.enemyOutlineWidth/scale))+':'+k;
+  function enemyRenderTexture(scene,k,scale){
+    const body=enemyTexture(scene,k);
+    if(!config.enemyOutline)return body;
+    const radius=Math.max(1,Math.round(config.enemyOutlineWidth/scale)),target=enemyOutlineKey(body,scale);
+    if(!scene.textures.exists(target)){
+      const src=scene.textures.get(body).getSourceImage();
+      const t=scene.textures.createCanvas(target,src.width,src.height),ctx=t.getContext();
+      // 32 samples around the outer edge limit jagged gaps at large raster radii.
+      for(let i=0;i<32;i++){
+        const a=i*Math.PI/16;
+        ctx.drawImage(src,Math.round(Math.cos(a)*radius),Math.round(Math.sin(a)*radius));
+      }
+      ctx.globalCompositeOperation='source-in';
+      ctx.fillStyle=config.enemyOutlineColor==='light'?window.GardenPalette.hex.silver:window.GardenPalette.roles.hex.ink;
+      ctx.fillRect(0,0,src.width,src.height);
+      ctx.globalCompositeOperation='source-over';ctx.drawImage(src,0,0);
+      t.refresh();t.setFilter(Phaser.Textures.FilterMode.LINEAR);
     }
     return target;
   }
@@ -144,5 +200,5 @@
       gfx.setPosition(hero.image.x,Math.max(spec.top+2,hero.image.y-hero.visibleHeight-7));
     }};
   }
-  window.GardenClarityPreview=Object.freeze({config,tonePixels,toneKey,enemyTexture,fairyTexture,enemyDepth,fairyDepth,gardenFocus,heroMarker,occlusionShape,coversHero,heroEnemyAlpha,occlusionTargets,protectedEnemyAlpha});
+  window.GardenClarityPreview=Object.freeze({config,tonePixels,toneKey,enemyTexture,flowerPixels,flowerToneKey,flowerTexture,enemyOutlineKey,enemyRenderTexture,fairyTexture,enemyDepth,fairyDepth,gardenFocus,heroMarker,occlusionShape,coversHero,heroEnemyAlpha,occlusionTargets,protectedEnemyAlpha});
 }());
