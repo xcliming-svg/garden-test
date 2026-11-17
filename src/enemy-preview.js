@@ -51,19 +51,23 @@
       eyeContext.globalCompositeOperation='source-in';eyeContext.fillStyle=window.GardenPalette.hex.ink;
       eyeContext.fillRect(0,0,atlas.width,atlas.height);
     }
+    // Read back from a dedicated software canvas so normal/closed use identical
+    // source rasterization; Phaser texture upload remains unchanged.
+    const work=document.createElement('canvas');work.width=work.height=size;
+    const ctx=work.getContext('2d',{willReadFrequently:true});
     return roster.map(e=>{
       const art=m.characters[e.id];
       if(!art)throw Error('Missing enemy anchor '+e.id);
       const body=scene.textures.get(baseKey(e.id)).getSourceImage();
-      let b;
+      ctx.clearRect(0,0,size,size);ctx.drawImage(body,0,0,size,size);
+      const b=bounds(ctx),raw=ctx.getImageData(0,0,size,size);
+      const base=window.GardenSvgPalette.enabled?window.GardenSvgPalette.apply(raw):raw;
       for(const expression of ['normal','closed']){
         const k=key(e.id,expression);
         const tex=scene.textures.exists(k)?scene.textures.get(k):scene.textures.createCanvas(k,size,size);
-        const ctx=tex.getContext();ctx.clearRect(0,0,size,size);ctx.drawImage(body,0,0,size,size);
-        if(!b)b=bounds(ctx);
-        // Quantize the body before compositing the existing eye silhouettes;
-        // leave their antialiased edges intact rather than quantizing the blend.
-        if(window.GardenSvgPalette.enabled)ctx.putImageData(window.GardenSvgPalette.apply(ctx.getImageData(0,0,size,size)),0,0);
+        // Both expressions start with the identical body pixels. Quantize only
+        // the body, not the blended antialiased eye edges.
+        ctx.putImageData(base,0,0);
         const f=fairy.sheets.eyes.frames[expression],w=f.width/2;
         for(const [i,side] of ['left','right'].entries()){
           const a=art.eyes[side],c=fairy.sourceEyeCenters[side];
@@ -73,6 +77,7 @@
           const dy=(a.y-c.y*a.scale)*factor;
           ctx.drawImage(atlas,sx,sy,w,f.height,dx,dy,w*a.scale*factor,f.height*a.scale*factor);
         }
+        tex.getContext().putImageData(ctx.getImageData(0,0,size,size),0,0);
         tex.refresh();tex.setFilter(Phaser.Textures.FilterMode.LINEAR);
       }
       return {...e,name:art.name,bounds:b};

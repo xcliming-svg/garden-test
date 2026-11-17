@@ -69,7 +69,7 @@ try{
    }
    const result=await page.evaluate(()=>{
     const s=window.__previewGame.scene.getScene('Game'),c=s.enemyPreview,L=window.GardenGameLayout.spec,F=s.fairyPatrol,B=F.boundary;
-    const ctx=document.createElement('canvas').getContext('2d');
+    const ctx=document.createElement('canvas').getContext('2d',{willReadFrequently:true});
     ctx.canvas.width=ctx.canvas.height=512;
     const anchors=s.cache.json.get('enemy-preview:anchors'),fm=s.cache.json.get('fairy:manifest');
     const original=!window.GardenSvgPalette.enabled,sharedAtlas=s.textures.get('fairy:eyes').getSourceImage();
@@ -80,8 +80,8 @@ try{
      const base=s.textures.get('enemy-preview:'+a.id+':base').getSourceImage(),normal=pix(s.textures.get('enemy-preview:'+a.id+':normal').getSourceImage()),closed=pix(s.textures.get('enemy-preview:'+a.id+':closed').getSourceImage());
      const raw=pix(base),expected=[];
      for(const expression of ['normal','closed']){
-      ctx.clearRect(0,0,512,512);ctx.drawImage(base,0,0);
-      if(!original)ctx.putImageData(window.GardenSvgPalette.apply(ctx.getImageData(0,0,512,512)),0,0);
+      const pixels=new ImageData(new Uint8ClampedArray(raw),512,512);
+      ctx.putImageData(original?pixels:window.GardenSvgPalette.apply(pixels),0,0);
       const f=fm.sheets.eyes.frames[expression],w=f.width/2;
       for(const [i,side] of ['left','right'].entries()){
        const eye=anchors.characters[a.id].eyes[side],center=fm.sourceEyeCenters[side],z=512/1000;
