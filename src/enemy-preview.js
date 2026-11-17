@@ -211,6 +211,8 @@
     const fieldMask=clip.createGeometryMask();
     function render(){
       const alive=new Set(model.actors.map(a=>a.id));
+      const hero=C?.config.heroOcclusion&&patrol.actors[0]?.image;
+      const heroShape=hero?C.occlusionShape(hero):null;
       for(const [id,sprite] of sprites)if(!alive.has(id)){sprite.image.destroy();sprite.shadow.destroy();sprites.delete(id);}
       for(const actor of model.actors){
         const a=actor.entry,r=a.bounds,p=actor.pose;
@@ -225,6 +227,7 @@
           .setOrigin((r.left+r.right)/2/size,(r.top+r.bottom)/2/size)
           .setScale(a.scale*sx*(flip?-1:1),a.scale*sy).setAngle(angle).setDepth(C?C.enemyDepth(ground,spec):3+ground/spec.height);
         const texture=renderKey(key(a.id,actor.expression));if(image.texture.key!==texture)image.setTexture(texture);
+        if(C?.config.heroOcclusion)image.setAlpha(C.heroEnemyAlpha(heroShape,image));
         shadow.setPosition(x,ground+1).setDisplaySize(a.width*.72*(1-lift*.009),Math.max(2,a.height*.10)).setAlpha(.36/(1+lift*.055));
       }
     }

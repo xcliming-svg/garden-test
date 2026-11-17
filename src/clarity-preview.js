@@ -9,7 +9,8 @@
     return value!==null&&/^\d+$/.test(value)?Math.max(0,Math.min(100,Number(value)))/100:fallback;
   }
   const config=Object.freeze({preset,enemyTone:flag('enemyTone'),fairyOutline:flag('fairyOutline'),
-    ySort:flag('ySort'),heroMarker:flag('heroMarker'),flowerFocus:flag('flowerFocus'),
+    ySort:flag('ySort'),heroMarker:flag('heroMarker'),flowerFocus:flag('flowerFocus'),heroOcclusion:flag('heroOcclusion'),
+    occlusionAlpha:percent('occlusionAlpha',.50),
     brightness:percent('enemyBrightness',.90),saturation:percent('enemySaturation',.75)});
   const toneKey=k=>'clarity:tone:'+k;
   function tonePixels(data,brightness=config.brightness,saturation=config.saturation){
@@ -54,6 +55,53 @@
   }
   const enemyDepth=(ground,spec)=> (config.ySort?2:3)+ground/spec.height;
   const fairyDepth=(center,height,spec)=>2+(config.ySort?(center+height/2)/spec.height+.000001:center/spec.height);
+  // Cache only the visible alpha silhouette. One logical-pixel sampling of
+  // the overlap avoids false positives from the transparent 512px canvas.
+  const silhouettes=new WeakMap();
+  function silhouette(texture){
+    if(silhouettes.has(texture))return silhouettes.get(texture);
+    const src=texture.getSourceImage(),w=src.width,h=src.height;
+    const rgba=src.getContext('2d').getImageData(0,0,w,h).data,mask=new Uint8Array(w*h);
+    let l=w,t=h,r=0,b=0;
+    for(let i=0;i<mask.length;i++)if(rgba[i*4+3]>=128){
+      mask[i]=1;const x=i%w,y=Math.floor(i/w);
+      l=Math.min(l,x);r=Math.max(r,x+1);t=Math.min(t,y);b=Math.max(b,y+1);
+    }
+    const data={w,h,mask,l,t,r,b};silhouettes.set(texture,data);return data;
+  }
+  function occlusionShape(image){
+    const m=silhouette(image.texture),sx=image.scaleX*(image.flipX?-1:1),sy=image.scaleY*(image.flipY?-1:1);
+    const cos=Math.cos(image.rotation),sin=Math.sin(image.rotation),ox=image.displayOriginX,oy=image.displayOriginY;
+    const x=image.x,y=image.y;
+    let l=Infinity,t=Infinity,r=-Infinity,b=-Infinity;
+    for(const px of [m.l,m.r])for(const py of [m.t,m.b]){
+      const dx=(px-ox)*sx,dy=(py-oy)*sy,wx=x+dx*cos-dy*sin,wy=y+dx*sin+dy*cos;
+      l=Math.min(l,wx);r=Math.max(r,wx);t=Math.min(t,wy);b=Math.max(b,wy);
+    }
+    return {m,sx,sy,cos,sin,ox,oy,x,y,l,t,r,b,depth:image.depth};
+  }
+  function opaqueAt(s,x,y){
+    const dx=x-s.x,dy=y-s.y;
+    const u=Math.floor((dx*s.cos+dy*s.sin)/s.sx+s.ox),v=Math.floor((-dx*s.sin+dy*s.cos)/s.sy+s.oy);
+    return u>=0&&u<s.m.w&&v>=0&&v<s.m.h&&s.m.mask[v*s.m.w+u]===1;
+  }
+  function coversHero(hero,enemy){
+    if(!hero||enemy.depth<=hero.depth)return false;
+    const l=Math.max(hero.l,enemy.l),r=Math.min(hero.r,enemy.r),t=Math.max(hero.t,enemy.t),b=Math.min(hero.b,enemy.b);
+    if(l>=r||t>=b)return false;
+    // Sample at most one logical pixel apart; both silhouettes must be
+    // sufficiently opaque at the same point, not just intersecting boxes.
+    const nx=Math.max(1,Math.ceil(r-l)),ny=Math.max(1,Math.ceil(b-t));
+    for(let j=0;j<ny;j++)for(let i=0;i<nx;i++){
+      const x=l+(i+.5)*(r-l)/nx,y=t+(j+.5)*(b-t)/ny;
+      if(opaqueAt(hero,x,y)&&opaqueAt(enemy,x,y))return true;
+    }
+    return false;
+  }
+  function heroEnemyAlpha(hero,image){
+    if(!config.heroOcclusion||!hero||image.depth<=hero.depth)return 1;
+    return coversHero(hero,occlusionShape(image))?config.occlusionAlpha:1;
+  }
   function gardenFocus(scene,spec,occupied){
     if(!config.flowerFocus)return null;
     const gfx=scene.add.graphics().setDepth(.8).setName('clarity:flower-focus');
@@ -74,5 +122,5 @@
       gfx.setPosition(hero.image.x,Math.max(spec.top+2,hero.image.y-hero.visibleHeight-7));
     }};
   }
-  window.GardenClarityPreview=Object.freeze({config,tonePixels,toneKey,enemyTexture,fairyTexture,enemyDepth,fairyDepth,gardenFocus,heroMarker});
+  window.GardenClarityPreview=Object.freeze({config,tonePixels,toneKey,enemyTexture,fairyTexture,enemyDepth,fairyDepth,gardenFocus,heroMarker,occlusionShape,coversHero,heroEnemyAlpha});
 }());
