@@ -28,6 +28,7 @@
 | [changes.md](./changes.md) | 커밋별 시스템 변경 요약 및 검증 상태. 현재 기준 정리 이후 지속적으로 갱신 |
 | [fairy-patrol.md](./fairy-patrol.md) | 요정 11명 순찰 및 눈·걷기 표현 현행 규격 |
 | [enemy-preview.md](./enemy-preview.md) | 적 동물 12종 선택, 크기, 이동·공격 및 공용 눈 깜빡임 |
+| [movement-speed.md](./movement-speed.md) | 요정·적 기본 및 최대 이동 속도, 유사 게임 참고 근거, 비교 UI |
 | [flower-head-preview.md](./flower-head-preview.md) | 별도 브랜치의 꽃 머리 크기 비교 및 검증 |
 
 상세 좌표·색상·PNG 크기는 [ASSET_SPECS.md](../ASSET_SPECS.md), 실행 방법은 [README.md](../README.md), 개발 범위 및 문서 갱신 규칙은 [AGENTS.md](../AGENTS.md)를 참조한다.

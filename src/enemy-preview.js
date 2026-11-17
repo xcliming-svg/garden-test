@@ -126,13 +126,19 @@
       const scale=e.span/Math.max(e.bounds.width,e.bounds.height);
       return {...e,scale,width:e.bounds.width*scale,height:e.bounds.height*scale};
     });
-    let selected=entries.find(e=>e.id==='3_caterpillar'),mode='auto',elapsed=0,motionTime=0,expression='normal',pose=null;
+    const M=window.GardenEnemyMotion,F=window.GardenFairyPatrol;
+    let selected=entries.find(e=>e.id==='3_caterpillar'),mode='auto',elapsed=0,motionTime=0,expression='normal',pose=null,speedRank=0;
+    const speedSelect=patrol.speedUI.add('enemy-speed','적',M.profiles[selected.id].baseSpeed,setSpeedRank);
+    function setSpeedRank(rank){
+      if(!F.validRank(rank))return false;
+      speedRank=rank;motionTime=0;speedSelect.refresh(M.profiles[selected.id].baseSpeed,rank);render();return true;
+    }
     const image=scene.add.image(0,0,key(selected.id,'normal')).setDepth(2).setName('enemy-preview:actor');
     const shadow=scene.add.ellipse(0,0,1,1,window.GardenPalette.n.ink,.35).setDepth(.75).setName('enemy-preview:shadow');
     let blink=window.GardenFairyPatrol.blinkSchedule(11);
     function render(){
       const a=selected,r=a.bounds,path=route(spec,patrol.boundary,a);
-      pose=window.GardenEnemyMotion.sample(a,mode,motionTime,path);
+      pose=M.sample(a,mode,motionTime,path,speedRank);
       const {x,lift,angle,sx,sy,flip}=pose;
       image.setPosition(x,path.ground-a.height*sy/2-lift)
         .setOrigin((r.left+r.right)/2/size,(r.top+r.bottom)/2/size)
@@ -145,7 +151,7 @@
     function select(id){
       const a=entries.find(e=>e.id===id);if(!a)return false;
       selected=a;motionTime=0;elapsed=0;blink=window.GardenFairyPatrol.blinkSchedule(entries.indexOf(a)+11);
-      expression='normal';image.setTexture(key(a.id,expression));render();return true;
+      expression='normal';image.setTexture(key(a.id,expression));speedSelect.refresh(M.profiles[a.id].baseSpeed,speedRank);render();return true;
     }
     function setMode(value){
       if(!window.GardenEnemyMotion.modes.includes(value))return false;
@@ -156,7 +162,7 @@
     const update=(_time,delta)=>advance(Math.min(.1,Math.max(0,delta/1000)));
     scene.events.on('update',update);
     scene.events.once('shutdown',()=>{scene.events.off('update',update);delete scene.enemyPreview;});
-    scene.enemyPreview={entries,image,shadow,ui,select,setMode,advance,get selected(){return selected;},get pose(){return pose;},
+    scene.enemyPreview={entries,image,shadow,ui,select,setMode,setSpeedRank,advance,get selected(){return selected;},get pose(){return pose;},get speedRank(){return speedRank;},get speed(){return M.speed(selected,speedRank);},
       get mode(){return mode;},get expression(){return expression;},get elapsed(){return elapsed;},get motionTime(){return motionTime;}};
     render();return scene.enemyPreview;
   }

@@ -129,7 +129,8 @@ try{
       const path=window.GardenEnemyPreview.route(L,B,a),profile=window.GardenEnemyMotion.profiles[id];
       const states=new Set(),xs=[],lifts=[],angles=[],scales=[],closed=new Set();let reopened=false,valid=true;
       const bound=B.border.right+B.frame/2;
-      for(let i=0;i<700;i++){
+      const samples=Math.ceil(Math.max(14,window.GardenEnemyMotion.duration(a,mode,path,c.speedRank)+.1)/.02);
+      for(let i=0;i<samples;i++){
        c.advance(.02);const p=c.pose,img=c.image;
        states.add(p.phase);xs.push(img.x);lifts.push(p.lift);angles.push(img.angle);scales.push(img.scaleY);
        if(c.expression==='closed')closed.add(id);else if(closed.has(id))reopened=true;
