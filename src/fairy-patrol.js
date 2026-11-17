@@ -63,7 +63,8 @@
     };
   }
   function attach(scene,spec,occupied,geometry,patrolPosition,updateHud,heroHeight){
-    const m=install(scene),B=window.GardenPebbleBoundary,border=B.attach(scene);
+    const m=install(scene),B=window.GardenPebbleBoundary,border=B.attach(scene),C=window.GardenClarityPreview;
+    const focus=C?.gardenFocus(scene,spec,occupied),marker=C?.heroMarker(scene,spec);
     const compute=()=>B.layout(spec,geometry(occupied,0,0).garden,heroHeight,gait,count);
     let info=compute(),b=info.patrol,length=info.length,spacing=length/count;
     let scale=info.height/m.characters.garden.visibleHeight;
@@ -72,7 +73,7 @@
     const actors=Array.from({length:count},(_,index)=>{
       const type=index===0?'garden':'water';
       const visibleHeight=m.characters[type].visibleHeight*scale;
-      const image=scene.add.image(0,0,key(type,'normal'))
+      const image=scene.add.image(0,0,C?C.fairyTexture(scene,key(type,'normal'),scale):key(type,'normal'))
         .setOrigin(m.anchor.x/m.canvas.width,m.anchor.y/m.canvas.height)
         .setDisplaySize(m.canvas.width*scale,m.canvas.height*scale)
         .setDepth(2).setName('fairy:'+type+':'+index);
@@ -123,7 +124,7 @@
         if(facing)a.image.setFlipX(facing<0);
         a.image.setPosition(p.x,p.y+a.visibleHeight/2-lift)
           .setAngle(tilt+facing*gait.lean)
-          .setDepth(2+p.y/spec.height);
+          .setDepth(C?C.fairyDepth(p.y,a.visibleHeight,spec):2+p.y/spec.height);
         const emotion=emotionPose(state,emotionTime,a.visibleHeight,a.phase);
         if(isResult(state))a.image.setPosition(p.x+emotion.dx,p.y+a.visibleHeight/2-emotion.lift).setAngle(0);
         for(const tear of a.tears){
@@ -133,8 +134,10 @@
           tear.sprite.setPosition(x,y).setDisplaySize(tear.rect.width*scale,tear.rect.height*scale).setAlpha(Math.min(1,(1-t)*4)).setDepth(a.image.depth+.01);
         }
         const expression=emotion.expression||a.blink(elapsed);
-        if(expression!==a.expression){a.expression=expression;a.image.setTexture(key(a.type,expression));}
+        const texture=C?C.fairyTexture(scene,key(a.type,expression),scale):key(a.type,expression);
+        a.expression=expression;if(a.image.texture.key!==texture)a.image.setTexture(texture);
       }
+      focus?.render();marker?.render(actors[0]);
       updateHud(elapsed,0,0,occupied.size);
     }
     function advance(seconds){const dt=Math.max(0,seconds);emotionTime+=dt;if(!isResult(state)){elapsed+=dt;distance=(distance+dt*currentSpeed)%length;}render();return elapsed;}
