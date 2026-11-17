@@ -22,7 +22,7 @@ await new Promise(r=>server.listen(0,'127.0.0.1',r));
 const url='http://127.0.0.1:'+server.address().port;
 const browser=await chromium.launch({channel:'chrome',headless:true,args:['--no-sandbox','--disable-dev-shm-usage','--use-gl=angle','--use-angle=swiftshader','--enable-unsafe-swiftshader']});
 const report=[];
-const baseById={'1_butterfly':40,'2_grasshopper':36,'6_mouse':28,'2_gray_bug':24,'1_cat':30,'3_caterpillar':20,'6_sparrow':44,'6_pigeon':48,'4_beetle':24,'2_frog':38,'6_rabbit':44,'5_bulldog':36};
+const baseById={'1_butterfly':40,'2_grasshopper':36,'6_mouse':36,'2_gray_bug':24,'1_cat':30,'3_caterpillar':20,'6_sparrow':46,'6_pigeon':48,'4_beetle':26,'2_frog':38,'6_rabbit':44,'5_bulldog':36};
 try{
  for(const [name,w,h,query] of [['default',960,540,''],['fhd',1920,1080,''],['small',640,360,''],['full',960,540,'?full=1'],['hidden',960,540,'?enemies=0'],['combat',960,540,'?combat=1']]){
   const page=await browser.newPage({viewport:{width:w,height:h}});
