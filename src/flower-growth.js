@@ -46,12 +46,13 @@
   }
   // Every retained stage keeps its previous art size and root (500,856).
   const displaySize=cell=>cell/.85;
-  function attach(scene,g){
+  function attach(scene,g,muted=false){
     install(scene);
+    const renderKey=k=>muted?window.GardenClarityPreview.flowerTexture(scene,k):k;
     const entries=new Map();
     function plant(index,name,center,born=0){
       const size=displaySize(g.cell);
-      const image=scene.add.image(center.x,center.y+g.cell/2-1,key(name,1))
+      const image=scene.add.image(center.x,center.y+g.cell/2-1,renderKey(key(name,1)))
         .setOrigin(.5,.856).setDisplaySize(size,size).setDepth(1).setName('garden-preview-flower:'+index);
       entries.set(index,{name,born,image,last:'1:100'});
       return image;
@@ -62,7 +63,7 @@
         if(state===entry.last)continue;
         entry.last=state;
         const size=displaySize(g.cell);
-        entry.image.setTexture(key(entry.name,stage,hp)).setDisplaySize(size,size);
+        entry.image.setTexture(renderKey(key(entry.name,stage,hp))).setDisplaySize(size,size);
       }
     }
     const controller={entries,plant,render};
