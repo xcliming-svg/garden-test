@@ -81,7 +81,7 @@ try{
    const original=!query.includes('svgcolors=palette16');
    assert.equal(initial.paletteEnabled,!original);
    const prefix='assets/'+(original?'':'palette16/')+'fairies/';
-   assert.deepEqual([...loaded].sort(),['eyes.svg','garden.svg','water.svg'].map(n=>prefix+n));
+   assert.deepEqual([...loaded].sort(),[...['eyes.svg','garden.svg','water.svg'].map(n=>prefix+n),'assets/fairies/tears.svg'].sort());
    for(const v of Object.values(initial.stats))if(!original)assert.ok(v.opaque>0&&v.offPalette<=v.opaque*.05,JSON.stringify(v));
    if(original)assert.ok(Object.values(initial.stats).every(v=>v.offPalette>0));
    assert.deepEqual(initial.counts,['garden',...Array(10).fill('water')]);

@@ -3,6 +3,12 @@
   // Single-enemy motion comparison. Original SVGs keep their embedded eyes hidden.
   const enabled=window.GardenFairyPatrol.enabled&&new URLSearchParams(window.location.search).get('enemies')!=='0';
   const size=512,root='assets/enemies/',anchorKey='enemy-preview:anchors';
+  const enemyStates=Object.freeze(['auto','normal','attack','hit']);
+  function expressionFor(state,phase,blink){
+    if(state==='hit')return 'dizzy';
+    if(state==='attack'||(state==='auto'&&['windup','strike'].includes(phase)))return 'angry';
+    return blink;
+  }
   const key=(id,expression)=>'enemy-preview:'+id+':'+expression;
   const baseKey=id=>key(id,'base');
   // Longest visible side in logical px: 22px flower cell, 40px garden fairy.
@@ -61,7 +67,7 @@
       ctx.clearRect(0,0,size,size);ctx.drawImage(body,0,0,size,size);
       const b=bounds(ctx),raw=ctx.getImageData(0,0,size,size);
       const base=window.GardenSvgPalette.enabled?window.GardenSvgPalette.apply(raw):raw;
-      for(const expression of ['normal','closed']){
+      for(const expression of ['normal','closed','angry','dizzy']){
         const k=key(e.id,expression);
         const tex=scene.textures.exists(k)?scene.textures.get(k):scene.textures.createCanvas(k,size,size);
         // Both expressions start with the identical body pixels. Quantize only
@@ -140,7 +146,7 @@
       return {...e,scale,width:e.bounds.width*scale,height:e.bounds.height*scale};
     });
     const M=window.GardenEnemyMotion,F=window.GardenFairyPatrol;
-    let selected=entries.find(e=>e.id==='3_caterpillar'),mode='auto',elapsed=0,motionTime=0,expression='normal',pose=null,speedRank=0,bulldogWobble=100,cachedBoundary=null,cachedEntry=null,cachedRoute=null;
+    let selected=entries.find(e=>e.id==='3_caterpillar'),mode='auto',elapsed=0,motionTime=0,expression='normal',pose=null,speedRank=0,expressionState='auto',cachedBoundary=null,cachedEntry=null,cachedRoute=null;
     const speedSelect=patrol.speedUI.add('enemy-speed','적',M.profiles[selected.id].baseSpeed,setSpeedRank);
     function setSpeedRank(rank){
       if(!F.validRank(rank))return false;
@@ -153,23 +159,23 @@
       const a=selected,r=a.bounds;
       if(cachedBoundary!==patrol.boundary||cachedEntry!==a){cachedBoundary=patrol.boundary;cachedEntry=a;cachedRoute=route(spec,cachedBoundary,a,patrol.occupied);}
       const path=cachedRoute;
-      pose=M.sample(a,mode,motionTime,path,speedRank,bulldogWobble);
+      pose=M.sample(a,mode,motionTime,path,speedRank);
       const {x,lift,angle,sx,sy,flip}=pose;
       image.setPosition(x,path.ground-a.height*sy/2-lift)
         .setOrigin((r.left+r.right)/2/size,(r.top+r.bottom)/2/size)
         .setScale(a.scale*sx*(flip?-1:1),a.scale*sy).setAngle(angle);
       shadow.setPosition(x,path.ground+1).setDisplaySize(a.width*.72*(1-lift*.009),Math.max(2,a.height*.10))
         .setAlpha(.36/(1+lift*.055));
-      const next=blink(elapsed);
+      const next=expressionFor(expressionState,pose.phase,blink(elapsed));
       if(next!==expression){expression=next;image.setTexture(key(a.id,expression));}
     }
-    function setBulldogWobble(value){
-      if(!M.bulldogWobbleLevels.includes(value))return false;
-      bulldogWobble=value;wobbleSelect.value=String(value);render();return true;
+    function setExpressionState(value){
+      if(!enemyStates.includes(value))return false;
+      expressionState=value;expressionSelect.value=value;render();return true;
     }
     function select(id){
       const a=entries.find(e=>e.id===id);if(!a)return false;
-      selected=a;wobbleSelect.style.display=a.id==='5_bulldog'?'block':'none';motionTime=0;elapsed=0;blink=window.GardenFairyPatrol.blinkSchedule(entries.indexOf(a)+11);
+      selected=a;motionTime=0;elapsed=0;blink=window.GardenFairyPatrol.blinkSchedule(entries.indexOf(a)+11);
       expression='normal';image.setTexture(key(a.id,expression));speedSelect.refresh(M.profiles[a.id].baseSpeed,speedRank);render();return true;
     }
     function setMode(value){
@@ -177,19 +183,14 @@
       mode=value;motionTime=0;render();return true;
     }
     const ui=controls(scene,spec,entries,select,setMode);
-    const wobbleSelect=document.createElement('select'),P=window.GardenPalette.reference.hex;
-    wobbleSelect.id='bulldog-wobble';wobbleSelect.setAttribute('aria-label','강아지 이동 흔들림');
-    Object.assign(wobbleSelect.style,{display:'none',width:'225px',height:'24px',fontFamily:'inherit',fontSize:'12px',background:P.panel,color:P.text,border:'1px solid '+P.border,borderRadius:'0',padding:'0 4px',cursor:'pointer'});
-    for(const value of M.bulldogWobbleLevels)wobbleSelect.add(new Option('강아지 흔들림 '+value+'%'+(value===100?' (현재)':''),String(value)));
-    wobbleSelect.value='100';wobbleSelect.addEventListener('change',()=>{setBulldogWobble(Number(wobbleSelect.value));wobbleSelect.blur();});
-    patrol.speedUI.panel.append(wobbleSelect);
-    function advance(seconds){const dt=Math.max(0,seconds);elapsed+=dt;motionTime+=dt;render();return elapsed;}
+    const expressionSelect=patrol.speedUI.addState('enemy-expression','적 표정',[['auto','적 · 자동 표정'],['normal','적 · 평상시'],['attack','적 · 공격 (화난 눈)'],['hit','적 · 피격 (X X)']],setExpressionState);
+    function advance(seconds){if(patrol.finished)return elapsed;const dt=Math.max(0,seconds);elapsed+=dt;motionTime+=dt;render();return elapsed;}
     const update=(_time,delta)=>advance(Math.min(.1,Math.max(0,delta/1000)));
     scene.events.on('update',update);
     scene.events.once('shutdown',()=>{scene.events.off('update',update);delete scene.enemyPreview;});
-    scene.enemyPreview={entries,image,shadow,ui,select,setMode,setSpeedRank,setBulldogWobble,advance,get bulldogWobble(){return bulldogWobble;},get selected(){return selected;},get pose(){return pose;},get speedRank(){return speedRank;},get speed(){return M.speed(selected,speedRank);},
+    scene.enemyPreview={entries,image,shadow,ui,select,setMode,setSpeedRank,setExpressionState,advance,get expressionState(){return expressionState;},get selected(){return selected;},get pose(){return pose;},get speedRank(){return speedRank;},get speed(){return M.speed(selected,speedRank);},
       get mode(){return mode;},get expression(){return expression;},get elapsed(){return elapsed;},get motionTime(){return motionTime;}};
     render();return scene.enemyPreview;
   }
-  window.GardenEnemyPreview=Object.freeze({enabled,roster,preload,attach,key,route});
+  window.GardenEnemyPreview=Object.freeze({enabled,roster,preload,attach,key,route,enemyStates,expressionFor});
 }());

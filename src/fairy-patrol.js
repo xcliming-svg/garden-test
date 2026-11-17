@@ -1,11 +1,18 @@
 (function(){
   'use strict';
   // Adapt the supplied Fairy Game Assets manifest to the Phaser scene.
-  // The original vector files are never edited. Only two eye frames are
-  // composited at runtime; all motion is a transform on the complete sprite.
+  // Original vector art is preserved; expressions are composited at runtime.
   const enabled=new URLSearchParams(window.location.search).get('combat')!=='1';
   const root='assets/fairies/',size=512,atlas='fairy:eyes',manifestKey='fairy:manifest';
-  const types=['garden','water'],expressions=['normal','closed'];
+  const types=['garden','water'],expressions=['normal','closed','dizzy','happy'],tearsAtlas='fairy:tears';
+  const fairyStates=Object.freeze(['normal','hit','win','lose']);
+  const isResult=state=>state==='win'||state==='lose';
+  function emotionPose(state,time,visibleHeight,phase=0){
+    const scale=visibleHeight/40;
+    if(state==='win')return {expression:'happy',dx:0,lift:Math.abs(Math.sin(time*2*Math.PI*2.2+phase))*2.5*scale};
+    if(state==='lose')return {expression:'closed',dx:Math.sin(time*2*Math.PI*2+phase)*.9*scale,lift:0};
+    return {expression:state==='hit'?'dizzy':null,dx:0,lift:0};
+  }
   const count=11,speed=40,maxSpeed=80;
   const ranks=Object.freeze([0,5]);
   const validRank=rank=>ranks.includes(rank);
@@ -30,7 +37,13 @@
     const resume=()=>{panel.style.display='flex';resize();};
     parent.append(panel);resize();scene.scale.on('resize',resize);scene.events.on('pause',pause);scene.events.on('resume',resume);
     scene.events.once('shutdown',()=>{scene.scale.off('resize',resize);scene.events.off('pause',pause);scene.events.off('resume',resume);panel.remove();});
-    return {panel,add};
+    const addState=(id,label,options,onChange)=>{
+      const select=document.createElement('select');select.id=id;select.setAttribute('aria-label',label);
+      Object.assign(select.style,{order:id==='fairy-expression'?'2':'3',width:'225px',height:'24px',fontFamily:'inherit',fontSize:'12px',background:P.panel,color:P.text,border:'1px solid '+P.border,borderRadius:'0',padding:'0 4px',cursor:'pointer'});
+      for(const [value,name] of options)select.add(new Option(name,value));
+      select.addEventListener('change',()=>{onChange(select.value);select.blur();});panel.append(select);return select;
+    };
+    return {panel,add,addState};
   }
   const gait=Object.freeze({frequency:1.6,lift:.5,tilt:1.25,lean:.5});
   const key=(type,expression)=>'fairy:'+type+':'+expression;
@@ -42,6 +55,7 @@
     for(const type of types)if(!scene.textures.exists(baseKey(type)))
       scene.load.svg(baseKey(type),window.GardenSvgPalette.path('fairies/'+type+'.svg'),{width:size,height:size});
     if(!scene.textures.exists(atlas))scene.load.svg(atlas,window.GardenSvgPalette.path('fairies/eyes.svg'),{width:1792,height:256});
+    if(!scene.textures.exists(tearsAtlas))scene.load.svg(tearsAtlas,'assets/fairies/tears.svg',{width:256,height:256});
   }
   function install(scene){
     const m=scene.cache.json.get(manifestKey),eyeImage=scene.textures.get(atlas).getSourceImage();
@@ -57,6 +71,11 @@
         ctx.drawImage(eyeImage,f.x+i*f.width/2,f.y,f.width/2,f.height,d.x*factor,d.y*factor,d.width*factor,d.height*factor);
       }
       t.refresh();t.setFilter(Phaser.Textures.FilterMode.LINEAR);
+    }
+    const sheet=scene.textures.get(tearsAtlas).getSourceImage();
+    for(const [i,side] of ['left','right'].entries()){
+      const k=tearsAtlas+':'+side;if(scene.textures.exists(k))continue;
+      const t=scene.textures.createCanvas(k,128,256);t.getContext().drawImage(sheet,i*128,0,128,256,0,0,128,256);t.refresh();t.setFilter(Phaser.Textures.FilterMode.LINEAR);
     }
     return m;
   }
@@ -85,12 +104,23 @@
         .setOrigin(m.anchor.x/m.canvas.width,m.anchor.y/m.canvas.height)
         .setDisplaySize(m.canvas.width*scale,m.canvas.height*scale)
         .setDepth(2).setName('fairy:'+type+':'+index);
-      return {index,type,image,visibleHeight,blink:blinkSchedule(index),expression:'normal',direction:'right',center:{x:0,y:0},phase:index*1.83};
+      const tears=[];
+      for(const [i,side] of ['left','right'].entries())for(let j=0;j<2;j++){
+        const c=m.sourceEyeCenters[side],d=m.characters[type].destinationRects[side];
+        const sprite=scene.add.image(0,0,tearsAtlas+':'+side).setOrigin((c.x-i*128)/128,(c.y+65)/256).setVisible(false).setName('fairy:tear:'+index+':'+side+':'+j);
+        tears.push({sprite,side,offset:j*.5,rect:d});
+      }
+      return {index,type,image,tears,visibleHeight,blink:blinkSchedule(index),expression:'normal',direction:'right',center:{x:0,y:0},phase:index*1.83};
     });
-    let elapsed=0,rank=0,currentSpeed=speed;
+    let elapsed=0,rank=0,currentSpeed=speed,state='normal',emotionTime=0;
     let distance=(b.right-b.left)/2;
     const speedUI=speedControls(scene,spec);
     const fairySelect=speedUI.add('fairy-speed','요정',speed,setSpeedRank,maxSpeed);
+    const stateSelect=speedUI.addState('fairy-expression','요정 표정',[['normal','요정 · 평상시'],['hit','요정 · 피격 (X X)'],['win','요정 · 승리'],['lose','요정 · 패배']],setState);
+    function setState(next){
+      if(!fairyStates.includes(next))return false;
+      if(next!==state){state=next;emotionTime=0;}stateSelect.value=state;render();return true;
+    }
     function setSpeedRank(next){
       if(!validRank(next))return false;
       rank=next;currentSpeed=speedAt(speed,rank,maxSpeed);fairySelect.refresh(speed,rank,maxSpeed);return true;
@@ -124,18 +154,26 @@
         a.image.setPosition(p.x,p.y+a.visibleHeight/2-lift)
           .setAngle(tilt+facing*gait.lean)
           .setDepth(2+p.y/spec.height);
-        const expression=a.blink(elapsed);
+        const emotion=emotionPose(state,emotionTime,a.visibleHeight,a.phase);
+        if(isResult(state))a.image.setPosition(p.x+emotion.dx,p.y+a.visibleHeight/2-emotion.lift).setAngle(0);
+        for(const tear of a.tears){
+          const show=state==='lose';tear.sprite.setVisible(show);if(!show)continue;
+          const eye=m.characters[a.type].eyeCenters[tear.side],t=((emotionTime*1.45+tear.offset+a.index*.17)%1),h=a.visibleHeight/40,flip=a.image.flipX?-1:1;
+          const x=a.image.x+(eye.x-m.anchor.x)*scale*flip,y=a.image.y+(eye.y-m.anchor.y)*scale+(2.8+t*8)*h;
+          tear.sprite.setPosition(x,y).setDisplaySize(tear.rect.width*scale,tear.rect.height*scale).setAlpha(Math.min(1,(1-t)*4)).setDepth(a.image.depth+.01);
+        }
+        const expression=emotion.expression||a.blink(elapsed);
         if(expression!==a.expression){a.expression=expression;a.image.setTexture(key(a.type,expression));}
       }
       updateHud(elapsed,0,0,occupied.size);
     }
-    function advance(seconds){const dt=Math.max(0,seconds);elapsed+=dt;distance=(distance+dt*currentSpeed)%length;render();return elapsed;}
-    const controller={actors,border,advance,setSpeedRank,speedUI,get speed(){return currentSpeed;},get speedRank(){return rank;},get distance(){return distance;},get bounds(){return b;},get length(){return length;},get spacing(){return spacing;},get boundary(){return info;},get occupied(){return [...occupied];},get elapsed(){return elapsed;}};
+    function advance(seconds){const dt=Math.max(0,seconds);emotionTime+=dt;if(!isResult(state)){elapsed+=dt;distance=(distance+dt*currentSpeed)%length;}render();return elapsed;}
+    const controller={actors,border,advance,setSpeedRank,setState,speedUI,get state(){return state;},get finished(){return isResult(state);},get emotionTime(){return emotionTime;},get speed(){return currentSpeed;},get speedRank(){return rank;},get distance(){return distance;},get bounds(){return b;},get length(){return length;},get spacing(){return spacing;},get boundary(){return info;},get occupied(){return [...occupied];},get elapsed(){return elapsed;}};
     scene.fairyPatrol=controller;
     const update=(_time,delta)=>advance(Math.min(.1,Math.max(0,delta/1000)));
     scene.events.on('update',update);
     scene.events.once('shutdown',()=>{scene.events.off('update',update);delete scene.fairyPatrol;});
     render();return controller;
   }
-  window.GardenFairyPatrol=Object.freeze({enabled,preload,install,attach,key,count,speed,maxSpeed,ranks,validRank,speedAt,blinkSchedule});
+  window.GardenFairyPatrol=Object.freeze({enabled,preload,install,attach,key,count,speed,maxSpeed,ranks,validRank,speedAt,blinkSchedule,fairyStates,isResult,emotionPose});
 }());
