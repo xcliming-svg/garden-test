@@ -45,7 +45,14 @@ try{
   ['shadow-fairy',640,360,'?shadows=0&fairyShadow=1',[false,false,false,false,false,false,false,false]],
   ['shadow-legacy',960,540,'?full=1&shadowStyle=dark',[false,false,false,false,false,false,false,false]],
   ['shadow-light',960,540,'?uitype=1',[false,false,false,false,false,false,false,false]],
-  ['combat',960,540,'?combat=1&clarity=1',[true,true,true,true,true,true,false,false]]
+  ['flower-tone',960,540,'?full=1&flowerTone=1',[false,false,false,false,false,false,false,false]],
+  ['flower-tone-subtle',640,360,'?flowerTone=1&flowerBrightness=95&flowerSaturation=80&flowerContrast=95',[false,false,false,false,false,false,false,false]],
+  ['flower-tone-heads',960,540,'?flowerheads=1&flowerTone=1',[false,false,false,false,false,false,false,false]],
+  ['enemy-outline',960,540,'?full=1&enemyOutline=1',[false,false,false,false,false,false,false,false]],
+  ['enemy-outline-light',640,360,'?enemyOutline=1&enemyOutlineColor=light&enemyOutlineWidth=1.5',[false,false,false,false,false,false,false,false]],
+  ['flower-enemy-combined',960,540,'?full=1&clarity=1&flowerTone=1&enemyOutline=1&flowerOcclusion=1',[true,true,true,true,true,true,false,true]],
+  ['new-options-off',960,540,'?full=1&clarity=1&flowerTone=0&enemyOutline=0',[true,true,true,true,true,true,false,false]],
+  ['combat',960,540,'?combat=1&clarity=1&flowerTone=1&enemyOutline=1',[true,true,true,true,true,true,false,false]]
  ]){
   const page=await browser.newPage({viewport:{width:w,height:h}});
   const errors=[],failed=[];page.on('pageerror',e=>errors.push(String(e)));page.on('requestfailed',r=>failed.push(r.url()));
@@ -58,7 +65,7 @@ try{
    const result=await page.evaluate(({name,expected})=>{
     const s=window.__previewGame.scene.getScene('Game'),C=window.GardenClarityPreview,c=s.enemyPreview,F=s.fairyPatrol,L=window.GardenGameLayout.spec;
     const cfg=C.config,flags=['enemyTone','fairyOutline','ySort','heroMarker','flowerFocus','heroOcclusion','waterOcclusion','flowerOcclusion'].map(k=>cfg[k]);
-    if(name==='combat')return {flags,combat:!!s.combatPreview,marker:!!s.children.getByName('clarity:hero-marker'),focus:!!s.children.getByName('clarity:flower-focus'),enemies:!!c};
+    if(name==='combat')return {flags,combat:!!s.combatPreview,marker:!!s.children.getByName('clarity:hero-marker'),focus:!!s.children.getByName('clarity:flower-focus'),enemies:!!c,flowerToneApplied:s.children.list.some(im=>im.name?.startsWith('garden-preview-flower:')&&im.texture?.key?.startsWith('clarity:flower-tone:'))};
     // Advance only model and render once, rather than 7,500 synchronous GPU
     // render calls. Capture real WebGL scene at the same elapsed population.
     c.advance(Math.max(0,120-c.elapsed));F.advance(Math.max(0,120-F.elapsed));s.flowerGrowth?.render(F.elapsed);c.advance(0);
@@ -78,9 +85,22 @@ try{
     let enemyOK=true,fairyOK=true,alphaOK=true,toneChanged=0,outlineAdded=0,bodyChanged=0;
     for(const a of actors){
      const im=c.sprites.get(a.id).image,k=window.GardenEnemyPreview.key(a.entry.id,a.expression);
-     enemyOK&&=im.texture.key===(cfg.enemyTone?C.toneKey(k):k)&&Math.abs(im.depth-((cfg.ySort?2:3)+a.pose.ground/L.height))<1e-9;
+     const body=cfg.enemyTone?C.toneKey(k):k;
+     enemyOK&&=im.texture.key===(cfg.enemyOutline?C.enemyOutlineKey(body,a.entry.scale):body)&&Math.abs(im.depth-((cfg.ySort?2:3)+a.pose.ground/L.height))<1e-9;
     }
-    const tex=(k)=>{const t=s.textures.get(k);return t.getContext().getImageData(0,0,t.width,t.height).data;};
+    const tex=(k)=>{const src=s.textures.get(k).getSourceImage();if(typeof src.getContext==='function')return src.getContext('2d').getImageData(0,0,src.width,src.height).data;
+      const canvas=document.createElement('canvas');canvas.width=src.width;canvas.height=src.height;const ctx=canvas.getContext('2d');ctx.drawImage(src,0,0);return ctx.getImageData(0,0,src.width,src.height).data;};
+    let enemyOutlineAdded=0,enemyBodyChanged=0,enemyOutlineCount=0,enemyClipped=0;
+    if(cfg.enemyOutline)for(const e of c.entries)for(const expression of ['normal','closed','angry','dizzy']){
+      const k=window.GardenEnemyPreview.key(e.id,expression),body=cfg.enemyTone?C.toneKey(k):k,outlined=C.enemyOutlineKey(body,e.scale);
+      const a=tex(body),b=tex(outlined),w=s.textures.get(body).getSourceImage().width,h=s.textures.get(body).getSourceImage().height;
+      let added=0;
+      for(let i=0;i<a.length;i+=4){
+        if(a[i+3]===0&&b[i+3]>0){added++;const x=i/4%w,y=Math.floor(i/4/w);if(x===0||x===w-1||y===0||y===h-1)enemyClipped++;}
+        if(a[i+3]===255&&[0,1,2,3].some(j=>a[i+j]!==b[i+j]))enemyBodyChanged++;
+      }
+      if(added>0)enemyOutlineCount++;enemyOutlineAdded+=added;
+    }
     if(cfg.enemyTone){
       const k=window.GardenEnemyPreview.key(c.entries[0].id,'normal'),a=tex(k),b=tex(C.toneKey(k));
       for(let i=0;i<a.length;i+=4){if(a[i+3]!==b[i+3])alphaOK=false;if(a[i+3]===255&&[0,1,2].some(j=>a[i+j]!==b[i+j]))toneChanged++;}
@@ -95,6 +115,28 @@ try{
       for(let i=0;i<a.length;i+=4){if(a[i+3]===0&&b[i+3]>0)outlineAdded++;if(a[i+3]===255&&[0,1,2,3].some(j=>a[i+j]!==b[i+j]))bodyChanged++;}
     }
     const flowers=s.flowerGrowth?[...s.flowerGrowth.entries.values()].map(e=>e.image):s.children.list.filter(im=>im.name?.startsWith('garden-preview-flower:'));
+    let flowerToneOK=true,flowerAlphaChanged=0,flowerChanged=0,flowerChromaBefore=0,flowerChromaAfter=0,flowerPeakBefore=0,flowerPeakAfter=0,flowerStates=0;
+    const prefix='clarity:flower-tone:';
+    for(const im of flowers)flowerToneOK&&=im.texture.key.startsWith(prefix)===cfg.flowerTone;
+    if(cfg.flowerTone){
+      const keys=new Set(flowers.map(im=>im.texture.key.slice(prefix.length)));
+      // Check every growth stage and HP expression, without altering live state.
+      if(s.flowerGrowth)for(const name of window.GardenFlowerGrowth.names)for(const stage of [1,2,3])for(const hp of [100,66,33])keys.add(window.GardenFlowerGrowth.key(name,stage,hp));
+      for(const k of keys){
+        const target=C.flowerTexture(s,k),a=tex(k),b=tex(target);flowerStates++;
+        const expected=C.flowerPixels(new Uint8ClampedArray(a));
+        for(let i=0;i<a.length;i+=4){
+          if(a[i+3]!==b[i+3])flowerAlphaChanged++;
+          if(!a[i+3])continue;
+          if([0,1,2].some(j=>b[i+j]!==expected[i+j]))flowerToneOK=false;
+          if(a[i+3]!==255)continue;
+          if([0,1,2].some(j=>a[i+j]!==b[i+j]))flowerChanged++;
+          const av=[a[i],a[i+1],a[i+2]],bv=[b[i],b[i+1],b[i+2]];
+          flowerChromaBefore+=Math.max(...av)-Math.min(...av);flowerChromaAfter+=Math.max(...bv)-Math.min(...bv);
+          flowerPeakBefore=Math.max(flowerPeakBefore,...av);flowerPeakAfter=Math.max(flowerPeakAfter,...bv);
+        }
+      }
+    }
     const groups=[[hero.image],fairies.slice(1).map(a=>a.image),flowers];
     const enabled=[cfg.heroOcclusion,cfg.waterOcclusion,cfg.flowerOcclusion];
     const targets=groups.flatMap((g,i)=>enabled[i]?g.map(C.occlusionShape):[]);
@@ -133,15 +175,22 @@ try{
     const shape=(m,depth)=>({m,sx:1,sy:1,cos:1,sin:0,ox:0,oy:0,x:0,y:0,l:0,t:0,r:4,b:4,depth});
     const transparentRejected=!C.coversHero(shape(mask(0),2),shape(mask(15),3));
     const opaqueAccepted=C.coversHero(shape(mask(0),2),shape(mask(0),3));
-    return {flags,enemyOK,shadowOK,enemyShadows,fairyShadows,shadowSizes,faded,alphaMismatch,behindFaded,testResults,targetCount,allUnchanged,transparentRejected,opaqueAccepted,occlusionAlpha:cfg.occlusionAlpha,fairyOK,alphaOK,toneChanged,outlineAdded,bodyChanged,count:actors.length,flowers:flowers.length,
+    return {flags,enemyOK,flowerTone:cfg.flowerTone,enemyOutline:cfg.enemyOutline,flowerToneOK,flowerAlphaChanged,flowerChanged,flowerChromaBefore,flowerChromaAfter,flowerPeakBefore,flowerPeakAfter,flowerStates,enemyOutlineAdded,enemyBodyChanged,enemyOutlineCount,enemyClipped,outlineWidth:cfg.enemyOutlineWidth,outlineColor:cfg.enemyOutlineColor,flowerBrightness:cfg.flowerBrightness,flowerSaturation:cfg.flowerSaturation,flowerContrast:cfg.flowerContrast,shadowOK,enemyShadows,fairyShadows,shadowSizes,faded,alphaMismatch,behindFaded,testResults,targetCount,allUnchanged,transparentRejected,opaqueAccepted,occlusionAlpha:cfg.occlusionAlpha,fairyOK,alphaOK,toneChanged,outlineAdded,bodyChanged,count:actors.length,flowers:flowers.length,
      heroHeight:hero.visibleHeight,waterHeight:fairies[1].visibleHeight,marker:!!marker,focus:!!focus,markerDepth:marker?.depth,
      markerX:marker?.x,heroX:hero.image.x,focusDepth:focus?.depth,brightness:cfg.brightness,saturation:cfg.saturation,
      rings:s.children.list.filter(o=>o.name?.startsWith('clarity:')&&o.name.includes('ring')).length};
    },{name,expected});
    assert.deepEqual(result.flags,expected);
-   if(name==='combat'){assert.ok(result.combat&&!result.marker&&!result.focus&&!result.enemies);}
+   if(name==='combat'){assert.ok(result.combat&&!result.marker&&!result.focus&&!result.enemies&&!result.flowerToneApplied);}
    else{
     assert.ok(result.enemyOK&&result.fairyOK&&result.alphaOK,JSON.stringify(result));assert.equal(result.count,200);assert.equal(result.flowers,query.includes('full=1')?100:4);
+    assert.equal(result.flowerTone,query.includes('flowerTone=1'));
+    assert.equal(result.enemyOutline,query.includes('enemyOutline=1'));
+    assert.ok(result.flowerToneOK&&result.flowerAlphaChanged===0,JSON.stringify(result));
+    if(result.flowerTone){assert.ok(result.flowerChanged>0&&result.flowerChromaAfter<result.flowerChromaBefore&&result.flowerPeakAfter<result.flowerPeakBefore,JSON.stringify(result));assert.ok(result.flowerStates===(name==='flower-tone-heads'?4:54));}
+    if(result.enemyOutline){assert.equal(result.enemyOutlineCount,48);assert.ok(result.enemyOutlineAdded>0&&result.enemyBodyChanged===0&&result.enemyClipped===0,JSON.stringify(result));}
+    if(name==='enemy-outline-light'){assert.equal(result.outlineColor,'light');assert.equal(result.outlineWidth,1.5);}
+    if(name==='flower-tone-subtle'){assert.equal(result.flowerBrightness,.95);assert.equal(result.flowerSaturation,.8);assert.equal(result.flowerContrast,.95);}
     assert.ok(result.shadowOK,JSON.stringify(result));
     assert.equal(result.enemyShadows,['shadow-off','shadow-fairy'].includes(name)?0:200);
     assert.equal(result.fairyShadows,['shadow-off','shadow-enemy'].includes(name)?0:11);
