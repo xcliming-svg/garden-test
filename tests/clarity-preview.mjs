@@ -24,15 +24,18 @@ const browser=await chromium.launch({channel:'chrome',headless:true,args:['--no-
 const report=[];
 try{
  for(const [name,w,h,query,expected] of [
-  ['off',960,540,'?full=1',[false,false,false,false,false]],
-  ['on',960,540,'?full=1&clarity=1',[true,true,true,true,true]],
-  ['overrides',640,360,'?full=1&clarity=1&heroMarker=0&flowerFocus=0&enemyBrightness=85&enemySaturation=65',[true,true,true,false,false]],
-  ['tone',960,540,'?full=1&enemyTone=1',[true,false,false,false,false]],
-  ['outline',960,540,'?fairyOutline=1',[false,true,false,false,false]],
-  ['sort',960,540,'?ySort=1',[false,false,true,false,false]],
-  ['marker',960,540,'?heroMarker=1',[false,false,false,true,false]],
-  ['focus',960,540,'?flowerFocus=1',[false,false,false,false,true]],
-  ['combat',960,540,'?combat=1&clarity=1',[true,true,true,true,true]]
+  ['off',960,540,'?full=1',[false,false,false,false,false,false]],
+  ['on',960,540,'?full=1&clarity=1',[true,true,true,true,true,true]],
+  ['overrides',640,360,'?full=1&clarity=1&heroMarker=0&flowerFocus=0&enemyBrightness=85&enemySaturation=65',[true,true,true,false,false,true]],
+  ['tone',960,540,'?full=1&enemyTone=1',[true,false,false,false,false,false]],
+  ['outline',960,540,'?fairyOutline=1',[false,true,false,false,false,false]],
+  ['sort',960,540,'?ySort=1',[false,false,true,false,false,false]],
+  ['marker',960,540,'?heroMarker=1',[false,false,false,true,false,false]],
+  ['focus',960,540,'?flowerFocus=1',[false,false,false,false,true,false]],
+  ['occlusion',960,540,'?full=1&heroOcclusion=1',[false,false,false,false,false,true]],
+  ['occlusion-sort',640,360,'?heroOcclusion=1&ySort=1&occlusionAlpha=40',[false,false,true,false,false,true]],
+  ['occlusion-off',960,540,'?full=1&clarity=1&heroOcclusion=0',[true,true,true,true,true,false]],
+  ['combat',960,540,'?combat=1&clarity=1',[true,true,true,true,true,true]]
  ]){
   const page=await browser.newPage({viewport:{width:w,height:h}});
   const errors=[],failed=[];page.on('pageerror',e=>errors.push(String(e)));page.on('requestfailed',r=>failed.push(r.url()));
@@ -44,11 +47,11 @@ try{
    await page.waitForFunction(()=>{const s=window.__previewGame.scene.getScene('Game');return !!(s.enemyPreview||s.combatPreview);});
    const result=await page.evaluate(({name,expected})=>{
     const s=window.__previewGame.scene.getScene('Game'),C=window.GardenClarityPreview,c=s.enemyPreview,F=s.fairyPatrol,L=window.GardenGameLayout.spec;
-    const cfg=C.config,flags=['enemyTone','fairyOutline','ySort','heroMarker','flowerFocus'].map(k=>cfg[k]);
+    const cfg=C.config,flags=['enemyTone','fairyOutline','ySort','heroMarker','flowerFocus','heroOcclusion'].map(k=>cfg[k]);
     if(name==='combat')return {flags,combat:!!s.combatPreview,marker:!!s.children.getByName('clarity:hero-marker'),focus:!!s.children.getByName('clarity:flower-focus'),enemies:!!c};
     // Advance only model and render once, rather than 7,500 synchronous GPU
     // render calls. Capture real WebGL scene at the same elapsed population.
-    c.advance(Math.max(0,120-c.elapsed));F.advance(Math.max(0,120-F.elapsed));
+    c.advance(Math.max(0,120-c.elapsed));F.advance(Math.max(0,120-F.elapsed));c.advance(0);
     const actors=c.actors,hero=F.actors[0],fairies=F.actors;
     const marker=s.children.getByName('clarity:hero-marker'),focus=s.children.getByName('clarity:flower-focus');
     let enemyOK=true,fairyOK=true,alphaOK=true,toneChanged=0,outlineAdded=0,bodyChanged=0;
@@ -70,7 +73,30 @@ try{
       const a=tex(window.GardenFairyPatrol.key(hero.type,hero.expression)),b=tex(hero.image.texture.key);
       for(let i=0;i<a.length;i+=4){if(a[i+3]===0&&b[i+3]>0)outlineAdded++;if(a[i+3]===255&&[0,1,2,3].some(j=>a[i+j]!==b[i+j]))bodyChanged++;}
     }
-    return {flags,enemyOK,fairyOK,alphaOK,toneChanged,outlineAdded,bodyChanged,count:actors.length,flowers:s.flowerGrowth.entries.size,
+    const heroShape=C.occlusionShape(hero.image);
+    let faded=0,alphaMismatch=0,behindFaded=0;
+    for(const a of actors){
+      const im=c.sprites.get(a.id).image,expectedAlpha=cfg.heroOcclusion&&C.coversHero(heroShape,C.occlusionShape(im))?cfg.occlusionAlpha:1;
+      if(im.alpha<1)faded++;
+      if(im.depth<=hero.image.depth&&im.alpha<1)behindFaded++;
+      if(Math.abs(im.alpha-expectedAlpha)>1e-9)alphaMismatch++;
+    }
+    // Controlled visible-pixel overlap, actual scene render update and restoration.
+    // Pick an enemy then align the protagonist with its visible silhouette.
+    const chosen=actors.find(a=>{const im=c.sprites.get(a.id).image;return im.y>60&&im.y<L.height-L.bottom-40;});
+    const im=c.sprites.get(chosen.id).image,orig={x:hero.image.x,y:hero.image.y,depth:hero.image.depth};
+    hero.image.setPosition(im.x,im.y+hero.visibleHeight/2).setDepth(im.depth-.01);
+    c.advance(0);
+    const overlapAlpha=im.alpha,overlap=C.coversHero(C.occlusionShape(hero.image),C.occlusionShape(im));
+    hero.image.setDepth(im.depth+.01);c.advance(0);const behindAlpha=im.alpha;
+    hero.image.setPosition(-100,-100).setDepth(im.depth-.01);c.advance(0);const restoredAlpha=im.alpha;
+    hero.image.setPosition(orig.x,orig.y).setDepth(orig.depth);c.advance(0);
+    // Synthetic masks: crossing transparent margins must not trigger a fade.
+    const mask=(x)=>{const a=new Uint8Array(16);a[x]=1;return {w:4,h:4,mask:a};};
+    const shape=(m,depth)=>({m,sx:1,sy:1,cos:1,sin:0,ox:0,oy:0,x:0,y:0,l:0,t:0,r:4,b:4,depth});
+    const transparentRejected=!C.coversHero(shape(mask(0),2),shape(mask(15),3));
+    const opaqueAccepted=C.coversHero(shape(mask(0),2),shape(mask(0),3));
+    return {flags,enemyOK,faded,alphaMismatch,behindFaded,overlapAlpha,overlap,behindAlpha,restoredAlpha,transparentRejected,opaqueAccepted,occlusionAlpha:cfg.occlusionAlpha,fairyOK,alphaOK,toneChanged,outlineAdded,bodyChanged,count:actors.length,flowers:s.flowerGrowth.entries.size,
      heroHeight:hero.visibleHeight,waterHeight:fairies[1].visibleHeight,marker:!!marker,focus:!!focus,markerDepth:marker?.depth,
      markerX:marker?.x,heroX:hero.image.x,focusDepth:focus?.depth,brightness:cfg.brightness,saturation:cfg.saturation,
      rings:s.children.list.filter(o=>o.name?.startsWith('clarity:')&&o.name.includes('ring')).length};
@@ -79,6 +105,10 @@ try{
    if(name==='combat'){assert.ok(result.combat&&!result.marker&&!result.focus&&!result.enemies);}
    else{
     assert.ok(result.enemyOK&&result.fairyOK&&result.alphaOK,JSON.stringify(result));assert.equal(result.count,200);assert.equal(result.flowers,query.includes('full=1')?100:4);
+    assert.equal(result.alphaMismatch,0);assert.equal(result.behindFaded,0);
+    assert.ok(result.overlap&&result.transparentRejected&&result.opaqueAccepted,JSON.stringify(result));
+    assert.equal(result.overlapAlpha,expected[5]?result.occlusionAlpha:1);assert.equal(result.behindAlpha,1);assert.equal(result.restoredAlpha,1);
+    if(name==='occlusion-sort')assert.equal(result.occlusionAlpha,.40);
     assert.equal(result.heroHeight,40);assert.ok(Math.abs(result.waterHeight-40*502/716)<.001);
     assert.equal(result.marker,expected[3]);assert.equal(result.focus,expected[4]);assert.equal(result.rings,0);
     if(expected[0])assert.ok(result.toneChanged>0);if(expected[1])assert.ok(result.outlineAdded>0&&result.bodyChanged===0,JSON.stringify(result));
