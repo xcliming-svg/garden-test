@@ -130,7 +130,8 @@
           const show=state==='lose';tear.sprite.setVisible(show);if(!show)continue;
           const eye=m.characters[a.type].eyeCenters[tear.side],t=((emotionTime*1.45+tear.offset+a.index*.17)%1),h=a.visibleHeight/40,flip=a.image.flipX?-1:1;
           const x=a.image.x+(eye.x-m.anchor.x)*scale*flip,y=a.image.y+(eye.y-m.anchor.y)*scale+(2.8+t*8)*h;
-          tear.sprite.setPosition(x,y).setDisplaySize(tear.rect.width*scale,tear.rect.height*scale).setAlpha(Math.min(1,(1-t)*4)).setDepth(a.image.depth+.01);
+          tear.baseAlpha=Math.min(1,(1-t)*4);
+          tear.sprite.setPosition(x,y).setDisplaySize(tear.rect.width*scale,tear.rect.height*scale).setAlpha(tear.baseAlpha).setDepth(a.image.depth+.01);
         }
         const expression=emotion.expression||a.blink(elapsed);
         if(expression!==a.expression){a.expression=expression;a.image.setTexture(key(a.type,expression));}

@@ -203,6 +203,7 @@
       return {...e,scale,width:e.bounds.width*scale,height:e.bounds.height*scale};
     });
     const model=createPopulation(spec,patrol,entries),sprites=new Map();
+    const occlusion=window.GardenEnemyOcclusion.attach(scene,spec,patrol);
     // The playable field clips partial entry/exit sprites; HUD is never covered.
     const clip=scene.make.graphics({x:0,y:0,add:false});
     clip.fillStyle(0xffffff,1).fillRect(0,spec.top,spec.width,spec.height-spec.top-spec.bottom);
@@ -226,12 +227,12 @@
         shadow.setPosition(x,ground+1).setDisplaySize(a.width*.72*(1-lift*.009),Math.max(2,a.height*.10)).setAlpha(.36/(1+lift*.055));
       }
     }
-    function advance(seconds){model.advance(seconds);render();return model.elapsed;}
+    function advance(seconds){model.advance(seconds);render();occlusion.update(Array.from(sprites.values(),s=>s.image),Math.max(0,Number.isFinite(seconds)?seconds:0));return model.elapsed;}
     function setExpression(id,state){const ok=model.setExpression(id,state);if(ok)render();return ok;}
     const update=(_time,delta)=>advance(Math.min(.1,Math.max(0,delta/1000)));
     scene.events.on('update',update);
     scene.events.once('shutdown',()=>{scene.events.off('update',update);for(const {image,shadow} of sprites.values()){image.clearMask();shadow.clearMask();}sprites.clear();fieldMask.destroy();clip.destroy();delete scene.enemyPreview;});
-    scene.enemyPreview={entries,model,sprites,advance,setExpression,get actors(){return model.actors;},get targetCount(){return targetCount(model.elapsed);},get elapsed(){return model.elapsed;}};
+    scene.enemyPreview={entries,model,sprites,occlusion,advance,setExpression,get actors(){return model.actors;},get targetCount(){return targetCount(model.elapsed);},get elapsed(){return model.elapsed;}};
     advance(0);return scene.enemyPreview;
   }
   window.GardenEnemyPreview=Object.freeze({enabled,roster,preload,attach,key,route,enemyStates,expressionFor,spawning,targetCount,directions,worldPose,createPopulation});

@@ -119,6 +119,52 @@ try{
     assert.equal(a.span,expectedSpans[a.id]);assert.deepEqual([a.attackType,a.level],expectedTypes[a.id]);
     assert.ok(Math.abs(Math.max(a.w,a.h)-a.span)<.01,JSON.stringify(a));
    }
+   if(name==='default'||name==='full'){
+    const fade=await page.evaluate(()=>{
+     const s=window.__previewGame.scene.getScene('Game'),c=s.enemyPreview,O=window.GardenEnemyOcclusion,F=s.fairyPatrol;
+     const hero=F.actors[0].image,water=F.actors[1].image,flowers=[...s.flowerGrowth.entries.values()].map(f=>f.image),flower=flowers[0];
+     const targets=[hero,water,...flowers];
+     const snapshot=()=>targets.map(t=>t.alpha);
+     const close=(a,b)=>Math.abs(a-b)<1e-6;
+     let checks=0;const check=(v,m)=>{checks++;if(!v)throw Error(m);};
+     const update=(enemies,dt)=>c.occlusion.update(enemies,dt);
+     update([],1);check(snapshot().every(a=>a===1),'initial opacity');
+     // Use identical current silhouettes for deterministic contact and
+     // duplicate coverage; separate targets cannot affect one another.
+     const clone=t=>s.add.image(t.x,t.y,t.texture.key).setOrigin(t.originX,t.originY)
+       .setScale(t.scaleX,t.scaleY).setAngle(t.angle).setFlip(t.flipX,t.flipY).setDepth(4);
+     const blockers=[clone(hero),clone(water),clone(flower),clone(flower)];
+     update(blockers,.05);check(close(hero.alpha,.75)&&close(water.alpha,.75)&&close(flower.alpha,.7),'100ms fade midpoint');
+     update(blockers,.05);check(close(hero.alpha,.5)&&close(water.alpha,.5)&&close(flower.alpha,.4),'fade floors');
+     check(blockers.every(b=>b.alpha===1)&&[...c.sprites.values()].every(b=>b.image.alpha===1),'enemies remain opaque');
+     const other=flowers.filter(f=>!blockers.some(b=>O.covers(O.shape(f),O.shape(b),{left:0,right:960,top:0,bottom:540})));
+     check(other.every(f=>f.alpha===1),'uncovered flowers stay opaque');
+     update(blockers,.1);check(close(flower.alpha,.4),'multiple enemies do not multiply fade');
+     update([],.1);check(close(hero.alpha,.75)&&close(flower.alpha,.7),'200ms recovery midpoint');
+     update([],.1);check(snapshot().every(a=>close(a,1)),'full recovery');
+     blockers[0].setDepth(hero.depth);update([blockers[0]],.1);check(hero.alpha===1,'equal depth does not cover');
+     update([],1);for(const b of blockers)b.destroy();
+     // Real enemy sprite, rotated and mirrored; use actual current alpha masks.
+     const e=[...c.sprites.values()][0].image,copy=s.add.image(0,0,e.texture.key).setOrigin(e.originX,e.originY)
+       .setScale(-Math.abs(e.scaleX),e.scaleY).setAngle(15).setDepth(4);
+     const bounds=O.shape(flower);copy.setPosition((bounds.l+bounds.r)/2,(bounds.t+bounds.b)/2);
+     const field={left:0,right:960,top:0,bottom:540};
+     check(O.covers(O.shape(flower),O.shape(copy),field),'real enemy silhouette overlaps flower');
+     update([copy],.1);check(close(flower.alpha,.4)&&copy.alpha===1,'real enemy keeps opacity and fades flower');
+     copy.setPosition(-100,-100);update([copy],.2);check(flower.alpha===1,'real enemy moved away');
+     copy.destroy();update([],1);
+     // Transparent middle must not cause a false overlap even when the
+     // enclosing visible bounds intersect.
+     const tex=s.textures.createCanvas('test:occlusion-gap',48,48),ctx=tex.getContext();
+     ctx.fillStyle='#fff';ctx.fillRect(0,0,8,48);ctx.fillRect(40,0,8,48);tex.refresh();
+     const gap=s.add.image(flower.x,flower.y-8,tex.key).setDepth(4);
+     check(!O.covers(O.shape(flower),O.shape(gap),field),'transparent canvas gap does not cover');
+     update([gap],.1);check(flower.alpha===1,'transparent gap leaves flower opaque');gap.destroy();s.textures.remove(tex.key);
+     update([],1);
+     return {checks,flowerAlpha:O.config.flowerAlpha,fairyAlpha:O.config.fairyAlpha};
+    });
+    console.log('PASS occlusion',name,JSON.stringify(fade));
+   }
    const motions=await page.evaluate(()=>{
     const s=window.__previewGame.scene.getScene('Game'),c=s.enemyPreview,F=s.fairyPatrol,L=window.GardenGameLayout.spec,M=window.GardenEnemyMotion,E=window.GardenEnemyPreview;
     const seen=new Set(),attacked=new Set(),sides=new Set(),entered=new Set(),first=[],serials=new Set();
