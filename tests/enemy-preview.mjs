@@ -144,7 +144,7 @@ try{
      },{id:a.id,mode});
      assert.equal(checked.id,a.id);assert.equal(checked.mode,mode);assert.equal(checked.visible,1);assert.ok(checked.valid&&checked.reopened&&checked.entered,JSON.stringify(checked));
      assert.ok(checked.xRange>10,JSON.stringify(checked));
-     if(a.id==='5_bulldog'&&mode==='move')assert.ok(checked.angleRange===0&&checked.scaleRange===0&&checked.lift===0,JSON.stringify(checked));
+     if(a.id==='5_bulldog'&&mode==='move')assert.ok(checked.angleRange>0&&checked.angleRange<=4.000001&&checked.scaleRange>0&&checked.lift>0&&checked.lift<=.800001,JSON.stringify(checked));
      else assert.ok(checked.angleRange>0&&checked.scaleRange>0,JSON.stringify(checked));
      if(mode!=='attack')assert.ok(checked.states.includes('move')&&checked.states.includes('return'),JSON.stringify(checked));
      if(mode!=='move')assert.ok(['windup','strike','recover'].every(x=>checked.states.includes(x)),JSON.stringify(checked));

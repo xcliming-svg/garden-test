@@ -42,7 +42,7 @@ function audit(sources){
        for(let i=0;i<=33;i++){
         const p=M.sample(a,mode,i===33?hit:dur*i/32,route,erank);
         check(Object.values(p).every(x=>typeof x!=="number"||Number.isFinite(x)),"finite pose");
-        if(a.id==="5_bulldog"&&(p.phase==="move"||p.phase==="return"))check(p.lift===0&&p.angle===0&&p.sx===1&&p.sy===1,"bulldog movement wobble");
+        if(a.id==="5_bulldog"&&(p.phase==="move"||p.phase==="return"))check(p.lift>=0&&p.lift<=.800001&&Math.abs(p.angle)<=2.000001&&Math.abs(p.sx-1)<=.035001&&Math.abs(p.sy-1)<=.035001,"bulldog movement wobble");
         const r=p.angle*Math.PI/180,hw=a.span*p.sx/2,hh=a.span*p.sy/2;
         const ex=Math.abs(Math.cos(r))*hw+Math.abs(Math.sin(r))*hh,ey=Math.abs(Math.sin(r))*hw+Math.abs(Math.cos(r))*hh;
         const y=route.ground-hh-p.lift;
