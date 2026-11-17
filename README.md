@@ -1,5 +1,7 @@
 # garden-test
 
+> **devel 추가 가독성 비교:** `flowerTone=1` 꽃 시각 강조 완화(채도 65%, 명도 85%, 대비 85%), `enemyOutline=1` 적 실루엣 외곽선(기본 어두운 ink, 1 논리 px). 두 효과는 기본 OFF 및 기존 `clarity=1`과 독립. [규격](./docs/enemy-preview.md#꽃-시각-강조-완화-및-적-외곽선).
+
 > **devel 발밑 그림자:** 적·주인공·물 요정 기본 ON. `?shadows=0` 전체 OFF, `enemyShadow=0/1`, `fairyShadow=0/1` 개별 제어. [규격](./docs/enemy-preview.md#devel-발밑-그림자).
 
 > **devel 가독성 비교(선택 적용):** `?clarity=1`에서 적 색조(명도 90%/채도 75%), 요정 약 1px 밝은 외곽선, 발 위치 Y 정렬, 주인공 머리 위 금색 화살표, 심은 셀 바닥 강조, 주인공 가림 방지(`heroOcclusion=1`, `occlusionAlpha=50`)를 활성화한다. 물 요정(`waterOcclusion=1`)·꽃(`flowerOcclusion=1`) 가림 방지는 독립 선택(기본 OFF)이다. 기본/`?clarity=0`은 기존 표시. 각 효과 0/1 개별 제어, 링 없음. [비교 규격](./docs/enemy-preview.md#devel-군집-가독성-비교).
