@@ -40,7 +40,16 @@
   function install(scene){
     const m=scene.cache.json.get(anchorKey),fairy=scene.cache.json.get('fairy:manifest');
     if(!m||m.canvas[0]!==1000||m.canvas[1]!==1000||!fairy)throw Error('Invalid enemy eye anchors');
-    const atlas=scene.textures.get('fairy:eyes').getSourceImage(),factor=size/1000;
+    const sharedAtlas=scene.textures.get('fairy:eyes').getSourceImage(),factor=size/1000;
+    let atlas=sharedAtlas;
+    if(window.GardenSvgPalette.enabled){
+      // In the optional 16-color comparison, bark eyes merge into bark faces.
+      // Keep the same shared eye silhouettes and use the existing ink role for contrast.
+      atlas=document.createElement('canvas');atlas.width=sharedAtlas.width;atlas.height=sharedAtlas.height;
+      const eyeContext=atlas.getContext('2d');eyeContext.drawImage(sharedAtlas,0,0);
+      eyeContext.globalCompositeOperation='source-in';eyeContext.fillStyle=window.GardenPalette.hex.ink;
+      eyeContext.fillRect(0,0,atlas.width,atlas.height);
+    }
     return roster.map(e=>{
       const art=m.characters[e.id];
       if(!art)throw Error('Missing enemy anchor '+e.id);
