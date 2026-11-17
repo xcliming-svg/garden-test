@@ -1,6 +1,6 @@
 # 요정 11명 순찰 — devel
 
-> 적 동물 12종 정적 표시가 추가되었다. 기본 순찰/성장 및 기존 전투 미구현 범위는 유지한다. [정적 적 비교](./enemy-preview.md).
+> 적 동물 12종 중 한 마리를 선택해 이동·공격 모션을 비교한다. 기본 순찰/성장 및 실제 전투 미구현 범위는 유지한다. [적 선택 및 모션 비교](./enemy-preview.md).
 
 - 기본 실행 화면은 사용자 제공 `fairy_game_assets.zip` (Fairy Game Assets v1, 2026-11-16)의 정원 요정(주인공) 1명과 물 요정 10명이다.
 - 원본 `assets/fairies/{garden,water,eyes,tears}.svg` 및 `manifest.json` 보존. 원본 1000×1000 몸체, 1792×256 눈 시트 7종 및 256×256 눈물 시트. 첨부 JS/HTML/PNG를 게임에 직접 이식하지 않는다. Phaser 3.90 로더로 512×512 몸체와 눈 SVG를 읽고 manifest의 좌우 소스/목적지 좌표로 normal/closed 합성 텍스처를 만든다. LINEAR 필터, 원본 비율 유지. 기본 모드는 원본 SVG 색상을 사용하며 `?svgcolors=palette16`에서만 16색 실험을 비교한다. [색상 규격](./ui-color-guide.md). 눈물·나머지 표정은 보존하되 이번 미리보기에서는 표시하지 않는다.
