@@ -323,10 +323,12 @@ try{
     check(fast.state.lastVolleys[0].length===5&&fast.state.lastVolleys[0].every(b=>b.type==='garden'),'five garden projectiles');
     fast.step(.25,[],[{id:2,x:435,y:270,radius:1}],new Map([[2,{id:2,x:435,y:270,radius:1}]]),()=>{hits++;return {killed:true};});
     check(hits===1,'swept projectile collision, no tunnelling');
-    // Run the real browser scene for 120 simulated seconds; rendering and
-    // real enemy motion, HP, spawn, and occlusion are exercised together.
+    // Exercise the real scene at startup and at the 200-enemy plateau.
+    // Advance the existing population model between windows without drawing
+    // hundreds of intermediate frames in software-rendered CI.
     let maxBullets=0,maxEnemies=0,removed=0,hitSeen=false,firstShots=0;
-    for(let i=0;i<240;i++){
+    for(let i=0;i<40;i++){
+     if(i===20){F.advance(100);c.model.advance(100);c.advance(0);}
      const before=new Set(c.actors.map(a=>a.id)),kills=c.model.kills;
      F.advance(.5);c.advance(.5);
      maxBullets=Math.max(maxBullets,c.attack.state.bullets.length);maxEnemies=Math.max(maxEnemies,c.actors.length);
@@ -341,7 +343,7 @@ try{
     check(a.shotsFired>100&&a.hits>0&&a.kills>0&&a.kills===c.model.kills&&removed>0,'real hits and removals');
     check(c.actors.every(e=>e.hp>=1&&e.hp<=e.entry.level),'survivor HP');
     check(c.model.spawned===c.actors.length+c.model.completed+c.model.kills,'spawn accounting');
-    check(maxEnemies<=200&&maxBullets>0&&maxBullets<=100,'bounded populations');
+    check(maxEnemies>=180&&maxEnemies<=200&&maxBullets>0&&maxBullets<=100,'bounded populations');
     check(c.sprites.size===c.actors.length&&c.actors.every(e=>c.sprites.has(e.id)),'sprite cleanup');
     check(c.attack.gfx.depth===6&&c.attack.gfx.mask&&F.actors.every(f=>f.image.depth<6),'projectiles on top and field clipped');
     check(s.children.getByName('fairy-patrol-status').text==='자동 공격 · 요정 11명','active attack status');
