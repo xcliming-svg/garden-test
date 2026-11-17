@@ -40,6 +40,10 @@ try{
   ['all-occlusion',640,360,'?full=1&clarity=1&waterOcclusion=1&flowerOcclusion=1&occlusionAlpha=40',[true,true,true,true,true,true,true,true]],
   ['flower-heads',960,540,'?flowerheads=1&flowerOcclusion=1',[false,false,false,false,false,false,false,true]],
   ['explicit-off',960,540,'?full=1&clarity=1&heroOcclusion=0&waterOcclusion=0&flowerOcclusion=0',[true,true,true,true,true,false,false,false]],
+  ['shadow-off',960,540,'?full=1&shadows=0',[false,false,false,false,false,false,false,false]],
+  ['shadow-enemy',960,540,'?shadows=0&enemyShadow=1',[false,false,false,false,false,false,false,false]],
+  ['shadow-fairy',640,360,'?shadows=0&fairyShadow=1',[false,false,false,false,false,false,false,false]],
+  ['shadow-light',960,540,'?uitype=1',[false,false,false,false,false,false,false,false]],
   ['combat',960,540,'?combat=1&clarity=1',[true,true,true,true,true,true,false,false]]
  ]){
   const page=await browser.newPage({viewport:{width:w,height:h}});
@@ -57,7 +61,18 @@ try{
     // Advance only model and render once, rather than 7,500 synchronous GPU
     // render calls. Capture real WebGL scene at the same elapsed population.
     c.advance(Math.max(0,120-c.elapsed));F.advance(Math.max(0,120-F.elapsed));s.flowerGrowth?.render(F.elapsed);c.advance(0);
-    const actors=c.actors,hero=F.actors[0],fairies=F.actors;
+    const actors=c.actors,hero=F.actors[0],fairies=F.actors,S=window.GardenGroundShadow;
+    const close=(a,b)=>Math.abs(a-b)<1e-5,base=window.GardenPalette.uiType===1?.30:.76;
+    let enemyShadows=0,fairyShadows=0,shadowOK=true;
+    for(const a of actors){const {shadow,image}=c.sprites.get(a.id),p=a.pose;
+      enemyShadows+=Number(shadow.visible);
+      shadowOK&&=shadow.visible===S.config.enemy&&shadow.depth===.75&&shadow.depth<image.depth&&shadow.mask===image.mask&&close(shadow.x,p.x)&&close(shadow.y,p.ground+1)&&close(shadow.displayWidth,a.entry.width*.72*Math.max(.5,1-p.lift*.009))&&close(shadow.displayHeight,Math.max(3,a.entry.height*.16))&&close(shadow.alpha,base/(1+p.lift*.055));
+    }
+    for(const a of fairies){const {shadow,image}=a,lift=a.center.y+a.visibleHeight/2-image.y;
+      fairyShadows+=Number(shadow.visible);
+      shadowOK&&=shadow.visible===S.config.fairy&&shadow.depth===.75&&shadow.depth<image.depth&&close(shadow.x,image.x)&&close(shadow.y,a.center.y+a.visibleHeight/2+1)&&close(shadow.displayWidth,a.visibleHeight*.48*Math.max(.5,1-lift*.009))&&close(shadow.displayHeight,a.visibleHeight*.15)&&close(shadow.alpha,base/(1+lift*.055));
+    }
+    const shadowSizes={hero:[hero.shadow.displayWidth,hero.shadow.displayHeight],water:[fairies[1].shadow.displayWidth,fairies[1].shadow.displayHeight]};
     const marker=s.children.getByName('clarity:hero-marker'),focus=s.children.getByName('clarity:flower-focus');
     let enemyOK=true,fairyOK=true,alphaOK=true,toneChanged=0,outlineAdded=0,bodyChanged=0;
     for(const a of actors){
@@ -117,7 +132,7 @@ try{
     const shape=(m,depth)=>({m,sx:1,sy:1,cos:1,sin:0,ox:0,oy:0,x:0,y:0,l:0,t:0,r:4,b:4,depth});
     const transparentRejected=!C.coversHero(shape(mask(0),2),shape(mask(15),3));
     const opaqueAccepted=C.coversHero(shape(mask(0),2),shape(mask(0),3));
-    return {flags,enemyOK,faded,alphaMismatch,behindFaded,testResults,targetCount,allUnchanged,transparentRejected,opaqueAccepted,occlusionAlpha:cfg.occlusionAlpha,fairyOK,alphaOK,toneChanged,outlineAdded,bodyChanged,count:actors.length,flowers:flowers.length,
+    return {flags,enemyOK,shadowOK,enemyShadows,fairyShadows,shadowSizes,faded,alphaMismatch,behindFaded,testResults,targetCount,allUnchanged,transparentRejected,opaqueAccepted,occlusionAlpha:cfg.occlusionAlpha,fairyOK,alphaOK,toneChanged,outlineAdded,bodyChanged,count:actors.length,flowers:flowers.length,
      heroHeight:hero.visibleHeight,waterHeight:fairies[1].visibleHeight,marker:!!marker,focus:!!focus,markerDepth:marker?.depth,
      markerX:marker?.x,heroX:hero.image.x,focusDepth:focus?.depth,brightness:cfg.brightness,saturation:cfg.saturation,
      rings:s.children.list.filter(o=>o.name?.startsWith('clarity:')&&o.name.includes('ring')).length};
@@ -126,6 +141,9 @@ try{
    if(name==='combat'){assert.ok(result.combat&&!result.marker&&!result.focus&&!result.enemies);}
    else{
     assert.ok(result.enemyOK&&result.fairyOK&&result.alphaOK,JSON.stringify(result));assert.equal(result.count,200);assert.equal(result.flowers,query.includes('full=1')?100:4);
+    assert.ok(result.shadowOK,JSON.stringify(result));
+    assert.equal(result.enemyShadows,['shadow-off','shadow-fairy'].includes(name)?0:200);
+    assert.equal(result.fairyShadows,['shadow-off','shadow-enemy'].includes(name)?0:11);
     assert.equal(result.alphaMismatch,0);assert.equal(result.behindFaded,0);
     assert.ok(result.transparentRejected&&result.opaqueAccepted&&result.allUnchanged,JSON.stringify(result));
     assert.equal(result.targetCount,(expected[5]?1:0)+(expected[6]?10:0)+(expected[7]?result.flowers:0));
@@ -142,6 +160,28 @@ try{
     if(expected[4])assert.equal(result.focusDepth,.8);
     if(name==='overrides'){assert.equal(result.brightness,.85);assert.equal(result.saturation,.65);}
     await page.screenshot({path:join(out,'clarity-'+name+'.png'),scale:'device'});
+    if(name==='off'||name==='shadow-light'){
+      // Freeze simulation while preserving scene rendering. Compare actual
+      // framebuffer pixels with each group independently hidden.
+      await page.evaluate(()=>{window.__previewGame.scene.pause('Game');});
+      await page.waitForFunction(()=>window.__previewGame.scene.isPaused('Game'));
+      await page.waitForTimeout(100);
+      const both=await page.screenshot({path:join(out,'shadow-'+name+'-both.png')});
+      await page.evaluate(()=>{const s=window.__previewGame.scene.getScene('Game');for(const a of s.fairyPatrol.actors)a.shadow.setVisible(false);});
+      await page.waitForTimeout(100);
+      const enemyOnly=await page.screenshot({path:join(out,'shadow-'+name+'-enemy.png')});
+      await page.evaluate(()=>{const s=window.__previewGame.scene.getScene('Game');for(const a of s.enemyPreview.sprites.values())a.shadow.setVisible(false);});
+      await page.waitForTimeout(100);
+      const neither=await page.screenshot({path:join(out,'shadow-'+name+'-none.png')});
+      const pixels=await page.evaluate(async shots=>{
+        const arrays=[];
+        for(const base64 of shots){const im=new Image();im.src='data:image/png;base64,'+base64;await im.decode();const c=document.createElement('canvas');c.width=im.width;c.height=im.height;const ctx=c.getContext('2d');ctx.drawImage(im,0,0);arrays.push(ctx.getImageData(0,0,c.width,c.height).data);}
+        function diff(a,b){let changed=0,maxDelta=0;for(let i=0;i<a.length;i+=4){const d=Math.max(...[0,1,2].map(j=>Math.abs(a[i+j]-b[i+j])));if(d>1)changed++;maxDelta=Math.max(maxDelta,d);}return {changed,maxDelta};}
+        return {fairy:diff(arrays[0],arrays[1]),enemy:diff(arrays[1],arrays[2])};
+      },[both,enemyOnly,neither].map(b=>b.toString('base64')));
+      assert.ok(pixels.fairy.changed>20&&pixels.enemy.changed>20,JSON.stringify(pixels));
+      result.shadowPixels=pixels;
+    }
    }
    assert.deepEqual(errors,[]);assert.deepEqual(failed,[]);
    report.push({name,...result,pass:true});console.log('PASS',name,JSON.stringify(result));

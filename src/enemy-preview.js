@@ -202,7 +202,7 @@
       const scale=e.span/Math.max(e.bounds.width,e.bounds.height);
       return {...e,scale,width:e.bounds.width*scale,height:e.bounds.height*scale};
     });
-    const model=createPopulation(spec,patrol,entries),sprites=new Map(),C=window.GardenClarityPreview;
+    const model=createPopulation(spec,patrol,entries),sprites=new Map(),C=window.GardenClarityPreview,S=window.GardenGroundShadow;
     const renderKey=k=>C?C.enemyTexture(scene,k):k;
     if(C?.config.enemyTone)for(const a of entries)for(const expression of ['normal','closed','angry','dizzy'])renderKey(key(a.id,expression));
     // The playable field clips partial entry/exit sprites; HUD is never covered.
@@ -219,7 +219,7 @@
         let sprite=sprites.get(actor.id);
         if(!sprite){
           const image=scene.add.image(0,0,renderKey(key(a.id,actor.expression))).setDepth(3).setMask(fieldMask).setName('enemy:actor:'+actor.id);
-          const shadow=scene.add.ellipse(0,0,1,1,window.GardenPalette.roles.n.ink,.35).setDepth(.75).setMask(fieldMask).setName('enemy:shadow:'+actor.id);
+          const shadow=S.create(scene,'enemy:shadow:'+actor.id,S.config.enemy,fieldMask);
           sprite={image,shadow};sprites.set(actor.id,sprite);
         }
         const {image,shadow}=sprite,{x,ground,lift,angle,sx,sy,flip}=p;
@@ -228,7 +228,7 @@
           .setScale(a.scale*sx*(flip?-1:1),a.scale*sy).setAngle(angle).setDepth(C?C.enemyDepth(ground,spec):3+ground/spec.height);
         const texture=renderKey(key(a.id,actor.expression));if(image.texture.key!==texture)image.setTexture(texture);
         if(protect)image.setAlpha(C.protectedEnemyAlpha(targets,image));
-        shadow.setPosition(x,ground+1).setDisplaySize(a.width*.72*(1-lift*.009),Math.max(2,a.height*.10)).setAlpha(.36/(1+lift*.055));
+        S.update(shadow,x,ground,a.width*.72,Math.max(3,a.height*.16),lift);
       }
     }
     function advance(seconds){model.advance(seconds);render();return model.elapsed;}

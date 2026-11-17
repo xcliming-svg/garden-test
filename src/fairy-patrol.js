@@ -63,7 +63,7 @@
     };
   }
   function attach(scene,spec,occupied,geometry,patrolPosition,updateHud,heroHeight){
-    const m=install(scene),B=window.GardenPebbleBoundary,border=B.attach(scene),C=window.GardenClarityPreview;
+    const m=install(scene),B=window.GardenPebbleBoundary,border=B.attach(scene),C=window.GardenClarityPreview,S=window.GardenGroundShadow;
     const focus=C?.gardenFocus(scene,spec,occupied),marker=C?.heroMarker(scene,spec);
     const compute=()=>B.layout(spec,geometry(occupied,0,0).garden,heroHeight,gait,count);
     let info=compute(),b=info.patrol,length=info.length,spacing=length/count;
@@ -77,13 +77,14 @@
         .setOrigin(m.anchor.x/m.canvas.width,m.anchor.y/m.canvas.height)
         .setDisplaySize(m.canvas.width*scale,m.canvas.height*scale)
         .setDepth(2).setName('fairy:'+type+':'+index);
+      const shadow=S.create(scene,'fairy:shadow:'+index,S.config.fairy);
       const tears=[];
       for(const [i,side] of ['left','right'].entries())for(let j=0;j<2;j++){
         const c=m.sourceEyeCenters[side],d=m.characters[type].destinationRects[side];
         const sprite=scene.add.image(0,0,tearsAtlas+':'+side).setOrigin((c.x-i*128)/128,(c.y+65)/256).setVisible(false).setName('fairy:tear:'+index+':'+side+':'+j);
         tears.push({sprite,side,offset:j*.5,rect:d});
       }
-      return {index,type,image,tears,visibleHeight,blink:blinkSchedule(index),expression:'normal',direction:'right',center:{x:0,y:0},phase:index*1.83};
+      return {index,type,image,shadow,tears,visibleHeight,blink:blinkSchedule(index),expression:'normal',direction:'right',center:{x:0,y:0},phase:index*1.83};
     });
     let elapsed=0,rank=0,currentSpeed=speed,state='normal',emotionTime=0;
     let distance=(b.right-b.left)/2;
@@ -127,6 +128,7 @@
           .setDepth(C?C.fairyDepth(p.y,a.visibleHeight,spec):2+p.y/spec.height);
         const emotion=emotionPose(state,emotionTime,a.visibleHeight,a.phase);
         if(isResult(state))a.image.setPosition(p.x+emotion.dx,p.y+a.visibleHeight/2-emotion.lift).setAngle(0);
+        S.update(a.shadow,a.image.x,p.y+a.visibleHeight/2,a.visibleHeight*.48,a.visibleHeight*.15,isResult(state)?emotion.lift:lift);
         for(const tear of a.tears){
           const show=state==='lose';tear.sprite.setVisible(show);if(!show)continue;
           const eye=m.characters[a.type].eyeCenters[tear.side],t=((emotionTime*1.45+tear.offset+a.index*.17)%1),h=a.visibleHeight/40,flip=a.image.flipX?-1:1;
