@@ -1,5 +1,7 @@
 # 전장 UI 및 에셋 규격
 
+> **devel 요정 외곽선:** paper #F4F1E9, 1 논리 px, 원본 실루엣 외측 런타임 링. 새싹·물방울 공통. 기존 SVG 수정 없음.
+
 > **devel 자동 구슬:** 런타임 원형 6논리 px, 빨강 red #FB575F/노랑 gold #F6BB48, bark 외곽 및 paper 하이라이트. 기존 원본 SVG 수정/추가 없음. Depth 6 및 전장 마스크. [공격 규격](./docs/enemy-preview.md).
 
 > **main/devel Garden 16 v9:** [공통 색상 가이드](./docs/ui-color-guide.md)가 최신 색상 규격이다. 16개 기본색 및 UI 파생 음영을 적용하고, SVG 원본은 보존하며 `?svgcolors=original`에서 원본 색상을 표시한다. 아래 이전 팔레트 수치와 색상 관련 기록은 역사적 기준이다.

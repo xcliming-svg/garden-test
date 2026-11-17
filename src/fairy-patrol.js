@@ -20,6 +20,30 @@
   const gait=Object.freeze({frequency:1.6,lift:.5,tilt:1.25,lean:.5});
   const key=(type,expression)=>'fairy:'+type+':'+expression;
   const baseKey=type=>'fairy:base:'+type;
+  const outlineWidth=1;
+  // A separate silhouette ring keeps body textures and collision masks intact.
+  function outlineKey(scene,type,scale){
+    const radius=outlineWidth*size/(1000*scale),k='fairy-outline:'+type+':'+radius.toFixed(3);
+    if(scene.textures.exists(k))return k;
+    const source=scene.textures.get(baseKey(type)).getSourceImage();
+    const texture=scene.textures.createCanvas(k,size,size),ctx=texture.getContext();
+    for(let i=0;i<24;i++){
+      const angle=i*Math.PI/12;
+      ctx.drawImage(source,Math.cos(angle)*radius,Math.sin(angle)*radius,size,size);
+    }
+    ctx.globalCompositeOperation='source-in';
+    ctx.fillStyle=window.GardenPalette.hex.paper;ctx.fillRect(0,0,size,size);
+    ctx.globalCompositeOperation='destination-out';ctx.drawImage(source,0,0,size,size);
+    ctx.globalCompositeOperation='source-over';
+    texture.refresh();texture.setFilter(Phaser.Textures.FilterMode.LINEAR);
+    return k;
+  }
+  function syncOutline(actor){
+    const {image,outline}=actor;
+    outline.setPosition(image.x,image.y).setOrigin(image.originX,image.originY)
+      .setScale(image.scaleX,image.scaleY).setAngle(image.angle).setFlip(image.flipX,image.flipY)
+      .setDepth(image.depth).setAlpha(image.alpha).setVisible(image.visible);
+  }
   function preload(scene){
     if(!enabled)return;
     window.GardenPebbleBoundary.preload(scene);
@@ -73,6 +97,7 @@
     const actors=Array.from({length:count},(_,index)=>{
       const type=index===0?'garden':'water';
       const visibleHeight=m.characters[type].visibleHeight*scale;
+      const outline=scene.add.image(0,0,outlineKey(scene,type,scale)).setName('fairy-outline:'+index);
       const image=scene.add.image(0,0,key(type,'normal'))
         .setOrigin(m.anchor.x/m.canvas.width,m.anchor.y/m.canvas.height)
         .setDisplaySize(m.canvas.width*scale,m.canvas.height*scale)
@@ -83,7 +108,7 @@
         const sprite=scene.add.image(0,0,tearsAtlas+':'+side).setOrigin((c.x-i*128)/128,(c.y+65)/256).setVisible(false).setName('fairy:tear:'+index+':'+side+':'+j);
         tears.push({sprite,side,offset:j*.5,rect:d});
       }
-      return {index,type,image,tears,visibleHeight,blink:blinkSchedule(index),expression:'normal',direction:'right',center:{x:0,y:0},phase:index*1.83};
+      return {index,type,image,outline,tears,visibleHeight,blink:blinkSchedule(index),expression:'normal',direction:'right',center:{x:0,y:0},phase:index*1.83};
     });
     let elapsed=0,rank=0,currentSpeed=speed,state='normal',emotionTime=0;
     let distance=(b.right-b.left)/2;
@@ -104,7 +129,7 @@
       info=compute();b=info.patrol;length=info.length;spacing=length/count;
       distance=progress*length;
       scale=info.height/m.characters.garden.visibleHeight;
-      for(const a of actors){a.visibleHeight=m.characters[a.type].visibleHeight*scale;a.image.setDisplaySize(m.canvas.width*scale,m.canvas.height*scale);}
+      for(const a of actors){a.visibleHeight=m.characters[a.type].visibleHeight*scale;a.image.setDisplaySize(m.canvas.width*scale,m.canvas.height*scale);a.outline.setTexture(outlineKey(scene,a.type,scale));}
       border.render(info);
     }
     function refreshHud(){updateHud(elapsed,scene.enemyPreview?.model.kills||0,0,occupied.size);}
@@ -137,6 +162,7 @@
         }
         const expression=emotion.expression||a.blink(elapsed);
         if(expression!==a.expression){a.expression=expression;a.image.setTexture(key(a.type,expression));}
+        syncOutline(a);
       }
       refreshHud();
     }

@@ -73,6 +73,7 @@
         for(const fairy of fairies)apply(fairy,config.fairyAlpha,enemyShapes);
       }
       for(const actor of patrol.actors){
+        if(actor.outline)actor.outline.setAlpha(actor.image.alpha);
         for(const tear of actor.tears)if(tear.sprite.visible)
           tear.sprite.setAlpha(tear.baseAlpha*actor.image.alpha);
       }
