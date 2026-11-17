@@ -93,6 +93,21 @@ try{
    if(name!=='hidden'){await page.selectOption('#enemy-speed','5');await page.selectOption('#garden-size','4');assert.equal(await page.locator('#enemy-speed').inputValue(),'5');}
    const panel=await page.locator('#movement-speed-controls').boundingBox();
    assert.ok(Math.abs(panel.width/canvas.width*960-226)<2&&Math.abs((panel.x-canvas.x)/canvas.width*960-724)<2);
+   if(name!=='hidden'){
+    assert.equal(await page.locator('#bulldog-wobble').isVisible(),false);
+    await page.selectOption('#enemy-character','5_bulldog');
+    assert.equal(await page.locator('#bulldog-wobble').isVisible(),true);
+    assert.deepEqual(await page.locator('#bulldog-wobble option').evaluateAll(es=>es.map(e=>Number(e.value))),[100,85,70,55,40,25]);
+    await page.selectOption('#enemy-motion-mode','move');
+    for(const value of [100,85,70,55,40,25]){
+     await page.selectOption('#bulldog-wobble',String(value));
+     const checked=await page.evaluate(()=>{const c=window.__previewGame.scene.getScene('Game').enemyPreview;let lift=0,angle=0,scale=0;for(let i=0;i<120;i++){c.advance(.01);lift=Math.max(lift,c.pose.lift);angle=Math.max(angle,Math.abs(c.pose.angle));scale=Math.max(scale,Math.abs(c.pose.sx-1));}return {value:c.bulldogWobble,lift,angle,scale};});
+     assert.equal(checked.value,value);assert.ok(checked.lift>0&&checked.lift<=.8*value/100+1e-6&&checked.angle>0&&checked.angle<=2*value/100+1e-6&&checked.scale>0&&checked.scale<=.035*value/100+1e-6,JSON.stringify(checked));
+    }
+    await page.selectOption('#enemy-character','3_caterpillar');assert.equal(await page.locator('#bulldog-wobble').isVisible(),false);
+    await page.selectOption('#enemy-character','5_bulldog');assert.equal(await page.locator('#bulldog-wobble').inputValue(),'25');
+    await page.selectOption('#bulldog-wobble','100');await page.selectOption('#enemy-motion-mode','auto');
+   }
    if(name==='default'||name==='fhd')await page.screenshot({path:join(out,'movement-speed-'+name+'.png'),scale:'device'});
    await page.keyboard.press('Escape');await page.waitForFunction(()=>window.__previewGame.scene.isActive('Pause'));
    assert.equal(await page.locator('#movement-speed-controls').isVisible(),false);

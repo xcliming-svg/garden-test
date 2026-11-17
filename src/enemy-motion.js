@@ -16,12 +16,14 @@
     '6_sparrow':[5.2,1.0,3,.015,18,46,34,.23,.26,11,16],
     '6_pigeon':[3.2,1.5,3,.018,20,48,39,.33,.34,12,11]
   }).map(([id,v])=>[id,Object.freeze({hz:v[0],bob:v[1],rock:v[2],squash:v[3],lift:v[4],baseSpeed:v[5],reach:v[6],windup:v[7],strike:v[8],impactLift:v[9],attackTilt:v[10]})])));
+  // Preview-only multiplier for bulldog locomotion; attack animation is unchanged.
+  const bulldogWobbleLevels=Object.freeze([100,85,70,55,40,25]);
   const modes=Object.freeze(['auto','move','attack']),clamp=x=>Math.max(0,Math.min(1,x)),smooth=x=>{x=clamp(x);return x*x*(3-2*x);};
   const lerp=(a,b,t)=>a+(b-a)*t,pi=Math.PI;
   const speed=(e,rank=0)=>window.GardenFairyPatrol.speedAt(profiles[e.id].baseSpeed,rank);
   const travelTime=(e,route,rank=0,mode='auto')=>Math.max(.01,Math.abs(route.start-(mode==='move'?route.target:route.stage))/speed(e,rank));
   function duration(e,mode,route,rank=0){const p=profiles[e.id],move=travelTime(e,route,rank,mode),attack=p.windup+p.strike+.55;return mode==='move'?2*move:mode==='attack'?attack+.8:2*move+attack;}
-  function gait(e,t,progress,returning,route,moveTime){
+  function gait(e,t,progress,returning,route,moveTime,wobble){
     const p=profiles[e.id],phase=t*p.hz*2*pi,wave=Math.sin(phase);
     const direction=returning?-1:1;
     let lift=0,angle=wave*p.rock,sx=1,sy=1;
@@ -37,20 +39,24 @@
       lift=Math.abs(wave)*p.bob;
       sx=1+p.squash*wave;sy=1-p.squash*wave;
     }
+    if(e.id==='5_bulldog'){
+      const factor=bulldogWobbleLevels.includes(wobble)?wobble/100:1;
+      lift*=factor;angle*=factor;sx=1+(sx-1)*factor;sy=1+(sy-1)*factor;
+    }
     // Original art faces left (frog faces front); mirror only for retreat.
     const x=returning?lerp(route.stage,route.start,travel):lerp(route.start,route.stage,travel);
     return {phase:returning?'return':'move',x,lift,angle:angle*direction,sx,sy,flip:returning&&e.id!=='2_frog'};
   }
-  function sample(e,mode,time,route,rank=0){
+  function sample(e,mode,time,route,rank=0,wobble=100){
     const p=profiles[e.id],recovery=.55,retreat=.8;
     const moveTime=travelTime(e,route,rank,mode),period=duration(e,mode,route,rank);
     let t=((time%period)+period)%period;
     if(mode==='move'){
       const path={...route,stage:route.target};
-      return t<moveTime?gait(e,t,t/moveTime,false,path,moveTime):gait(e,t-moveTime,(t-moveTime)/moveTime,true,path,moveTime);
+      return t<moveTime?gait(e,t,t/moveTime,false,path,moveTime,wobble):gait(e,t-moveTime,(t-moveTime)/moveTime,true,path,moveTime,wobble);
     }
     if(mode==='auto'){
-      if(t<moveTime)return gait(e,t,t/moveTime,false,route,moveTime);
+      if(t<moveTime)return gait(e,t,t/moveTime,false,route,moveTime,wobble);
       t-=moveTime;
     }
     const fly=e.attackType==='fly',jump=e.attackType==='jump',charge=e.attackType==='charge',baseLift=fly?p.lift:0;
@@ -71,8 +77,8 @@
       return pose('recover',lerp(route.target,route.stage,smooth(u)),baseLift*smooth(u),-p.attackTilt*.28*pulse,1+.035*pulse,1-.06*pulse);
     }
     t-=recovery;
-    if(mode==='auto')return gait(e,t,t/moveTime,true,route,moveTime);
+    if(mode==='auto')return gait(e,t,t/moveTime,true,route,moveTime,wobble);
     return pose('ready',route.stage,baseLift,0,1,1);
   }
-  window.GardenEnemyMotion=Object.freeze({profiles,modes,sample,speed,travelTime,duration});
+  window.GardenEnemyMotion=Object.freeze({profiles,modes,sample,speed,travelTime,duration,bulldogWobbleLevels});
 }());
