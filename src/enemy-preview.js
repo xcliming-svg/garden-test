@@ -5,22 +5,21 @@
   const size=512,root='assets/enemies/',anchorKey='enemy-preview:anchors';
   const key=(id,expression)=>'enemy-preview:'+id+':'+expression;
   const baseKey=id=>key(id,'base');
-  // Longest visible side in logical px: one 22px flower cell for small pests,
-  // 40px garden fairy for medium animals, and up to 1.6x fairy height for large threats.
-  // The order maps into two outer field lanes, not combat tiers or spawn rules.
+  // Longest visible side in logical px: 22px flower cell, 40px garden fairy.
+  // Attack type and level are design metadata only; placement and movement are unchanged.
   const roster=Object.freeze([
-    {id:'1_butterfly',span:26,side:'left',row:0,col:0},
-    {id:'2_grasshopper',span:28,side:'left',row:0,col:1},
-    {id:'6_mouse',span:32,side:'left',row:1,col:0},
-    {id:'2_gray_bug',span:22,side:'left',row:1,col:1},
-    {id:'1_cat',span:56,side:'left',row:2,col:0},
-    {id:'3_caterpillar',span:28,side:'left',row:2,col:1},
-    {id:'6_sparrow',span:32,side:'right',row:0,col:0},
-    {id:'6_pigeon',span:40,side:'right',row:0,col:1},
-    {id:'4_beetle',span:28,side:'right',row:1,col:0},
-    {id:'2_frog',span:36,side:'right',row:1,col:1},
-    {id:'6_rabbit',span:48,side:'right',row:2,col:0},
-    {id:'5_bulldog',span:64,side:'right',row:2,col:1}
+    {id:'1_butterfly',span:26,attackType:'fly',level:1,side:'left',row:0,col:0},
+    {id:'2_grasshopper',span:28,attackType:'jump',level:1,side:'left',row:0,col:1},
+    {id:'6_mouse',span:42,attackType:'approach',level:3,side:'left',row:1,col:0},
+    {id:'2_gray_bug',span:30,attackType:'charge',level:1,side:'left',row:1,col:1},
+    {id:'1_cat',span:48,attackType:'charge',level:2,side:'left',row:2,col:0},
+    {id:'3_caterpillar',span:28,attackType:'approach',level:1,side:'left',row:2,col:1},
+    {id:'6_sparrow',span:34,attackType:'fly',level:2,side:'right',row:0,col:0},
+    {id:'6_pigeon',span:42,attackType:'fly',level:3,side:'right',row:0,col:1},
+    {id:'4_beetle',span:34,attackType:'approach',level:2,side:'right',row:1,col:0},
+    {id:'2_frog',span:36,attackType:'jump',level:2,side:'right',row:1,col:1},
+    {id:'6_rabbit',span:48,attackType:'jump',level:3,side:'right',row:2,col:0},
+    {id:'5_bulldog',span:60,attackType:'charge',level:3,side:'right',row:2,col:1}
   ].map(Object.freeze));
   function preload(scene){
     if(!enabled)return;

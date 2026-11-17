@@ -43,7 +43,8 @@ const url='http://127.0.0.1:'+server.address().port;
 const browser=await chromium.launch({channel:'chrome',headless:true,args:['--no-sandbox','--disable-dev-shm-usage','--use-gl=angle','--use-angle=swiftshader','--enable-unsafe-swiftshader']});
 const report=[];
 // Fixed comparison sizes, relative to 22px flower cells and the 40px garden fairy.
-const expectedSpans={"1_butterfly":26,"2_grasshopper":28,"6_mouse":32,"2_gray_bug":22,"1_cat":56,"3_caterpillar":28,"6_sparrow":32,"6_pigeon":40,"4_beetle":28,"2_frog":36,"6_rabbit":48,"5_bulldog":64};
+const expectedSpans={"1_butterfly":26,"2_grasshopper":28,"6_mouse":42,"2_gray_bug":30,"1_cat":48,"3_caterpillar":28,"6_sparrow":34,"6_pigeon":42,"4_beetle":34,"2_frog":36,"6_rabbit":48,"5_bulldog":60};
+const expectedTypes={"1_butterfly":["fly",1],"2_grasshopper":["jump",1],"6_mouse":["approach",3],"2_gray_bug":["charge",1],"1_cat":["charge",2],"3_caterpillar":["approach",1],"6_sparrow":["fly",2],"6_pigeon":["fly",3],"4_beetle":["approach",2],"2_frog":["jump",2],"6_rabbit":["jump",3],"5_bulldog":["charge",3]};
 const overlap=(a,b)=>a.left<b.right&&a.right>b.left&&a.top<b.bottom&&a.bottom>b.top;
 try{
  for(const [name,w,h,dpr,query] of [
@@ -99,7 +100,7 @@ try{
       if(frame[i+3]===255&&exp[i+3]===255)for(let k=0;k<3;k++)opaqueDelta=Math.max(opaqueDelta,Math.abs(frame[i+k]-exp[i+k]));
       else if(Math.min(frame[i+3],exp[i+3])>=128)for(let k=0;k<3;k++)edgeDelta=Math.max(edgeDelta,Math.abs(frame[i+k]-exp[i+k]));
      }
-     return {id:a.id,x:a.x,y:a.y,w:a.width,h:a.height,span:a.span,changed,eyeDelta,alpha,maxAlpha,opaqueDelta,edgeDelta,
+     return {id:a.id,x:a.x,y:a.y,w:a.width,h:a.height,span:a.span,attackType:a.attackType,level:a.level,changed,eyeDelta,alpha,maxAlpha,opaqueDelta,edgeDelta,
       exact:maxAlpha<=1&&opaqueDelta<=2&&edgeDelta<=4,
       rect:{left:a.x-a.width/2,right:a.x+a.width/2,top:a.y-a.height/2,bottom:a.y+a.height/2},
       visible:a.image.visible&&a.image.alpha===1,interactive:!!a.image.input,body:!!a.image.body,linear:a.image.texture.source[0].scaleMode===Phaser.Textures.FilterMode.LINEAR};
@@ -109,10 +110,16 @@ try{
      blueprint:{left:L.blueprint.x,right:L.blueprint.x+L.blueprint.width,top:L.blueprint.y,bottom:L.blueprint.y+L.blueprint.height},fairies:F.actors.length,flowers:s.flowerGrowth.entries.size,combat:!!s.combatPreview};
    });
    assert.equal(loaded.size,13);assert.equal(result.entries.length,12);assert.equal(new Set(result.entries.map(e=>e.id)).size,12);
+   for(const type of ['approach','jump','charge','fly']){
+    const stages=result.entries.filter(e=>e.attackType===type).sort((a,b)=>a.level-b.level);
+    assert.deepEqual(stages.map(e=>e.level),[1,2,3]);
+    assert.ok(stages[0].span<stages[1].span&&stages[1].span<stages[2].span,type);
+   }
    assert.equal(result.fairies,11);assert.equal(result.flowers,name==='full-dpr2'?100:6);assert.equal(result.combat,false);
    for(const a of result.entries){
     assert.ok(a.visible&&!a.interactive&&!a.body&&a.linear&&a.exact&&a.changed>0&&a.eyeDelta>0&&a.alpha>10000,JSON.stringify(a));
     assert.equal(a.span,expectedSpans[a.id]);
+    assert.deepEqual([a.attackType,a.level],expectedTypes[a.id]);
     assert.ok(Math.abs(Math.max(a.w,a.h)-a.span)<.01,JSON.stringify(a));
     assert.ok(a.rect.left>=result.field.left&&a.rect.right<=result.field.right&&a.rect.top>=result.field.top&&a.rect.bottom<=result.field.bottom,JSON.stringify(a));
     assert.ok(!overlap(a.rect,result.boundary)&&!overlap(a.rect,result.blueprint),JSON.stringify(a));
