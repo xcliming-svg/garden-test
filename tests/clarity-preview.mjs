@@ -43,6 +43,7 @@ try{
   ['shadow-off',960,540,'?full=1&shadows=0',[false,false,false,false,false,false,false,false]],
   ['shadow-enemy',960,540,'?shadows=0&enemyShadow=1',[false,false,false,false,false,false,false,false]],
   ['shadow-fairy',640,360,'?shadows=0&fairyShadow=1',[false,false,false,false,false,false,false,false]],
+  ['shadow-legacy',960,540,'?full=1&shadowStyle=dark',[false,false,false,false,false,false,false,false]],
   ['shadow-light',960,540,'?uitype=1',[false,false,false,false,false,false,false,false]],
   ['combat',960,540,'?combat=1&clarity=1',[true,true,true,true,true,true,false,false]]
  ]){
@@ -62,15 +63,15 @@ try{
     // render calls. Capture real WebGL scene at the same elapsed population.
     c.advance(Math.max(0,120-c.elapsed));F.advance(Math.max(0,120-F.elapsed));s.flowerGrowth?.render(F.elapsed);c.advance(0);
     const actors=c.actors,hero=F.actors[0],fairies=F.actors,S=window.GardenGroundShadow;
-    const close=(a,b)=>Math.abs(a-b)<1e-5,base=window.GardenPalette.uiType===1?.30:.76;
+    const close=(a,b)=>Math.abs(a-b)<1e-5,style=S.style(),base=style.alpha;
     let enemyShadows=0,fairyShadows=0,shadowOK=true;
     for(const a of actors){const {shadow,image}=c.sprites.get(a.id),p=a.pose;
       enemyShadows+=Number(shadow.visible);
-      shadowOK&&=shadow.visible===S.config.enemy&&shadow.depth===.75&&shadow.depth<image.depth&&shadow.mask===image.mask&&close(shadow.x,p.x)&&close(shadow.y,p.ground+1)&&close(shadow.displayWidth,a.entry.width*.72*Math.max(.5,1-p.lift*.009))&&close(shadow.displayHeight,Math.max(3,a.entry.height*.16))&&close(shadow.alpha,base/(1+p.lift*.055));
+      shadowOK&&=shadow.visible===S.config.enemy&&shadow.depth===.75&&shadow.depth<image.depth&&shadow.mask===image.mask&&close(shadow.x,p.x)&&close(shadow.y,p.ground+style.offset)&&close(shadow.displayWidth,a.entry.width*.72*style.scaleX*Math.max(.5,1-p.lift*.009))&&close(shadow.displayHeight,Math.max(3,a.entry.height*.16)*style.scaleY)&&close(shadow.alpha,base/(1+p.lift*.055));
     }
     for(const a of fairies){const {shadow,image}=a,lift=a.center.y+a.visibleHeight/2-image.y;
       fairyShadows+=Number(shadow.visible);
-      shadowOK&&=shadow.visible===S.config.fairy&&shadow.depth===.75&&shadow.depth<image.depth&&close(shadow.x,image.x)&&close(shadow.y,a.center.y+a.visibleHeight/2+1)&&close(shadow.displayWidth,a.visibleHeight*.48*Math.max(.5,1-lift*.009))&&close(shadow.displayHeight,a.visibleHeight*.15)&&close(shadow.alpha,base/(1+lift*.055));
+      shadowOK&&=shadow.visible===S.config.fairy&&shadow.depth===.75&&shadow.depth<image.depth&&close(shadow.x,image.x)&&close(shadow.y,a.center.y+a.visibleHeight/2+style.offset)&&close(shadow.displayWidth,a.visibleHeight*.48*style.scaleX*Math.max(.5,1-lift*.009))&&close(shadow.displayHeight,a.visibleHeight*.15*style.scaleY)&&close(shadow.alpha,base/(1+lift*.055));
     }
     const shadowSizes={hero:[hero.shadow.displayWidth,hero.shadow.displayHeight],water:[fairies[1].shadow.displayWidth,fairies[1].shadow.displayHeight]};
     const marker=s.children.getByName('clarity:hero-marker'),focus=s.children.getByName('clarity:flower-focus');
@@ -160,12 +161,13 @@ try{
     if(expected[4])assert.equal(result.focusDepth,.8);
     if(name==='overrides'){assert.equal(result.brightness,.85);assert.equal(result.saturation,.65);}
     await page.screenshot({path:join(out,'clarity-'+name+'.png'),scale:'device'});
-    if(name==='off'||name==='shadow-light'){
+    if(['off','shadow-light','shadow-legacy'].includes(name)){
       // Freeze simulation while preserving scene rendering. Compare actual
       // framebuffer pixels with each group independently hidden.
       await page.evaluate(()=>{window.__previewGame.scene.pause('Game');});
       await page.waitForFunction(()=>window.__previewGame.scene.isPaused('Game'));
       await page.waitForTimeout(100);
+      const foot=await page.evaluate(()=>{const s=window.__previewGame.scene.getScene('Game'),sh=s.fairyPatrol.actors[0].shadow,canvas=document.querySelector('canvas'),r=canvas.getBoundingClientRect();return {x:r.x+sh.x*r.width/960,y:r.y+sh.y*r.height/540,w:sh.displayWidth*r.width/960,h:sh.displayHeight*r.height/540};});
       const both=await page.screenshot({path:join(out,'shadow-'+name+'-both.png')});
       await page.evaluate(()=>{const s=window.__previewGame.scene.getScene('Game');for(const a of s.fairyPatrol.actors)a.shadow.setVisible(false);});
       await page.waitForTimeout(100);
@@ -173,13 +175,17 @@ try{
       await page.evaluate(()=>{const s=window.__previewGame.scene.getScene('Game');for(const a of s.enemyPreview.sprites.values())a.shadow.setVisible(false);});
       await page.waitForTimeout(100);
       const neither=await page.screenshot({path:join(out,'shadow-'+name+'-none.png')});
-      const pixels=await page.evaluate(async shots=>{
-        const arrays=[];
-        for(const base64 of shots){const im=new Image();im.src='data:image/png;base64,'+base64;await im.decode();const c=document.createElement('canvas');c.width=im.width;c.height=im.height;const ctx=c.getContext('2d');ctx.drawImage(im,0,0);arrays.push(ctx.getImageData(0,0,c.width,c.height).data);}
+      const pixels=await page.evaluate(async ({shots,foot})=>{
+        const arrays=[];let width=0,height=0;
+        for(const base64 of shots){const im=new Image();im.src='data:image/png;base64,'+base64;await im.decode();const c=document.createElement('canvas');c.width=im.width;c.height=im.height;width=c.width;height=c.height;const ctx=c.getContext('2d');ctx.drawImage(im,0,0);arrays.push(ctx.getImageData(0,0,c.width,c.height).data);}
         function diff(a,b){let changed=0,maxDelta=0;for(let i=0;i<a.length;i+=4){const d=Math.max(...[0,1,2].map(j=>Math.abs(a[i+j]-b[i+j])));if(d>1)changed++;maxDelta=Math.max(maxDelta,d);}return {changed,maxDelta};}
-        return {fairy:diff(arrays[0],arrays[1]),enemy:diff(arrays[1],arrays[2])};
-      },[both,enemyOnly,neither].map(b=>b.toString('base64')));
+        const hero={changed:0,maxDelta:0,strong:0};for(let y=Math.max(0,Math.floor(foot.y-foot.h/2));y<Math.min(height,Math.ceil(foot.y+foot.h/2));y++)for(let x=Math.max(0,Math.floor(foot.x-foot.w/2));x<Math.min(width,Math.ceil(foot.x+foot.w/2));x++){
+          const i=(y*width+x)*4,d=Math.max(...[0,1,2].map(j=>Math.abs(arrays[0][i+j]-arrays[1][i+j])));if(d>1)hero.changed++;if(d>=40)hero.strong++;hero.maxDelta=Math.max(hero.maxDelta,d);
+        }
+        return {fairy:diff(arrays[0],arrays[1]),enemy:diff(arrays[1],arrays[2]),hero};
+      },{shots:[both,enemyOnly,neither].map(b=>b.toString('base64')),foot});
       assert.ok(pixels.fairy.changed>20&&pixels.enemy.changed>20,JSON.stringify(pixels));
+      if(name==='off'){assert.ok(pixels.hero.strong>=12&&pixels.hero.maxDelta>=45,JSON.stringify(pixels));assert.ok(pixels.fairy.maxDelta>=45,JSON.stringify(pixels));}
       result.shadowPixels=pixels;
     }
    }
