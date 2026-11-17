@@ -128,8 +128,10 @@ try{
         for(let i=0;i<a.length;i+=4){
           if(a[i+3]!==b[i+3])flowerAlphaChanged++;
           if(!a[i+3])continue;
-          if([0,1,2].some(j=>b[i+j]!==expected[i+j]))flowerToneOK=false;
+          // Browser canvas premultiplies partially transparent AA pixels.
+          // Alpha must be exact; compare color math on fully opaque pixels.
           if(a[i+3]!==255)continue;
+          if([0,1,2].some(j=>b[i+j]!==expected[i+j]))flowerToneOK=false;
           if([0,1,2].some(j=>a[i+j]!==b[i+j]))flowerChanged++;
           const av=[a[i],a[i+1],a[i+2]],bv=[b[i],b[i+1],b[i+2]];
           flowerChromaBefore+=Math.max(...av)-Math.min(...av);flowerChromaAfter+=Math.max(...bv)-Math.min(...bv);
