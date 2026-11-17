@@ -72,7 +72,7 @@
       const texture=scene.textures.createCanvas(key,w,h),ctx=texture.getContext(),im=ctx.createImageData(w,h),data=pixels(type,f,w,h,direction);
       for(let i=0;i<data.length;i++){
         if(!data[i])continue;
-        const c=window.GardenPalette.n[roles[data[i]]];
+        const c=window.GardenPalette.art.n[roles[data[i]]];
         im.data.set([(c>>16)&255,(c>>8)&255,c&255,255],i*4);
       }
       ctx.putImageData(im,0,0);texture.refresh();texture.setFilter(Phaser.Textures.FilterMode.NEAREST);

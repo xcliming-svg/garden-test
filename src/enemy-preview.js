@@ -31,7 +31,7 @@
     if(!enabled)return;
     if(!scene.cache.json.exists(anchorKey))scene.load.json(anchorKey,root+'eye_anchors.json');
     for(const e of roster)if(!scene.textures.exists(baseKey(e.id)))
-      scene.load.svg(baseKey(e.id),root+e.id+'_1000.svg',{width:size,height:size});
+      scene.load.svg(baseKey(e.id),window.GardenSvgPalette.path('enemies/'+e.id+'_1000.svg'),{width:size,height:size});
   }
   function bounds(ctx){
     const data=ctx.getImageData(0,0,size,size).data;
@@ -47,15 +47,7 @@
     const m=scene.cache.json.get(anchorKey),fairy=scene.cache.json.get('fairy:manifest');
     if(!m||m.canvas[0]!==1000||m.canvas[1]!==1000||!fairy)throw Error('Invalid enemy eye anchors');
     const sharedAtlas=scene.textures.get('fairy:eyes').getSourceImage(),factor=size/1000;
-    let atlas=sharedAtlas;
-    if(window.GardenSvgPalette.enabled){
-      // In the optional 16-color comparison, bark eyes merge into bark faces.
-      // Keep the same shared eye silhouettes and use the existing ink role for contrast.
-      atlas=document.createElement('canvas');atlas.width=sharedAtlas.width;atlas.height=sharedAtlas.height;
-      const eyeContext=atlas.getContext('2d');eyeContext.drawImage(sharedAtlas,0,0);
-      eyeContext.globalCompositeOperation='source-in';eyeContext.fillStyle=window.GardenPalette.hex.ink;
-      eyeContext.fillRect(0,0,atlas.width,atlas.height);
-    }
+    const atlas=sharedAtlas;
     // Read back from a dedicated software canvas so normal/closed use identical
     // source rasterization; Phaser texture upload remains unchanged.
     const work=document.createElement('canvas');work.width=work.height=size;
@@ -65,13 +57,11 @@
       if(!art)throw Error('Missing enemy anchor '+e.id);
       const body=scene.textures.get(baseKey(e.id)).getSourceImage();
       ctx.clearRect(0,0,size,size);ctx.drawImage(body,0,0,size,size);
-      const b=bounds(ctx),raw=ctx.getImageData(0,0,size,size);
-      const base=window.GardenSvgPalette.enabled?window.GardenSvgPalette.apply(raw):raw;
+      const b=bounds(ctx),base=ctx.getImageData(0,0,size,size);
       for(const expression of ['normal','closed','angry','dizzy']){
         const k=key(e.id,expression);
         const tex=scene.textures.exists(k)?scene.textures.get(k):scene.textures.createCanvas(k,size,size);
-        // Both expressions start with the identical body pixels. Quantize only
-        // the body, not the blended antialiased eye edges.
+        // Keep approved vector body and shared eye rasterization unchanged.
         ctx.putImageData(base,0,0);
         const f=fairy.sheets.eyes.frames[expression],w=f.width/2;
         for(const [i,side] of ['left','right'].entries()){
@@ -205,7 +195,7 @@
         let sprite=sprites.get(actor.id);
         if(!sprite){
           const image=scene.add.image(0,0,key(a.id,actor.expression)).setDepth(3).setMask(fieldMask).setName('enemy:actor:'+actor.id);
-          const shadow=scene.add.ellipse(0,0,1,1,window.GardenPalette.n.ink,.35).setDepth(.75).setMask(fieldMask).setName('enemy:shadow:'+actor.id);
+          const shadow=scene.add.ellipse(0,0,1,1,window.GardenPalette.roles.n.ink,.35).setDepth(.75).setMask(fieldMask).setName('enemy:shadow:'+actor.id);
           sprite={image,shadow};sprites.set(actor.id,sprite);
         }
         const {image,shadow}=sprite,{x,ground,lift,angle,sx,sy,flip}=p;

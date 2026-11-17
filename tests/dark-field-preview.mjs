@@ -44,13 +44,13 @@ try{
     if(!o)return result;
     const im=o.texture.getSourceImage(),ctx=im.getContext('2d'),d=ctx.getImageData(0,0,im.width,im.height).data;
     const counts={};let min=255,max=0,neutral=true,opaque=true,green=true,maxChannel=0;
-    for(let i=0;i<d.length;i+=4){const v=d[i];min=Math.min(min,v);max=Math.max(max,v);counts[v]=(counts[v]||0)+1;neutral&&=v===d[i+1]&&v===d[i+2];opaque&&=d[i+3]===255;green&&=d[i+1]>d[i]&&d[i+1]>d[i+2];maxChannel=Math.max(maxChannel,d[i],d[i+1],d[i+2]);}
+    for(let i=0;i<d.length;i+=4){const v=d[i];min=Math.min(min,v);max=Math.max(max,v);counts[v]=(counts[v]||0)+1;neutral&&=Math.max(v,d[i+1],d[i+2])-Math.min(v,d[i+1],d[i+2])<=2;opaque&&=d[i+3]===255;green&&=d[i+1]>d[i]&&d[i+1]>d[i+2];maxChannel=Math.max(maxChannel,d[i],d[i+1],d[i+2]);}
     const cv=document.createElement('canvas');cv.width=im.width;cv.height=im.height;B.paint(cv.getContext('2d'),cv.width,cv.height,B.active);
     const d2=cv.getContext('2d').getImageData(0,0,cv.width,cv.height).data;
     return {...result,min,max,neutral,opaque,green,maxChannel,counts,stable:d.every((v,i)=>v===d2[i]),depth:o.depth,interactive:!!o.input,body:!!o.body,rect:[o.x-o.displayWidth/2,o.y-o.displayHeight/2,o.displayWidth,o.displayHeight],expected:[0,L.top,L.width,L.fieldHeight]};
    });
    assert.equal(info.active,mode);assert.equal(info.pattern,!!mode);assert.equal(info.light,name==='light'||name==='grass-light');
-   assert.equal(info.actors,11);assert.equal(info.flowers,4);assert.ok(info.stones>20&&info.original);
+   assert.equal(info.actors,11);assert.equal(info.flowers,4);assert.ok(info.stones>20&&!info.original);
    if(mode){assert.ok((mode===6?info.green:info.neutral)&&info.opaque&&info.stable);assert.ok(info.maxChannel<=40);assert.ok(info.min>=13&&info.max<=40&&info.max>info.min);assert.ok(Object.keys(info.counts).length>=2);assert.equal(info.depth,-1.8);assert.ok(!info.interactive&&!info.body);assert.deepEqual(info.rect,info.expected);}
    const png=await page.screenshot({path:join(out,'bg-'+name+'.png')});
    // Check actual rendered pixels in an empty field patch, not just texture data.
@@ -69,3 +69,4 @@ try{
  }
 }finally{await browser.close();server.close();writeFileSync(join(out,'background-report.json'),JSON.stringify(report,null,2));}
 console.log('PASS '+report.length+' background browser configurations');
+

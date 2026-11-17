@@ -49,13 +49,13 @@ try{
  for(const [name,w,h,dpr,query] of [
   ['default',960,540,1,''],['fhd',1920,1080,1,''],['small',640,360,1,''],
   ['full-dpr2',960,540,2,'?flower=32&person=56&full=1&slots=36'],
-  ['light',960,540,1,'?uitype=1'],['palette16',960,540,1,'?svgcolors=palette16'],
+  ['light',960,540,1,'?uitype=1'],['original',960,540,1,'?svgcolors=original'],
   ['hidden',960,540,1,'?enemies=0'],['combat',960,540,1,'?combat=1']
  ]){
   const page=await browser.newPage({viewport:{width:w,height:h},deviceScaleFactor:dpr});
   const errors=[],failed=[],loaded=new Set();
   page.on('pageerror',e=>errors.push(String(e)));page.on('requestfailed',r=>failed.push(r.url()));
-  page.on('response',r=>{if(r.url().includes('/assets/enemies/')&&r.ok())loaded.add(new URL(r.url()).pathname)});
+  page.on('response',r=>{if(/\/assets\/(?:palette16\/)?enemies\//.test(r.url())&&r.ok())loaded.add(new URL(r.url()).pathname)});
   try{
    await page.goto(url+'/index.html'+query);
    await page.waitForFunction(()=>window.__previewGame?.scene.isActive('MainMenu'));
@@ -73,15 +73,14 @@ try{
     ctx.canvas.width=ctx.canvas.height=512;
     const anchors=s.cache.json.get('enemy-preview:anchors'),fm=s.cache.json.get('fairy:manifest');
     const original=!window.GardenSvgPalette.enabled,sharedAtlas=s.textures.get('fairy:eyes').getSourceImage();
-    let atlas=sharedAtlas;
-    if(!original){atlas=document.createElement('canvas');atlas.width=sharedAtlas.width;atlas.height=sharedAtlas.height;const ec=atlas.getContext('2d');ec.drawImage(sharedAtlas,0,0);ec.globalCompositeOperation='source-in';ec.fillStyle=window.GardenPalette.hex.ink;ec.fillRect(0,0,atlas.width,atlas.height);}
+    const atlas=sharedAtlas;
     const pix=(image)=>{if(image instanceof HTMLCanvasElement)return image.getContext('2d').getImageData(0,0,512,512).data;ctx.clearRect(0,0,512,512);ctx.drawImage(image,0,0);return ctx.getImageData(0,0,512,512).data;};
     const entries=c.entries.map(a=>{
      const base=s.textures.get('enemy-preview:'+a.id+':base').getSourceImage(),normal=pix(s.textures.get('enemy-preview:'+a.id+':normal').getSourceImage()),closed=pix(s.textures.get('enemy-preview:'+a.id+':closed').getSourceImage());
      const raw=pix(base),expected=[];
      for(const expression of ['normal','closed']){
       const pixels=new ImageData(new Uint8ClampedArray(raw),512,512);
-      ctx.putImageData(original?pixels:window.GardenSvgPalette.apply(pixels),0,0);
+      ctx.putImageData(pixels,0,0);
       const f=fm.sheets.eyes.frames[expression],w=f.width/2;
       for(const [i,side] of ['left','right'].entries()){
        const eye=anchors.characters[a.id].eyes[side],center=fm.sourceEyeCenters[side],z=512/1000;

@@ -6,7 +6,7 @@
   const expand=(r,x,y=x)=>({left:r.left-x,right:r.right+x,top:r.top-y,bottom:r.bottom+y});
   function preload(scene){
     for(const role of roles)if(!scene.textures.exists(key(role)))
-      scene.load.svg(key(role),'assets/pebbles/garden-pebble-'+role+'.svg',{width:assetSize,height:assetSize});
+      scene.load.svg(key(role),window.GardenSvgPalette.path('pebbles/garden-pebble-'+role+'.svg'),{width:assetSize,height:assetSize});
   }
   // Include full visible body, pivot rotation and lift, not transparent canvas.
   function layout(spec,garden,requestedHeight,gait,count){

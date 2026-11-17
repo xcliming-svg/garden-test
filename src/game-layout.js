@@ -72,7 +72,7 @@
   // assetKey와 suggestedFile은 이후 에셋 작업 시 참조할 식별자이다.
   const assets = Object.freeze({
     gardenTile: Object.freeze({ size: spec.garden.cell, assetKey: 'garden-tile', suggestedFile: 'assets/garden-tile.png' }),
-    guardian: Object.freeze({ size: 24, color: P.n.teal, assetKey: 'guardian', suggestedFile: 'assets/guardian.png' }),
+    guardian: Object.freeze({ size: 24, color: P.roles.n.teal, assetKey: 'guardian', suggestedFile: 'assets/guardian.png' }),
     enemy: Object.freeze({ size: unit * 2, color: P.n.red, assetKey: 'enemy', suggestedFile: 'assets/enemy.png' }),
     gem: Object.freeze({ size: unit, color: P.n.sky, assetKey: 'gem', suggestedFile: 'assets/gem.png' }),
     flower: Object.freeze({ size: iconSize, cardSize: spec.slots.size, dropSize: flowerDropSize, color: P.n.red, assetKey: 'flower', suggestedFile: 'assets/flower.png' }),
@@ -616,7 +616,7 @@
       stats.forEach(row => {
         const d = next[row.key] - current[row.key];
         row.value.setText(String(next[row.key]));
-        row.delta.setText(d ? signed(d) : '').setColor(d > 0 ? R.hex.green : d < 0 ? R.hex.red : colors.value)
+        row.delta.setText(d ? signed(d) : '').setColor(d > 0 ? R.hex.green : d < 0 ? R.hex.redText : colors.value)
           .setVisible(d !== 0);
         // 레이블 하단과 보석 하단, 모든 숫자의 가시 상단을 동일한 픽셀 행에 정렬한다.
         // 증감이 있을 때는 값과 증감 사이 2px를 두고 전체 행을 중앙 정렬한다.
@@ -641,7 +641,7 @@
     function effectRows(item, removed) {
       return statKeys.filter(key => item.stats[key]).map(key => ({
         value: statLabels[key] + ' ' + signed((removed ? -1 : 1) * item.stats[key]),
-        color: removed ? R.hex.red : R.hex.green
+        color: removed ? R.hex.redText : R.hex.green
       }));
     }
     function rebuildTooltip(key, rows) {

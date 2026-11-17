@@ -1,7 +1,7 @@
 (function () {
   'use strict';
-  // Original SVG colors are the default. The archived palette experiment is opt-in only.
-  const enabled=new URLSearchParams(window.location.search).get('svgcolors')==='palette16';
+  // Approved palette is default; original SVGs remain selectable.
+  const enabled=new URLSearchParams(window.location.search).get('svgcolors')!=='original';
   const path=relative=>'assets/'+(enabled?'palette16/':'')+relative;
   const rgb=Object.values(window.GardenPalette.n).map(n=>[n>>16&255,n>>8&255,n&255]);
   const cache=new Map();

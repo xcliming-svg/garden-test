@@ -35,7 +35,7 @@ const url='http://127.0.0.1:'+server.address().port;
 const browser=await chromium.launch({channel:'chrome',headless:true,args:['--no-sandbox','--disable-dev-shm-usage','--use-gl=angle','--use-angle=swiftshader','--enable-unsafe-swiftshader']});
 const report=[];
 try{
- for(const [w,h,dpr,query] of [[960,540,1,''],[1920,1080,1,'?uitype=1'],[960,540,2,'?flower=32&person=56&full=1&slots=36'],[960,540,1,'?flower=12&person=56'],[960,540,1,'?svgcolors=palette16']]){
+ for(const [w,h,dpr,query] of [[960,540,1,''],[1920,1080,1,'?uitype=1'],[960,540,2,'?flower=32&person=56&full=1&slots=36'],[960,540,1,'?flower=12&person=56'],[960,540,1,'?svgcolors=original']]){
   const page=await browser.newPage({viewport:{width:w,height:h},deviceScaleFactor:dpr});
   const errors=[],failed=[],loaded=new Set();
   page.on('response',r=>{if(/\/assets\/(?:palette16\/)?fairies\/[^/]+\.svg$/.test(r.url())&&r.ok())loaded.add(new URL(r.url()).pathname.slice(1));});
@@ -57,7 +57,7 @@ try{
      ctx.clearRect(0,0,512,512);ctx.drawImage(im,0,0);
      const data=ctx.getImageData(0,0,256,256).data;let left=256,right=-1,top=256,bottom=-1;const colors=new Set();
      for(let i=0;i<data.length;i+=4){if(data[i+3]<128)continue;const x=i/4%256,y=Math.floor(i/4/256);left=Math.min(left,x);right=Math.max(right,x);top=Math.min(top,y);bottom=Math.max(bottom,y);if(data[i+3]===255)colors.add((data[i]<<16)|(data[i+1]<<8)|data[i+2]);}
-     stoneStats[role]={left,right,top,bottom,colors:[...colors],expected:window.GardenPalette.n[role]};
+     stoneStats[role]={left,right,top,bottom,colors:[...colors],expected:window.GardenSvgPalette.enabled?window.GardenPalette.n.stone:role==='stone'?0x676777:0xB0ACBD};
     }
     for(const type of ['garden','water']){
      function pixels(k){ctx.clearRect(0,0,512,512);ctx.drawImage(s.textures.get(k).getSourceImage(),0,0);return ctx.getImageData(0,0,512,512).data;}
@@ -78,10 +78,10 @@ try{
       length:c.length,spacing:c.spacing,bounds:c.bounds,field:{top:L.spec.top,bottom:L.spec.height-L.spec.bottom},garden:L.spec.garden,
       flowers:s.flowerGrowth.entries.size,combat:!!s.combatPreview,status:s.children.getByName('fairy-patrol-status')?.text};
    });
-   const original=!query.includes('svgcolors=palette16');
+   const original=query.includes('svgcolors=original');
    assert.equal(initial.paletteEnabled,!original);
    const prefix='assets/'+(original?'':'palette16/')+'fairies/';
-   assert.deepEqual([...loaded].sort(),[...['eyes.svg','garden.svg','water.svg'].map(n=>prefix+n),'assets/fairies/tears.svg'].sort());
+   assert.deepEqual([...loaded].sort(),['eyes.svg','garden.svg','water.svg','tears.svg'].map(n=>prefix+n).sort());
    for(const v of Object.values(initial.stats))if(!original)assert.ok(v.opaque>0&&v.offPalette<=v.opaque*.05,JSON.stringify(v));
    if(original)assert.ok(Object.values(initial.stats).every(v=>v.offPalette>0));
    assert.deepEqual(initial.counts,['garden',...Array(10).fill('water')]);

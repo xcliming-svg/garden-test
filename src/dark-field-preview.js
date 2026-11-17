@@ -6,7 +6,7 @@
   // Night grass is the approved default; explicit 0 retains the plain black comparison.
   const type=/^[0-6]$/.test(raw||'')?Number(raw):6;
   const active=P.uiType===0?type:0;
-  const base=P.n.ink,neutral=P.n.paper;
+  const base=P.roles.n.ink,neutral=P.n.paper;
   const color=(t,target=neutral)=>{
     const channel=shift=>Math.round(((base>>shift)&255)*(1-t)+((target>>shift)&255)*t);
     return '#'+((channel(16)<<16)|(channel(8)<<8)|channel(0)).toString(16).padStart(6,'0');

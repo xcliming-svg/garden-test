@@ -51,7 +51,7 @@ try{
      if(a!==0&&a!==255)invalid++;
      if(!a)continue;
      const color=(p[i]<<16)|(p[i+1]<<8)|p[i+2];colors.add(color);
-     if(color===0xf46c7c){pinkLeft=Math.min(pinkLeft,x);pinkRight=Math.max(pinkRight,x);pinkTop=Math.min(pinkTop,y);pinkBottom=Math.max(pinkBottom,y);}
+     if(color===0xfb575f){pinkLeft=Math.min(pinkLeft,x);pinkRight=Math.max(pinkRight,x);pinkTop=Math.min(pinkTop,y);pinkBottom=Math.max(pinkBottom,y);}
      left=Math.min(left,x);right=Math.max(right,x);top=Math.min(top,y);bottom=Math.max(bottom,y);
     }
     return {key:t.key,w:o.displayWidth,h:o.displayHeight,visibleW:right-left+1,visibleH:bottom-top+1,
@@ -77,7 +77,7 @@ try{
    assert.equal(art.w,Math.round(size*0.75));assert.equal(art.h,size);
    if(walkType)assert.ok(art.visibleW<=art.w&&art.visibleW>=art.w-3&&art.visibleH===art.h);
    else assert.deepEqual([art.visibleW,art.visibleH],[art.w,art.h]);
-   assert.deepEqual(art.colors,[0x51516b,0x6aba2c,0x7c4c24,0xe9d0ab,0xf46c7c]);assert.equal(art.invalid,0);
+   assert.deepEqual(art.colors,[0x4e352e,0x706975,0x84a83e,0xf5d3a5,0xfb575f]);assert.equal(art.invalid,0);
    const border=await page.evaluate(()=>{
     const scene=window.__previewGame.scene.getScene('Game'),c=scene.combatPreview,L=window.GardenGameLayout,S=window.GardenDashedGridPreview;
     const p=scene.children.getByName('placeholder:guardian:0'),info=S.geometry(L.spec,c.model.occupied,p.displayWidth,p.displayHeight);
@@ -102,8 +102,8 @@ try{
      return {type:P.uiType,field:L.colors.field,hud:L.colors.hud,texture:true,colors:used.size,
        width:t.width,height:t.height,valid:[...used].every(c=>window.GardenLightFieldPreview.grass.includes(c))};
    });
-   assert.equal(theme.type,light?1:0);assert.equal(theme.field,light?0x83a650:0x0d0d0d);
-   assert.equal(theme.hud,light?0xe2b66f:0x161619);assert.equal(theme.texture,light);
+   assert.equal(theme.type,light?1:0);assert.equal(theme.field,light?0x83a650:0x0d0d0e);
+   assert.equal(theme.hud,light?0xe2b66f:0x16161a);assert.equal(theme.texture,light);
    if(light)assert.ok(theme.colors===7&&theme.valid&&theme.width===960&&theme.height===468);
    const gridCheck=await page.evaluate(()=>{
      const scene=window.__previewGame.scene.getScene('Game'),c=scene.combatPreview,L=window.GardenGameLayout,g=L.spec.garden,G=window.GardenDashedGridPreview;
@@ -188,7 +188,7 @@ try{
       // The approved default is night grass; explicit bgtype=0 is still black.
       const scene=window.__previewGame.scene.getScene('Game');
       const bg=scene.children.getByName('dark-field-pattern');
-      const fieldColors=new Set([0x0d0d0d]);
+      const fieldColors=new Set([0x0d0d0e]);
       if(bg){const im=bg.texture.getSourceImage(),d=im.getContext('2d').getImageData(0,0,im.width,im.height).data;
         for(let i=0;i<d.length;i+=4)fieldColors.add((d[i]<<16)|(d[i+1]<<8)|d[i+2]);}
       let dash=0,gap=0,wrong=0;
@@ -200,7 +200,7 @@ try{
       // The previous decorative palette (green, teal, slate and stone) must not appear.
       const spec=window.GardenGameLayout.spec,bp=spec.blueprint;
       let background=0,decorPixels=0;
-      const forbidden=new Set([0x6aba2c,0x0c9484,0x51516b,0x676777,0x3b3b4e]);
+      const forbidden=new Set([0x84a83e,0x6794d8,0x535361,0x706975,0x3b3a44]);
       for(let y=(spec.top+30)*2;y<(spec.height-spec.bottom-12)*2;y++){
         for(let x=24;x<(spec.width-12)*2;x++){
           const lx=x/2,ly=y/2;
@@ -237,7 +237,7 @@ try{
       for(let x=Math.floor(art.x*2-65);x<=Math.ceil(art.x*2+65);x++){
        const i=(y*cv.width+x)*4,c=(p[i]<<16)|(p[i+1]<<8)|p[i+2];
        // Pink isolates the guardian from the new slate grid behind it.
-       if(c!==0xf46c7c)continue;
+       if(c!==0xfb575f)continue;
        pink++;
        left=Math.min(left,x);right=Math.max(right,x);top=Math.min(top,y);bottom=Math.max(bottom,y);
       }
@@ -322,7 +322,7 @@ try{
     const s=c.state;
     const colors=scene.textures.get('combat:ball').getContext().getImageData(0,0,8,8).data;
     let gold=0,rim=0;
-    for(let i=0;i<colors.length;i+=4){if(colors[i+3]===255){const v=(colors[i]<<16)|(colors[i+1]<<8)|colors[i+2];if(v===0xf4b404)gold++;if(v===0x51516b)rim++;}}
+    for(let i=0;i<colors.length;i+=4){if(colors[i+3]===255){const v=(colors[i]<<16)|(colors[i+1]<<8)|colors[i+2];if(v===0xf6bb48)gold++;if(v===0x535361)rim++;}}
     return {gaps,start,end:{kills:s.kills,rate:s.rate,spawned:s.spawned,arrived:s.arrived,live:s.enemies.length,gems:s.gems,shots:s.shotsFired,balls:s.ballCount},
       flowers:scene.children.list.filter(o=>o.name?.startsWith('garden-preview-flower:')).length,
       equipped:[0,1].every(i=>scene.children.getByName('preview-equipped:'+i).visible),
@@ -397,3 +397,4 @@ try{
 }finally{await browser.close();server.close();writeFileSync(join(out,'projectile-loot-report.json'),JSON.stringify(report,null,2));}
 function Lformat(n){return String(n).replace(/\B(?=(\d{3})+(?!\d))/g,',');}
 console.log('PASS: '+report.length+' real browser configurations, actual pointer drags and radial projectile combat');
+

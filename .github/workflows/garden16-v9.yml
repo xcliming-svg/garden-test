@@ -1,0 +1,28 @@
+name: Garden 16 v9 verification
+on:
+  push:
+    branches: [feature/garden16-v9, devel, main]
+  pull_request:
+    branches: [devel, main]
+permissions:
+  contents: read
+jobs:
+  palette:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v6
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - run: node scripts/recolor-svg.mjs
+      - run: for file in src/*.js tests/garden16-v9.mjs; do node --check "$file"; done
+      - run: npm install --no-save --package-lock=false playwright@1.51.1 phaser@3.90.0
+        env:
+          PLAYWRIGHT_SKIP_BROWSER_DOWNLOAD: '1'
+      - run: node tests/garden16-v9.mjs
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: garden16-v9
+          path: benchmark-results

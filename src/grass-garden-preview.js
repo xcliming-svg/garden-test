@@ -1,7 +1,7 @@
 (function(){
   'use strict';
   // Derived tints of the existing Garden 16 ink and growth roles.
-  const P=window.GardenPalette.n;
+  const P=window.GardenPalette.roles.n;
   function tint(t){
     return [16,8,0].reduce((n,s)=>n|(Math.round(((P.ink>>s)&255)*(1-t)+((P.growth>>s)&255)*t)<<s),0);
   }

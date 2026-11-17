@@ -1,6 +1,6 @@
 (function(){
   'use strict';
-  const P=window.GardenPalette.n;
+  const P=window.GardenPalette.roles.n;
   const colors=Object.freeze({base:P.slate,active:P.growth});
   const all=g=>new Set(Array.from({length:g.columns*g.rows},(_,i)=>i));
   const visible=(occupied,candidates)=>new Set([...occupied,...candidates]);

@@ -1,6 +1,6 @@
 (function(){
   'use strict';
-  const P=window.GardenPalette.n;
+  const P=window.GardenPalette.roles.n;
   // Fixed seeded placement, independent of combat RNG, no collision or input.
   function layout(spec){
     let seed=0x4da19e27;

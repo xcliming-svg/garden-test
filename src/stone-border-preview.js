@@ -31,7 +31,7 @@
     return rects;
   }
   function draw(graphics,info){
-    const P=window.GardenPalette.n;
+    const P=window.GardenPalette.roles.n;
     graphics.clear();
     // 1px slate outline, stone/panel faces, a short slate/stone highlight.
     // Shared tile bounds, inset corner pixels create discrete little stone blocks.

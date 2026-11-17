@@ -27,7 +27,7 @@
     for(const type of types)if(!scene.textures.exists(baseKey(type)))
       scene.load.svg(baseKey(type),window.GardenSvgPalette.path('fairies/'+type+'.svg'),{width:size,height:size});
     if(!scene.textures.exists(atlas))scene.load.svg(atlas,window.GardenSvgPalette.path('fairies/eyes.svg'),{width:1792,height:256});
-    if(!scene.textures.exists(tearsAtlas))scene.load.svg(tearsAtlas,'assets/fairies/tears.svg',{width:256,height:256});
+    if(!scene.textures.exists(tearsAtlas))scene.load.svg(tearsAtlas,window.GardenSvgPalette.path('fairies/tears.svg'),{width:256,height:256});
   }
   function install(scene){
     const m=scene.cache.json.get(manifestKey),eyeImage=scene.textures.get(atlas).getSourceImage();

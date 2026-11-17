@@ -1,34 +1,28 @@
-// Generate/check Garden 16 vector copies; never rewrite originals.
-import {readFileSync,writeFileSync,readdirSync,mkdirSync} from 'node:fs';
+// Generate and verify approved Garden 16 vector copies without changing originals.
+import {readFileSync,writeFileSync,mkdirSync} from 'node:fs';
 import {dirname,join} from 'node:path';
 import {runInNewContext} from 'node:vm';
 import assert from 'node:assert/strict';
-const read=p=>readFileSync(p,'utf8').replace(/\r\n/g,'\n');
+const read=p=>readFileSync(p,'utf8').replace(/\r\n/g,'\n').trimEnd()+'\n';
 const window={location:{search:''}};
 runInNewContext(read('src/palette.js'),{window,URLSearchParams});
 const palette=window.GardenPalette.hex;
 const roles=JSON.parse(read('scripts/svg-palette-roles.json'));
-const files=[
- ...readdirSync('assets/flowers').filter(n=>n.endsWith('.svg')).map(n=>'flowers/'+n),
- ...readdirSync('assets/fairies').filter(n=>n.endsWith('.svg')).map(n=>'fairies/'+n),
- 'caterpillar-preview.svg'
-];
-assert.equal(files.length,29);
-const paint=/\b(fill|stroke)="(#[\da-fA-F]{6})"/g;
-const used=new Set();
-for(const f of files){
- const original=read(join('assets',f));
+const paint=/\b(fill|stroke|stop-color)="(#[\da-fA-F]{6})"/g;
+assert.equal(Object.keys(roles).length,43);
+assert.equal(new Set(Object.values(palette)).size,16);
+for(const [f,sequence] of Object.entries(roles)){
+ const original=read(join('assets',f));let i=0;
  const converted=original.replace(paint,(match,attribute,color)=>{
-  const role=roles[color.toUpperCase()];
-  assert.ok(role&&palette[role],f+' unknown color '+color);
-  used.add(color.toUpperCase());
-  return attribute+'="'+palette[role]+'"';
+  const entry=sequence[i++];assert.ok(entry&&entry[0]===color.toUpperCase(),f+' source paint mismatch '+color);
+  assert.ok(palette[entry[1]],f+' unknown role '+entry[1]);
+  return attribute+'="'+palette[entry[1]]+'"';
  });
+ assert.equal(i,sequence.length,f+' paint count');
  const target=join('assets/palette16',f);
  if(process.argv.includes('--write')){mkdirSync(dirname(target),{recursive:true});writeFileSync(target,converted);}
- assert.equal(read(target),converted,f+' must match the generated palette copy');
+ assert.equal(read(target),converted,f+' must match generated palette copy');
  assert.equal(original.replace(paint,'$1="COLOR"'),converted.replace(paint,'$1="COLOR"'),f+' geometry changed');
  for(const m of converted.matchAll(paint))assert.ok(Object.values(palette).includes(m[2]),f);
 }
-assert.deepEqual([...used].sort(),Object.keys(roles).sort());
-console.log('PASS 29 original SVGs; only fill/stroke colors changed in copies');
+console.log('PASS 43 original SVGs; only paint colors changed in generated copies');

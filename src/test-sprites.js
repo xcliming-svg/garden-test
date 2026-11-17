@@ -63,12 +63,12 @@
   const key = (name, size) => 'ui-test:' + name + ':' + size;
   // 원본 픽셀 인덱스/알파는 보존하고 실제 게임 색은 Garden 16 소재 역할을 사용한다.
   const materialRoles = Object.freeze({
-    'daisy:12': [null,'sand','gold','growth'], 'daisy:16': [null,'sand','gold','growth'],
-    'tulip:12': [null,'red','red','red','growth','growth'], 'tulip:16': [null,'red','red','red','growth','growth'],
+    'daisy:12': [null,'paper','gold','growth'], 'daisy:16': [null,'paper','gold','growth'],
+    'tulip:12': [null,'pink','pink','pink','growth','growth'], 'tulip:16': [null,'pink','pink','pink','growth','growth'],
     'sunflower:12': [null,'gold','gold','gold','bark','growth','growth'],
     'sunflower:16': [null,'gold','gold','gold','bark','gold','growth','growth'],
-    'hydrangea:12': [null,'sky','sky','silver','silver','growth','sky'],
-    'hydrangea:16': [null,'sky','sky','silver','silver','growth','sky'],
+    'hydrangea:12': [null,'sky','skyLight','paper','paper','growth','skyLight'],
+    'hydrangea:16': [null,'sky','skyLight','paper','paper','growth','skyLight'],
     'snail:12': [null,'clay','clay','clay','clay','sand','sand','sand','sand','sand','clay','sand','sand','bark','bark','sand'],
     'snail:16': [null,'clay','clay','clay','clay','sand','sand','sand','sand','sand','clay','sand','sand','bark','bark','sand'],
     'wheelbarrow:16': [null,'clay','bark','slate']
@@ -82,7 +82,7 @@
       const index = parseInt(pixels[i], 16), source = palette[index];
       const role = materialRoles[name + ':' + size]?.[index];
       if (!original && index && !role) throw new Error('Missing material role: '+name+':'+size+':'+index);
-      const rgba = !original && role ? window.GardenPalette.hex[role].slice(1) + source.slice(6) : source;
+      const rgba = !original && role ? window.GardenPalette.art.hex[role].slice(1) + source.slice(6) : source;
       for (let c = 0; c < 4; c++) data[i * 4 + c] = parseInt(rgba.slice(c * 2, c * 2 + 2), 16);
     }
     return data;

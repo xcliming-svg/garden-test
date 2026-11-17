@@ -63,7 +63,7 @@
       for (let i=0;i<display.length;i++) {
         const index=Number(display[i]);
         if (!index) continue;
-        const color = window.GardenPalette.n[index===9?'ink':roles[index]];
+        const color = window.GardenPalette.art.n[index===9?'ink':roles[index]];
         if (color===undefined) throw new Error('Invalid palette role: '+index);
         image.data.set([(color>>16)&255,(color>>8)&255,color&255,255],i*4);
       }
@@ -125,7 +125,7 @@
     for(let y=0;y<h;y++)for(let x=0;x<w;x++){
       const index=Number(guardianRows[Math.floor((y+0.5)*40/h)][Math.floor((x+0.5)*30/w)]);
       if(!index)continue;
-      const c=window.GardenPalette.n[guardianRoles[index]];
+      const c=window.GardenPalette.art.n[guardianRoles[index]];
       image.data.set([(c>>16)&255,(c>>8)&255,c&255,255],(y*w+x)*4);
     }
     ctx.putImageData(image,0,0);texture.refresh();texture.setFilter(Phaser.Textures.FilterMode.NEAREST);
@@ -140,7 +140,7 @@
     const ctx=texture.getContext(),image=ctx.createImageData(enemySize,enemySize);
     for(let i=0;i<pixels.length;i++){
       if(pixels[i]==='0') continue;
-      const c=window.GardenPalette.n[pixels[i]==='1'?'growth':'slate'];
+      const c=window.GardenPalette.art.n[pixels[i]==='1'?'growth':'slate'];
       image.data.set([(c>>16)&255,(c>>8)&255,c&255,255],i*4);
     }
     ctx.putImageData(image,0,0);texture.refresh();

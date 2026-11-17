@@ -29,7 +29,7 @@
     return rects;
   }
   function draw(graphics,info){
-    const P=window.GardenPalette.n;
+    const P=window.GardenPalette.roles.n;
     graphics.clear();
     for(const r of rectangles(info)){
       // Muted solid colors from the existing palette; not a raised barrier.

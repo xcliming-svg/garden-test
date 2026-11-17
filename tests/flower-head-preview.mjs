@@ -62,7 +62,7 @@ try{
     const sprites=[...new Set(flowers.map(o=>o.texture.key)),guardian.texture.key].map(key=>{
      const t=s.textures.get(key),w=t.width,h=t.height,p=t.getContext().getImageData(0,0,w,h).data;
      let left=w,right=-1,top=h,bottom=-1,valid=true,outline=0,unoutlined=0;
-     const ink=window.GardenPalette.n.ink;
+     const ink=window.GardenPalette.art.n.ink;
      const pixel=(x,y)=>{const i=(y*w+x)*4;return x<0||y<0||x>=w||y>=h||!p[i+3]?-1:(p[i]<<16)|(p[i+1]<<8)|p[i+2];};
      for(let y=0;y<h;y++)for(let x=0;x<w;x++){
       const i=(y*w+x)*4,a=p[i+3]; if(a!==0&&a!==255)valid=false;
@@ -85,8 +85,8 @@ try{
     for(let y=0;y<32;y++)for(let x=0;x<32;x++){
      const i=(y*32+x)*4,a=ep[i+3],c=(ep[i]<<16)|(ep[i+1]<<8)|ep[i+2];
      if(a===0)continue;
-     if(a!==255||![0x6aba2c,0x0d0d0d].includes(c))valid=false;
-     if(c===0x6aba2c)green++;else inkCount++;
+     if(a!==255||![0x84a83e,0x4e352e].includes(c))valid=false;
+     if(c===0x84a83e)green++;else inkCount++;
      left=Math.min(left,x);right=Math.max(right,x);top=Math.min(top,y);bottom=Math.max(bottom,y);
     }
     return {g,z,seamColors,enemyBounds:{w:right-left+1,h:bottom-top+1,green,inkCount,valid},enemies:enemies.map(o=>({x:o.x,y:o.y,w:o.displayWidth,h:o.displayHeight,flip:o.flipX,key:o.texture.key})),count:flowers.length,markers:list.filter(o=>o.name?.startsWith('placeholder:')).map(o=>o.name),
@@ -102,7 +102,7 @@ try{
    assert.equal(state.g.cell,cell);assert.ok(state.centers);assert.equal(state.sprites.length,5);
    assert.ok(state.sprites.every(t=>t.valid&&t.extent<=t.w&&t.extent>=t.w-2&&t.w===t.h),JSON.stringify(state.sprites));
    assert.ok(state.sprites.filter(t=>!t.key.includes('guardian')).every(t=>t.outline>0&&t.unoutlined===0),JSON.stringify(state.sprites));
-   assert.ok(state.seamColors.every(c=>c.join(',')==='22,22,25,255'),JSON.stringify(state.seamColors));
+   assert.ok(state.seamColors.every(c=>c.join(',')==='22,22,26,255'),JSON.stringify(state.seamColors));
    const person=Number(new URLSearchParams(query).get('person')||44);
    assert.deepEqual(state.corner,[0,0,0,0]);assert.equal(state.guardian.w,person);assert.equal(state.guardian.h,person);
    assert.ok(state.guardian.y-person/2>=32&&state.guardian.y+person/2<=500,JSON.stringify(state.guardian));
@@ -118,27 +118,27 @@ try{
      const pixel=(x,y)=>{const i=(y*cv.width+x)*4;return (p[i]<<16)|(p[i+1]<<8)|p[i+2];};
      let seams=0,wrongSeams=0,outline=0,wrongOutline=0;
      for(let i=1;i<g.columns;i++)for(let y=(g.y+1)*z;y<(g.y+g.size-1)*z;y++){
-      const x=(g.x+i*g.pitch)*z;seams++;if(pixel(x,y)!==0x161619)wrongSeams++;
+      const x=(g.x+i*g.pitch)*z;seams++;if(pixel(x,y)!==0x16161a)wrongSeams++;
      }
      for(let i=1;i<g.rows;i++)for(let x=(g.x+1)*z;x<(g.x+g.size-1)*z;x++){
-      const y=(g.y+i*g.pitch)*z;seams++;if(pixel(x,y)!==0x161619)wrongSeams++;
+      const y=(g.y+i*g.pitch)*z;seams++;if(pixel(x,y)!==0x16161a)wrongSeams++;
      }
      for(const o of s.children.list.filter(o=>o.name?.startsWith('garden-preview-flower:'))){
       const t=o.texture,n=t.width,bytes=t.getContext().getImageData(0,0,n,n).data;
       for(let y=0;y<n;y++)for(let x=0;x<n;x++){
-       const i=(y*n+x)*4;if(bytes[i+3]!==255||((bytes[i]<<16)|(bytes[i+1]<<8)|bytes[i+2])!==0x0d0d0d)continue;
-       outline++;if(pixel(Math.round((o.x-n/2+x)*z),Math.round((o.y-n/2+y)*z))!==0x0d0d0d)wrongOutline++;
+       const i=(y*n+x)*4;if(bytes[i+3]!==255||((bytes[i]<<16)|(bytes[i+1]<<8)|bytes[i+2])!==0x4e352e)continue;
+       outline++;if(pixel(Math.round((o.x-n/2+x)*z),Math.round((o.y-n/2+y)*z))!==0x4e352e)wrongOutline++;
       }
      }
      // Measure visible teal pixels in the real screenshot, independently of display size.
      let left=cv.width,right=-1,top=cv.height,bottom=-1;
-     for(let y=0;y<cv.height;y++)for(let x=0;x<cv.width;x++)if(pixel(x,y)===0x0c9484){
+     for(let y=0;y<cv.height;y++)for(let x=0;x<cv.width;x++)if(pixel(x,y)===0x6794d8){
       left=Math.min(left,x);right=Math.max(right,x);top=Math.min(top,y);bottom=Math.max(bottom,y);
      }
      const enemies=s.children.list.filter(o=>o.name?.startsWith('placeholder:enemy:caterpillar:')).map(o=>{
       let l=cv.width,r=-1,t=cv.height,b=-1;
       for(let y=Math.floor((o.y-16)*z);y<Math.ceil((o.y+16)*z);y++)
-       for(let x=Math.floor((o.x-16)*z);x<Math.ceil((o.x+16)*z);x++)if(pixel(x,y)===0x6aba2c){
+       for(let x=Math.floor((o.x-16)*z);x<Math.ceil((o.x+16)*z);x++)if(pixel(x,y)===0x84a83e){
         l=Math.min(l,x);r=Math.max(r,x);t=Math.min(t,y);b=Math.max(b,y);
        }
       return {w:r-l+1,h:b-t+1};

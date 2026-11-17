@@ -27,7 +27,7 @@ const browser=await chromium.launch({channel:'chrome',headless:true,args:['--no-
 const expected=[[1,100],[2,100],[3,100],[3,66],[3,33],[2,100],[2,66],[2,33],[1,100],[1,66],[1,33]];
 const report=[];
 try{
- for(const [w,h,dpr,query] of [[960,540,1,''],[1920,1080,1,'?flower=32&personstyle=3'],[960,540,2,'?uitype=1&personstyle=3'],[960,540,1,'?svgcolors=palette16']]){
+ for(const [w,h,dpr,query] of [[960,540,1,''],[1920,1080,1,'?flower=32&personstyle=3'],[960,540,2,'?uitype=1&personstyle=3'],[960,540,1,'?svgcolors=original']]){
   const page=await browser.newPage({viewport:{width:w,height:h},deviceScaleFactor:dpr});
   const errors=[],failed=[],loaded=new Set();
   page.on('pageerror',e=>errors.push(String(e)));
@@ -61,7 +61,7 @@ try{
    assert.ok(first.entries.every(e=>e[4]===.5&&e[5]===.856&&Math.abs(e[6]-first.cell/.85)<1e-8));
    assert.equal(first.period,55);assert.equal(first.maxStage,3);
    assert.equal(first.tex.length,54);assert.equal(loaded.size,18);
-   const original=!query.includes('svgcolors=palette16');
+   const original=query.includes('svgcolors=original');
    assert.equal(first.paletteEnabled,!original);
    const expectedPaths=first.names.flatMap((n,i)=>[2,3,4].map(stage=>'assets/'+(original?'':'palette16/')+'flowers/0'+(i+1)+'_'+n+'_0'+stage+'.svg'));
    assert.deepEqual(first.paths,expectedPaths);

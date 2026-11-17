@@ -1,6 +1,6 @@
 (function(){
   'use strict';
-  const P=window.GardenPalette.n,U=window.GardenUI;
+  const P=window.GardenPalette.roles.n,U=window.GardenUI;
   function installBall(scene){
     if(scene.textures.exists('combat:ball'))return;
     const n=8,t=scene.textures.createCanvas('combat:ball',n,n),ctx=t.getContext(),im=ctx.createImageData(n,n);

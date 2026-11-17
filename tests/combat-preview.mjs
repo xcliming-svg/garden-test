@@ -37,7 +37,7 @@ try{
    await page.waitForFunction(()=>window.__previewGame.scene.getScene('Game').combatPreview.state.elapsed>0.8);
    const result=await page.evaluate(()=>{
     const scene=window.__previewGame.scene.getScene('Game'),c=scene.combatPreview,s=c.state,
-      spec=window.GardenGameLayout.spec,g=spec.garden,P=window.GardenPalette.n;
+      spec=window.GardenGameLayout.spec,g=spec.garden,P=window.GardenPalette.roles.n;
     const list=scene.children.list,person=scene.children.getByName('placeholder:guardian:0'),soil=scene.children.getByName('garden-preview-soil');
     const p=soil.texture.getContext().getImageData(0,0,soil.texture.width,soil.texture.height).data;
     let soilGood=true;
@@ -113,10 +113,10 @@ try{
       const spec=window.GardenGameLayout.spec,g=spec.garden;
       let green=0,teal=0,rim=0,soil=0,hudGreen=0;
       for(let y=64;y<1000;y++)for(let x=0;x<cv.width;x++){
-       const c=color(x,y);if(c===0x6aba2c)green++;if(c===0x0c9484)teal++;if(c===0x51516b)rim++;
+       const c=color(x,y);if(c===0x84a83e)green++;if(c===0x6794d8)teal++;if(c===0x535361)rim++;
       }
-      for(let x=g.x*2;x<(g.x+g.size)*2;x++)if(color(x,g.y*2)===0x161619)soil++;
-      for(let y=1000;y<cv.height;y++)for(let x=0;x<cv.width;x++)if(color(x,y)===0x6aba2c)hudGreen++;
+      for(let x=g.x*2;x<(g.x+g.size)*2;x++)if(color(x,g.y*2)===0x16161a)soil++;
+      for(let y=1000;y<cv.height;y++)for(let x=0;x<cv.width;x++)if(color(x,y)===0xc3d968)hudGreen++;
       return {green,teal,rim,soil,hudGreen};
     },png.toString('base64'));
     assert.ok(pixels.green>0&&pixels.teal>0&&pixels.rim>0&&pixels.soil>0&&pixels.hudGreen===0,JSON.stringify(pixels));
