@@ -171,12 +171,12 @@
       texture.refresh();texture.setFilter(Phaser.Textures.FilterMode.NEAREST);
     }
     function center(i){return {x:g.x+(i%g.columns)*g.pitch+g.line+g.cell/2,y:g.y+Math.floor(i/g.columns)*g.pitch+g.line+g.cell/2};}
-    const G=window.GardenFlowerGrowth, growth=G.enabled?G.attach(scene,g):null;
+    const G=window.GardenFlowerGrowth, growth=G.enabled?G.attach(scene,g,fairy):null;
     const types=growth?G.names:flowers;
     function addFlower(i,name,born=0){
       const p=center(i);
       if(growth)growth.plant(i,name,p,born);
-      else scene.add.image(p.x,p.y,key(name,g.cell)).setDisplaySize(g.cell,g.cell).setDepth(1).setName('garden-preview-flower:'+i);
+      else scene.add.image(p.x,p.y,fairy?window.GardenClarityPreview.flowerTexture(scene,key(name,g.cell)):key(name,g.cell)).setDisplaySize(g.cell,g.cell).setDepth(1).setName('garden-preview-flower:'+i);
     }
     [...occupied].forEach((i,n)=>addFlower(i,types[n%types.length]));
     function clampedBounds(keys){return geometry(keys).patrol;}
