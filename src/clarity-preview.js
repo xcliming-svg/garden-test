@@ -10,6 +10,7 @@
   }
   const config=Object.freeze({preset,enemyTone:flag('enemyTone'),fairyOutline:flag('fairyOutline'),
     ySort:flag('ySort'),heroMarker:flag('heroMarker'),flowerFocus:flag('flowerFocus'),heroOcclusion:flag('heroOcclusion'),
+    waterOcclusion:params.get('waterOcclusion')==='1',flowerOcclusion:params.get('flowerOcclusion')==='1',
     occlusionAlpha:percent('occlusionAlpha',.50),
     brightness:percent('enemyBrightness',.90),saturation:percent('enemySaturation',.75)});
   const toneKey=k=>'clarity:tone:'+k;
@@ -61,7 +62,10 @@
   function silhouette(texture){
     if(silhouettes.has(texture))return silhouettes.get(texture);
     const src=texture.getSourceImage(),w=src.width,h=src.height;
-    const rgba=src.getContext('2d').getImageData(0,0,w,h).data,mask=new Uint8Array(w*h);
+    // Healthy SVG flowers may be HTMLImageElements, unlike composited enemies.
+    const canvas=typeof src.getContext==='function'?src:document.createElement('canvas');
+    if(canvas!==src){canvas.width=w;canvas.height=h;canvas.getContext('2d').drawImage(src,0,0);}
+    const rgba=canvas.getContext('2d').getImageData(0,0,w,h).data,mask=new Uint8Array(w*h);
     let l=w,t=h,r=0,b=0;
     for(let i=0;i<mask.length;i++)if(rgba[i*4+3]>=128){
       mask[i]=1;const x=i%w,y=Math.floor(i/w);
@@ -102,6 +106,24 @@
     if(!config.heroOcclusion||!hero||image.depth<=hero.depth)return 1;
     return coversHero(hero,occlusionShape(image))?config.occlusionAlpha:1;
   }
+  // Resolve visible protected targets once per frame. Flower stages and newly
+  // planted flowers use the current texture, with the same cached alpha masks.
+  function occlusionTargets(scene,patrol){
+    const targets=[];
+    const add=image=>{if(image&&image.visible&&image.active&&image.alpha>0)targets.push(occlusionShape(image));};
+    if(config.heroOcclusion)add(patrol.actors[0]?.image);
+    if(config.waterOcclusion)for(const a of patrol.actors.slice(1))add(a.image);
+    if(config.flowerOcclusion){
+      if(scene.flowerGrowth)for(const f of scene.flowerGrowth.entries.values())add(f.image);
+      else for(const image of scene.children.list)if(image.name?.startsWith('garden-preview-flower:'))add(image);
+    }
+    return targets;
+  }
+  function protectedEnemyAlpha(targets,image){
+    if(!targets.length)return 1;
+    const enemy=occlusionShape(image);
+    return targets.some(target=>coversHero(target,enemy))?config.occlusionAlpha:1;
+  }
   function gardenFocus(scene,spec,occupied){
     if(!config.flowerFocus)return null;
     const gfx=scene.add.graphics().setDepth(.8).setName('clarity:flower-focus');
@@ -122,5 +144,5 @@
       gfx.setPosition(hero.image.x,Math.max(spec.top+2,hero.image.y-hero.visibleHeight-7));
     }};
   }
-  window.GardenClarityPreview=Object.freeze({config,tonePixels,toneKey,enemyTexture,fairyTexture,enemyDepth,fairyDepth,gardenFocus,heroMarker,occlusionShape,coversHero,heroEnemyAlpha});
+  window.GardenClarityPreview=Object.freeze({config,tonePixels,toneKey,enemyTexture,fairyTexture,enemyDepth,fairyDepth,gardenFocus,heroMarker,occlusionShape,coversHero,heroEnemyAlpha,occlusionTargets,protectedEnemyAlpha});
 }());
