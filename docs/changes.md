@@ -1,5 +1,9 @@
 # 시스템별 변경 이력
 
+## 2026-11-17 — devel 그림자 대비 개선
+
+- 기존 검정 타원은 어두운 필드에서 요정 그림자 최대 RGB 차이 25/255로 약했다([이전 Chromium 검사](https://github.com/xcliming-svg/garden-test/actions/runs/44082513697)). 기본을 채워진 부드러운 stone 회색 접지 타원으로 변경, 폭×1.25/높이×1.5/발 위치+3px, 밝은 테마 갈색 암영 유지. `shadowStyle=dark` 이전 비교, ON/OFF·군집·몸체·이동 불변. [규격](./enemy-preview.md#devel-발밑-그림자).
+
 ## 2026-11-17 — devel 적·요정 발밑 그림자
 
 - 기존 적 그림자 대비 강화, 주인공·물 요정 11명 추가. 공통 바닥 고정 타원, 점프 시 폭/알파 감소, 어두운/밝은 테마의 그림자 대비 분리. 기본 ON, `shadows=0` 전체 OFF, `enemyShadow`, `fairyShadow` 개별 0/1. 원본 SVG·몸체·군집 밀도·200마리 상한·가림 방지·기존 전투 변경 없음. [규격](./enemy-preview.md#devel-발밑-그림자).
