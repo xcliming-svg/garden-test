@@ -51,6 +51,7 @@ try{
   ['attack-default',''],['attack-full','?full=1'],['attack-fairy-front','?occlusion=fairy'],['attack-full-fairy-front','?full=1&occlusion=fairy']
  ]){
   const page=await browser.newPage({viewport:{width:960,height:540}});
+  page.setDefaultTimeout(20000);
   const errors=[];page.on('pageerror',e=>errors.push(String(e)));page.on('requestfailed',r=>errors.push(r.url()));
   try{
    await page.addInitScript(()=>{let seed=42;Math.random=()=>{seed=(Math.imul(seed,1664525)+1013904223)>>>0;return seed/4294967296;};});
@@ -111,14 +112,16 @@ try{
    });
    combat.checks+=result;
    assert.equal(combat.flowers,name.includes('full')?100:4);
-   await page.screenshot({path:join(out,name+'.png'),scale:'device'});
+   console.log('ATTACK combat passed',name,JSON.stringify(combat));
+   await page.screenshot({path:join(out,name+'.png'),scale:'device',timeout:20000});
    await page.keyboard.press('Escape');await page.waitForFunction(()=>window.__previewGame.scene.isActive('Pause'));
    const frozen=await page.evaluate(()=>{const a=window.__previewGame.scene.getScene('Game').enemyPreview.attack.state;return [a.elapsed,a.shotsFired,a.kills];});
    await page.waitForTimeout(250);
    assert.deepEqual(await page.evaluate(()=>{const a=window.__previewGame.scene.getScene('Game').enemyPreview.attack.state;return [a.elapsed,a.shotsFired,a.kills];}),frozen);
    await page.keyboard.press('Escape');await page.waitForFunction(t=>window.__previewGame.scene.getScene('Game').enemyPreview.attack.state.elapsed>t,frozen[0]);
-   await page.evaluate(()=>window.__previewGame.scene.stop('Game'));
-   await page.waitForFunction(()=>!window.__previewGame.scene.getScene('Game').enemyPreview);
+   console.log('ATTACK pause/resume passed',name);
+   await page.evaluate(()=>{window.__previewGame.scene.stop('Game');});
+   await page.waitForFunction(()=>!window.__previewGame.scene.getScene('Game').enemyPreview,null,{timeout:15000});
    assert.deepEqual(errors,[]);report.push({name,result:combat,pass:true});console.log('PASS attack',name,JSON.stringify(combat));
   }finally{await page.close();}
  }
