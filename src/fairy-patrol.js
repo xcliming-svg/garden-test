@@ -20,10 +20,15 @@
   const gait=Object.freeze({frequency:1.6,lift:.5,tilt:1.25,lean:.5});
   const key=(type,expression)=>'fairy:'+type+':'+expression;
   const baseKey=type=>'fairy:base:'+type;
-  const outlineWidth=1;
+  const params=new URLSearchParams(window.location.search),palette=window.GardenPalette.hex;
+  const rawColor=params.get('outlineColor'),rawWidth=params.get('outlineWidth');
+  const outlineColor=Object.prototype.hasOwnProperty.call(palette,rawColor)?rawColor:'stone';
+  const requestedWidth=rawWidth===null?1:Number(rawWidth);
+  const outlineWidth=Number.isFinite(requestedWidth)&&requestedWidth>=.5&&requestedWidth<=1.5?requestedWidth:1;
+  const outlineConfig=Object.freeze({enabled:params.get('outline')!=='0',color:outlineColor,width:outlineWidth,hex:palette[outlineColor]});
   // A separate silhouette ring keeps body textures and collision masks intact.
   function outlineKey(scene,type,scale){
-    const radius=outlineWidth*size/(1000*scale),k='fairy-outline:'+type+':'+radius.toFixed(3);
+    const radius=outlineWidth*size/(1000*scale),k='fairy-outline:'+type+':'+outlineColor+':'+radius.toFixed(3);
     if(scene.textures.exists(k))return k;
     const source=scene.textures.get(baseKey(type)).getSourceImage();
     const texture=scene.textures.createCanvas(k,size,size),ctx=texture.getContext();
@@ -32,7 +37,7 @@
       ctx.drawImage(source,Math.cos(angle)*radius,Math.sin(angle)*radius,size,size);
     }
     ctx.globalCompositeOperation='source-in';
-    ctx.fillStyle=window.GardenPalette.hex.paper;ctx.fillRect(0,0,size,size);
+    ctx.fillStyle=outlineConfig.hex;ctx.fillRect(0,0,size,size);
     ctx.globalCompositeOperation='destination-out';ctx.drawImage(source,0,0,size,size);
     ctx.globalCompositeOperation='source-over';
     texture.refresh();texture.setFilter(Phaser.Textures.FilterMode.LINEAR);
@@ -40,6 +45,7 @@
   }
   function syncOutline(actor){
     const {image,outline}=actor;
+    if(!outline)return;
     outline.setPosition(image.x,image.y).setOrigin(image.originX,image.originY)
       .setScale(image.scaleX,image.scaleY).setRotation(image.rotation).setFlip(image.flipX,image.flipY)
       .setDepth(image.depth).setAlpha(image.alpha).setVisible(image.visible);
@@ -97,7 +103,7 @@
     const actors=Array.from({length:count},(_,index)=>{
       const type=index===0?'garden':'water';
       const visibleHeight=m.characters[type].visibleHeight*scale;
-      const outline=scene.add.image(0,0,outlineKey(scene,type,scale)).setName('fairy-outline:'+index);
+      const outline=outlineConfig.enabled?scene.add.image(0,0,outlineKey(scene,type,scale)).setName('fairy-outline:'+index):null;
       const image=scene.add.image(0,0,key(type,'normal'))
         .setOrigin(m.anchor.x/m.canvas.width,m.anchor.y/m.canvas.height)
         .setDisplaySize(m.canvas.width*scale,m.canvas.height*scale)
@@ -129,7 +135,7 @@
       info=compute();b=info.patrol;length=info.length;spacing=length/count;
       distance=progress*length;
       scale=info.height/m.characters.garden.visibleHeight;
-      for(const a of actors){a.visibleHeight=m.characters[a.type].visibleHeight*scale;a.image.setDisplaySize(m.canvas.width*scale,m.canvas.height*scale);a.outline.setTexture(outlineKey(scene,a.type,scale));}
+      for(const a of actors){a.visibleHeight=m.characters[a.type].visibleHeight*scale;a.image.setDisplaySize(m.canvas.width*scale,m.canvas.height*scale);if(a.outline)a.outline.setTexture(outlineKey(scene,a.type,scale));}
       border.render(info);
     }
     function refreshHud(){updateHud(elapsed,scene.enemyPreview?.model.kills||0,0,occupied.size);}
@@ -174,5 +180,5 @@
     scene.events.once('shutdown',()=>{scene.events.off('update',update);delete scene.fairyPatrol;});
     render();return controller;
   }
-  window.GardenFairyPatrol=Object.freeze({enabled,preload,install,attach,key,count,speed,maxSpeed,ranks,validRank,speedAt,blinkSchedule,fairyStates,isResult,emotionPose});
+  window.GardenFairyPatrol=Object.freeze({enabled,preload,install,attach,key,count,speed,maxSpeed,ranks,validRank,speedAt,blinkSchedule,fairyStates,isResult,emotionPose,outlineConfig});
 }());

@@ -86,9 +86,8 @@ try{
    if(original)assert.ok(Object.values(initial.stats).every(v=>v.offPalette>0));
    assert.deepEqual(initial.counts,['garden',...Array(10).fill('water')]);
    const B=initial.boundary;
-   assert.equal(B.gap,5);assert.equal(initial.stones.length,B.points.length);assert.equal(initial.stones.length%2,0);
-   assert.ok(initial.stones.length>20);
-   assert.ok(initial.stones.every((o,i)=>o.key==='garden-pebble:'+['stone','silver'][i%2]&&o.w===B.frame&&o.h===B.frame&&!o.interactive&&!o.body));
+   assert.equal(B.gap,5);assert.equal(initial.stones.length,0);assert.equal(B.points.length%2,0);
+   assert.ok(B.points.length>20);
    for(const v of Object.values(initial.stoneStats)){assert.deepEqual(v.colors,[v.expected]);assert.ok(v.right-v.left>=170&&v.bottom-v.top>=120);}
    assert.ok(B.height<=B.requestedHeight);if(!query.includes('full=1'))assert.equal(B.height,B.requestedHeight);
    assert.ok(B.border.top-B.frame*11/32>=initial.field.top&&B.border.bottom+B.frame*11/32<=initial.field.bottom);

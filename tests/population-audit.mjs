@@ -1,6 +1,6 @@
 import {readFileSync} from 'node:fs';
 function populationAudit(sources){
- const w={location:{search:""}},check=(ok,msg)=>{if(!ok)throw Error(msg)};
+ const w={location:{search:""},GardenPalette:{hex:{stone:"#706975"}}},check=(ok,msg)=>{if(!ok)throw Error(msg)};
  for(const path of ["src/fairy-patrol.js","src/enemy-motion.js","src/enemy-preview.js","src/pebble-boundary.js"])new Function("window","URLSearchParams",sources[path])(w,class{get(){return null;}});
  const E=w.GardenEnemyPreview,M=w.GardenEnemyMotion,B=w.GardenPebbleBoundary;
  let count=0,spawned=0,completed=0,samples=0,minConcurrent=8,directionCases=0,directionSamples=0,clippedStarts=0;

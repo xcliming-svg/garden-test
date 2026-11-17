@@ -1,7 +1,7 @@
 import {readFileSync} from 'node:fs';
 import assert from 'node:assert/strict';
 function audit(sources){
- const w={location:{search:''}};
+ const w={location:{search:''},GardenPalette:{hex:{stone:'#706975'}}};
  for(const n of ['fairy-patrol','enemy-motion','enemy-preview','pebble-boundary'])
   new Function('window','URLSearchParams',sources['src/'+n+'.js'])(w,class{get(){return null;}});
  const E=w.GardenEnemyPreview,B=w.GardenPebbleBoundary;

@@ -1,8 +1,7 @@
 (function(){
   'use strict';
-  // Rendering-only comparison: choose whether enemies or fairies are in front.
-  const fairyFront=new URLSearchParams(window.location.search).get('occlusion')==='fairy';
-  const config=Object.freeze({fairyFront,flowerAlpha:.4,fairyAlpha:.5,enemyAlpha:.5,fadeIn:.1,fadeOut:.2});
+  // Selected rendering order: fairies in front, enemies fade behind them.
+  const config=Object.freeze({fairyFront:true,flowerAlpha:.4,enemyAlpha:.5,fadeIn:.1,fadeOut:.2});
   const cache=new WeakMap();
   function silhouette(texture){
     if(cache.has(texture))return cache.get(texture);
@@ -64,14 +63,9 @@
         const covered=uppers.some(upper=>covers(lower,upper,field));
         image.setAlpha(nextAlpha(image.alpha,covered,min,seconds));
       }
-      if(fairyFront){
-        const fairyShapes=fairies.map(shape);
-        for(const fairy of fairies)fairy.setAlpha(1);
-        for(let i=0;i<enemyImages.length;i++)apply(enemyImages[i],config.enemyAlpha,fairyShapes,enemyShapes[i]);
-      }else{
-        for(const enemy of enemyImages)enemy.setAlpha(1);
-        for(const fairy of fairies)apply(fairy,config.fairyAlpha,enemyShapes);
-      }
+      const fairyShapes=fairies.map(shape);
+      for(const fairy of fairies)fairy.setAlpha(1);
+      for(let i=0;i<enemyImages.length;i++)apply(enemyImages[i],config.enemyAlpha,fairyShapes,enemyShapes[i]);
       for(const actor of patrol.actors){
         if(actor.outline)actor.outline.setAlpha(actor.image.alpha);
         for(const tear of actor.tears)if(tear.sprite.visible)

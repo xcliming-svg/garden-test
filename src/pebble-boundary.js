@@ -1,7 +1,7 @@
 (function(){
   'use strict';
   // Decorative outer boundary, not a physics wall. Sizes in logical pixels.
-  const visible=new URLSearchParams(window.location.search).get('pebbles')!=='0';
+  // Keep the established route geometry, but never draw the decorative wall.
   const gap=5,roles=['stone','silver'],assetSize=256,halfW=11/32,halfH=8.25/32;
   const key=role=>'garden-pebble:'+role;
   const expand=(r,x,y=x)=>({left:r.left-x,right:r.right+x,top:r.top-y,bottom:r.bottom+y});
@@ -48,11 +48,9 @@
     let images=[];
     function render(info){
       for(const image of images)image.destroy();
-      images=(visible?info.points:[]).map((p,i)=>scene.add.image(p.x,p.y,key(p.role))
-        .setDisplaySize(info.frame,info.frame).setAngle(p.angle).setDepth(.5)
-        .setName('garden-pebble:'+i));
+      images=[];
     }
     return {render,get images(){return images;}};
   }
-  window.GardenPebbleBoundary=Object.freeze({preload,layout,attach,key,gap,halfW,halfH,visible});
+  window.GardenPebbleBoundary=Object.freeze({preload,layout,attach,key,gap,halfW,halfH});
 }());

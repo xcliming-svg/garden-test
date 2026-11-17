@@ -46,9 +46,9 @@ const report=[];
 const expectedSpans={"1_butterfly":24,"2_grasshopper":24,"6_mouse":34,"2_gray_bug":26,"1_cat":32,"3_caterpillar":24,"6_sparrow":28,"6_pigeon":34,"4_beetle":28,"2_frog":28,"6_rabbit":34,"5_bulldog":40};
 const expectedTypes={"1_butterfly":["fly",1],"2_grasshopper":["jump",1],"6_mouse":["approach",3],"2_gray_bug":["charge",1],"1_cat":["charge",2],"3_caterpillar":["approach",1],"6_sparrow":["fly",2],"6_pigeon":["fly",3],"4_beetle":["approach",2],"2_frog":["jump",2],"6_rabbit":["jump",3],"5_bulldog":["charge",3]};
 try{
- // Active combat uses the same state in both render-order comparisons.
+ // Active combat uses the same state in the selected render order.
  for(const [name,query] of [
-  ['attack-default',''],['attack-full','?full=1'],['attack-fairy-front','?occlusion=fairy'],['attack-full-fairy-front','?full=1&occlusion=fairy']
+  ['attack-default',''],['attack-full','?full=1']
  ]){
   const page=await browser.newPage({viewport:{width:960,height:540}});
   page.setDefaultTimeout(20000);
@@ -104,8 +104,7 @@ try{
     check(c.attack.gfx.depth===6&&c.attack.gfx.mask&&F.actors.every(f=>f.image.depth<6),'projectiles on top and field clipped');
     check(s.children.getByName('fairy-patrol-status').text==='자동 공격 · 요정 11명','active attack status');
     check(s.children.getByName('hud-kills-value').text===window.GardenGameLayout.formatHudCount(a.kills),'HUD kill count');
-    const fairyFront=window.GardenEnemyOcclusion.config.fairyFront;
-    check(F.actors.every(f=>[...c.sprites.values()].every(e=>fairyFront?f.image.depth>e.image.depth:f.image.depth<e.image.depth)),'mode-specific depth retained');
+    check(F.actors.every(f=>[...c.sprites.values()].every(e=>f.image.depth>e.image.depth)),'fairies remain in front');
     check(a.bullets.every(b=>b.age<T.life&&b.x>=0&&b.x<=L.width&&b.y>=L.top&&b.y<=L.height-L.bottom),'projectile life and bounds');
     return {checks,shots:a.shotsFired,hits:a.hits,kills:a.kills,bullets:a.bullets.length,live:c.actors.length,flowers:s.flowerGrowth.entries.size};
 
@@ -128,7 +127,7 @@ try{
 
  if(process.env.FAIRY_ATTACK_ONLY!=='1')for(const [name,w,h,dpr,query] of [
   ['default',960,540,1,''],['fhd',1920,1080,1,''],['small',640,360,1,''],
-  ['full',960,540,1,'?full=1'],['fairy-front',960,540,1,'?occlusion=fairy'],['full-fairy-front',960,540,1,'?full=1&occlusion=fairy'],['full-dpr2',960,540,2,'?flower=32&person=56&full=1&slots=36'],
+  ['full',960,540,1,'?full=1'],['full-dpr2',960,540,2,'?flower=32&person=56&full=1&slots=36'],
   ['light',960,540,1,'?uitype=1'],['original',960,540,1,'?svgcolors=original'],
   ['hidden',960,540,1,'?enemies=0'],['combat',960,540,1,'?combat=1']
  ]){
@@ -200,52 +199,6 @@ try{
     assert.ok(Math.abs(Math.max(a.w,a.h)-a.span)<.01,JSON.stringify(a));
    }
    if(name==='default'||name==='full'){
-    const fade=await page.evaluate(()=>{
-     const s=window.__previewGame.scene.getScene('Game'),c=s.enemyPreview,O=window.GardenEnemyOcclusion,F=s.fairyPatrol;
-     const hero=F.actors[0].image,water=F.actors[1].image,flowers=[...s.flowerGrowth.entries.values()].map(f=>f.image),flower=flowers[0];
-     const targets=[hero,water,...flowers];
-     const snapshot=()=>targets.map(t=>t.alpha);
-     const close=(a,b)=>Math.abs(a-b)<1e-6;
-     let checks=0;const check=(v,m)=>{checks++;if(!v)throw Error(m);};
-     const update=(enemies,dt)=>c.occlusion.update(enemies,dt);
-     update([],1);check(snapshot().every(a=>a===1),'initial opacity');
-     // Use identical current silhouettes for deterministic contact and
-     // duplicate coverage; separate targets cannot affect one another.
-     const clone=t=>s.add.image(t.x,t.y,t.texture.key).setOrigin(t.originX,t.originY)
-       .setScale(t.scaleX,t.scaleY).setAngle(t.angle).setFlip(t.flipX,t.flipY).setDepth(4);
-     const blockers=[clone(hero),clone(water),clone(flower),clone(flower)];
-     update(blockers,.05);check(close(hero.alpha,.75)&&close(water.alpha,.75)&&close(flower.alpha,.7),'100ms fade midpoint');
-     update(blockers,.05);check(close(hero.alpha,.5)&&close(water.alpha,.5)&&close(flower.alpha,.4),'fade floors');
-     check(blockers.every(b=>b.alpha===1)&&[...c.sprites.values()].every(b=>b.image.alpha===1),'enemies remain opaque');
-     const other=flowers.filter(f=>!blockers.some(b=>O.covers(O.shape(f),O.shape(b),{left:0,right:960,top:0,bottom:540})));
-     check(other.every(f=>f.alpha===1),'uncovered flowers stay opaque');
-     update(blockers,.1);check(close(flower.alpha,.4),'multiple enemies do not multiply fade');
-     update([],.1);check(close(hero.alpha,.75)&&close(flower.alpha,.7),'200ms recovery midpoint');
-     update([],.1);check(snapshot().every(a=>close(a,1)),'full recovery');
-     blockers[0].setDepth(hero.depth);update([blockers[0]],.1);check(hero.alpha===1,'equal depth does not cover');
-     update([],1);for(const b of blockers)b.destroy();
-     // Real enemy sprite, rotated and mirrored; use actual current alpha masks.
-     const e=[...c.sprites.values()][0].image,copy=s.add.image(0,0,e.texture.key).setOrigin(e.originX,e.originY)
-       .setScale(-Math.abs(e.scaleX),e.scaleY).setAngle(15).setDepth(4);
-     const bounds=O.shape(flower);copy.setPosition((bounds.l+bounds.r)/2,(bounds.t+bounds.b)/2);
-     const field={left:0,right:960,top:0,bottom:540};
-     check(O.covers(O.shape(flower),O.shape(copy),field),'real enemy silhouette overlaps flower');
-     update([copy],.1);check(close(flower.alpha,.4)&&copy.alpha===1,'real enemy keeps opacity and fades flower');
-     copy.setPosition(-100,-100);update([copy],.2);check(flower.alpha===1,'real enemy moved away');
-     copy.destroy();update([],1);
-     // Transparent middle must not cause a false overlap even when the
-     // enclosing visible bounds intersect.
-     const tex=s.textures.createCanvas('test:occlusion-gap',48,48),ctx=tex.getContext();
-     ctx.fillStyle='#fff';ctx.fillRect(0,0,8,48);ctx.fillRect(40,0,8,48);tex.refresh();
-     const gap=s.add.image(flower.x,flower.y-8,tex.key).setDepth(4);
-     check(!O.covers(O.shape(flower),O.shape(gap),field),'transparent canvas gap does not cover');
-     update([gap],.1);check(flower.alpha===1,'transparent gap leaves flower opaque');gap.destroy();s.textures.remove(tex.key);
-     update([],1);
-     return {checks,flowerAlpha:O.config.flowerAlpha,fairyAlpha:O.config.fairyAlpha};
-    });
-    console.log('PASS occlusion',name,JSON.stringify(fade));
-   }
-   if(name.endsWith('fairy-front')){
     const fade=await page.evaluate(()=>{
      const s=window.__previewGame.scene.getScene('Game'),c=s.enemyPreview,O=window.GardenEnemyOcclusion,F=s.fairyPatrol;
      const hero=F.actors[0].image,water=F.actors[1].image,flowers=[...s.flowerGrowth.entries.values()].map(f=>f.image),flower=flowers[0];
@@ -330,7 +283,7 @@ try{
    assert.equal(motions.seen.length,12);assert.equal(motions.attacked.length,12);assert.equal(motions.entered.length,12);assert.equal(new Set(motions.first).size,12);assert.equal(motions.sides.length,8);assert.ok(motions.maxActive>1&&motions.maxActive<=200&&motions.completed>=12,JSON.stringify(motions));
    await page.screenshot({path:join(out,'enemy-'+name+'.png'),scale:'device'});
    let swarm=null;
-   if(name==='default'||name==='full'||name.endsWith('fairy-front')){
+   if(name==='default'||name==='full'){
     swarm=await page.evaluate(async()=>{
      const s=window.__previewGame.scene.getScene('Game'),c=s.enemyPreview,F=s.fairyPatrol,E=window.GardenEnemyPreview,L=window.GardenGameLayout.spec;
      c.advance(Math.max(0,120-c.elapsed));c.advance(.5);
