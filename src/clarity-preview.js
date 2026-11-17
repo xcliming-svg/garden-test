@@ -54,14 +54,21 @@
     }
     return data;
   }
+  function readTexturePixels(texture){
+    const src=texture.getSourceImage();
+    // Read CanvasTextures directly: drawImage may resample/round their alpha.
+    if(typeof src.getContext==='function')return src.getContext('2d').getImageData(0,0,src.width,src.height);
+    const raster=document.createElement('canvas');raster.width=src.width;raster.height=src.height;
+    const ctx=raster.getContext('2d',{willReadFrequently:true});ctx.drawImage(src,0,0);
+    return ctx.getImageData(0,0,src.width,src.height);
+  }
   function flowerTexture(scene,k){
     if(!config.flowerTone)return k;
     const target=flowerToneKey(k);
     if(!scene.textures.exists(target)){
       const src=scene.textures.get(k).getSourceImage();
       const t=scene.textures.createCanvas(target,src.width,src.height),ctx=t.getContext();
-      ctx.drawImage(src,0,0);
-      const img=ctx.getImageData(0,0,src.width,src.height);
+      const img=readTexturePixels(scene.textures.get(k));
       flowerPixels(img.data);ctx.putImageData(img,0,0);t.refresh();
       t.setFilter(scene.textures.get(k).source[0].scaleMode===Phaser.Textures.FilterMode.NEAREST?Phaser.Textures.FilterMode.NEAREST:Phaser.Textures.FilterMode.LINEAR);
     }
@@ -200,5 +207,5 @@
       gfx.setPosition(hero.image.x,Math.max(spec.top+2,hero.image.y-hero.visibleHeight-7));
     }};
   }
-  window.GardenClarityPreview=Object.freeze({config,tonePixels,toneKey,enemyTexture,flowerPixels,flowerToneKey,flowerTexture,enemyOutlineKey,enemyRenderTexture,fairyTexture,enemyDepth,fairyDepth,gardenFocus,heroMarker,occlusionShape,coversHero,heroEnemyAlpha,occlusionTargets,protectedEnemyAlpha});
+  window.GardenClarityPreview=Object.freeze({config,tonePixels,toneKey,enemyTexture,flowerPixels,flowerToneKey,flowerTexture,readTexturePixels,enemyOutlineKey,enemyRenderTexture,fairyTexture,enemyDepth,fairyDepth,gardenFocus,heroMarker,occlusionShape,coversHero,heroEnemyAlpha,occlusionTargets,protectedEnemyAlpha});
 }());
