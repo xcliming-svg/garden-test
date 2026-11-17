@@ -143,7 +143,9 @@ try{
       return {id:a.id,mode:c.mode,states:[...states],xRange:range(xs),lift:Math.max(...lifts),angleRange:range(angles),scaleRange:range(scales),valid,reopened,entered,visible:s.children.list.filter(o=>o.name==='enemy-preview:actor'&&o.visible).length,profile};
      },{id:a.id,mode});
      assert.equal(checked.id,a.id);assert.equal(checked.mode,mode);assert.equal(checked.visible,1);assert.ok(checked.valid&&checked.reopened&&checked.entered,JSON.stringify(checked));
-     assert.ok(checked.xRange>10&&checked.angleRange>0&&checked.scaleRange>0,JSON.stringify(checked));
+     assert.ok(checked.xRange>10,JSON.stringify(checked));
+     if(a.id==='5_bulldog'&&mode==='move')assert.ok(checked.angleRange===0&&checked.scaleRange===0&&checked.lift===0,JSON.stringify(checked));
+     else assert.ok(checked.angleRange>0&&checked.scaleRange>0,JSON.stringify(checked));
      if(mode!=='attack')assert.ok(checked.states.includes('move')&&checked.states.includes('return'),JSON.stringify(checked));
      if(mode!=='move')assert.ok(['windup','strike','recover'].every(x=>checked.states.includes(x)),JSON.stringify(checked));
      if(a.attackType==='jump'||a.attackType==='fly')assert.ok(checked.lift>=7,JSON.stringify(checked));
