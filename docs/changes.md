@@ -1,5 +1,9 @@
 # 시스템별 변경 이력
 
+## 2026-11-17 — devel 적·요정 발밑 그림자
+
+- 기존 적 그림자 대비 강화, 주인공·물 요정 11명 추가. 공통 바닥 고정 타원, 점프 시 폭/알파 감소, 어두운/밝은 테마의 그림자 대비 분리. 기본 ON, `shadows=0` 전체 OFF, `enemyShadow`, `fairyShadow` 개별 0/1. 원본 SVG·몸체·군집 밀도·200마리 상한·가림 방지·기존 전투 변경 없음. [규격](./enemy-preview.md#devel-발밑-그림자).
+
 ## 2026-11-17 — devel 물 요정·꽃 가림 방지 확장
 
 - `waterOcclusion=1`, `flowerOcclusion=1`을 독립 추가(기본 OFF). 기존 `heroOcclusion`, `clarity=1`, 공통 `occlusionAlpha` 유지. 실제 가시 실루엣과 depth 판정, 현재 성장/시듦 꽃 및 기존 꽃 머리 비교 지원, 중첩 중복 감쇠 없음. 적의 표시 알파만 변경. 밀도 제어·200마리 상한·스폰·모션·꽃/요정 본체 변경 없음. Chromium 17/17 및 군집 계산 10/10 통과. [규격](./enemy-preview.md#주인공-가림-방지-추가-비교).

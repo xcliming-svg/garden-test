@@ -1,10 +1,10 @@
 name: Swarm clarity browser comparison
 on:
   push:
-    branches: [feature/devel-swarm-clarity, feature/devel-hero-occlusion, devel]
+    branches: [feature/devel-swarm-clarity, feature/devel-hero-occlusion, feature/devel-ground-shadows, devel]
   pull_request:
     branches: [devel]
-    paths: ['src/clarity-preview.js', 'src/enemy-preview.js', 'src/fairy-patrol.js', 'tests/clarity-preview.mjs', 'index.html', '.github/workflows/clarity-preview.yml']
+    paths: ['src/ground-shadow.js', 'src/clarity-preview.js', 'src/enemy-preview.js', 'src/fairy-patrol.js', 'tests/clarity-preview.mjs', 'index.html', '.github/workflows/clarity-preview.yml']
 permissions:
   contents: read
 jobs:
