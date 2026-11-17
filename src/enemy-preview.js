@@ -60,6 +60,9 @@
         const tex=scene.textures.exists(k)?scene.textures.get(k):scene.textures.createCanvas(k,size,size);
         const ctx=tex.getContext();ctx.clearRect(0,0,size,size);ctx.drawImage(body,0,0,size,size);
         if(!b)b=bounds(ctx);
+        // Quantize the body before compositing the existing eye silhouettes;
+        // leave their antialiased edges intact rather than quantizing the blend.
+        if(window.GardenSvgPalette.enabled)ctx.putImageData(window.GardenSvgPalette.apply(ctx.getImageData(0,0,size,size)),0,0);
         const f=fairy.sheets.eyes.frames[expression],w=f.width/2;
         for(const [i,side] of ['left','right'].entries()){
           const a=art.eyes[side],c=fairy.sourceEyeCenters[side];
@@ -69,7 +72,6 @@
           const dy=(a.y-c.y*a.scale)*factor;
           ctx.drawImage(atlas,sx,sy,w,f.height,dx,dy,w*a.scale*factor,f.height*a.scale*factor);
         }
-        if(window.GardenSvgPalette.enabled)ctx.putImageData(window.GardenSvgPalette.apply(ctx.getImageData(0,0,size,size)),0,0);
         tex.refresh();tex.setFilter(Phaser.Textures.FilterMode.LINEAR);
       }
       return {...e,name:art.name,bounds:b};

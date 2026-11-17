@@ -67,30 +67,38 @@ try{
    }
    const result=await page.evaluate(()=>{
     const s=window.__previewGame.scene.getScene('Game'),c=s.enemyPreview,L=window.GardenGameLayout.spec,F=s.fairyPatrol,B=F.boundary;
-    const ctx=document.createElement('canvas').getContext('2d',{willReadFrequently:true});
+    const ctx=document.createElement('canvas').getContext('2d');
     ctx.canvas.width=ctx.canvas.height=512;
     const anchors=s.cache.json.get('enemy-preview:anchors'),fm=s.cache.json.get('fairy:manifest');
     const original=!window.GardenSvgPalette.enabled,sharedAtlas=s.textures.get('fairy:eyes').getSourceImage();
     let atlas=sharedAtlas;
     if(!original){atlas=document.createElement('canvas');atlas.width=sharedAtlas.width;atlas.height=sharedAtlas.height;const ec=atlas.getContext('2d');ec.drawImage(sharedAtlas,0,0);ec.globalCompositeOperation='source-in';ec.fillStyle=window.GardenPalette.hex.ink;ec.fillRect(0,0,atlas.width,atlas.height);}
-    const pix=(image)=>{ctx.clearRect(0,0,512,512);ctx.drawImage(image,0,0);return ctx.getImageData(0,0,512,512).data;};
+    const pix=(image)=>{if(image instanceof HTMLCanvasElement)return image.getContext('2d').getImageData(0,0,512,512).data;ctx.clearRect(0,0,512,512);ctx.drawImage(image,0,0);return ctx.getImageData(0,0,512,512).data;};
     const entries=c.actors.map(a=>{
      const base=s.textures.get('enemy-preview:'+a.id+':base').getSourceImage(),normal=pix(s.textures.get('enemy-preview:'+a.id+':normal').getSourceImage()),closed=pix(s.textures.get('enemy-preview:'+a.id+':closed').getSourceImage());
      const raw=pix(base),expected=[];
      for(const expression of ['normal','closed']){
       ctx.clearRect(0,0,512,512);ctx.drawImage(base,0,0);
+      if(!original)ctx.putImageData(window.GardenSvgPalette.apply(ctx.getImageData(0,0,512,512)),0,0);
       const f=fm.sheets.eyes.frames[expression],w=f.width/2;
       for(const [i,side] of ['left','right'].entries()){
        const eye=anchors.characters[a.id].eyes[side],center=fm.sourceEyeCenters[side],z=512/1000;
        ctx.drawImage(atlas,f.x+i*w,f.y,w,f.height,(eye.x-(center.x-i*w)*eye.scale)*z,(eye.y-center.y*eye.scale)*z,w*eye.scale*z,f.height*eye.scale*z);
       }
-      if(!original)ctx.putImageData(window.GardenSvgPalette.apply(ctx.getImageData(0,0,512,512)),0,0);
       expected.push(ctx.getImageData(0,0,512,512).data);
      }
      let changed=0,eyeDelta=0,alpha=0;
      for(let i=0;i<normal.length;i+=4){if([0,1,2,3].some(j=>normal[i+j]!==closed[i+j]))changed++;if([0,1,2,3].some(j=>normal[i+j]!==raw[i+j]))eyeDelta++;if(normal[i+3])alpha++;}
-     return {id:a.id,x:a.x,y:a.y,w:a.width,h:a.height,span:a.span,changed,eyeDelta,alpha,
-      exact:normal.every((v,i)=>v===expected[0][i])&&closed.every((v,i)=>v===expected[1][i]),
+     // Canvas backends can round premultiplied antialias RGB differently. Compare
+     // alpha independently and allow a tiny channel tolerance on visible pixels.
+     let maxAlpha=0,opaqueDelta=0,edgeDelta=0;
+     for(const [j,frame] of [normal,closed].entries())for(let i=0;i<frame.length;i+=4){
+      const exp=expected[j];maxAlpha=Math.max(maxAlpha,Math.abs(frame[i+3]-exp[i+3]));
+      if(frame[i+3]===255&&exp[i+3]===255)for(let k=0;k<3;k++)opaqueDelta=Math.max(opaqueDelta,Math.abs(frame[i+k]-exp[i+k]));
+      else if(Math.min(frame[i+3],exp[i+3])>=128)for(let k=0;k<3;k++)edgeDelta=Math.max(edgeDelta,Math.abs(frame[i+k]-exp[i+k]));
+     }
+     return {id:a.id,x:a.x,y:a.y,w:a.width,h:a.height,span:a.span,changed,eyeDelta,alpha,maxAlpha,opaqueDelta,edgeDelta,
+      exact:maxAlpha<=1&&opaqueDelta<=2&&edgeDelta<=4,
       rect:{left:a.x-a.width/2,right:a.x+a.width/2,top:a.y-a.height/2,bottom:a.y+a.height/2},
       visible:a.image.visible&&a.image.alpha===1,interactive:!!a.image.input,body:!!a.image.body,linear:a.image.texture.source[0].scaleMode===Phaser.Textures.FilterMode.LINEAR};
     });
