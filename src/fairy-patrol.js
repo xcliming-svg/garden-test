@@ -41,7 +41,7 @@
   function syncOutline(actor){
     const {image,outline}=actor;
     outline.setPosition(image.x,image.y).setOrigin(image.originX,image.originY)
-      .setScale(image.scaleX,image.scaleY).setAngle(image.angle).setFlip(image.flipX,image.flipY)
+      .setScale(image.scaleX,image.scaleY).setRotation(image.rotation).setFlip(image.flipX,image.flipY)
       .setDepth(image.depth).setAlpha(image.alpha).setVisible(image.visible);
   }
   function preload(scene){
