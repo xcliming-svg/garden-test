@@ -63,7 +63,7 @@ try{
     const s=window.__previewGame.scene.getScene('Game'),L=window.GardenGameLayout,g=L.spec.garden,F=window.GardenFlowerHeadPreview;
     return {cell:g.cell,pitch:g.pitch,outer:g.outer,grid:g.size,top:L.spec.top,bottom:L.spec.bottom,
       textures:F.flowers.map(name=>{const t=s.textures.get(F.key(name,g.cell)),p=t.getContext().getImageData(0,0,t.width,t.height).data;
-        let ink=0,col=0;for(let i=0;i<p.length;i+=4){if(!p[i+3])continue;if(p[i]===13&&p[i+1]===13&&p[i+2]===13)ink++;else col++;}
+        let ink=0,col=0;for(let i=0;i<p.length;i+=4){if(!p[i+3])continue;if(((p[i]<<16)|(p[i+1]<<8)|p[i+2])===window.GardenPalette.art.n.ink)ink++;else col++;}
         return {w:t.width,h:t.height,ink,col};
       })};
    });
