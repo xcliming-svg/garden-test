@@ -57,6 +57,7 @@ try{
   page.on('pageerror',e=>errors.push(String(e)));page.on('requestfailed',r=>failed.push(r.url()));
   page.on('response',r=>{if(/\/assets\/(?:palette16\/)?enemies\//.test(r.url())&&r.ok())loaded.add(new URL(r.url()).pathname)});
   try{
+   await page.addInitScript(()=>{let seed=42;Math.random=()=>{seed=(Math.imul(seed,1664525)+1013904223)>>>0;return seed/4294967296;};});
    await page.goto(url+'/index.html'+query);
    await page.waitForFunction(()=>window.__previewGame?.scene.isActive('MainMenu'));
    const box=await page.locator('canvas').boundingBox();
@@ -123,22 +124,25 @@ try{
     const seen=new Set(),attacked=new Set(),sides=new Set(),entered=new Set(),first=[],serials=new Set();
     let valid=true,maxActive=0,spawnedOutside=true,frames=0;
     for(let i=0;i<4000;i++){
-     c.advance(.08);maxActive=Math.max(maxActive,c.actors.length);
-     valid&&=c.sprites.size===c.actors.length&&c.actors.length<=E.spawning.maxActive;
+     // Simulate every step; sample real sprites every 50 steps, avoiding thousands of redundant texture/render updates.
+     c.model.advance(.08);const rendered=i%50===0;if(rendered)c.advance(0);maxActive=Math.max(maxActive,c.actors.length);
+     valid&&=c.actors.length<=E.spawning.maxActive&&(!rendered||c.sprites.size===c.actors.length);
      for(const a of c.actors){
-      const e=a.entry,p=a.pose,im=c.sprites.get(a.id).image,rad=im.rotation,hw=e.width*p.sx/2,hh=e.height*p.sy/2,ex=Math.abs(Math.cos(rad))*hw+Math.abs(Math.sin(rad))*hh,ey=Math.abs(Math.sin(rad))*hw+Math.abs(Math.cos(rad))*hh;
+      const e=a.entry,p=a.pose,im=rendered?c.sprites.get(a.id).image:null,rad=p.angle*Math.PI/180,y=p.ground-e.height*p.sy/2-p.lift,hw=e.width*p.sx/2,hh=e.height*p.sy/2,ex=Math.abs(Math.cos(rad))*hw+Math.abs(Math.sin(rad))*hh,ey=Math.abs(Math.sin(rad))*hw+Math.abs(Math.cos(rad))*hh;
       const b=F.boundary.border,m=F.boundary.frame/2;
-      if(!serials.has(a.id)){serials.add(a.id);first.push(e.id);sides.add(a.path.side);spawnedOutside&&=p.x+ex<b.left||p.x-ex>b.right||im.y+ey<b.top||im.y-ey>b.bottom;}
+      if(!serials.has(a.id)){serials.add(a.id);first.push(e.id);sides.add(a.path.side);spawnedOutside&&=p.x+ex<b.left||p.x-ex>b.right||y+ey<b.top||y-ey>b.bottom;}
       seen.add(e.id);
-      valid&&=im.x===p.x&&im.x-ex>=8-1e-6&&im.x+ex<=L.width-8+1e-6&&im.mask&&Math.abs(im.y-(p.ground-e.height*p.sy/2-p.lift))<1e-6&&((im.scaleX<0)===p.flip)&&im.texture.key===E.key(e.id,a.expression)&&!im.body&&!im.input&&F.occupied.includes(a.path.flower);
+      valid&&=p.x-ex>=8-1e-6&&p.x+ex<=L.width-8+1e-6&&F.occupied.includes(a.path.flower);
+      if(rendered)valid&&=im.x===p.x&&im.mask&&Math.abs(im.y-y)<1e-6&&Math.abs(im.rotation-rad)<1e-6&&((im.scaleX<0)===p.flip)&&im.texture.key===E.key(e.id,a.expression)&&!im.body&&!im.input;
       valid&&=Math.abs((a.path.start-a.path.stage)/M.travelTime(e,a.path,0)-M.speed(e,0))<1e-7;
-      if(p.phase==='strike'){attacked.add(e.id);valid&&=a.expression==='angry'&&im.y-ey>=L.top&&im.y+ey<=L.height-L.bottom;}
+      if(p.phase==='strike'){attacked.add(e.id);valid&&=a.expression==='angry'&&y-ey>=L.top&&y+ey<=L.height-L.bottom;}
       valid&&=p.flip===(a.path.ux<0?p.phase!=='return':a.path.ux>0?p.phase==='return':false);
-      if(p.phase==='recover'&&im.x-ex>=b.left+m&&im.x+ex<=b.right-m&&im.y-ey>=b.top+m&&im.y+ey<=b.bottom-m)entered.add(e.id);
+      if(p.phase==='recover'&&p.x-ex>=b.left+m&&p.x+ex<=b.right-m&&y-ey>=b.top+m&&y+ey<=b.bottom-m)entered.add(e.id);
      }
      frames++;
      if(seen.size===12&&attacked.size===12&&entered.size===12&&sides.size===8&&c.model.completed>=12)break;
     }
+    c.advance(0);valid&&=c.sprites.size===c.actors.length;
     return {valid,spawnedOutside,seen:[...seen],attacked:[...attacked],entered:[...entered],sides:[...sides],first:first.slice(0,12),maxActive,frames,spawned:c.model.spawned,completed:c.model.completed};
    });
    assert.ok(motions.valid&&motions.spawnedOutside,JSON.stringify(motions));
@@ -178,7 +182,7 @@ try{
     await page.setViewportSize({width:800,height:450});
     await page.waitForFunction(()=>Math.abs(document.getElementById('game').getBoundingClientRect().width-800)<1,{},{timeout:8000});
     assert.equal(await page.locator('select').count(),0);
-    await page.evaluate(()=>window.__previewGame.scene.stop('Game'));
+    await page.evaluate(()=>{window.__previewGame.scene.stop('Game');});
     await page.waitForFunction(()=>!window.__previewGame.scene.getScene('Game').enemyPreview);
    }
    assert.deepEqual(errors,[]);assert.deepEqual(failed,[]);

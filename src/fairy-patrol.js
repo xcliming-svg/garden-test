@@ -63,8 +63,7 @@
     };
   }
   function attach(scene,spec,occupied,geometry,patrolPosition,updateHud,heroHeight){
-    const m=install(scene),B=window.GardenPebbleBoundary,border=B.attach(scene),C=window.GardenClarityPreview,S=window.GardenGroundShadow;
-    const focus=C?.gardenFocus(scene,spec,occupied),marker=C?.heroMarker(scene,spec);
+    const m=install(scene),B=window.GardenPebbleBoundary,border=B.attach(scene);
     const compute=()=>B.layout(spec,geometry(occupied,0,0).garden,heroHeight,gait,count);
     let info=compute(),b=info.patrol,length=info.length,spacing=length/count;
     let scale=info.height/m.characters.garden.visibleHeight;
@@ -73,18 +72,17 @@
     const actors=Array.from({length:count},(_,index)=>{
       const type=index===0?'garden':'water';
       const visibleHeight=m.characters[type].visibleHeight*scale;
-      const image=scene.add.image(0,0,C?C.fairyTexture(scene,key(type,'normal'),scale):key(type,'normal'))
+      const image=scene.add.image(0,0,key(type,'normal'))
         .setOrigin(m.anchor.x/m.canvas.width,m.anchor.y/m.canvas.height)
         .setDisplaySize(m.canvas.width*scale,m.canvas.height*scale)
         .setDepth(2).setName('fairy:'+type+':'+index);
-      const shadow=S.create(scene,'fairy:shadow:'+index,S.config.fairy);
       const tears=[];
       for(const [i,side] of ['left','right'].entries())for(let j=0;j<2;j++){
         const c=m.sourceEyeCenters[side],d=m.characters[type].destinationRects[side];
         const sprite=scene.add.image(0,0,tearsAtlas+':'+side).setOrigin((c.x-i*128)/128,(c.y+65)/256).setVisible(false).setName('fairy:tear:'+index+':'+side+':'+j);
         tears.push({sprite,side,offset:j*.5,rect:d});
       }
-      return {index,type,image,shadow,tears,visibleHeight,blink:blinkSchedule(index),expression:'normal',direction:'right',center:{x:0,y:0},phase:index*1.83};
+      return {index,type,image,tears,visibleHeight,blink:blinkSchedule(index),expression:'normal',direction:'right',center:{x:0,y:0},phase:index*1.83};
     });
     let elapsed=0,rank=0,currentSpeed=speed,state='normal',emotionTime=0;
     let distance=(b.right-b.left)/2;
@@ -125,10 +123,9 @@
         if(facing)a.image.setFlipX(facing<0);
         a.image.setPosition(p.x,p.y+a.visibleHeight/2-lift)
           .setAngle(tilt+facing*gait.lean)
-          .setDepth(C?C.fairyDepth(p.y,a.visibleHeight,spec):2+p.y/spec.height);
+          .setDepth(2+p.y/spec.height);
         const emotion=emotionPose(state,emotionTime,a.visibleHeight,a.phase);
         if(isResult(state))a.image.setPosition(p.x+emotion.dx,p.y+a.visibleHeight/2-emotion.lift).setAngle(0);
-        S.update(a.shadow,a.image.x,p.y+a.visibleHeight/2,a.visibleHeight*.48,a.visibleHeight*.15,isResult(state)?emotion.lift:lift);
         for(const tear of a.tears){
           const show=state==='lose';tear.sprite.setVisible(show);if(!show)continue;
           const eye=m.characters[a.type].eyeCenters[tear.side],t=((emotionTime*1.45+tear.offset+a.index*.17)%1),h=a.visibleHeight/40,flip=a.image.flipX?-1:1;
@@ -136,10 +133,8 @@
           tear.sprite.setPosition(x,y).setDisplaySize(tear.rect.width*scale,tear.rect.height*scale).setAlpha(Math.min(1,(1-t)*4)).setDepth(a.image.depth+.01);
         }
         const expression=emotion.expression||a.blink(elapsed);
-        const texture=C?C.fairyTexture(scene,key(a.type,expression),scale):key(a.type,expression);
-        a.expression=expression;if(a.image.texture.key!==texture)a.image.setTexture(texture);
+        if(expression!==a.expression){a.expression=expression;a.image.setTexture(key(a.type,expression));}
       }
-      focus?.render();marker?.render(actors[0]);
       updateHud(elapsed,0,0,occupied.size);
     }
     function advance(seconds){const dt=Math.max(0,seconds);emotionTime+=dt;if(!isResult(state)){elapsed+=dt;distance=(distance+dt*currentSpeed)%length;}render();return elapsed;}

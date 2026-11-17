@@ -202,33 +202,28 @@
       const scale=e.span/Math.max(e.bounds.width,e.bounds.height);
       return {...e,scale,width:e.bounds.width*scale,height:e.bounds.height*scale};
     });
-    const model=createPopulation(spec,patrol,entries),sprites=new Map(),C=window.GardenClarityPreview,S=window.GardenGroundShadow;
-    const renderKey=(k,scale)=>C?C.enemyRenderTexture(scene,k,scale):k;
-    if(C&&(C.config.enemyTone||C.config.enemyOutline))for(const a of entries)for(const expression of ['normal','closed','angry','dizzy'])renderKey(key(a.id,expression),a.scale);
+    const model=createPopulation(spec,patrol,entries),sprites=new Map();
     // The playable field clips partial entry/exit sprites; HUD is never covered.
     const clip=scene.make.graphics({x:0,y:0,add:false});
     clip.fillStyle(0xffffff,1).fillRect(0,spec.top,spec.width,spec.height-spec.top-spec.bottom);
     const fieldMask=clip.createGeometryMask();
     function render(){
       const alive=new Set(model.actors.map(a=>a.id));
-      const protect=C&&(C.config.heroOcclusion||C.config.waterOcclusion||C.config.flowerOcclusion);
-      const targets=protect?C.occlusionTargets(scene,patrol):[];
       for(const [id,sprite] of sprites)if(!alive.has(id)){sprite.image.destroy();sprite.shadow.destroy();sprites.delete(id);}
       for(const actor of model.actors){
         const a=actor.entry,r=a.bounds,p=actor.pose;
         let sprite=sprites.get(actor.id);
         if(!sprite){
-          const image=scene.add.image(0,0,renderKey(key(a.id,actor.expression),a.scale)).setDepth(3).setMask(fieldMask).setName('enemy:actor:'+actor.id);
-          const shadow=S.create(scene,'enemy:shadow:'+actor.id,S.config.enemy,fieldMask);
+          const image=scene.add.image(0,0,key(a.id,actor.expression)).setDepth(3).setMask(fieldMask).setName('enemy:actor:'+actor.id);
+          const shadow=scene.add.ellipse(0,0,1,1,window.GardenPalette.roles.n.ink,.35).setDepth(.75).setMask(fieldMask).setName('enemy:shadow:'+actor.id);
           sprite={image,shadow};sprites.set(actor.id,sprite);
         }
         const {image,shadow}=sprite,{x,ground,lift,angle,sx,sy,flip}=p;
         image.setPosition(x,ground-a.height*sy/2-lift)
           .setOrigin((r.left+r.right)/2/size,(r.top+r.bottom)/2/size)
-          .setScale(a.scale*sx*(flip?-1:1),a.scale*sy).setAngle(angle).setDepth(C?C.enemyDepth(ground,spec):3+ground/spec.height);
-        const texture=renderKey(key(a.id,actor.expression),a.scale);if(image.texture.key!==texture)image.setTexture(texture);
-        if(protect)image.setAlpha(C.protectedEnemyAlpha(targets,image));
-        S.update(shadow,x,ground,a.width*.72,Math.max(3,a.height*.16),lift);
+          .setScale(a.scale*sx*(flip?-1:1),a.scale*sy).setAngle(angle).setDepth(3+ground/spec.height);
+        const texture=key(a.id,actor.expression);if(image.texture.key!==texture)image.setTexture(texture);
+        shadow.setPosition(x,ground+1).setDisplaySize(a.width*.72*(1-lift*.009),Math.max(2,a.height*.10)).setAlpha(.36/(1+lift*.055));
       }
     }
     function advance(seconds){model.advance(seconds);render();return model.elapsed;}
