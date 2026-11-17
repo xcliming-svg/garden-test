@@ -42,6 +42,8 @@ await new Promise(r=>server.listen(0,'127.0.0.1',r));
 const url='http://127.0.0.1:'+server.address().port;
 const browser=await chromium.launch({channel:'chrome',headless:true,args:['--no-sandbox','--disable-dev-shm-usage','--use-gl=angle','--use-angle=swiftshader','--enable-unsafe-swiftshader']});
 const report=[];
+// Fixed comparison sizes, relative to 22px flower cells and the 40px garden fairy.
+const expectedSpans={"1_butterfly":26,"2_grasshopper":28,"6_mouse":32,"2_gray_bug":22,"1_cat":56,"3_caterpillar":28,"6_sparrow":32,"6_pigeon":40,"4_beetle":28,"2_frog":36,"6_rabbit":48,"5_bulldog":64};
 const overlap=(a,b)=>a.left<b.right&&a.right>b.left&&a.top<b.bottom&&a.bottom>b.top;
 try{
  for(const [name,w,h,dpr,query] of [
@@ -110,7 +112,8 @@ try{
    assert.equal(result.fairies,11);assert.equal(result.flowers,name==='full-dpr2'?100:6);assert.equal(result.combat,false);
    for(const a of result.entries){
     assert.ok(a.visible&&!a.interactive&&!a.body&&a.linear&&a.exact&&a.changed>0&&a.eyeDelta>0&&a.alpha>10000,JSON.stringify(a));
-    assert.ok(Math.max(a.w,a.h)>=44&&Math.max(a.w,a.h)<=a.span+.01,JSON.stringify(a));
+    assert.equal(a.span,expectedSpans[a.id]);
+    assert.ok(Math.abs(Math.max(a.w,a.h)-a.span)<.01,JSON.stringify(a));
     assert.ok(a.rect.left>=result.field.left&&a.rect.right<=result.field.right&&a.rect.top>=result.field.top&&a.rect.bottom<=result.field.bottom,JSON.stringify(a));
     assert.ok(!overlap(a.rect,result.boundary)&&!overlap(a.rect,result.blueprint),JSON.stringify(a));
     for(const b of result.entries)if(a.id!==b.id)assert.ok(!overlap(a.rect,b.rect),a.id+' overlaps '+b.id);
@@ -131,9 +134,9 @@ try{
      const img=new Image();img.src='data:image/png;base64,'+png;await img.decode();
      const cv=document.createElement('canvas');cv.width=img.width;cv.height=img.height;const ctx=cv.getContext('2d');ctx.drawImage(img,0,0);
      const z=img.width/960;
-     return entries.map(e=>{const r=e.rect,p=ctx.getImageData(Math.floor(r.left*z),Math.floor(r.top*z),Math.ceil(e.w*z),Math.ceil(e.h*z)).data;let lit=0;for(let i=0;i<p.length;i+=4)if(Math.max(p[i],p[i+1],p[i+2])>70)lit++;return {id:e.id,lit};});
+     return entries.map(e=>{const r=e.rect,p=ctx.getImageData(Math.floor(r.left*z),Math.floor(r.top*z),Math.ceil(e.w*z),Math.ceil(e.h*z)).data;let lit=0;for(let i=0;i<p.length;i+=4)if(Math.max(p[i],p[i+1],p[i+2])>70)lit++;return {id:e.id,lit,area:p.length/4};});
     },{png:png.toString('base64'),entries:result.entries});
-    assert.ok(visible.every(a=>a.lit>100),JSON.stringify(visible));
+    assert.ok(visible.every(a=>a.lit>20&&a.lit/a.area>.12),JSON.stringify(visible));
    }
    if(name==='default'){
     await page.keyboard.press('Escape');await page.waitForFunction(()=>window.__previewGame.scene.isActive('Pause'));

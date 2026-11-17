@@ -5,21 +5,22 @@
   const size=512,root='assets/enemies/',anchorKey='enemy-preview:anchors';
   const key=(id,expression)=>'enemy-preview:'+id+':'+expression;
   const baseKey=id=>key(id,'base');
-  // Longest visible side in logical px; deliberately compressed relative to real animal sizes.
+  // Longest visible side in logical px: one 22px flower cell for small pests,
+  // 40px garden fairy for medium animals, and up to 1.6x fairy height for large threats.
   // The order maps into two outer field lanes, not combat tiers or spawn rules.
   const roster=Object.freeze([
-    {id:'1_butterfly',span:46,side:'left',row:0,col:0},
-    {id:'2_grasshopper',span:50,side:'left',row:0,col:1},
-    {id:'6_mouse',span:54,side:'left',row:1,col:0},
-    {id:'2_gray_bug',span:50,side:'left',row:1,col:1},
-    {id:'1_cat',span:98,side:'left',row:2,col:0},
-    {id:'3_caterpillar',span:48,side:'left',row:2,col:1},
-    {id:'6_sparrow',span:58,side:'right',row:0,col:0},
-    {id:'6_pigeon',span:68,side:'right',row:0,col:1},
-    {id:'4_beetle',span:52,side:'right',row:1,col:0},
-    {id:'2_frog',span:64,side:'right',row:1,col:1},
-    {id:'6_rabbit',span:84,side:'right',row:2,col:0},
-    {id:'5_bulldog',span:116,side:'right',row:2,col:1}
+    {id:'1_butterfly',span:26,side:'left',row:0,col:0},
+    {id:'2_grasshopper',span:28,side:'left',row:0,col:1},
+    {id:'6_mouse',span:32,side:'left',row:1,col:0},
+    {id:'2_gray_bug',span:22,side:'left',row:1,col:1},
+    {id:'1_cat',span:56,side:'left',row:2,col:0},
+    {id:'3_caterpillar',span:28,side:'left',row:2,col:1},
+    {id:'6_sparrow',span:32,side:'right',row:0,col:0},
+    {id:'6_pigeon',span:40,side:'right',row:0,col:1},
+    {id:'4_beetle',span:28,side:'right',row:1,col:0},
+    {id:'2_frog',span:36,side:'right',row:1,col:1},
+    {id:'6_rabbit',span:48,side:'right',row:2,col:0},
+    {id:'5_bulldog',span:64,side:'right',row:2,col:1}
   ].map(Object.freeze));
   function preload(scene){
     if(!enabled)return;
