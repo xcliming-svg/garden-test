@@ -20,6 +20,7 @@ jobs:
           PLAYWRIGHT_SKIP_BROWSER_DOWNLOAD: '1'
       - run: for file in src/*.js tests/enemy-preview.mjs; do node --check "$file"; done
       - run: node tests/balance-audit.mjs
+      - run: node tests/population-audit.mjs
       - run: node tests/movement-speed.mjs
       - run: node tests/enemy-preview.mjs
       - run: node tests/fairy-patrol.mjs

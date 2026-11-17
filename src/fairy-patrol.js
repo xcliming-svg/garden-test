@@ -17,34 +17,6 @@
   const ranks=Object.freeze([0,5]);
   const validRank=rank=>ranks.includes(rank);
   const speedAt=(base,rank,max=base*1.5)=>rank===5?max:base;
-  function speedControls(scene,spec){
-    const parent=document.getElementById('game'),P=window.GardenPalette.reference.hex;
-    const panel=document.createElement('div');panel.id='movement-speed-controls';
-    Object.assign(panel.style,{position:'absolute',left:'0',top:'0',width:'226px',display:'flex',flexWrap:'wrap',gap:'5px',alignItems:'center',transformOrigin:'0 0',zIndex:'2',fontFamily:'"Garden Fusion", sans-serif'});
-    const add=(id,label,base,onChange,max=base*1.5)=>{
-      const select=document.createElement('select');select.id=id;select.setAttribute('aria-label',label+' 이동 속도 (px/s)');
-      Object.assign(select.style,{width:'110px',height:'24px',fontFamily:'inherit',fontSize:'12px',background:P.panel,color:P.text,border:'1px solid '+P.border,borderRadius:'0',padding:'0 4px',cursor:'pointer'});
-      const refresh=(nextBase,rank,nextMax=nextBase*1.5)=>{
-        select.replaceChildren();
-        for(const r of ranks){const state=r===0?'기본':'최대';select.add(new Option(label+' '+state+' '+speedAt(nextBase,r,nextMax),String(r)));}
-        select.value=String(rank);select.title=label+' 이동 속도 '+speedAt(nextBase,rank,nextMax)+' 논리 px/s';
-      };
-      refresh(base,0,max);select.addEventListener('change',()=>{onChange(Number(select.value));select.blur();});panel.append(select);
-      return {select,refresh};
-    };
-    const resize=()=>{const z=parent.clientWidth/spec.width;panel.style.transform='translate('+((spec.width-236)*z)+'px,'+((spec.top+54)*z)+'px) scale('+z+')';};
-    const pause=()=>{panel.style.display='none';for(const e of panel.querySelectorAll('select'))e.blur();};
-    const resume=()=>{panel.style.display='flex';resize();};
-    parent.append(panel);resize();scene.scale.on('resize',resize);scene.events.on('pause',pause);scene.events.on('resume',resume);
-    scene.events.once('shutdown',()=>{scene.scale.off('resize',resize);scene.events.off('pause',pause);scene.events.off('resume',resume);panel.remove();});
-    const addState=(id,label,options,onChange)=>{
-      const select=document.createElement('select');select.id=id;select.setAttribute('aria-label',label);
-      Object.assign(select.style,{order:id==='fairy-expression'?'2':'3',width:'225px',height:'24px',fontFamily:'inherit',fontSize:'12px',background:P.panel,color:P.text,border:'1px solid '+P.border,borderRadius:'0',padding:'0 4px',cursor:'pointer'});
-      for(const [value,name] of options)select.add(new Option(name,value));
-      select.addEventListener('change',()=>{onChange(select.value);select.blur();});panel.append(select);return select;
-    };
-    return {panel,add,addState};
-  }
   const gait=Object.freeze({frequency:1.6,lift:.5,tilt:1.25,lean:.5});
   const key=(type,expression)=>'fairy:'+type+':'+expression;
   const baseKey=type=>'fairy:base:'+type;
@@ -114,16 +86,14 @@
     });
     let elapsed=0,rank=0,currentSpeed=speed,state='normal',emotionTime=0;
     let distance=(b.right-b.left)/2;
-    const speedUI=speedControls(scene,spec);
-    const fairySelect=speedUI.add('fairy-speed','요정',speed,setSpeedRank,maxSpeed);
-    const stateSelect=speedUI.addState('fairy-expression','요정 표정',[['normal','요정 · 평상시'],['hit','요정 · 피격 (X X)'],['win','요정 · 승리'],['lose','요정 · 패배']],setState);
+    // Retained for future upgrades and combat/result events; no preview UI.
     function setState(next){
       if(!fairyStates.includes(next))return false;
-      if(next!==state){state=next;emotionTime=0;}stateSelect.value=state;render();return true;
+      if(next!==state){state=next;emotionTime=0;}render();return true;
     }
     function setSpeedRank(next){
       if(!validRank(next))return false;
-      rank=next;currentSpeed=speedAt(speed,rank,maxSpeed);fairySelect.refresh(speed,rank,maxSpeed);return true;
+      rank=next;currentSpeed=speedAt(speed,rank,maxSpeed);return true;
     }
     function refreshBoundary(){
       const next=[...occupied].sort((a,b)=>a-b).join(',');
@@ -168,7 +138,7 @@
       updateHud(elapsed,0,0,occupied.size);
     }
     function advance(seconds){const dt=Math.max(0,seconds);emotionTime+=dt;if(!isResult(state)){elapsed+=dt;distance=(distance+dt*currentSpeed)%length;}render();return elapsed;}
-    const controller={actors,border,advance,setSpeedRank,setState,speedUI,get state(){return state;},get finished(){return isResult(state);},get emotionTime(){return emotionTime;},get speed(){return currentSpeed;},get speedRank(){return rank;},get distance(){return distance;},get bounds(){return b;},get length(){return length;},get spacing(){return spacing;},get boundary(){return info;},get occupied(){return [...occupied];},get elapsed(){return elapsed;}};
+    const controller={actors,border,advance,setSpeedRank,setState,get state(){return state;},get finished(){return isResult(state);},get emotionTime(){return emotionTime;},get speed(){return currentSpeed;},get speedRank(){return rank;},get distance(){return distance;},get bounds(){return b;},get length(){return length;},get spacing(){return spacing;},get boundary(){return info;},get occupied(){return [...occupied];},get elapsed(){return elapsed;}};
     scene.fairyPatrol=controller;
     const update=(_time,delta)=>advance(Math.min(.1,Math.max(0,delta/1000)));
     scene.events.on('update',update);

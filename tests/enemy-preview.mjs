@@ -113,71 +113,51 @@ try{
     assert.ok(stages[0].span<stages[1].span&&stages[1].span<stages[2].span,type);
    }
    assert.equal(result.fairies,11);assert.equal(result.flowers,name==='full-dpr2'?100:4);assert.equal(result.combat,false);
-   assert.equal(await page.locator('#enemy-character option').count(),12);
-   assert.equal(await page.locator('#enemy-motion-mode option').count(),3);
-   const motions=[];
+   assert.equal(await page.locator('select').count(),0);
    for(const a of result.entries){
     assert.ok(a.exact&&a.changed>0&&a.eyeDelta>0&&a.alpha>10000,JSON.stringify(a));
     assert.equal(a.span,expectedSpans[a.id]);assert.deepEqual([a.attackType,a.level],expectedTypes[a.id]);
     assert.ok(Math.abs(Math.max(a.w,a.h)-a.span)<.01,JSON.stringify(a));
-    if(name==='default')await page.selectOption('#enemy-character',a.id);
-    else await page.evaluate(id=>{const e=document.getElementById('enemy-character');e.value=id;e.dispatchEvent(new Event('change',{bubbles:true}));},a.id);
-    for(const mode of ['move','attack','auto']){
-     await page.evaluate(mode=>{const e=document.getElementById('enemy-motion-mode');e.value=mode;e.dispatchEvent(new Event('change',{bubbles:true}));},mode);
-     const checked=await page.evaluate(({id,mode})=>{
-      const s=window.__previewGame.scene.getScene('Game'),c=s.enemyPreview,a=c.selected,L=window.GardenGameLayout.spec,B=s.fairyPatrol.boundary;
-      const path=window.GardenEnemyPreview.route(L,B,a,s.fairyPatrol.occupied),profile=window.GardenEnemyMotion.profiles[id];
-      const states=new Set(),xs=[],lifts=[],angles=[],scales=[],closed=new Set();let reopened=false,valid=true,entered=false;
-      const bound=B.border,margin=B.frame/2;
-      const samples=Math.ceil(Math.max(14,window.GardenEnemyMotion.duration(a,mode,path,c.speedRank)+.1)/.04);
-      for(let i=0;i<samples;i++){
-       c.advance(.04);const p=c.pose,img=c.image;
-       states.add(p.phase);xs.push(img.x);lifts.push(p.lift);angles.push(img.angle);scales.push(img.scaleY);
-       if(c.expression==='closed')closed.add(id);else if(closed.has(id))reopened=true;
-       const rad=img.rotation,hw=a.width*p.sx/2,hh=a.height*p.sy/2;
-       const ex=Math.abs(Math.cos(rad))*hw+Math.abs(Math.sin(rad))*hh,ey=Math.abs(Math.sin(rad))*hw+Math.abs(Math.cos(rad))*hh;
-       entered ||= img.x-ex>=bound.left+margin&&img.x+ex<=bound.right-margin&&img.y-ey>=bound.top+margin&&img.y+ey<=bound.bottom-margin&&Math.abs(img.x-path.target)<=2;
-       valid=valid&&img.x-ex>=8&&img.x+ex<=L.width-8&&img.y-ey>=L.top&&img.y+ey<=L.height-L.bottom&&img.visible&&!img.input&&!img.body&&img.texture.source[0].scaleMode===Phaser.Textures.FilterMode.LINEAR&&img.texture.key==='enemy-preview:'+id+':'+c.expression;
-      }
-      const range=v=>Math.max(...v)-Math.min(...v);
-      return {id:a.id,mode:c.mode,states:[...states],xRange:range(xs),lift:Math.max(...lifts),angleRange:range(angles),scaleRange:range(scales),valid,reopened,entered,visible:s.children.list.filter(o=>o.name==='enemy-preview:actor'&&o.visible).length,profile};
-     },{id:a.id,mode});
-     assert.equal(checked.id,a.id);assert.equal(checked.mode,mode);assert.equal(checked.visible,1);assert.ok(checked.valid&&(mode!=='move'||checked.reopened)&&checked.entered,JSON.stringify(checked));
-     assert.ok(checked.xRange>10,JSON.stringify(checked));
-     if(a.id==='5_bulldog'&&mode==='move')assert.ok(checked.angleRange>0&&checked.angleRange<=2.200001&&checked.scaleRange>0&&checked.lift>0&&checked.lift<=.440001,JSON.stringify(checked));
-     else assert.ok(checked.angleRange>0&&checked.scaleRange>0,JSON.stringify(checked));
-     if(mode!=='attack')assert.ok(checked.states.includes('move')&&checked.states.includes('return'),JSON.stringify(checked));
-     if(mode!=='move')assert.ok(['windup','strike','recover'].every(x=>checked.states.includes(x)),JSON.stringify(checked));
-     if(a.attackType==='jump'||a.attackType==='fly')assert.ok(checked.lift>=7,JSON.stringify(checked));
-     motions.push(checked);
-    }
-    if(name==='fhd'&&['2_frog','1_cat','6_rabbit','5_bulldog'].includes(a.id)){
-     await page.selectOption('#enemy-motion-mode','attack');
-     await page.evaluate(()=>{const c=window.__previewGame.scene.getScene('Game').enemyPreview,p=window.GardenEnemyMotion.profiles[c.selected.id];c.setMode('attack');c.advance(p.windup+p.strike*.45);});
-     await page.screenshot({path:join(out,'enemy-'+name+'-'+a.id+'.png'),scale:'device'});
-    }
    }
-   await page.selectOption('#enemy-character','3_caterpillar');
-   await page.selectOption('#enemy-motion-mode','auto');
+   const motions=await page.evaluate(()=>{
+    const s=window.__previewGame.scene.getScene('Game'),c=s.enemyPreview,F=s.fairyPatrol,L=window.GardenGameLayout.spec,M=window.GardenEnemyMotion,E=window.GardenEnemyPreview;
+    const seen=new Set(),attacked=new Set(),sides=new Set(),entered=new Set(),first=[],serials=new Set();
+    let valid=true,maxActive=0,spawnedOutside=true,frames=0;
+    for(let i=0;i<4000;i++){
+     c.advance(.08);maxActive=Math.max(maxActive,c.actors.length);
+     valid&&=c.sprites.size===c.actors.length&&c.actors.length<=E.spawning.maxActive;
+     for(const a of c.actors){
+      const e=a.entry,p=a.pose,im=c.sprites.get(a.id).image,rad=im.rotation,hw=e.width*p.sx/2,hh=e.height*p.sy/2,ex=Math.abs(Math.cos(rad))*hw+Math.abs(Math.sin(rad))*hh,ey=Math.abs(Math.sin(rad))*hw+Math.abs(Math.cos(rad))*hh;
+      const b=F.boundary.border,m=F.boundary.frame/2;
+      if(!serials.has(a.id)){serials.add(a.id);first.push(e.id);sides.add(a.path.side);spawnedOutside&&=a.path.side==='left'?p.x+ex<b.left:p.x-ex>b.right;}
+      seen.add(e.id);
+      valid&&=im.x===p.x&&im.x-ex>=8-1e-6&&im.x+ex<=L.width-8+1e-6&&im.y-ey>=L.top&&im.y+ey<=L.height-L.bottom&&im.texture.key===E.key(e.id,a.expression)&&!im.body&&!im.input&&F.occupied.includes(a.path.flower);
+      valid&&=Math.abs((a.path.start-a.path.stage)/M.travelTime(e,a.path,0)-M.speed(e,0))<1e-7;
+      if(p.phase==='strike'){attacked.add(e.id);valid&&=a.expression==='angry';}
+      if(p.phase==='recover'&&im.x-ex>=b.left+m&&im.x+ex<=b.right-m&&im.y-ey>=b.top+m&&im.y+ey<=b.bottom-m)entered.add(e.id);
+     }
+     frames++;
+     if(seen.size===12&&attacked.size===12&&entered.size===12&&sides.size===2&&c.model.completed>=12)break;
+    }
+    return {valid,spawnedOutside,seen:[...seen],attacked:[...attacked],entered:[...entered],sides:[...sides],first:first.slice(0,12),maxActive,frames,spawned:c.model.spawned,completed:c.model.completed};
+   });
+   assert.ok(motions.valid&&motions.spawnedOutside,JSON.stringify(motions));
+   assert.equal(motions.seen.length,12);assert.equal(motions.attacked.length,12);assert.equal(motions.entered.length,12);assert.equal(new Set(motions.first).size,12);assert.equal(motions.sides.length,2);assert.ok(motions.maxActive>1&&motions.maxActive<=8&&motions.completed>=12,JSON.stringify(motions));
    await page.screenshot({path:join(out,'enemy-'+name+'.png'),scale:'device'});
-   const control=await page.locator('#enemy-preview-controls').boundingBox(),canvas=await page.locator('canvas').boundingBox();
-   assert.ok(Math.abs((control.x-canvas.x)/canvas.width*960-724)<2&&Math.abs(control.width/canvas.width*960-226)<2,JSON.stringify({control,canvas}));
    if(name==='default'){
     await page.keyboard.press('Escape');await page.waitForFunction(()=>window.__previewGame.scene.isActive('Pause'));
-    assert.equal(await page.locator('#enemy-preview-controls').isVisible(),false);
     const elapsed=await page.evaluate(()=>window.__previewGame.scene.getScene('Game').enemyPreview.elapsed);
     await page.waitForTimeout(250);
     assert.equal(await page.evaluate(()=>window.__previewGame.scene.getScene('Game').enemyPreview.elapsed),elapsed);
-    await page.keyboard.press('Escape');await page.waitForFunction(()=>window.__previewGame.scene.getScene('Game').enemyPreview.elapsed>0&&window.__previewGame.scene.isActive('Game'));
-    assert.equal(await page.locator('#enemy-preview-controls').isVisible(),true);
+    await page.keyboard.press('Escape');await page.waitForFunction(t=>window.__previewGame.scene.getScene('Game').enemyPreview.elapsed>t&&window.__previewGame.scene.isActive('Game'),elapsed);
     await page.setViewportSize({width:800,height:450});
-    await page.waitForFunction(()=>Math.abs(document.getElementById('game').getBoundingClientRect().width-800)<1&&Math.abs(document.getElementById('enemy-preview-controls').getBoundingClientRect().width-226*800/960)<2,{},{timeout:8000});
-    const resized=await page.locator('#enemy-preview-controls').boundingBox();assert.ok(Math.abs(resized.width-226*800/960)<2);
+    await page.waitForFunction(()=>Math.abs(document.getElementById('game').getBoundingClientRect().width-800)<1,{},{timeout:8000});
+    assert.equal(await page.locator('select').count(),0);
     await page.evaluate(()=>window.__previewGame.scene.stop('Game'));
-    await page.waitForFunction(()=>!document.getElementById('enemy-preview-controls'));
+    await page.waitForFunction(()=>!window.__previewGame.scene.getScene('Game').enemyPreview);
    }
    assert.deepEqual(errors,[]);assert.deepEqual(failed,[]);
-   report.push({name,result,motions,pass:true});console.log('PASS',name,'12 selectable enemies, 3 modes, shared eyes, bounded motion');
+   report.push({name,result,motions,pass:true});console.log('PASS',name,'12 random enemies, default speed, shared eyes, bounded motion');
   }finally{await page.close();}
  }
 }finally{await browser.close();server.close();writeFileSync(join(out,'enemy-report.json'),JSON.stringify(report,null,2));}

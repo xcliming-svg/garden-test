@@ -1,6 +1,6 @@
 (function(){
   'use strict';
-  // Single-enemy motion comparison. Original SVGs keep their embedded eyes hidden.
+  // Random incoming enemy population. Original SVGs keep their embedded eyes hidden.
   const enabled=window.GardenFairyPatrol.enabled&&new URLSearchParams(window.location.search).get('enemies')!=='0';
   const size=512,root='assets/enemies/',anchorKey='enemy-preview:anchors';
   const enemyStates=Object.freeze(['auto','normal','attack','hit']);
@@ -88,17 +88,19 @@
       return {...e,name:art.name,bounds:b};
     });
   }
-  function route(spec,boundary,e,occupied){
+  function route(spec,boundary,e,occupied,options={}){
     // Stones are decorative. Target an occupied flower, not the outside of the wall.
+    const side=options.side==='left'?'left':'right',mirror=side==='left';
     const g=spec.garden,mid=(boundary.garden.top+boundary.garden.bottom)/2;
     const cells=occupied.map(index=>({index,x:g.x+(index%g.columns)*g.pitch+g.line+g.cell/2,y:g.y+Math.floor(index/g.columns)*g.pitch+g.line+g.cell-1}));
     if(!cells.length)throw Error('Enemy preview needs a planted flower');
+    if(mirror)for(const c of cells)c.x=spec.width-c.x;
     cells.sort((a,b)=>b.x-a.x||Math.abs(a.y-mid)-Math.abs(b.y-mid)||a.index-b.index);
     const M=window.GardenEnemyMotion,p=M.profiles[e.id],margin=e.span*.74+12,start=spec.width-margin;
-    const path=flower=>({start,stage:flower.x+Math.min(p.reach,(start-flower.x)*.55),target:flower.x,ground:flower.y,flower:flower.index});
+    const path=flower=>({start,stage:flower.x+Math.min(p.reach,(start-flower.x)*.55),target:flower.x,ground:flower.y,flower:flower.index,side});
     // Prefer a planted flower that can contain the full sprite at arrival,
     // including flight altitude. A lower row may be needed in tiny previews.
-    const b=boundary.border,m=boundary.frame/2;
+    const original=boundary.border,b=mirror?{...original,left:spec.width-original.right,right:spec.width-original.left}:original,m=boundary.frame/2;
     const fits=r=>[0,5].every(rank=>M.modes.every(mode=>{
       const hit=mode==='move'?M.travelTime(e,r,rank,mode):p.windup+p.strike+(mode==='auto'?M.travelTime(e,r,rank):0);
       const q=M.sample(e,mode,hit,r,rank),a=q.angle*Math.PI/180,hw=e.span*q.sx/2,hh=e.span*q.sy/2;
@@ -107,37 +109,53 @@
       return q.x-ex>=b.left+m-1e-6&&q.x+ex<=b.right-m+1e-6&&y-ey>=b.top+m-1e-6&&r.ground+Math.abs(Math.sin(a))*hw<=b.bottom-m+1e-6;
     }));
     const paths=cells.map(path);
+    if(options.random){const safe=paths.filter(fits);if(safe.length)return safe[Math.min(safe.length-1,Math.floor(options.random()*safe.length))];}
     return paths.find(fits)||paths[0];
   }
-  function controls(scene,spec,entries,onSelect,onMode){
-    const parent=document.getElementById('game'),P=window.GardenPalette.reference.hex;
-    const panel=document.createElement('div');panel.id='enemy-preview-controls';
-    Object.assign(panel.style,{position:'absolute',left:'0',top:'0',width:'226px',display:'flex',
-      gap:'5px',alignItems:'center',transformOrigin:'0 0',zIndex:'2',fontFamily:'"Garden Fusion", sans-serif'});
-    const make=(id,label,width)=>{
-      const s=document.createElement('select');s.id=id;s.setAttribute('aria-label',label);
-      Object.assign(s.style,{width:width+'px',height:'24px',fontFamily:'inherit',fontSize:'12px',
-        background:P.panel,color:P.text,border:'1px solid '+P.border,borderRadius:'0',padding:'0 4px',cursor:'pointer'});
-      panel.append(s);return s;
-    };
-    const select=make('enemy-character','적 캐릭터 선택',145),mode=make('enemy-motion-mode','적 모션 선택',76);
-    const labels={approach:'접근',jump:'점프',charge:'돌진',fly:'비행'},names={'2_gray_bug':'공벌레','5_bulldog':'강아지'};
-    const ordered=[...entries].sort((a,b)=>a.level-b.level||Object.keys(labels).indexOf(a.attackType)-Object.keys(labels).indexOf(b.attackType));
-    for(const e of ordered)select.add(new Option('Lv.'+e.level+' '+labels[e.attackType]+' · '+(names[e.id]||e.name),e.id));
-    for(const [v,label] of [['auto','이동+공격'],['move','이동'],['attack','공격']])mode.add(new Option(label,v));
-    select.value='3_caterpillar';mode.value='auto';
-    select.addEventListener('change',()=>{onSelect(select.value);select.blur();});
-    mode.addEventListener('change',()=>{onMode(mode.value);mode.blur();});
-    const resize=()=>{
-      const z=parent.clientWidth/spec.width;
-      panel.style.transform='translate('+((spec.width-236)*z)+'px,'+((spec.top+25)*z)+'px) scale('+z+')';
-    };
-    const pause=()=>{panel.style.display='none';select.blur();mode.blur();};
-    const resume=()=>{panel.style.display='flex';resize();};
-    parent.append(panel);resize();
-    scene.scale.on('resize',resize);scene.events.on('pause',pause);scene.events.on('resume',resume);
-    scene.events.once('shutdown',()=>{scene.scale.off('resize',resize);scene.events.off('pause',pause);scene.events.off('resume',resume);panel.remove();});
-    return {panel,select,mode};
+  // Spawn cadence is temporary presentation tuning, not wave difficulty.
+  const spawning=Object.freeze({interval:3,maxActive:8,rank:0});
+  function worldPose(spec,path,pose,e){
+    if(path.side!=='left')return pose;
+    return {...pose,x:spec.width-pose.x,angle:-pose.angle,flip:e.id==='2_frog'?false:!pose.flip};
+  }
+  function createPopulation(spec,patrol,entries,random=Math.random){
+    const M=window.GardenEnemyMotion,F=window.GardenFairyPatrol;
+    const actors=[];let bag=[],serial=0,elapsed=0,nextSpawn=0,spawned=0,completed=0;
+    function nextEntry(){
+      if(!bag.length){
+        bag=[...entries];
+        for(let i=bag.length-1;i>0;i--){const j=Math.floor(random()*(i+1));[bag[i],bag[j]]=[bag[j],bag[i]];}
+      }
+      return bag.pop();
+    }
+    function spawn(){
+      const entry=nextEntry(),side=random()<.5?'left':'right';
+      const path=route(spec,patrol.boundary,entry,patrol.occupied,{side,random});
+      const actor={id:serial++,entry,path,age:0,blink:F.blinkSchedule(serial+11),expressionState:'auto',expression:'normal',pose:null};
+      actor.duration=M.duration(entry,'auto',path,spawning.rank);actors.push(actor);spawned++;
+      updateActor(actor);return actor;
+    }
+    function updateActor(a){
+      a.pose=worldPose(spec,a.path,M.sample(a.entry,'auto',a.age,a.path,spawning.rank),a.entry);
+      a.expression=expressionFor(a.expressionState,a.pose.phase,a.blink(a.age));
+    }
+    function advance(seconds){
+      if(patrol.finished)return elapsed;
+      const dt=Math.max(0,seconds);elapsed+=dt;
+      for(let i=actors.length-1;i>=0;i--){
+        const a=actors[i];a.age+=dt;
+        if(a.age>=a.duration){actors.splice(i,1);completed++;}else updateActor(a);
+      }
+      // No backlog burst after reaching the cap.
+      if(elapsed+1e-9>=nextSpawn&&actors.length<spawning.maxActive){spawn();nextSpawn=elapsed+spawning.interval;}
+      return elapsed;
+    }
+    function setExpression(id,state){
+      if(!enemyStates.includes(state))return false;
+      const a=actors.find(x=>x.id===id);if(!a)return false;
+      a.expressionState=state;updateActor(a);return true;
+    }
+    return {actors,advance,setExpression,get elapsed(){return elapsed;},get spawned(){return spawned;},get completed(){return completed;}};
   }
   function attach(scene,spec,patrol){
     if(!enabled)return null;
@@ -145,52 +163,33 @@
       const scale=e.span/Math.max(e.bounds.width,e.bounds.height);
       return {...e,scale,width:e.bounds.width*scale,height:e.bounds.height*scale};
     });
-    const M=window.GardenEnemyMotion,F=window.GardenFairyPatrol;
-    let selected=entries.find(e=>e.id==='3_caterpillar'),mode='auto',elapsed=0,motionTime=0,expression='normal',pose=null,speedRank=0,expressionState='auto',cachedBoundary=null,cachedEntry=null,cachedRoute=null;
-    const speedSelect=patrol.speedUI.add('enemy-speed','적',M.profiles[selected.id].baseSpeed,setSpeedRank);
-    function setSpeedRank(rank){
-      if(!F.validRank(rank))return false;
-      speedRank=rank;motionTime=0;speedSelect.refresh(M.profiles[selected.id].baseSpeed,rank);render();return true;
-    }
-    const image=scene.add.image(0,0,key(selected.id,'normal')).setDepth(3).setName('enemy-preview:actor');
-    const shadow=scene.add.ellipse(0,0,1,1,window.GardenPalette.n.ink,.35).setDepth(.75).setName('enemy-preview:shadow');
-    let blink=window.GardenFairyPatrol.blinkSchedule(11);
+    const model=createPopulation(spec,patrol,entries),sprites=new Map();
     function render(){
-      const a=selected,r=a.bounds;
-      if(cachedBoundary!==patrol.boundary||cachedEntry!==a){cachedBoundary=patrol.boundary;cachedEntry=a;cachedRoute=route(spec,cachedBoundary,a,patrol.occupied);}
-      const path=cachedRoute;
-      pose=M.sample(a,mode,motionTime,path,speedRank);
-      const {x,lift,angle,sx,sy,flip}=pose;
-      image.setPosition(x,path.ground-a.height*sy/2-lift)
-        .setOrigin((r.left+r.right)/2/size,(r.top+r.bottom)/2/size)
-        .setScale(a.scale*sx*(flip?-1:1),a.scale*sy).setAngle(angle);
-      shadow.setPosition(x,path.ground+1).setDisplaySize(a.width*.72*(1-lift*.009),Math.max(2,a.height*.10))
-        .setAlpha(.36/(1+lift*.055));
-      const next=expressionFor(expressionState,pose.phase,blink(elapsed));
-      if(next!==expression){expression=next;image.setTexture(key(a.id,expression));}
+      const alive=new Set(model.actors.map(a=>a.id));
+      for(const [id,sprite] of sprites)if(!alive.has(id)){sprite.image.destroy();sprite.shadow.destroy();sprites.delete(id);}
+      for(const actor of model.actors){
+        const a=actor.entry,r=a.bounds,p=actor.pose;
+        let sprite=sprites.get(actor.id);
+        if(!sprite){
+          const image=scene.add.image(0,0,key(a.id,actor.expression)).setDepth(3).setName('enemy:actor:'+actor.id);
+          const shadow=scene.add.ellipse(0,0,1,1,window.GardenPalette.n.ink,.35).setDepth(.75).setName('enemy:shadow:'+actor.id);
+          sprite={image,shadow};sprites.set(actor.id,sprite);
+        }
+        const {image,shadow}=sprite,{x,lift,angle,sx,sy,flip}=p,ground=actor.path.ground;
+        image.setPosition(x,ground-a.height*sy/2-lift)
+          .setOrigin((r.left+r.right)/2/size,(r.top+r.bottom)/2/size)
+          .setScale(a.scale*sx*(flip?-1:1),a.scale*sy).setAngle(angle).setDepth(3+ground/spec.height);
+        const texture=key(a.id,actor.expression);if(image.texture.key!==texture)image.setTexture(texture);
+        shadow.setPosition(x,ground+1).setDisplaySize(a.width*.72*(1-lift*.009),Math.max(2,a.height*.10)).setAlpha(.36/(1+lift*.055));
+      }
     }
-    function setExpressionState(value){
-      if(!enemyStates.includes(value))return false;
-      expressionState=value;expressionSelect.value=value;render();return true;
-    }
-    function select(id){
-      const a=entries.find(e=>e.id===id);if(!a)return false;
-      selected=a;motionTime=0;elapsed=0;blink=window.GardenFairyPatrol.blinkSchedule(entries.indexOf(a)+11);
-      expression='normal';image.setTexture(key(a.id,expression));speedSelect.refresh(M.profiles[a.id].baseSpeed,speedRank);render();return true;
-    }
-    function setMode(value){
-      if(!window.GardenEnemyMotion.modes.includes(value))return false;
-      mode=value;motionTime=0;render();return true;
-    }
-    const ui=controls(scene,spec,entries,select,setMode);
-    const expressionSelect=patrol.speedUI.addState('enemy-expression','적 표정',[['auto','적 · 자동 표정'],['normal','적 · 평상시'],['attack','적 · 공격 (화난 눈)'],['hit','적 · 피격 (X X)']],setExpressionState);
-    function advance(seconds){if(patrol.finished)return elapsed;const dt=Math.max(0,seconds);elapsed+=dt;motionTime+=dt;render();return elapsed;}
+    function advance(seconds){model.advance(seconds);render();return model.elapsed;}
+    function setExpression(id,state){const ok=model.setExpression(id,state);if(ok)render();return ok;}
     const update=(_time,delta)=>advance(Math.min(.1,Math.max(0,delta/1000)));
     scene.events.on('update',update);
-    scene.events.once('shutdown',()=>{scene.events.off('update',update);delete scene.enemyPreview;});
-    scene.enemyPreview={entries,image,shadow,ui,select,setMode,setSpeedRank,setExpressionState,advance,get expressionState(){return expressionState;},get selected(){return selected;},get pose(){return pose;},get speedRank(){return speedRank;},get speed(){return M.speed(selected,speedRank);},
-      get mode(){return mode;},get expression(){return expression;},get elapsed(){return elapsed;},get motionTime(){return motionTime;}};
-    render();return scene.enemyPreview;
+    scene.events.once('shutdown',()=>{scene.events.off('update',update);sprites.clear();delete scene.enemyPreview;});
+    scene.enemyPreview={entries,model,sprites,advance,setExpression,get actors(){return model.actors;},get elapsed(){return model.elapsed;}};
+    advance(0);return scene.enemyPreview;
   }
-  window.GardenEnemyPreview=Object.freeze({enabled,roster,preload,attach,key,route,enemyStates,expressionFor});
+  window.GardenEnemyPreview=Object.freeze({enabled,roster,preload,attach,key,route,enemyStates,expressionFor,spawning,worldPose,createPopulation});
 }());

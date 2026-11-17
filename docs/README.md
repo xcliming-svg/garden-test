@@ -1,6 +1,6 @@
 # 개발 문서
 
-> **devel 적 동물 12종:** [선택 및 모션 비교](./enemy-preview.md) 기본 표시. 기존 11명 요정과 함께 선택한 적 한 마리의 이동·공격을 비교하며 실제 전투와 별개이다.
+> **main/devel 적 동물 12종:** [무작위 출현 및 모션 규격](./enemy-preview.md). 기본 속도로 좌우 외곽에서 진입·공격하며 실제 전투 판정과 별개이다.
 
 > **devel 요정 순찰:** [현행 11명 요정 순찰](./fairy-patrol.md) 우선. 기본 화면 전투 없음, 이전 전투는 `?combat=1`.
 
@@ -27,8 +27,8 @@
 | [ui-decisions.md](./ui-decisions.md) | 2026-11-12 UI 디자인 확정 기록. 레이아웃, HUD, Garden 32, 보더, 폰트·렌더링 최종 결정 및 제약 |
 | [changes.md](./changes.md) | 커밋별 시스템 변경 요약 및 검증 상태. 현재 기준 정리 이후 지속적으로 갱신 |
 | [fairy-patrol.md](./fairy-patrol.md) | 요정 11명 순찰 및 눈·걷기 표현 현행 규격 |
-| [enemy-preview.md](./enemy-preview.md) | 적 동물 12종 선택, 크기, 이동·공격 및 공용 눈 깜빡임 |
-| [movement-speed.md](./movement-speed.md) | 요정·적 기본 및 최대 이동 속도, 유사 게임 참고 근거, 비교 UI |
+| [enemy-preview.md](./enemy-preview.md) | 적 동물 12종 무작위 등장, 크기, 이동·공격 및 표정 |
+| [movement-speed.md](./movement-speed.md) | 요정·적 기본 및 최대 이동 속도, 유사 게임 참고 근거, 강화·표정 연동용 보존 규격 |
 | [flower-head-preview.md](./flower-head-preview.md) | 별도 브랜치의 꽃 머리 크기 비교 및 검증 |
 
 상세 좌표·색상·PNG 크기는 [ASSET_SPECS.md](../ASSET_SPECS.md), 실행 방법은 [README.md](../README.md), 개발 범위 및 문서 갱신 규칙은 [AGENTS.md](../AGENTS.md)를 참조한다.
