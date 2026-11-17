@@ -203,8 +203,8 @@
       return {...e,scale,width:e.bounds.width*scale,height:e.bounds.height*scale};
     });
     const model=createPopulation(spec,patrol,entries),sprites=new Map(),C=window.GardenClarityPreview,S=window.GardenGroundShadow;
-    const renderKey=k=>C?C.enemyTexture(scene,k):k;
-    if(C?.config.enemyTone)for(const a of entries)for(const expression of ['normal','closed','angry','dizzy'])renderKey(key(a.id,expression));
+    const renderKey=(k,scale)=>C?C.enemyRenderTexture(scene,k,scale):k;
+    if(C&&(C.config.enemyTone||C.config.enemyOutline))for(const a of entries)for(const expression of ['normal','closed','angry','dizzy'])renderKey(key(a.id,expression),a.scale);
     // The playable field clips partial entry/exit sprites; HUD is never covered.
     const clip=scene.make.graphics({x:0,y:0,add:false});
     clip.fillStyle(0xffffff,1).fillRect(0,spec.top,spec.width,spec.height-spec.top-spec.bottom);
@@ -218,7 +218,7 @@
         const a=actor.entry,r=a.bounds,p=actor.pose;
         let sprite=sprites.get(actor.id);
         if(!sprite){
-          const image=scene.add.image(0,0,renderKey(key(a.id,actor.expression))).setDepth(3).setMask(fieldMask).setName('enemy:actor:'+actor.id);
+          const image=scene.add.image(0,0,renderKey(key(a.id,actor.expression),a.scale)).setDepth(3).setMask(fieldMask).setName('enemy:actor:'+actor.id);
           const shadow=S.create(scene,'enemy:shadow:'+actor.id,S.config.enemy,fieldMask);
           sprite={image,shadow};sprites.set(actor.id,sprite);
         }
@@ -226,7 +226,7 @@
         image.setPosition(x,ground-a.height*sy/2-lift)
           .setOrigin((r.left+r.right)/2/size,(r.top+r.bottom)/2/size)
           .setScale(a.scale*sx*(flip?-1:1),a.scale*sy).setAngle(angle).setDepth(C?C.enemyDepth(ground,spec):3+ground/spec.height);
-        const texture=renderKey(key(a.id,actor.expression));if(image.texture.key!==texture)image.setTexture(texture);
+        const texture=renderKey(key(a.id,actor.expression),a.scale);if(image.texture.key!==texture)image.setTexture(texture);
         if(protect)image.setAlpha(C.protectedEnemyAlpha(targets,image));
         S.update(shadow,x,ground,a.width*.72,Math.max(3,a.height*.16),lift);
       }
