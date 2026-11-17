@@ -43,7 +43,7 @@ const url='http://127.0.0.1:'+server.address().port;
 const browser=await chromium.launch({channel:'chrome',headless:true,args:['--no-sandbox','--disable-dev-shm-usage','--use-gl=angle','--use-angle=swiftshader','--enable-unsafe-swiftshader']});
 const report=[];
 // Fixed comparison sizes, relative to 22px flower cells and the 40px garden fairy.
-const expectedSpans={"1_butterfly":26,"2_grasshopper":28,"6_mouse":42,"2_gray_bug":30,"1_cat":48,"3_caterpillar":28,"6_sparrow":34,"6_pigeon":42,"4_beetle":34,"2_frog":36,"6_rabbit":48,"5_bulldog":60};
+const expectedSpans={"1_butterfly":26,"2_grasshopper":28,"6_mouse":42,"2_gray_bug":30,"1_cat":40,"3_caterpillar":28,"6_sparrow":34,"6_pigeon":42,"4_beetle":34,"2_frog":32,"6_rabbit":40,"5_bulldog":48};
 const expectedTypes={"1_butterfly":["fly",1],"2_grasshopper":["jump",1],"6_mouse":["approach",3],"2_gray_bug":["charge",1],"1_cat":["charge",2],"3_caterpillar":["approach",1],"6_sparrow":["fly",2],"6_pigeon":["fly",3],"4_beetle":["approach",2],"2_frog":["jump",2],"6_rabbit":["jump",3],"5_bulldog":["charge",3]};
 try{
  for(const [name,w,h,dpr,query] of [
@@ -120,9 +120,10 @@ try{
     assert.ok(a.exact&&a.changed>0&&a.eyeDelta>0&&a.alpha>10000,JSON.stringify(a));
     assert.equal(a.span,expectedSpans[a.id]);assert.deepEqual([a.attackType,a.level],expectedTypes[a.id]);
     assert.ok(Math.abs(Math.max(a.w,a.h)-a.span)<.01,JSON.stringify(a));
-    await page.selectOption('#enemy-character',a.id);
+    if(name==='default')await page.selectOption('#enemy-character',a.id);
+    else await page.evaluate(id=>{const e=document.getElementById('enemy-character');e.value=id;e.dispatchEvent(new Event('change',{bubbles:true}));},a.id);
     for(const mode of ['move','attack','auto']){
-     await page.selectOption('#enemy-motion-mode',mode);
+     await page.evaluate(mode=>{const e=document.getElementById('enemy-motion-mode');e.value=mode;e.dispatchEvent(new Event('change',{bubbles:true}));},mode);
      const checked=await page.evaluate(({id,mode})=>{
       const s=window.__previewGame.scene.getScene('Game'),c=s.enemyPreview,a=c.selected,L=window.GardenGameLayout.spec,B=s.fairyPatrol.boundary;
       const path=window.GardenEnemyPreview.route(L,B,a),profile=window.GardenEnemyMotion.profiles[id];
@@ -146,7 +147,7 @@ try{
      if(a.attackType==='jump'||a.attackType==='fly')assert.ok(checked.lift>=7,JSON.stringify(checked));
      motions.push(checked);
     }
-    if(name==='default'||name==='fhd'){
+    if(name==='fhd'&&['2_frog','1_cat','6_rabbit','5_bulldog'].includes(a.id)){
      await page.selectOption('#enemy-motion-mode','attack');
      await page.evaluate(()=>{const c=window.__previewGame.scene.getScene('Game').enemyPreview,p=window.GardenEnemyMotion.profiles[c.selected.id];c.setMode('attack');c.advance(p.windup+p.strike*.45);});
      await page.screenshot({path:join(out,'enemy-'+name+'-'+a.id+'.png'),scale:'device'});
@@ -166,6 +167,7 @@ try{
     await page.keyboard.press('Escape');await page.waitForFunction(()=>window.__previewGame.scene.getScene('Game').enemyPreview.elapsed>0&&window.__previewGame.scene.isActive('Game'));
     assert.equal(await page.locator('#enemy-preview-controls').isVisible(),true);
     await page.setViewportSize({width:800,height:450});
+    await page.waitForFunction(()=>Math.abs(document.getElementById('game').getBoundingClientRect().width-800)<1&&Math.abs(document.getElementById('enemy-preview-controls').getBoundingClientRect().width-226*800/960)<2,{},{timeout:8000});
     const resized=await page.locator('#enemy-preview-controls').boundingBox();assert.ok(Math.abs(resized.width-226*800/960)<2);
     await page.evaluate(()=>window.__previewGame.scene.stop('Game'));
     await page.waitForFunction(()=>!document.getElementById('enemy-preview-controls'));

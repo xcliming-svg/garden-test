@@ -12,14 +12,14 @@
     {id:'2_grasshopper',span:28,attackType:'jump',level:1,side:'left',row:0,col:1},
     {id:'6_mouse',span:42,attackType:'approach',level:3,side:'left',row:1,col:0},
     {id:'2_gray_bug',span:30,attackType:'charge',level:1,side:'left',row:1,col:1},
-    {id:'1_cat',span:48,attackType:'charge',level:2,side:'left',row:2,col:0},
+    {id:'1_cat',span:40,attackType:'charge',level:2,side:'left',row:2,col:0},
     {id:'3_caterpillar',span:28,attackType:'approach',level:1,side:'left',row:2,col:1},
     {id:'6_sparrow',span:34,attackType:'fly',level:2,side:'right',row:0,col:0},
     {id:'6_pigeon',span:42,attackType:'fly',level:3,side:'right',row:0,col:1},
     {id:'4_beetle',span:34,attackType:'approach',level:2,side:'right',row:1,col:0},
-    {id:'2_frog',span:36,attackType:'jump',level:2,side:'right',row:1,col:1},
-    {id:'6_rabbit',span:48,attackType:'jump',level:3,side:'right',row:2,col:0},
-    {id:'5_bulldog',span:60,attackType:'charge',level:3,side:'right',row:2,col:1}
+    {id:'2_frog',span:32,attackType:'jump',level:2,side:'right',row:1,col:1},
+    {id:'6_rabbit',span:40,attackType:'jump',level:3,side:'right',row:2,col:0},
+    {id:'5_bulldog',span:48,attackType:'charge',level:3,side:'right',row:2,col:1}
   ].map(Object.freeze));
   function preload(scene){
     if(!enabled)return;
