@@ -1,6 +1,6 @@
 # 현재 설계 및 구현 정리
 
-> **devel 가독성 비교(선택 적용):** `?clarity=1`에서 적 색조(명도 90%/채도 75%), 요정 약 1px 밝은 외곽선, 발 위치 Y 정렬, 주인공 머리 위 금색 화살표, 심은 셀 바닥 강조, 주인공 가림 방지(`heroOcclusion=1`, `occlusionAlpha=50`)를 활성화한다. 기본/`?clarity=0`은 기존 표시. 각 효과 0/1 개별 제어, 링 없음. [비교 규격](./enemy-preview.md#devel-군집-가독성-비교).
+> **devel 가독성 비교(선택 적용):** `?clarity=1`에서 적 색조(명도 90%/채도 75%), 요정 약 1px 밝은 외곽선, 발 위치 Y 정렬, 주인공 머리 위 금색 화살표, 심은 셀 바닥 강조, 주인공 가림 방지(`heroOcclusion=1`, `occlusionAlpha=50`)를 활성화한다. 물 요정(`waterOcclusion=1`)·꽃(`flowerOcclusion=1`) 가림 방지는 독립 선택(기본 OFF)이다. 기본/`?clarity=0`은 기존 표시. 각 효과 0/1 개별 제어, 링 없음. [비교 규격](./enemy-preview.md#devel-군집-가독성-비교).
 
 > **main/devel Garden 16 v9:** [공통 색상 가이드](./ui-color-guide.md)가 최신 색상 규격이다. 16개 기본색 및 UI 파생 음영을 적용하고, SVG 원본은 보존하며 `?svgcolors=original`에서 원본 색상을 표시한다. 아래 이전 팔레트 수치와 색상 관련 기록은 역사적 기준이다.
 
