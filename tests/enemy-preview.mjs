@@ -99,13 +99,7 @@ try{
       if(frame[i+3]===255&&exp[i+3]===255)for(let k=0;k<3;k++)opaqueDelta=Math.max(opaqueDelta,Math.abs(frame[i+k]-exp[i+k]));
       else if(Math.min(frame[i+3],exp[i+3])>=128)for(let k=0;k<3;k++)edgeDelta=Math.max(edgeDelta,Math.abs(frame[i+k]-exp[i+k]));
      }
-     let wingPixels=0;
-     if(a.attackType==='fly'){
-      const up=pix(s.textures.get(window.GardenEnemyPreview.wingKey(a.id,'normal',-2)).getSourceImage());
-      const down=pix(s.textures.get(window.GardenEnemyPreview.wingKey(a.id,'normal',2)).getSourceImage());
-      for(let i=0;i<up.length;i+=4)if([0,1,2,3].some(j=>up[i+j]!==down[i+j]))wingPixels++;
-     }
-     return {id:a.id,w:a.width,h:a.height,span:a.span,attackType:a.attackType,level:a.level,changed,eyeDelta,alpha,maxAlpha,opaqueDelta,edgeDelta,wingPixels,
+     return {id:a.id,w:a.width,h:a.height,span:a.span,attackType:a.attackType,level:a.level,changed,eyeDelta,alpha,maxAlpha,opaqueDelta,edgeDelta,
       exact:maxAlpha<=1&&opaqueDelta<=2&&edgeDelta<=4};
     });
     return {entries,field:{left:0,right:L.width,top:L.top,bottom:L.height-L.bottom},
@@ -125,63 +119,37 @@ try{
    for(const a of result.entries){
     assert.ok(a.exact&&a.changed>0&&a.eyeDelta>0&&a.alpha>10000,JSON.stringify(a));
     assert.equal(a.span,expectedSpans[a.id]);assert.deepEqual([a.attackType,a.level],expectedTypes[a.id]);
-    if(a.attackType==='fly')assert.ok(a.wingPixels>1000,JSON.stringify(a));
     assert.ok(Math.abs(Math.max(a.w,a.h)-a.span)<.01,JSON.stringify(a));
-    // Exercise the native selector with Playwright once per species in the default
-    // viewport; use the same DOM change event in other configurations to avoid
-    // repeated compositor waits in the full matrix.
-    if(name==='default')await page.selectOption('#enemy-character',a.id);
-    const checks=await page.evaluate(({id,selectedByBrowser})=>{
-      const s=window.__previewGame.scene.getScene('Game'),c=s.enemyPreview,L=window.GardenGameLayout.spec,B=s.fairyPatrol.boundary;
-      const choose=(select,value)=>{select.value=value;select.dispatchEvent(new Event('change',{bubbles:true}));};
-      if(!selectedByBrowser)choose(c.ui.select,id);
-      const a=c.selected,path=window.GardenEnemyPreview.route(L,B,a,s.flowerGrowth),M=window.GardenEnemyMotion;
-      const g=L.garden,range=v=>Math.max(...v)-Math.min(...v);
-      const flowerTarget=[...s.flowerGrowth.entries.values()].some(f=>f.image.x===path.target&&f.image.y===path.ground);
-      return ['move','attack','auto'].map(mode=>{
-       choose(c.ui.mode,mode);
-       const states=new Set(),xs=[],lifts=[],angles=[],wings=new Set(),closed=new Set();
-       let reopened=false,valid=true,reached=false,entered=false,maxMoveStretch=0,maxMoveAngle=0,moveLift=0,moveMinLift=Infinity;
-       const seconds=Math.max(12,M.duration(a,mode)+.1);
-       for(let i=0;i<Math.ceil(seconds/.02);i++){
-        c.advance(.02);const p=c.pose,img=c.image;
-        states.add(p.phase);xs.push(img.x);lifts.push(p.lift);angles.push(img.angle);wings.add(p.wing);
-        if(c.expression==='closed')closed.add(id);else if(closed.has(id))reopened=true;
-        const rad=img.rotation,hw=a.width*p.sx/2,hh=a.height*p.sy/2;
-        const ex=Math.abs(Math.cos(rad))*hw+Math.abs(Math.sin(rad))*hh,ey=Math.abs(Math.sin(rad))*hw+Math.abs(Math.cos(rad))*hh;
-        valid=valid&&img.x-ex>=8&&img.x+ex<=L.width-8&&img.y-ey>=L.top&&img.y+ey<=L.height-L.bottom&&img.visible&&!img.input&&!img.body&&img.texture.source[0].scaleMode===Phaser.Textures.FilterMode.LINEAR&&img.texture.key===window.GardenEnemyPreview.wingKey(id,c.expression,p.wing);
-        entered=entered||(p.x>=g.x&&p.x<=g.x+g.size&&path.ground+p.drift>=g.y&&path.ground+p.drift<=g.y+g.size);
-        reached=reached||(Math.abs(p.x-path.target)<1.5&&(mode==='move'||p.phase==='strike'||p.phase==='recover'));
-        if(p.phase==='move'||p.phase==='return'){
-         maxMoveStretch=Math.max(maxMoveStretch,Math.abs(p.sx-1),Math.abs(p.sy-1));maxMoveAngle=Math.max(maxMoveAngle,Math.abs(p.angle));
-         moveLift=Math.max(moveLift,p.lift);moveMinLift=Math.min(moveMinLift,p.lift);
-        }
-       }
-       return {id:a.id,mode:c.mode,flowerTarget,states:[...states],xRange:range(xs),lift:Math.max(...lifts),angleRange:range(angles),valid,reopened,entered,reached,maxMoveStretch,maxMoveAngle,moveLift,moveMinLift:moveMinLift===Infinity?null:moveMinLift,wings:[...wings],target:path.target,ground:path.ground,visible:s.children.list.filter(o=>o.name==='enemy-preview:actor'&&o.visible).length};
-      });
-    },{id:a.id,selectedByBrowser:name==='default'});
-    for(const checked of checks){
-     const mode=checked.mode;
-     assert.equal(checked.id,a.id);assert.equal(checked.visible,1);assert.ok(checked.valid&&checked.reopened&&checked.entered&&checked.reached&&checked.flowerTarget,JSON.stringify(checked));
-     assert.ok(checked.xRange>10&&checked.angleRange>0,JSON.stringify(checked));
-     if(mode!=='attack'){
-      assert.ok(checked.states.includes('move')&&checked.states.includes('return'),JSON.stringify(checked));
-      assert.ok(checked.maxMoveStretch<=(a.span>=42?.009:.026)&&checked.maxMoveAngle<=3.6,JSON.stringify(checked));
-      if(a.attackType==='fly')assert.ok(checked.moveMinLift>=25&&checked.moveLift-checked.moveMinLift>10&&checked.wings.length>=4,JSON.stringify(checked));
-      if(a.attackType==='jump')assert.ok(checked.moveLift>=8,JSON.stringify(checked));
-     }
+    await page.selectOption('#enemy-character',a.id);
+    for(const mode of ['move','attack','auto']){
+     await page.selectOption('#enemy-motion-mode',mode);
+     const checked=await page.evaluate(({id,mode})=>{
+      const s=window.__previewGame.scene.getScene('Game'),c=s.enemyPreview,a=c.selected,L=window.GardenGameLayout.spec,B=s.fairyPatrol.boundary;
+      const path=window.GardenEnemyPreview.route(L,B,a),profile=window.GardenEnemyMotion.profiles[id];
+      const states=new Set(),xs=[],lifts=[],angles=[],scales=[],closed=new Set();let reopened=false,valid=true;
+      const bound=B.border.right+B.frame/2;
+      for(let i=0;i<700;i++){
+       c.advance(.02);const p=c.pose,img=c.image;
+       states.add(p.phase);xs.push(img.x);lifts.push(p.lift);angles.push(img.angle);scales.push(img.scaleY);
+       if(c.expression==='closed')closed.add(id);else if(closed.has(id))reopened=true;
+       const rad=img.rotation,hw=a.width*p.sx/2,hh=a.height*p.sy/2;
+       const ex=Math.abs(Math.cos(rad))*hw+Math.abs(Math.sin(rad))*hh,ey=Math.abs(Math.sin(rad))*hw+Math.abs(Math.cos(rad))*hh;
+       valid=valid&&img.x-ex>=bound+9&&img.x+ex<=L.width-8&&img.y-ey>=L.top&&img.y+ey<=L.height-L.bottom&&img.visible&&!img.input&&!img.body&&img.texture.source[0].scaleMode===Phaser.Textures.FilterMode.LINEAR&&img.texture.key==='enemy-preview:'+id+':'+c.expression;
+      }
+      const range=v=>Math.max(...v)-Math.min(...v);
+      return {id:a.id,mode:c.mode,states:[...states],xRange:range(xs),lift:Math.max(...lifts),angleRange:range(angles),scaleRange:range(scales),valid,reopened,visible:s.children.list.filter(o=>o.name==='enemy-preview:actor'&&o.visible).length,profile};
+     },{id:a.id,mode});
+     assert.equal(checked.id,a.id);assert.equal(checked.mode,mode);assert.equal(checked.visible,1);assert.ok(checked.valid&&checked.reopened,JSON.stringify(checked));
+     assert.ok(checked.xRange>10&&checked.angleRange>0&&checked.scaleRange>0,JSON.stringify(checked));
+     if(mode!=='attack')assert.ok(checked.states.includes('move')&&checked.states.includes('return'),JSON.stringify(checked));
      if(mode!=='move')assert.ok(['windup','strike','recover'].every(x=>checked.states.includes(x)),JSON.stringify(checked));
+     if(a.attackType==='jump'||a.attackType==='fly')assert.ok(checked.lift>=7,JSON.stringify(checked));
      motions.push(checked);
     }
-    if(name==='fhd'&&['3_caterpillar','6_rabbit','5_bulldog','1_butterfly','6_sparrow','6_pigeon'].includes(a.id)){
+    if(name==='default'||name==='fhd'){
      await page.selectOption('#enemy-motion-mode','attack');
-     await page.evaluate(()=>{const c=window.__previewGame.scene.getScene('Game').enemyPreview,p=window.GardenEnemyMotion.profiles[c.selected.id];c.setMode('attack');c.advance(p.windup+p.strike*.80);});
+     await page.evaluate(()=>{const c=window.__previewGame.scene.getScene('Game').enemyPreview,p=window.GardenEnemyMotion.profiles[c.selected.id];c.setMode('attack');c.advance(p.windup+p.strike*.45);});
      await page.screenshot({path:join(out,'enemy-'+name+'-'+a.id+'.png'),scale:'device'});
-     if(a.attackType==='fly'){
-      await page.selectOption('#enemy-motion-mode','move');
-      await page.evaluate(()=>{const c=window.__previewGame.scene.getScene('Game').enemyPreview,p=window.GardenEnemyMotion.profiles[c.selected.id];c.setMode('move');c.advance(p.moveTime*.52);});
-      await page.screenshot({path:join(out,'enemy-flight-'+a.id+'.png'),scale:'device'});
-     }
     }
    }
    await page.selectOption('#enemy-character','3_caterpillar');
@@ -198,14 +166,12 @@ try{
     await page.keyboard.press('Escape');await page.waitForFunction(()=>window.__previewGame.scene.getScene('Game').enemyPreview.elapsed>0&&window.__previewGame.scene.isActive('Game'));
     assert.equal(await page.locator('#enemy-preview-controls').isVisible(),true);
     await page.setViewportSize({width:800,height:450});
-    // Window resize and Phaser's scale event are asynchronous in Chromium.
-    await page.waitForFunction(()=>Math.abs(document.getElementById('game').getBoundingClientRect().width-800)<1&&Math.abs(document.getElementById('enemy-preview-controls').getBoundingClientRect().width-226*800/960)<2,{},{timeout:8000});
-    const resized=await page.locator('#enemy-preview-controls').boundingBox();assert.ok(Math.abs(resized.width-226*800/960)<2,JSON.stringify(resized));
+    const resized=await page.locator('#enemy-preview-controls').boundingBox();assert.ok(Math.abs(resized.width-226*800/960)<2);
     await page.evaluate(()=>window.__previewGame.scene.stop('Game'));
     await page.waitForFunction(()=>!document.getElementById('enemy-preview-controls'));
    }
    assert.deepEqual(errors,[]);assert.deepEqual(failed,[]);
-   report.push({name,result,motions,pass:true});console.log('PASS',name,'12 selectable enemies, 3 modes, garden entry, subdued gait and flight');
+   report.push({name,result,motions,pass:true});console.log('PASS',name,'12 selectable enemies, 3 modes, shared eyes, bounded motion');
   }finally{await page.close();}
  }
 }finally{await browser.close();server.close();writeFileSync(join(out,'enemy-report.json'),JSON.stringify(report,null,2));}

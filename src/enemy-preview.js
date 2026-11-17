@@ -4,39 +4,7 @@
   const enabled=window.GardenFairyPatrol.enabled&&new URLSearchParams(window.location.search).get('enemies')!=='0';
   const size=512,root='assets/enemies/',anchorKey='enemy-preview:anchors';
   const key=(id,expression)=>'enemy-preview:'+id+':'+expression;
-  const baseKey=id=>key(id,'base'),sourceKey=id=>key(id,'source');
-  const wingKey=(id,expression,wing)=>key(id,expression)+(wing?':wing:'+wing:'');
-  // The original SVG paths are retained; only these wing shapes are transformed in memory.
-  const wingParts=Object.freeze({
-    '1_butterfly':{indices:[0,1,2,6],pivot:[515,922],angle:8,fold:.24},
-    '6_sparrow':{indices:[3],pivot:[980,854],angle:8,overlay:true},
-    '6_pigeon':{indices:[3],pivot:[1325,831],angle:6,overlay:true}
-  });
-  function wingBody(ctx,source,id,frame){
-    const body=new DOMParser().parseFromString(source,'image/svg+xml').getElementById('body');
-    if(!body)throw Error('Missing wing source '+id);
-    const config=wingParts[id],amount=frame/2,[x,y]=config.pivot;
-    ctx.clearRect(0,0,size,size);ctx.save();ctx.scale(size/1000,size/1000);
-    for(const m of body.getAttribute('transform').matchAll(/(translate|scale)\(([^)]+)\)/g)){
-      const v=m[2].trim().split(/[ ,]+/).map(Number);
-      if(m[1]==='translate')ctx.translate(v[0],v[1]||0);else ctx.scale(v[0],v[1]??v[0]);
-    }
-    for(const [i,node] of [...body.children].entries()){
-      const path=new Path2D(node.getAttribute('d')),draw=()=>{
-        ctx.fillStyle=node.getAttribute('fill');ctx.fill(path);
-        if(node.hasAttribute('stroke')){ctx.strokeStyle=node.getAttribute('stroke');ctx.lineWidth=Number(node.getAttribute('stroke-width')||1);ctx.lineJoin=node.getAttribute('stroke-linejoin')||'miter';ctx.stroke(path);}
-      };
-      if(!config.indices.includes(i)){draw();continue;}
-      // Bird wing/tail art touches the torso contour. Preserve its original fill
-      // underneath the small animated extension so the outline never opens a gap.
-      if(config.overlay)draw();
-      ctx.save();ctx.translate(x,y);ctx.rotate(amount*config.angle*Math.PI/180);
-      if(config.fold)ctx.scale(1-config.fold*Math.abs(amount),1);
-      ctx.translate(-x,-y);draw();ctx.restore();
-    }
-    ctx.restore();
-    return ctx.getImageData(0,0,size,size);
-  }
+  const baseKey=id=>key(id,'base');
   // Longest visible side in logical px: 22px flower cell, 40px garden fairy.
   // Attack type and level select preview motion only, not combat rules.
   const roster=Object.freeze([
@@ -56,10 +24,8 @@
   function preload(scene){
     if(!enabled)return;
     if(!scene.cache.json.exists(anchorKey))scene.load.json(anchorKey,root+'eye_anchors.json');
-    for(const e of roster){
-      if(!scene.textures.exists(baseKey(e.id)))scene.load.svg(baseKey(e.id),root+e.id+'_1000.svg',{width:size,height:size});
-      if(wingParts[e.id]&&!scene.cache.text.exists(sourceKey(e.id)))scene.load.text(sourceKey(e.id),root+e.id+'_1000.svg');
-    }
+    for(const e of roster)if(!scene.textures.exists(baseKey(e.id)))
+      scene.load.svg(baseKey(e.id),root+e.id+'_1000.svg',{width:size,height:size});
   }
   function bounds(ctx){
     const data=ctx.getImageData(0,0,size,size).data;
@@ -94,41 +60,35 @@
       const body=scene.textures.get(baseKey(e.id)).getSourceImage();
       ctx.clearRect(0,0,size,size);ctx.drawImage(body,0,0,size,size);
       const b=bounds(ctx),raw=ctx.getImageData(0,0,size,size);
-      for(const wing of wingParts[e.id]?[0,-2,-1,1,2]:[0]){
-        const pixels=wing?wingBody(ctx,scene.cache.text.get(sourceKey(e.id)),e.id,wing):raw;
-        const base=window.GardenSvgPalette.enabled?window.GardenSvgPalette.apply(pixels):pixels;
-        for(const expression of ['normal','closed']){
-          const k=wingKey(e.id,expression,wing);
-          const tex=scene.textures.exists(k)?scene.textures.get(k):scene.textures.createCanvas(k,size,size);
-          ctx.putImageData(base,0,0);
-          const f=fairy.sheets.eyes.frames[expression],w=f.width/2;
-          for(const [i,side] of ['left','right'].entries()){
-            const a=art.eyes[side],c=fairy.sourceEyeCenters[side];
-            const sx=f.x+i*w,sy=f.y;
-            const dx=(a.x-(c.x-i*w)*a.scale)*factor;
-            const dy=(a.y-c.y*a.scale)*factor;
-            ctx.drawImage(atlas,sx,sy,w,f.height,dx,dy,w*a.scale*factor,f.height*a.scale*factor);
-          }
-          tex.getContext().putImageData(ctx.getImageData(0,0,size,size),0,0);
-          tex.refresh();tex.setFilter(Phaser.Textures.FilterMode.LINEAR);
+      const base=window.GardenSvgPalette.enabled?window.GardenSvgPalette.apply(raw):raw;
+      for(const expression of ['normal','closed']){
+        const k=key(e.id,expression);
+        const tex=scene.textures.exists(k)?scene.textures.get(k):scene.textures.createCanvas(k,size,size);
+        // Both expressions start with the identical body pixels. Quantize only
+        // the body, not the blended antialiased eye edges.
+        ctx.putImageData(base,0,0);
+        const f=fairy.sheets.eyes.frames[expression],w=f.width/2;
+        for(const [i,side] of ['left','right'].entries()){
+          const a=art.eyes[side],c=fairy.sourceEyeCenters[side];
+          // The shared atlas already includes the source eye normalization.
+          const sx=f.x+i*w,sy=f.y;
+          const dx=(a.x-(c.x-i*w)*a.scale)*factor;
+          const dy=(a.y-c.y*a.scale)*factor;
+          ctx.drawImage(atlas,sx,sy,w,f.height,dx,dy,w*a.scale*factor,f.height*a.scale*factor);
         }
+        tex.getContext().putImageData(ctx.getImageData(0,0,size,size),0,0);
+        tex.refresh();tex.setFilter(Phaser.Textures.FilterMode.LINEAR);
       }
       return {...e,name:art.name,bounds:b};
     });
   }
-  function route(spec,boundary,e,flowers){
-    const margin=e.span*.74+12,g=spec.garden;
-    // The rightmost planted flower is the deterministic preview target.
-    // The stone border is decorative; every enemy may cross it.
-    const planted=flowers?[...flowers.entries.values()].map(v=>v.image):[];
-    const inset=e.span/2+2,interior=planted.filter(p=>p.x>=g.x+inset&&p.x<=g.x+g.size-inset&&p.y>=g.y+inset&&p.y<=g.y+g.size-inset);
-    const candidates=interior.length?interior:planted;
-    candidates.sort((a,b)=>b.x-a.x||Math.abs(a.y-(g.y+g.size/2))-Math.abs(b.y-(g.y+g.size/2)));
-    const target=candidates[0]?.x??g.x+g.size/2;
-    const ground=candidates[0]?.y??g.y+g.size/2;
+  function route(spec,boundary,e){
+    // Reserve the complete transformed body outside the outermost stones.
+    const margin=e.span*.74+12;
+    const target=boundary.border.right+boundary.frame/2+margin;
     const start=spec.width-margin;
     const reach=Math.min(window.GardenEnemyMotion.profiles[e.id].reach,(start-target)*.55);
-    return {start,stage:target+reach,target,ground};
+    return {start,stage:target+reach,target,ground:spec.top+spec.fieldHeight*.58};
   }
   function controls(scene,spec,entries,onSelect,onMode){
     const parent=document.getElementById('game'),P=window.GardenPalette.reference.hex;
@@ -171,18 +131,16 @@
     const shadow=scene.add.ellipse(0,0,1,1,window.GardenPalette.n.ink,.35).setDepth(.75).setName('enemy-preview:shadow');
     let blink=window.GardenFairyPatrol.blinkSchedule(11);
     function render(){
-      const a=selected,r=a.bounds,path=route(spec,patrol.boundary,a,scene.flowerGrowth);
+      const a=selected,r=a.bounds,path=route(spec,patrol.boundary,a);
       pose=window.GardenEnemyMotion.sample(a,mode,motionTime,path);
-      const {x,lift,angle,sx,sy,flip,drift}=pose;
-      const ground=path.ground+drift;
-      image.setPosition(x,ground-a.height*sy/2-lift)
+      const {x,lift,angle,sx,sy,flip}=pose;
+      image.setPosition(x,path.ground-a.height*sy/2-lift)
         .setOrigin((r.left+r.right)/2/size,(r.top+r.bottom)/2/size)
-        .setScale(a.scale*sx*(flip?-1:1),a.scale*sy).setAngle(angle).setDepth(3);
-      shadow.setPosition(x,ground+1).setDisplaySize(a.width*.72*(1-Math.min(.42,lift*.006)),Math.max(2,a.height*.10))
-        .setAlpha(.46/(1+lift*.023));
-      expression=blink(elapsed);
-      const texture=wingKey(a.id,expression,pose.wing);
-      if(image.texture.key!==texture)image.setTexture(texture);
+        .setScale(a.scale*sx*(flip?-1:1),a.scale*sy).setAngle(angle);
+      shadow.setPosition(x,path.ground+1).setDisplaySize(a.width*.72*(1-lift*.009),Math.max(2,a.height*.10))
+        .setAlpha(.36/(1+lift*.055));
+      const next=blink(elapsed);
+      if(next!==expression){expression=next;image.setTexture(key(a.id,expression));}
     }
     function select(id){
       const a=entries.find(e=>e.id===id);if(!a)return false;
@@ -202,5 +160,5 @@
       get mode(){return mode;},get expression(){return expression;},get elapsed(){return elapsed;},get motionTime(){return motionTime;}};
     render();return scene.enemyPreview;
   }
-  window.GardenEnemyPreview=Object.freeze({enabled,roster,preload,attach,key,wingKey,route});
+  window.GardenEnemyPreview=Object.freeze({enabled,roster,preload,attach,key,route});
 }());
