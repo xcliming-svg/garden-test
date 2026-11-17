@@ -1,6 +1,6 @@
 # 요정 11명 순찰 — devel
 
-- 새싹·물방울 요정 11명 외곽선 기본 stone #706975, 1 논리 px. `outlineColor=paper|stone|silver|...` (Garden 16 역할명 16개), `outlineWidth=0.5~1.5`(실수), `outline=0`으로 끄기. 잘못된 값은 stone/1. 별도 런타임 링, 몸체 원본·크기·충돌·순찰 유지. 요정 전면 고정, 기존 combat=1 제외.
+- 새싹·물방울 요정 11명 및 적 12종 공통 외곽선 기본 stone #706975, 1 논리 px. `outlineColor=paper|stone|silver|...` (Garden 16 역할명 16개), `outlineWidth=0.5~1.5`(실수), `outline=0`으로 끄기. 잘못된 값은 stone/1. 별도 런타임 링, 몸체 원본·크기·충돌·순찰 유지. 요정 전면 고정, 기존 combat=1 제외.
 
 > **devel 자동 공격 비교:** 기본 실행에 새싹 요정 5발 빨강·물 요정 2발 노랑 자동 발사 및 적 피격/처치가 추가됐다. `?attack=0`은 이전 비전투 군집 비교, 요정 전면은 기본 고정, `?full=1`은 100칸으로 조합 가능하다. [공격 규격](./enemy-preview.md). 꽃 피해·실제 웨이브·보상 미구현.
 

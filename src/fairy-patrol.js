@@ -26,27 +26,32 @@
   const requestedWidth=rawWidth===null?1:Number(rawWidth);
   const outlineWidth=Number.isFinite(requestedWidth)&&requestedWidth>=.5&&requestedWidth<=1.5?requestedWidth:1;
   const outlineConfig=Object.freeze({enabled:params.get('outline')!=='0',color:outlineColor,width:outlineWidth,hex:palette[outlineColor]});
-  // A separate silhouette ring keeps body textures and collision masks intact.
-  function outlineKey(scene,type,scale){
-    const radius=outlineWidth*size/(1000*scale),k='fairy-outline:'+type+':'+outlineColor+':'+radius.toFixed(3);
+  // Shared cached silhouette ring. The body/occlusion/attack textures stay intact.
+  function ringKey(scene,sourceKey,prefix,scale,pad=0){
+    const radius=outlineWidth/scale,k=prefix+':'+outlineColor+':'+radius.toFixed(3)+':'+pad;
     if(scene.textures.exists(k))return k;
-    const source=scene.textures.get(baseKey(type)).getSourceImage();
-    const texture=scene.textures.createCanvas(k,size,size),ctx=texture.getContext();
+    const source=scene.textures.get(sourceKey).getSourceImage(),w=source.width,h=source.height;
+    const texture=scene.textures.createCanvas(k,w+2*pad,h+2*pad),ctx=texture.getContext();
     for(let i=0;i<24;i++){
       const angle=i*Math.PI/12;
-      ctx.drawImage(source,Math.cos(angle)*radius,Math.sin(angle)*radius,size,size);
+      ctx.drawImage(source,pad+Math.cos(angle)*radius,pad+Math.sin(angle)*radius,w,h);
     }
     ctx.globalCompositeOperation='source-in';
-    ctx.fillStyle=outlineConfig.hex;ctx.fillRect(0,0,size,size);
-    ctx.globalCompositeOperation='destination-out';ctx.drawImage(source,0,0,size,size);
+    ctx.fillStyle=outlineConfig.hex;ctx.fillRect(0,0,texture.width,texture.height);
+    ctx.globalCompositeOperation='destination-out';ctx.drawImage(source,pad,pad,w,h);
     ctx.globalCompositeOperation='source-over';
     texture.refresh();texture.setFilter(Phaser.Textures.FilterMode.LINEAR);
     return k;
   }
-  function syncOutline(actor){
+  function outlineKey(scene,type,scale){
+    return ringKey(scene,baseKey(type),'fairy-outline:'+type,1000*scale/size);
+  }
+  function syncOutline(actor,pad=0){
     const {image,outline}=actor;
     if(!outline)return;
-    outline.setPosition(image.x,image.y).setOrigin(image.originX,image.originY)
+    outline.setPosition(image.x,image.y).setOrigin(
+      pad?(image.displayOriginX+pad)/outline.width:image.originX,
+      pad?(image.displayOriginY+pad)/outline.height:image.originY)
       .setScale(image.scaleX,image.scaleY).setRotation(image.rotation).setFlip(image.flipX,image.flipY)
       .setDepth(image.depth).setAlpha(image.alpha).setVisible(image.visible);
   }
@@ -180,5 +185,5 @@
     scene.events.once('shutdown',()=>{scene.events.off('update',update);delete scene.fairyPatrol;});
     render();return controller;
   }
-  window.GardenFairyPatrol=Object.freeze({enabled,preload,install,attach,key,count,speed,maxSpeed,ranks,validRank,speedAt,blinkSchedule,fairyStates,isResult,emotionPose,outlineConfig});
+  window.GardenFairyPatrol=Object.freeze({enabled,preload,install,attach,key,count,speed,maxSpeed,ranks,validRank,speedAt,blinkSchedule,fairyStates,isResult,emotionPose,outlineConfig,ringKey,syncOutline});
 }());

@@ -204,12 +204,16 @@
   }
   function attach(scene,spec,patrol){
     if(!enabled)return null;
+    const F=window.GardenFairyPatrol,O=F.outlineConfig;
     const entries=install(scene).map(e=>{
       const scale=e.span/Math.max(e.bounds.width,e.bounds.height);
-      return {...e,scale,width:e.bounds.width*scale,height:e.bounds.height*scale};
+      // Pad each cached ring so even a body touching its source edge is not clipped.
+      const outlinePad=O.enabled?Math.ceil(O.width/scale)+2:0;
+      const outlineKey=O.enabled?F.ringKey(scene,baseKey(e.id),'enemy-outline:'+e.id,scale,outlinePad):null;
+      return {...e,scale,width:e.bounds.width*scale,height:e.bounds.height*scale,outlinePad,outlineKey};
     });
     const model=createPopulation(spec,patrol,entries),sprites=new Map();
-    const occlusion=window.GardenEnemyOcclusion.attach(scene,spec,patrol);
+    const occlusion=window.GardenEnemyOcclusion.attach(scene,spec,patrol,()=>sprites.values());
     // The playable field clips partial entry/exit sprites; HUD is never covered.
     const clip=scene.make.graphics({x:0,y:0,add:false});
     clip.fillStyle(0xffffff,1).fillRect(0,spec.top,spec.width,spec.height-spec.top-spec.bottom);
@@ -217,20 +221,22 @@
     const A=window.GardenFairyAttack,attack=A.enabled?A.attach(scene,spec,patrol,model,fieldMask):null;
     function render(){
       const alive=new Set(model.actors.map(a=>a.id));
-      for(const [id,sprite] of sprites)if(!alive.has(id)){sprite.image.destroy();sprite.shadow.destroy();sprites.delete(id);}
+      for(const [id,sprite] of sprites)if(!alive.has(id)){sprite.outline?.destroy();sprite.image.destroy();sprite.shadow.destroy();sprites.delete(id);}
       for(const actor of model.actors){
         const a=actor.entry,r=a.bounds,p=actor.pose;
         let sprite=sprites.get(actor.id);
         if(!sprite){
+          const outline=a.outlineKey?scene.add.image(0,0,a.outlineKey).setDepth(3).setMask(fieldMask).setName('enemy-outline:'+actor.id):null;
           const image=scene.add.image(0,0,key(a.id,actor.expression)).setDepth(3).setMask(fieldMask).setName('enemy:actor:'+actor.id);
           const shadow=scene.add.ellipse(0,0,1,1,window.GardenPalette.roles.n.ink,.35).setDepth(.75).setMask(fieldMask).setName('enemy:shadow:'+actor.id);
-          sprite={image,shadow};sprites.set(actor.id,sprite);
+          sprite={image,shadow,outline};sprites.set(actor.id,sprite);
         }
         const {image,shadow}=sprite,{x,ground,lift,angle,sx,sy,flip}=p;
         image.setPosition(x,ground-a.height*sy/2-lift)
           .setOrigin((r.left+r.right)/2/size,(r.top+r.bottom)/2/size)
           .setScale(a.scale*sx*(flip?-1:1),a.scale*sy).setAngle(angle).setDepth(3+ground/spec.height);
         const texture=key(a.id,actor.expression);if(image.texture.key!==texture)image.setTexture(texture);
+        F.syncOutline(sprite,a.outlinePad);
         shadow.setPosition(x,ground+1).setDisplaySize(a.width*.72*(1-lift*.009),Math.max(2,a.height*.10)).setAlpha(.36/(1+lift*.055));
       }
     }
@@ -254,7 +260,7 @@
     function setExpression(id,state){const ok=model.setExpression(id,state);if(ok)render();return ok;}
     const update=(_time,delta)=>advance(Math.min(.1,Math.max(0,delta/1000)));
     scene.events.on('update',update);
-    scene.events.once('shutdown',()=>{scene.events.off('update',update);for(const {image,shadow} of sprites.values()){image.clearMask();shadow.clearMask();}sprites.clear();if(attack){attack.gfx.clearMask();attack.gfx.destroy();}fieldMask.destroy();clip.destroy();delete scene.enemyPreview;});
+    scene.events.once('shutdown',()=>{scene.events.off('update',update);for(const {image,shadow,outline} of sprites.values()){image.clearMask();shadow.clearMask();outline?.clearMask();}sprites.clear();if(attack){attack.gfx.clearMask();attack.gfx.destroy();}fieldMask.destroy();clip.destroy();delete scene.enemyPreview;});
     scene.enemyPreview={entries,model,sprites,occlusion,attack,advance,setExpression,get actors(){return model.actors;},get targetCount(){return targetCount(model.elapsed);},get elapsed(){return model.elapsed;}};
     advance(0);return scene.enemyPreview;
   }

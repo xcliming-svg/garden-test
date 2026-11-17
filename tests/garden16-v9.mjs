@@ -60,6 +60,40 @@ try{
      let colored=0,inside=0;for(let i=0;i<rd.length;i+=4){if(rd[i+3]===255&&((rd[i]<<16)|(rd[i+1]<<8)|rd[i+2])===P.n[config.color])colored++;if(bd[i+3]===255&&rd[i+3]>0)inside++;}
      outlines.push({type:a.type,colored,inside,widths:[b[0]-r[0],r[1]-b[1],b[2]-r[2],r[3]-b[3]].map(n=>n*f)});
     }
+    const c=s.enemyPreview,enemyOutlines=[];
+    for(const e of c.entries){
+     if(!e.outlineKey)continue;
+     const base=s.textures.get('enemy-preview:'+e.id+':base').getSourceImage(),ring=s.textures.get(e.outlineKey).getSourceImage(),pad=e.outlinePad;
+     cv.width=ring.width;cv.height=ring.height;
+     ctx.drawImage(base,pad,pad);const bd=ctx.getImageData(0,0,cv.width,cv.height).data;
+     ctx.clearRect(0,0,cv.width,cv.height);ctx.drawImage(ring,0,0);const rd=ctx.getImageData(0,0,cv.width,cv.height).data;
+     const b=bounds(bd,cv.width),r=bounds(rd,cv.width);
+     let colored=0,inside=0;for(let i=0;i<rd.length;i+=4){if(rd[i+3]===255&&((rd[i]<<16)|(rd[i+1]<<8)|rd[i+2])===P.n[config.color])colored++;if(bd[i+3]===255&&rd[i+3]>0)inside++;}
+     enemyOutlines.push({id:e.id,colored,inside,widths:[b[0]-r[0],r[1]-b[1],b[2]-r[2],r[3]-b[3]].map(n=>n*e.scale)});
+    }
+    const syncEnemy=(actor,sprite)=>{
+     const {image,outline}=sprite,pad=actor.entry.outlinePad;
+     return !config.enabled?!outline:!!outline&&outline.texture.key===actor.entry.outlineKey&&outline.mask===image.mask&&
+       outline.x===image.x&&outline.y===image.y&&outline.rotation===image.rotation&&outline.scaleX===image.scaleX&&outline.scaleY===image.scaleY&&
+       outline.flipX===image.flipX&&outline.flipY===image.flipY&&outline.depth===image.depth&&outline.alpha===image.alpha&&outline.visible===image.visible&&
+       Math.abs(outline.displayOriginX-image.displayOriginX-pad)<1e-6&&Math.abs(outline.displayOriginY-image.displayOriginY-pad)<1e-6;
+    };
+    const actor=c.actors[0],sprite=c.sprites.get(actor.id),enemyInitial=syncEnemy(actor,sprite);
+    c.setExpression(actor.id,'hit');const hitSynced=syncEnemy(actor,sprite)&&sprite.image.texture.key.endsWith(':dizzy');
+    const fairy=actors[0].image,shape=window.GardenEnemyOcclusion.shape(fairy),body=sprite.image;
+    body.setPosition((shape.l+shape.r)/2,(shape.t+shape.b)/2).setAlpha(1);
+    window.GardenFairyPatrol.syncOutline(sprite,actor.entry.outlinePad);
+    c.occlusion.update([body],.1);
+    const enemyOverlap=body.alpha===.5&&(!sprite.outline||sprite.outline.alpha===.5);
+    body.setPosition(-100,-100);c.occlusion.update([body],.2);
+    const enemyRecovery=body.alpha===1&&(!sprite.outline||sprite.outline.alpha===1);
+    c.setExpression(actor.id,'auto');c.advance(0);
+    const enemyRestored=syncEnemy(actor,sprite);
+    const oldOutline=sprite.outline,oldImage=sprite.image;
+    c.model.damage(actor.id,actor.hp);c.advance(0);
+    const removed=!c.sprites.has(actor.id)&&!oldImage.active&&(!oldOutline||!oldOutline.active)&&!s.children.getByName('enemy-outline:'+actor.id);
+    const enemySynced=c.actors.every(a=>syncEnemy(a,c.sprites.get(a.id)));
+    const enemyChecks={enemyInitial,hitSynced,enemyOverlap,enemyRecovery,enemyRestored,removed,enemySynced};
     const hero=actors[0].image,probe=s.add.image(hero.x,hero.y,hero.texture.key).setOrigin(hero.originX,hero.originY).setScale(hero.scaleX,hero.scaleY).setAngle(hero.angle).setFlip(hero.flipX,hero.flipY).setDepth(3.5);
     s.enemyPreview.occlusion.update([probe],.1);
     const fade=hero.alpha,enemyFade=probe.alpha,outlineFade=actors[0].outline?.alpha??null;
@@ -78,12 +112,15 @@ try{
       path:s.fairyPatrol.length};
     const F=window.GardenFlowerGrowth;
     for(const n of F.names)for(let stage=1;stage<=3;stage++)art.push(read(F.key(n,stage)));
-    return {palette:Object.values(P.hex),reference:P.reference.hex,enabled:G.enabled,art,outlines,config,outlineCount:actors.filter(a=>a.outline).length,fade,enemyFade,outlineFade,synced,terrain,actors:s.fairyPatrol.actors.length,enemies:s.enemyPreview.entries.length,flowers:s.flowerGrowth.entries.size};
+    return {palette:Object.values(P.hex),reference:P.reference.hex,enabled:G.enabled,art,outlines,enemyOutlines,enemyChecks,config,outlineCount:actors.filter(a=>a.outline).length,fade,enemyFade,outlineFade,synced,terrain,actors:s.fairyPatrol.actors.length,enemies:s.enemyPreview.entries.length,flowers:s.flowerGrowth.entries.size};
    });
    assert.equal(state.actors,11);assert.equal(state.flowers,query.includes('full=1')?100:4);
    assert.deepEqual(state.config,{enabled,color,width,hex:state.palette[Object.keys({bark:0,stone:0,clay:0,silver:0,paper:0,sand:0,gold:0,red:0,redDark:0,pink:0,growth:0,growthLight:0,sky:0,skyLight:0,lavender:0,violet:0}).indexOf(color)]});
    assert.equal(state.outlineCount,enabled?11:0);assert.ok(state.synced);assert.equal(state.fade,1);assert.equal(state.enemyFade,.5);assert.equal(state.outlineFade,enabled?1:null);
    for(const a of state.outlines){assert.ok(a.colored>0&&a.inside===0&&a.widths.every(w=>Math.abs(w-width)<=.35),JSON.stringify(a));}
+   assert.equal(state.enemyOutlines.length,enabled?12:0);
+   for(const a of state.enemyOutlines)assert.ok(a.colored>0&&a.inside===0&&a.widths.every(w=>Math.abs(w-width)<=.35),JSON.stringify(a));
+   assert.ok(Object.values(state.enemyChecks).every(Boolean),JSON.stringify(state.enemyChecks));
    const terrain=state.terrain;
    assert.equal(terrain.stones,0);assert.ok(terrain.points>20);
    if(name!=='light')assert.ok(terrain.occupied.every(p=>p[3]===0)&&terrain.candidates.every(p=>p[3]===0));
@@ -100,8 +137,18 @@ try{
    if(name!=='light'){assert.equal(state.reference.background,'#0D0D0E');assert.equal(state.reference.panel,'#3B3A44');assert.equal(state.reference.redText,'#F89596');}
    assert.deepEqual(errors,[]);assert.deepEqual(failures,[]);
    await page.screenshot({path:join(out,'garden16-v9-'+name+'.png')});
+   if(name==='default'){
+    const dense=await page.evaluate(()=>{
+     const s=window.__previewGame.scene.getScene('Game'),c=s.enemyPreview;
+     c.model.advance(Math.max(0,120-c.model.elapsed));c.advance(0);
+     const list=[...c.sprites.values()],keys=new Set(list.map(o=>o.outline?.texture.key));
+     return {count:list.length,actors:c.actors.length,keys:keys.size,all:list.every(o=>o.outline&&o.outline.alpha===o.image.alpha&&o.outline.depth===o.image.depth&&o.outline.mask===o.image.mask),sceneCount:s.children.list.filter(o=>o.name?.startsWith('enemy-outline:')).length};
+    });
+    assert.equal(dense.count,200);assert.equal(dense.actors,200);assert.equal(dense.sceneCount,200);assert.equal(dense.keys,12);assert.ok(dense.all);
+    await page.screenshot({path:join(out,'garden16-v9-enemy-outline-dense.png')});console.log('PASS dense enemy outline',JSON.stringify(dense));
+   }
    results.push({name,pass:true,art:state.art.map(a=>({key:a.key,opaque:a.opaque,off:a.off}))});
-   console.log('PASS',name,state.art.length,'loaded textures',JSON.stringify({outlines:state.outlines,fade:state.fade,synced:state.synced,terrain:{stones:terrain.stones,field:terrain.field,path:terrain.path}}));
+   console.log('PASS',name,state.art.length,'loaded textures',JSON.stringify({outlines:state.outlines,enemyOutlines:state.enemyOutlines,enemyChecks:state.enemyChecks,fade:state.fade,synced:state.synced,terrain:{stones:terrain.stones,field:terrain.field,path:terrain.path}}));
   }finally{await page.close();}
  }
  writeFileSync(join(out,'garden16-v9.json'),JSON.stringify(results,null,2));

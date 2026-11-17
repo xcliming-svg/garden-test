@@ -2,7 +2,7 @@
 
 > **devel 화면 확정:** 돌담 없음·요정 전면·기존 어두운 잔디 및 투명 점선. 직전 지형/Z 비교 제거. [규격](./ui-color-guide.md).
 
-> **devel 요정 외곽선:** 기본 stone 1px. `outlineColor` Garden 16 역할, `outlineWidth` 0.5~1.5, `outline=0` 끄기. [규격](./fairy-patrol.md).
+> **devel 요정·적 공통 외곽선:** 기본 stone 1px. `outlineColor` Garden 16 역할, `outlineWidth` 0.5~1.5, `outline=0` 끄기. [규격](./fairy-patrol.md).
 
 > **devel 자동 공격 비교:** 기본 실행에 새싹 요정 5발 빨강·물 요정 2발 노랑 자동 발사 및 적 피격/처치가 추가됐다. `?attack=0`은 이전 비전투 군집 비교, 요정 전면 기본, `?full=1`은 100칸으로 조합 가능하다. [공격 규격](./enemy-preview.md). 꽃 피해·실제 웨이브·보상 미구현.
 

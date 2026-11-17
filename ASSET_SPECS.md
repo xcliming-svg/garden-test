@@ -1,6 +1,6 @@
 # 전장 UI 및 에셋 규격
 
-> **devel 요정 외곽선:** 기본 stone #706975 1 논리 px, `outlineColor` Garden 16 키, `outlineWidth` 0.5~1.5, `outline=0` 미표시. 원본 실루엣 외측 링, 두 요정 공통, SVG 수정 없음.
+> **devel 요정·적 외곽선:** 기본 stone #706975 1 논리 px, `outlineColor` Garden 16 키, `outlineWidth` 0.5~1.5, `outline=0` 미표시. 원본 실루엣 외측 링, 두 요정 및 12종 적 공통, 적은 종별 캐시 및 패딩, 모션 중 몸체와 함께 변형. 원본 SVG·충돌 불변.
 
 > **devel 자동 구슬:** 런타임 원형 6논리 px, 빨강 red #FB575F/노랑 gold #F6BB48, bark 외곽 및 paper 하이라이트. 기존 원본 SVG 수정/추가 없음. Depth 6 및 전장 마스크. [공격 규격](./docs/enemy-preview.md).
 

@@ -49,7 +49,7 @@
     const step=(1-min)*Math.max(0,seconds)/(covered?config.fadeIn:config.fadeOut);
     return covered?Math.max(min,alpha-step):Math.min(1,alpha+step);
   }
-  function attach(scene,spec,patrol){
+  function attach(scene,spec,patrol,enemySprites=()=>[]){
     const field={left:0,right:spec.width,top:spec.top,bottom:spec.height-spec.bottom};
     const visible=image=>image&&image.active&&image.visible;
     function update(images,seconds){
@@ -66,6 +66,7 @@
       const fairyShapes=fairies.map(shape);
       for(const fairy of fairies)fairy.setAlpha(1);
       for(let i=0;i<enemyImages.length;i++)apply(enemyImages[i],config.enemyAlpha,fairyShapes,enemyShapes[i]);
+      for(const {image,outline} of enemySprites())if(outline)outline.setAlpha(image.alpha);
       for(const actor of patrol.actors){
         if(actor.outline)actor.outline.setAlpha(actor.image.alpha);
         for(const tear of actor.tears)if(tear.sprite.visible)
