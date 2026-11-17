@@ -1,7 +1,7 @@
 import {readFileSync} from 'node:fs';
 function audit(sources){
  const check=(ok,msg)=>{if(!ok)throw Error(msg)};
- const w={location:{search:""},GardenPalette:{n:{slate:0,growth:0}}};
+ const w={location:{search:""},GardenPalette:{n:{slate:0,growth:0},roles:{n:{slate:0,growth:0}}}};
  for(const p of Object.keys(sources).filter(p=>!p.endsWith("game-layout.js")))new Function("window","URLSearchParams",sources[p])(w,class{get(){return null;}});
  const F=w.GardenFairyPatrol,M=w.GardenEnemyMotion,E=w.GardenEnemyPreview,B=w.GardenPebbleBoundary,G=w.GardenFlowerGrowth;
  const candidateSource=sources["src/game-layout.js"].match(/function gardenCandidates\(occupied\) \{[\s\S]*?\n  \}/)[0];

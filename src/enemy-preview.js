@@ -14,18 +14,18 @@
   // Longest visible side in logical px: 22px flower cell, 40px garden fairy.
   // Attack type and level select preview motion only, not combat rules.
   const roster=Object.freeze([
-    {id:'1_butterfly',span:26,attackType:'fly',level:1,side:'left',row:0,col:0},
-    {id:'2_grasshopper',span:28,attackType:'jump',level:1,side:'left',row:0,col:1},
-    {id:'6_mouse',span:42,attackType:'approach',level:3,side:'left',row:1,col:0},
-    {id:'2_gray_bug',span:30,attackType:'charge',level:1,side:'left',row:1,col:1},
-    {id:'1_cat',span:40,attackType:'charge',level:2,side:'left',row:2,col:0},
-    {id:'3_caterpillar',span:28,attackType:'approach',level:1,side:'left',row:2,col:1},
-    {id:'6_sparrow',span:34,attackType:'fly',level:2,side:'right',row:0,col:0},
-    {id:'6_pigeon',span:42,attackType:'fly',level:3,side:'right',row:0,col:1},
-    {id:'4_beetle',span:34,attackType:'approach',level:2,side:'right',row:1,col:0},
-    {id:'2_frog',span:32,attackType:'jump',level:2,side:'right',row:1,col:1},
-    {id:'6_rabbit',span:40,attackType:'jump',level:3,side:'right',row:2,col:0},
-    {id:'5_bulldog',span:48,attackType:'charge',level:3,side:'right',row:2,col:1}
+    {id:'1_butterfly',span:24,attackType:'fly',level:1,side:'left',row:0,col:0},
+    {id:'2_grasshopper',span:24,attackType:'jump',level:1,side:'left',row:0,col:1},
+    {id:'6_mouse',span:34,attackType:'approach',level:3,side:'left',row:1,col:0},
+    {id:'2_gray_bug',span:26,attackType:'charge',level:1,side:'left',row:1,col:1},
+    {id:'1_cat',span:32,attackType:'charge',level:2,side:'left',row:2,col:0},
+    {id:'3_caterpillar',span:24,attackType:'approach',level:1,side:'left',row:2,col:1},
+    {id:'6_sparrow',span:28,attackType:'fly',level:2,side:'right',row:0,col:0},
+    {id:'6_pigeon',span:34,attackType:'fly',level:3,side:'right',row:0,col:1},
+    {id:'4_beetle',span:28,attackType:'approach',level:2,side:'right',row:1,col:0},
+    {id:'2_frog',span:28,attackType:'jump',level:2,side:'right',row:1,col:1},
+    {id:'6_rabbit',span:34,attackType:'jump',level:3,side:'right',row:2,col:0},
+    {id:'5_bulldog',span:40,attackType:'charge',level:3,side:'right',row:2,col:1}
   ].map(Object.freeze));
   function preload(scene){
     if(!enabled)return;
@@ -132,8 +132,18 @@
     if(options.random){const candidate=shuffled(paths,options.random).find(fits);if(candidate)return candidate;}
     return paths.find(fits)||paths[0];
   }
-  // Spawn cadence is temporary presentation tuning, not wave difficulty.
-  const spawning=Object.freeze({interval:3,maxActive:8,rank:0});
+  // Population target is a presentation stress test, not a combat wave rule.
+  const spawning=Object.freeze({maxActive:200,rank:0,step:.1,maxBatch:8,
+    milestones:Object.freeze([[0,1],[15,6],[30,25],[60,75],[90,140],[120,200]].map(Object.freeze)),
+    levelWeights:Object.freeze([6,3,1])});
+  function targetCount(seconds){
+    const t=Math.max(0,seconds),points=spawning.milestones;
+    for(let i=1;i<points.length;i++){
+      const [end,count]=points[i], [start,previous]=points[i-1];
+      if(t<end)return Math.floor(previous+(count-previous)*(t-start)/(end-start)+1e-9);
+    }
+    return spawning.maxActive;
+  }
   function shuffled(values,random){
     const bag=[...values];
     for(let i=bag.length-1;i>0;i--){const j=Math.floor(random()*(i+1));[bag[i],bag[j]]=[bag[j],bag[i]];}
@@ -141,9 +151,14 @@
   }
   function createPopulation(spec,patrol,entries,random=Math.random){
     const M=window.GardenEnemyMotion,F=window.GardenFairyPatrol;
-    const actors=[];let bag=[],directionBag=[],serial=0,elapsed=0,nextSpawn=0,spawned=0,completed=0;
+    const actors=[];let bag=[],directionBag=[],serial=0,elapsed=0,spawned=0,completed=0;
     function nextEntry(){
-      if(!bag.length)bag=shuffled(entries,random);
+      if(!bag.length){
+        // Show all 12 species once; subsequent 40-entry bags preserve every
+        // species while favoring small common enemies (60/30/10 by level).
+        const pool=spawned===0?entries:entries.flatMap(e=>Array(spawning.levelWeights[e.level-1]).fill(e));
+        bag=shuffled(pool,random);
+      }
       return bag.pop();
     }
     function spawn(){
@@ -160,13 +175,18 @@
     }
     function advance(seconds){
       if(patrol.finished)return elapsed;
-      const dt=Math.max(0,seconds);elapsed+=dt;
-      for(let i=actors.length-1;i>=0;i--){
-        const a=actors[i];a.age+=dt;
-        if(a.age>=a.duration){actors.splice(i,1);completed++;}else updateActor(a);
-      }
-      // No backlog burst after reaching the cap.
-      if(elapsed+1e-9>=nextSpawn&&actors.length<spawning.maxActive){spawn();nextSpawn=elapsed+spawning.interval;}
+      // Substeps retain smooth entry/exit and avoid a backlog burst after a
+      // delayed frame. The target is a concurrent count, not cumulative spawns.
+      let left=Math.max(0,Number.isFinite(seconds)?seconds:0);
+      do {
+        const dt=Math.min(spawning.step,left);left-=dt;elapsed+=dt;
+        for(let i=actors.length-1;i>=0;i--){
+          const a=actors[i];a.age+=dt;
+          if(a.age>=a.duration){actors.splice(i,1);completed++;}else updateActor(a);
+        }
+        const wanted=targetCount(elapsed);
+        for(let n=0;n<spawning.maxBatch&&actors.length<wanted;n++)spawn();
+      } while(left>1e-9);
       return elapsed;
     }
     function setExpression(id,state){
@@ -211,8 +231,8 @@
     const update=(_time,delta)=>advance(Math.min(.1,Math.max(0,delta/1000)));
     scene.events.on('update',update);
     scene.events.once('shutdown',()=>{scene.events.off('update',update);for(const {image,shadow} of sprites.values()){image.clearMask();shadow.clearMask();}sprites.clear();fieldMask.destroy();clip.destroy();delete scene.enemyPreview;});
-    scene.enemyPreview={entries,model,sprites,advance,setExpression,get actors(){return model.actors;},get elapsed(){return model.elapsed;}};
+    scene.enemyPreview={entries,model,sprites,advance,setExpression,get actors(){return model.actors;},get targetCount(){return targetCount(model.elapsed);},get elapsed(){return model.elapsed;}};
     advance(0);return scene.enemyPreview;
   }
-  window.GardenEnemyPreview=Object.freeze({enabled,roster,preload,attach,key,route,enemyStates,expressionFor,spawning,directions,worldPose,createPopulation});
+  window.GardenEnemyPreview=Object.freeze({enabled,roster,preload,attach,key,route,enemyStates,expressionFor,spawning,targetCount,directions,worldPose,createPopulation});
 }());
