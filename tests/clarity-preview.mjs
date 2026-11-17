@@ -163,7 +163,7 @@ try{
     if(name==='off'||name==='shadow-light'){
       // Freeze simulation while preserving scene rendering. Compare actual
       // framebuffer pixels with each group independently hidden.
-      await page.evaluate(()=>window.__previewGame.scene.pause('Game'));
+      await page.evaluate(()=>{window.__previewGame.scene.pause('Game');});
       await page.waitForFunction(()=>window.__previewGame.scene.isPaused('Game'));
       await page.waitForTimeout(100);
       const both=await page.screenshot({path:join(out,'shadow-'+name+'-both.png')});
