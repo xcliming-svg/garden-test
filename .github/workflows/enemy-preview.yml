@@ -1,7 +1,7 @@
 name: Enemy animal preview verification
 on:
   push:
-    branches: [feature/enemy-animal-preview]
+    branches: [feature/enemy-animal-preview, feature/devel-enemy-swarm]
   pull_request:
     branches: [devel]
 permissions:
@@ -9,7 +9,7 @@ permissions:
 jobs:
   enemy:
     runs-on: ubuntu-latest
-    timeout-minutes: 8
+    timeout-minutes: 12
     steps:
       - uses: actions/checkout@v6
       - uses: actions/setup-node@v4
@@ -21,6 +21,7 @@ jobs:
       - run: for file in src/*.js tests/enemy-preview.mjs; do node --check "$file"; done
       - run: node tests/balance-audit.mjs
       - run: node tests/population-audit.mjs
+      - run: node tests/swarm-audit.mjs
       - run: node tests/movement-speed.mjs
       - run: node tests/enemy-preview.mjs
       - run: node tests/fairy-patrol.mjs
