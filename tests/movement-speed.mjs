@@ -34,61 +34,60 @@ try{
    await page.mouse.click(canvas.x+480*canvas.width/960,canvas.y+252*canvas.height/540);
    await page.waitForFunction(()=>{const s=window.__previewGame.scene.getScene('Game');return !!(s.fairyPatrol||s.combatPreview)});
    if(name==='combat'){assert.equal(await page.locator('#movement-speed-controls').count(),0);report.push({name,pass:true});continue;}
-   assert.equal(await page.locator('#fairy-speed option').count(),6);
+   assert.equal(await page.locator('#fairy-speed option').count(),2);
+   assert.equal(await page.locator('#garden-size option').count(),2);
    assert.equal(await page.locator('#fairy-speed').inputValue(),'0');
+   assert.equal(await page.locator('#garden-size').inputValue(),name==='full'?'100':'4');
    assert.equal(await page.locator('#enemy-speed').count(),name==='hidden'?0:1);
-   const fairy=await page.evaluate(()=>{
-    const c=window.__previewGame.scene.getScene('Game').fairyPatrol,el=document.getElementById('fairy-speed');
-    const set=r=>{el.value=String(r);el.dispatchEvent(new Event('change',{bubbles:true}));};
-    const result=[];
-    for(let r=0;r<=5;r++){
-     const d=c.distance,e=c.elapsed,first=c.actors.map(a=>({...a.center}));
-     set(r);const after=c.actors.map(a=>({...a.center}));
-     c.advance(1);result.push({rank:c.speedRank,speed:c.speed,moved:(c.distance-d+c.length)%c.length,time:c.elapsed-e,same:JSON.stringify(first)===JSON.stringify(after),spacing:c.spacing});
-    }
-    set(0);return {result,length:c.length,spacing:c.spacing,speed:c.speed};
-   });
-   for(let r=0;r<6;r++){const x=fairy.result[r];assert.equal(x.rank,r);assert.equal(x.speed,40+4*r);assert.ok(Math.abs(x.moved-x.speed)<1e-6&&Math.abs(x.time-1)<1e-6&&x.same&&x.spacing===fairy.spacing,JSON.stringify(x));}
-   assert.equal(fairy.speed,40);
-   let enemies=[];
-   if(name!=='hidden'){
-    assert.equal(await page.locator('#enemy-speed option').count(),6);
-    enemies=await page.evaluate(()=>{
-     const s=window.__previewGame.scene.getScene('Game'),c=s.enemyPreview,F=s.fairyPatrol,M=window.GardenEnemyMotion,L=window.GardenGameLayout.spec;
-     const choose=(id,v)=>{const el=document.getElementById(id);el.value=String(v);el.dispatchEvent(new Event('change',{bubbles:true}));};
-     const result=[];
-     for(const a of c.entries){
-      choose('enemy-character',a.id);choose('enemy-motion-mode','move');
-      const route=window.GardenEnemyPreview.route(L,F.boundary,a);
-      const rows=[];
-      for(let rank=0;rank<=5;rank++){
-       choose('enemy-speed',rank);
-       const speed=c.speed,travel=M.travelTime(a,route,rank),start=c.pose.x;
-       c.advance(travel/2);const mid=c.pose.x;
-       c.advance(travel/2);const end=c.pose.x;
-       const attackUnchanged=JSON.stringify(M.sample(a,'attack',.3,route,rank))===JSON.stringify(M.sample(a,'attack',.3,route,0));
-       let bounded=true;
-       for(let i=0;i<=200;i++){
-        const p=M.sample(a,'auto',M.duration(a,'auto',route,rank)*i/200,route,rank),rad=p.angle*Math.PI/180,hw=a.width*p.sx/2,hh=a.height*p.sy/2;
-        const ex=Math.abs(Math.cos(rad))*hw+Math.abs(Math.sin(rad))*hh,ey=Math.abs(Math.sin(rad))*hw+Math.abs(Math.cos(rad))*hh,y=route.ground-a.height*p.sy/2-p.lift;
-        bounded&&=p.x-ex>=F.boundary.border.right+F.boundary.frame/2+9&&p.x+ex<=L.width-8&&y-ey>=L.top&&y+ey<=L.height-L.bottom;
+   const matrix=await page.evaluate(()=>{
+    const s=window.__previewGame.scene.getScene('Game'),F=s.fairyPatrol,c=s.enemyPreview,M=window.GardenEnemyMotion,L=window.GardenGameLayout.spec;
+    const choose=(id,v)=>{const e=document.getElementById(id);e.value=String(v);e.dispatchEvent(new Event('change',{bubbles:true}));};
+    const rows=[];
+    for(const gardenSize of [4,100,4]){
+     choose('garden-size',gardenSize);
+     for(const rank of [0,5]){
+      const first=F.actors.map(a=>({...a.center})),d=F.distance,e=F.elapsed;
+      choose('fairy-speed',rank);const same=JSON.stringify(first)===JSON.stringify(F.actors.map(a=>({...a.center})));
+      F.advance(1);const moved=(F.distance-d+F.length)%F.length;
+      const enemies=[];
+      if(c)for(const a of c.entries){
+       choose('enemy-character',a.id);choose('enemy-motion-mode','move');
+       const route=window.GardenEnemyPreview.route(L,F.boundary,a);
+       for(const erank of [0,5]){
+        choose('enemy-speed',erank);
+        const speed=c.speed,travel=M.travelTime(a,route,erank),start=c.pose.x;
+        c.advance(travel/2);c.advance(travel/2);const end=c.pose.x;
+        const profile=M.profiles[a.id],impact=travel+profile.windup+profile.strike;
+        let bounded=true;
+        for(let i=0;i<=300;i++){
+         const p=M.sample(a,'auto',M.duration(a,'auto',route,erank)*i/300,route,erank),rad=p.angle*Math.PI/180,hw=a.width*p.sx/2,hh=a.height*p.sy/2;
+         const ex=Math.abs(Math.cos(rad))*hw+Math.abs(Math.sin(rad))*hh,ey=Math.abs(Math.sin(rad))*hw+Math.abs(Math.cos(rad))*hh,y=route.ground-a.height*p.sy/2-p.lift;
+         bounded&&=p.x-ex>=F.boundary.border.right+F.boundary.frame/2+9&&p.x+ex<=L.width-8&&y-ey>=L.top&&y+ey<=L.height-L.bottom;
+        }
+        enemies.push({id:a.id,rank:erank,speed,travel,start,end,expectedStart:route.start,expectedEnd:route.stage,impact,passes:impact/(F.spacing/F.speed),bounded,attackUnchanged:JSON.stringify(M.sample(a,'attack',.3,route,erank))===JSON.stringify(M.sample(a,'attack',.3,route,0)),fairySpeed:F.speed});
        }
-       rows.push({rank:c.speedRank,speed,travel,start,mid,end,expectedStart:route.start,expectedEnd:route.stage,attackUnchanged,bounded,fairySpeed:F.speed});
       }
-      result.push({id:a.id,rows});
+      rows.push({gardenSize,actual:s.flowerGrowth.entries.size,rank,speed:F.speed,moved,time:F.elapsed-e,same,length:F.length,spacing:F.spacing,lap:F.length/F.speed,gap:F.spacing/F.speed,enemies});
      }
-     choose('enemy-character','3_caterpillar');choose('enemy-speed',0);choose('enemy-motion-mode','auto');
-     return result;
-    });
-    assert.equal(enemies.length,12);
-    for(const e of enemies)for(let r=0;r<6;r++){
-     const x=e.rows[r],expected=baseById[e.id]*(10+r)/10;assert.equal(x.rank,r);assert.equal(x.speed,expected);
-     assert.ok(Math.abs(x.start-x.expectedStart)<1e-6&&Math.abs(x.end-x.expectedEnd)<1e-6&&Math.abs((x.expectedStart-x.expectedEnd)/x.travel-expected)<1e-6&&x.attackUnchanged&&x.bounded&&x.fairySpeed===40,JSON.stringify({id:e.id,...x}));
     }
-    await page.selectOption('#enemy-speed','5');assert.equal(await page.locator('#enemy-speed').inputValue(),'5');
+    if(c){choose('enemy-character','3_caterpillar');choose('enemy-motion-mode','auto');choose('enemy-speed',0);}
+    choose('fairy-speed',0);return rows;
+   });
+   for(const row of matrix){
+    assert.equal(row.actual,row.gardenSize);assert.equal(row.speed,row.rank===0?40:80);
+    assert.ok(Math.abs(row.moved-row.speed)<1e-6&&Math.abs(row.time-1)<1e-6&&row.same,JSON.stringify(row));
+    assert.ok(row.spacing>=52-1e-6);
+    for(const x of row.enemies){
+     const expected=baseById[x.id]*(x.rank===0?1:1.5);
+     assert.equal(x.speed,expected);assert.equal(x.fairySpeed,row.speed);
+     assert.ok(Math.abs(x.start-x.expectedStart)<1e-6&&Math.abs(x.end-x.expectedEnd)<1e-6&&Math.abs((x.expectedStart-x.expectedEnd)/x.travel-expected)<1e-6&&x.attackUnchanged&&x.bounded&&x.passes>=1,JSON.stringify({garden:row.gardenSize,...x}));
+    }
    }
-   await page.selectOption('#fairy-speed','5');
-   assert.equal(await page.evaluate(()=>window.__previewGame.scene.getScene('Game').fairyPatrol.speed),60);
+   assert.ok(matrix[3].lap<=matrix[0].lap+1e-6);
+   assert.ok(Math.abs(matrix[0].length-matrix[4].length)<1e-6);
+   await page.selectOption('#fairy-speed','5');await page.selectOption('#garden-size','100');
+   assert.equal(await page.locator('#fairy-speed').inputValue(),'5');
+   if(name!=='hidden'){await page.selectOption('#enemy-speed','5');await page.selectOption('#garden-size','4');assert.equal(await page.locator('#enemy-speed').inputValue(),'5');}
    const panel=await page.locator('#movement-speed-controls').boundingBox();
    assert.ok(Math.abs(panel.width/canvas.width*960-226)<2&&Math.abs((panel.x-canvas.x)/canvas.width*960-724)<2);
    if(name==='default'||name==='fhd')await page.screenshot({path:join(out,'movement-speed-'+name+'.png'),scale:'device'});
@@ -98,7 +97,7 @@ try{
    assert.equal(await page.locator('#movement-speed-controls').isVisible(),true);
    await page.evaluate(()=>window.__previewGame.scene.stop('Game'));
    await page.waitForFunction(()=>!document.getElementById('movement-speed-controls'));
-   assert.deepEqual(errors,[]);report.push({name,fairy,enemies,pass:true});console.log('PASS movement speed',name,'patrol',fairy.length);
+   assert.deepEqual(errors,[]);report.push({name,matrix,pass:true});console.log('PASS',name, matrix.length);
   }finally{await page.close();}
  }
 }finally{await browser.close();server.close();writeFileSync(join(out,'movement-speed-report.json'),JSON.stringify(report,null,2));}

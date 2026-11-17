@@ -112,7 +112,7 @@ try{
     assert.deepEqual(stages.map(e=>e.level),[1,2,3]);
     assert.ok(stages[0].span<stages[1].span&&stages[1].span<stages[2].span,type);
    }
-   assert.equal(result.fairies,11);assert.equal(result.flowers,name==='full-dpr2'?100:6);assert.equal(result.combat,false);
+   assert.equal(result.fairies,11);assert.equal(result.flowers,name==='full-dpr2'?100:4);assert.equal(result.combat,false);
    assert.equal(await page.locator('#enemy-character option').count(),12);
    assert.equal(await page.locator('#enemy-motion-mode option').count(),3);
    const motions=[];

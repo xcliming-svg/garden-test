@@ -50,7 +50,7 @@ try{
     return {...result,min,max,neutral,opaque,green,maxChannel,counts,stable:d.every((v,i)=>v===d2[i]),depth:o.depth,interactive:!!o.input,body:!!o.body,rect:[o.x-o.displayWidth/2,o.y-o.displayHeight/2,o.displayWidth,o.displayHeight],expected:[0,L.top,L.width,L.fieldHeight]};
    });
    assert.equal(info.active,mode);assert.equal(info.pattern,!!mode);assert.equal(info.light,name==='light'||name==='grass-light');
-   assert.equal(info.actors,11);assert.equal(info.flowers,6);assert.ok(info.stones>20&&info.original);
+   assert.equal(info.actors,11);assert.equal(info.flowers,4);assert.ok(info.stones>20&&info.original);
    if(mode){assert.ok((mode===6?info.green:info.neutral)&&info.opaque&&info.stable);assert.ok(info.maxChannel<=40);assert.ok(info.min>=13&&info.max<=40&&info.max>info.min);assert.ok(Object.keys(info.counts).length>=2);assert.equal(info.depth,-1.8);assert.ok(!info.interactive&&!info.body);assert.deepEqual(info.rect,info.expected);}
    const png=await page.screenshot({path:join(out,'bg-'+name+'.png')});
    // Check actual rendered pixels in an empty field patch, not just texture data.

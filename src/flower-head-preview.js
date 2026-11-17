@@ -149,7 +149,7 @@
   function draw(scene, spec, colors, gardenRaster, patrolBounds, patrolPosition, updateHud, itemPreview) {
     const fairy=window.GardenFairyPatrol.enabled;
     install(scene,spec.garden.cell);if(!fairy)installEnemy(scene);
-    const g=spec.garden,occupied=window.GardenCombatPreview.initialGarden(spec);
+    const g=spec.garden,params=new URLSearchParams(window.location.search),occupied=fairy&&params.get('full')!=='1'?new Set([44,45,54,55]):window.GardenCombatPreview.initialGarden(spec);
     const textureKey='flower-head-preview:soil:'+g.cell;
     const texture=scene.textures.exists(textureKey)?scene.textures.get(textureKey):
       scene.textures.createCanvas(textureKey,g.size,g.size);
@@ -192,7 +192,19 @@
     scene.events.once('shutdown',()=>scene.scale.off('resize',resize));
     if(fairy){
       const patrol=window.GardenFairyPatrol.attach(scene,spec,occupied,geometry,patrolPosition,updateHud,guardianSize);
-      window.GardenEnemyPreview.attach(scene,spec,patrol);
+      const enemy=window.GardenEnemyPreview.attach(scene,spec,patrol);
+      // Garden size and speed upgrades are independent preview dimensions.
+      const sizeSelect=document.createElement('select');sizeSelect.id='garden-size';sizeSelect.setAttribute('aria-label','정원 크기');
+      const P=window.GardenPalette.reference.hex;
+      Object.assign(sizeSelect.style,{width:'225px',height:'24px',fontFamily:'inherit',fontSize:'12px',background:P.panel,color:P.text,border:'1px solid '+P.border,borderRadius:'0',padding:'0 4px',cursor:'pointer'});
+      sizeSelect.add(new Option('초기 정원 · 4칸','4'));sizeSelect.add(new Option('최대 정원 · 100칸','100'));sizeSelect.value=String(occupied.size);
+      sizeSelect.addEventListener('change',()=>{
+        const keys=sizeSelect.value==='100'?Array.from({length:g.columns*g.rows},(_,i)=>i):[44,45,54,55];
+        if(growth){for(const entry of growth.entries.values())entry.image.destroy();growth.entries.clear();}
+        else for(const i of occupied)scene.children.getByName('garden-preview-flower:'+i)?.destroy();
+        occupied.clear();keys.forEach((i,n)=>{occupied.add(i);addFlower(i,types[n%types.length],patrol.elapsed);});
+        refreshSoil(null);patrol.advance(0);enemy?.setMode(enemy.mode);sizeSelect.blur();
+      });patrol.speedUI.panel.append(sizeSelect);
       return;
     }
     const bounds=clampedBounds(occupied),start=patrolPosition(bounds,(bounds.right-bounds.left)/2);

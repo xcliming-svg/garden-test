@@ -6,23 +6,23 @@
   const enabled=new URLSearchParams(window.location.search).get('combat')!=='1';
   const root='assets/fairies/',size=512,atlas='fairy:eyes',manifestKey='fairy:manifest';
   const types=['garden','water'],expressions=['normal','closed'];
-  const count=11,speed=40,maxSpeed=60;
-  const ranks=Object.freeze([0,1,2,3,4,5]);
+  const count=11,speed=40,maxSpeed=80;
+  const ranks=Object.freeze([0,5]);
   const validRank=rank=>ranks.includes(rank);
-  const speedAt=(base,rank)=>base*(10+(validRank(rank)?rank:0))/10;
+  const speedAt=(base,rank,max=base*1.5)=>rank===5?max:base;
   function speedControls(scene,spec){
     const parent=document.getElementById('game'),P=window.GardenPalette.reference.hex;
     const panel=document.createElement('div');panel.id='movement-speed-controls';
-    Object.assign(panel.style,{position:'absolute',left:'0',top:'0',width:'226px',display:'flex',gap:'5px',alignItems:'center',transformOrigin:'0 0',zIndex:'2',fontFamily:'"Garden Fusion", sans-serif'});
-    const add=(id,label,base,onChange)=>{
+    Object.assign(panel.style,{position:'absolute',left:'0',top:'0',width:'226px',display:'flex',flexWrap:'wrap',gap:'5px',alignItems:'center',transformOrigin:'0 0',zIndex:'2',fontFamily:'"Garden Fusion", sans-serif'});
+    const add=(id,label,base,onChange,max=base*1.5)=>{
       const select=document.createElement('select');select.id=id;select.setAttribute('aria-label',label+' 이동 속도 (px/s)');
       Object.assign(select.style,{width:'110px',height:'24px',fontFamily:'inherit',fontSize:'12px',background:P.panel,color:P.text,border:'1px solid '+P.border,borderRadius:'0',padding:'0 4px',cursor:'pointer'});
-      const refresh=(nextBase,rank)=>{
+      const refresh=(nextBase,rank,nextMax=nextBase*1.5)=>{
         select.replaceChildren();
-        for(const r of ranks){const state=r===0?'기본':r===5?'최대':'+'+(r*10)+'%';select.add(new Option(label+' '+state+' '+speedAt(nextBase,r),String(r)));}
-        select.value=String(rank);select.title=label+' 이동 속도 '+speedAt(nextBase,rank)+' 논리 px/s';
+        for(const r of ranks){const state=r===0?'기본':'최대';select.add(new Option(label+' '+state+' '+speedAt(nextBase,r,nextMax),String(r)));}
+        select.value=String(rank);select.title=label+' 이동 속도 '+speedAt(nextBase,rank,nextMax)+' 논리 px/s';
       };
-      refresh(base,0);select.addEventListener('change',()=>{onChange(Number(select.value));select.blur();});panel.append(select);
+      refresh(base,0,max);select.addEventListener('change',()=>{onChange(Number(select.value));select.blur();});panel.append(select);
       return {select,refresh};
     };
     const resize=()=>{const z=parent.clientWidth/spec.width;panel.style.transform='translate('+((spec.width-236)*z)+'px,'+((spec.top+54)*z)+'px) scale('+z+')';};
@@ -90,10 +90,10 @@
     let elapsed=0,rank=0,currentSpeed=speed;
     let distance=(b.right-b.left)/2;
     const speedUI=speedControls(scene,spec);
-    const fairySelect=speedUI.add('fairy-speed','요정',speed,setSpeedRank);
+    const fairySelect=speedUI.add('fairy-speed','요정',speed,setSpeedRank,maxSpeed);
     function setSpeedRank(next){
       if(!validRank(next))return false;
-      rank=next;currentSpeed=speedAt(speed,rank);fairySelect.refresh(speed,rank);return true;
+      rank=next;currentSpeed=speedAt(speed,rank,maxSpeed);fairySelect.refresh(speed,rank,maxSpeed);return true;
     }
     function refreshBoundary(){
       const next=[...occupied].sort((a,b)=>a-b).join(',');

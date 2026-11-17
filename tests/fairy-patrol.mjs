@@ -94,7 +94,7 @@ try{
    assert.ok(B.border.top-B.frame*11/32>=initial.field.top&&B.border.bottom+B.frame*11/32<=initial.field.bottom);
    assert.ok(Math.abs(B.border.top-(B.swept.top-5-B.frame*8.25/32))<1e-6);
    assert.equal(initial.combat,false);assert.equal(initial.status,'정원 순찰 · 요정 11명');
-   assert.equal(initial.flowers,query.includes('full=1')?100:6);
+   assert.equal(initial.flowers,query.includes('full=1')?100:4);
    assert.ok(initial.heights.slice(1).every(x=>Math.abs(x/initial.heights[0]-502/716)<1e-9));
    assert.ok(initial.origins.every(a=>a[0]===.5&&a[1]===.858));
    for(const v of Object.values(initial.stats))assert.ok(v.changed>50&&v.eyeDelta>50&&v.other===0&&v.aa>50,JSON.stringify(v));
