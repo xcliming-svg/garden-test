@@ -37,9 +37,9 @@
       lift=Math.abs(wave)*p.bob;
       sx=1+p.squash*wave;sy=1-p.squash*wave;
     }
-    // Original art faces left (frog faces front); mirror only for retreat.
+    // Canonical left-facing motion; world projection chooses the actual facing.
     const x=returning?lerp(route.stage,route.start,travel):lerp(route.start,route.stage,travel);
-    return {phase:returning?'return':'move',x,lift,angle:angle*direction,sx,sy,flip:returning&&e.id!=='2_frog'};
+    return {phase:returning?'return':'move',x,lift,angle:angle*direction,sx,sy,flip:returning};
   }
   function sample(e,mode,time,route,rank=0){
     const p=profiles[e.id],recovery=.55,retreat=.8;

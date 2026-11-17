@@ -129,20 +129,21 @@ try{
      for(const a of c.actors){
       const e=a.entry,p=a.pose,im=c.sprites.get(a.id).image,rad=im.rotation,hw=e.width*p.sx/2,hh=e.height*p.sy/2,ex=Math.abs(Math.cos(rad))*hw+Math.abs(Math.sin(rad))*hh,ey=Math.abs(Math.sin(rad))*hw+Math.abs(Math.cos(rad))*hh;
       const b=F.boundary.border,m=F.boundary.frame/2;
-      if(!serials.has(a.id)){serials.add(a.id);first.push(e.id);sides.add(a.path.side);spawnedOutside&&=a.path.side==='left'?p.x+ex<b.left:p.x-ex>b.right;}
+      if(!serials.has(a.id)){serials.add(a.id);first.push(e.id);sides.add(a.path.side);spawnedOutside&&=p.x+ex<b.left||p.x-ex>b.right||im.y+ey<b.top||im.y-ey>b.bottom;}
       seen.add(e.id);
-      valid&&=im.x===p.x&&im.x-ex>=8-1e-6&&im.x+ex<=L.width-8+1e-6&&im.y-ey>=L.top&&im.y+ey<=L.height-L.bottom&&im.texture.key===E.key(e.id,a.expression)&&!im.body&&!im.input&&F.occupied.includes(a.path.flower);
+      valid&&=im.x===p.x&&im.x-ex>=8-1e-6&&im.x+ex<=L.width-8+1e-6&&im.mask&&Math.abs(im.y-(p.ground-e.height*p.sy/2-p.lift))<1e-6&&((im.scaleX<0)===p.flip)&&im.texture.key===E.key(e.id,a.expression)&&!im.body&&!im.input&&F.occupied.includes(a.path.flower);
       valid&&=Math.abs((a.path.start-a.path.stage)/M.travelTime(e,a.path,0)-M.speed(e,0))<1e-7;
-      if(p.phase==='strike'){attacked.add(e.id);valid&&=a.expression==='angry';}
+      if(p.phase==='strike'){attacked.add(e.id);valid&&=a.expression==='angry'&&im.y-ey>=L.top&&im.y+ey<=L.height-L.bottom;}
+      valid&&=p.flip===(a.path.ux<0?p.phase!=='return':a.path.ux>0?p.phase==='return':false);
       if(p.phase==='recover'&&im.x-ex>=b.left+m&&im.x+ex<=b.right-m&&im.y-ey>=b.top+m&&im.y+ey<=b.bottom-m)entered.add(e.id);
      }
      frames++;
-     if(seen.size===12&&attacked.size===12&&entered.size===12&&sides.size===2&&c.model.completed>=12)break;
+     if(seen.size===12&&attacked.size===12&&entered.size===12&&sides.size===8&&c.model.completed>=12)break;
     }
     return {valid,spawnedOutside,seen:[...seen],attacked:[...attacked],entered:[...entered],sides:[...sides],first:first.slice(0,12),maxActive,frames,spawned:c.model.spawned,completed:c.model.completed};
    });
    assert.ok(motions.valid&&motions.spawnedOutside,JSON.stringify(motions));
-   assert.equal(motions.seen.length,12);assert.equal(motions.attacked.length,12);assert.equal(motions.entered.length,12);assert.equal(new Set(motions.first).size,12);assert.equal(motions.sides.length,2);assert.ok(motions.maxActive>1&&motions.maxActive<=8&&motions.completed>=12,JSON.stringify(motions));
+   assert.equal(motions.seen.length,12);assert.equal(motions.attacked.length,12);assert.equal(motions.entered.length,12);assert.equal(new Set(motions.first).size,12);assert.equal(motions.sides.length,8);assert.ok(motions.maxActive>1&&motions.maxActive<=8&&motions.completed>=12,JSON.stringify(motions));
    await page.screenshot({path:join(out,'enemy-'+name+'.png'),scale:'device'});
    if(name==='default'){
     await page.keyboard.press('Escape');await page.waitForFunction(()=>window.__previewGame.scene.isActive('Pause'));
@@ -157,7 +158,7 @@ try{
     await page.waitForFunction(()=>!window.__previewGame.scene.getScene('Game').enemyPreview);
    }
    assert.deepEqual(errors,[]);assert.deepEqual(failed,[]);
-   report.push({name,result,motions,pass:true});console.log('PASS',name,'12 random enemies, default speed, shared eyes, bounded motion');
+   report.push({name,result,motions,pass:true});console.log('PASS',name,'12 random enemies, eight directions, default speed, shared eyes');
   }finally{await page.close();}
  }
 }finally{await browser.close();server.close();writeFileSync(join(out,'enemy-report.json'),JSON.stringify(report,null,2));}
