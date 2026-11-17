@@ -1,0 +1,28 @@
+name: Swarm clarity browser comparison
+on:
+  push:
+    branches: [feature/devel-swarm-clarity, devel]
+  pull_request:
+    branches: [devel]
+    paths: ['src/clarity-preview.js', 'src/enemy-preview.js', 'src/fairy-patrol.js', 'tests/clarity-preview.mjs', 'index.html', '.github/workflows/clarity-preview.yml']
+permissions:
+  contents: read
+jobs:
+  clarity:
+    runs-on: ubuntu-latest
+    timeout-minutes: 8
+    steps:
+      - uses: actions/checkout@v6
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - run: for file in src/*.js tests/clarity-preview.mjs; do node --check "$file"; done
+      - run: npm install --no-save --package-lock=false playwright@1.51.1 phaser@3.90.0
+        env:
+          PLAYWRIGHT_SKIP_BROWSER_DOWNLOAD: '1'
+      - run: node tests/clarity-preview.mjs
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: swarm-clarity
+          path: benchmark-results
