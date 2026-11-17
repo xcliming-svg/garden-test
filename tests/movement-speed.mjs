@@ -28,7 +28,7 @@ try{
   const page=await browser.newPage({viewport:{width:w,height:h}});
   const errors=[];page.on('pageerror',e=>errors.push(String(e)));
   try{
-   await page.goto(url+'/index.html'+query);
+   await page.goto(url+'/index.html'+query+(query?'&':'?')+'attack=0');
    await page.waitForFunction(()=>window.__previewGame?.scene.isActive('MainMenu'));
    const canvas=await page.locator('canvas').boundingBox();
    await page.mouse.click(canvas.x+480*canvas.width/960,canvas.y+252*canvas.height/540);

@@ -107,6 +107,7 @@
       for(const a of actors){a.visibleHeight=m.characters[a.type].visibleHeight*scale;a.image.setDisplaySize(m.canvas.width*scale,m.canvas.height*scale);}
       border.render(info);
     }
+    function refreshHud(){updateHud(elapsed,scene.enemyPreview?.model.kills||0,0,occupied.size);}
     function render(){
       refreshBoundary();
       for(const a of actors){
@@ -137,10 +138,10 @@
         const expression=emotion.expression||a.blink(elapsed);
         if(expression!==a.expression){a.expression=expression;a.image.setTexture(key(a.type,expression));}
       }
-      updateHud(elapsed,0,0,occupied.size);
+      refreshHud();
     }
     function advance(seconds){const dt=Math.max(0,seconds);emotionTime+=dt;if(!isResult(state)){elapsed+=dt;distance=(distance+dt*currentSpeed)%length;}render();return elapsed;}
-    const controller={actors,border,advance,setSpeedRank,setState,get state(){return state;},get finished(){return isResult(state);},get emotionTime(){return emotionTime;},get speed(){return currentSpeed;},get speedRank(){return rank;},get distance(){return distance;},get bounds(){return b;},get length(){return length;},get spacing(){return spacing;},get boundary(){return info;},get occupied(){return [...occupied];},get elapsed(){return elapsed;}};
+    const controller={actors,border,advance,refreshHud,setSpeedRank,setState,get state(){return state;},get finished(){return isResult(state);},get emotionTime(){return emotionTime;},get speed(){return currentSpeed;},get speedRank(){return rank;},get distance(){return distance;},get bounds(){return b;},get length(){return length;},get spacing(){return spacing;},get boundary(){return info;},get occupied(){return [...occupied];},get elapsed(){return elapsed;}};
     scene.fairyPatrol=controller;
     const update=(_time,delta)=>advance(Math.min(.1,Math.max(0,delta/1000)));
     scene.events.on('update',update);

@@ -12,7 +12,7 @@
   const key=(id,expression)=>'enemy-preview:'+id+':'+expression;
   const baseKey=id=>key(id,'base');
   // Longest visible side in logical px: 22px flower cell, 40px garden fairy.
-  // Attack type and level select preview motion only, not combat rules.
+  // Level also supplies temporary projectile hit points in the attack preview.
   const roster=Object.freeze([
     {id:'1_butterfly',span:24,attackType:'fly',level:1,side:'left',row:0,col:0},
     {id:'2_grasshopper',span:24,attackType:'jump',level:1,side:'left',row:0,col:1},
@@ -151,7 +151,7 @@
   }
   function createPopulation(spec,patrol,entries,random=Math.random){
     const M=window.GardenEnemyMotion,F=window.GardenFairyPatrol;
-    const actors=[];let bag=[],directionBag=[],serial=0,elapsed=0,spawned=0,completed=0;
+    const actors=[];let bag=[],directionBag=[],serial=0,elapsed=0,spawned=0,completed=0,kills=0;
     function nextEntry(){
       if(!bag.length){
         // Show all 12 species once; subsequent 40-entry bags preserve every
@@ -165,13 +165,13 @@
       if(!directionBag.length)directionBag=shuffled(directions,random);
       const entry=nextEntry(),side=directionBag.pop();
       const path=route(spec,patrol.boundary,entry,patrol.occupied,{side,random});
-      const actor={id:serial++,entry,path,age:0,blink:F.blinkSchedule(serial+11),expressionState:'auto',expression:'normal',pose:null};
+      const actor={id:serial++,entry,path,age:0,blink:F.blinkSchedule(serial+11),expressionState:'auto',expression:'normal',pose:null,hp:entry.level,hitUntil:0};
       actor.duration=M.duration(entry,'auto',path,spawning.rank);actors.push(actor);spawned++;
       updateActor(actor);return actor;
     }
     function updateActor(a){
       a.pose=worldPose(spec,a.path,M.sample(a.entry,'auto',a.age,a.path,spawning.rank),a.entry);
-      a.expression=expressionFor(a.expressionState,a.pose.phase,a.blink(a.age));
+      a.expression=expressionFor(a.expressionState==='auto'&&elapsed<a.hitUntil?'hit':a.expressionState,a.pose.phase,a.blink(a.age));
     }
     function advance(seconds){
       if(patrol.finished)return elapsed;
@@ -194,7 +194,13 @@
       const a=actors.find(x=>x.id===id);if(!a)return false;
       a.expressionState=state;updateActor(a);return true;
     }
-    return {actors,advance,setExpression,get elapsed(){return elapsed;},get spawned(){return spawned;},get completed(){return completed;}};
+    function damage(id,amount){
+      const i=actors.findIndex(a=>a.id===id);if(i<0||!Number.isFinite(amount)||amount<=0)return null;
+      const a=actors[i];a.hp=Math.max(0,a.hp-amount);
+      if(a.hp===0){actors.splice(i,1);kills++;return {killed:true,hp:0};}
+      a.hitUntil=elapsed+window.GardenFairyAttack.tuning.hitSeconds;updateActor(a);return {killed:false,hp:a.hp};
+    }
+    return {actors,advance,setExpression,damage,get elapsed(){return elapsed;},get spawned(){return spawned;},get completed(){return completed;},get kills(){return kills;}};
   }
   function attach(scene,spec,patrol){
     if(!enabled)return null;
@@ -208,6 +214,7 @@
     const clip=scene.make.graphics({x:0,y:0,add:false});
     clip.fillStyle(0xffffff,1).fillRect(0,spec.top,spec.width,spec.height-spec.top-spec.bottom);
     const fieldMask=clip.createGeometryMask();
+    const A=window.GardenFairyAttack,attack=A.enabled?A.attach(scene,spec,patrol,model,fieldMask):null;
     function render(){
       const alive=new Set(model.actors.map(a=>a.id));
       for(const [id,sprite] of sprites)if(!alive.has(id)){sprite.image.destroy();sprite.shadow.destroy();sprites.delete(id);}
@@ -227,12 +234,28 @@
         shadow.setPosition(x,ground+1).setDisplaySize(a.width*.72*(1-lift*.009),Math.max(2,a.height*.10)).setAlpha(.36/(1+lift*.055));
       }
     }
-    function advance(seconds){model.advance(seconds);render();occlusion.update(Array.from(sprites.values(),s=>s.image),Math.max(0,Number.isFinite(seconds)?seconds:0));return model.elapsed;}
+    function advance(seconds){
+      const dt=Math.max(0,Number.isFinite(seconds)?seconds:0);
+      if(!attack)model.advance(dt);
+      else if(!patrol.finished){
+        if(dt===0)model.advance(0);
+        let left=dt;
+        while(left>1e-8){
+          const step=Math.min(left,A.tuning.step);left-=step;
+          const previous=new Map(attack.positions().map(e=>[e.id,e]));
+          model.advance(step);attack.step(step,previous);
+        }
+      }
+      render();
+      if(attack){attack.render();patrol.refreshHud();}
+      occlusion.update(Array.from(sprites.values(),s=>s.image),dt);
+      return model.elapsed;
+    }
     function setExpression(id,state){const ok=model.setExpression(id,state);if(ok)render();return ok;}
     const update=(_time,delta)=>advance(Math.min(.1,Math.max(0,delta/1000)));
     scene.events.on('update',update);
-    scene.events.once('shutdown',()=>{scene.events.off('update',update);for(const {image,shadow} of sprites.values()){image.clearMask();shadow.clearMask();}sprites.clear();fieldMask.destroy();clip.destroy();delete scene.enemyPreview;});
-    scene.enemyPreview={entries,model,sprites,occlusion,advance,setExpression,get actors(){return model.actors;},get targetCount(){return targetCount(model.elapsed);},get elapsed(){return model.elapsed;}};
+    scene.events.once('shutdown',()=>{scene.events.off('update',update);for(const {image,shadow} of sprites.values()){image.clearMask();shadow.clearMask();}sprites.clear();if(attack){attack.gfx.clearMask();attack.gfx.destroy();}fieldMask.destroy();clip.destroy();delete scene.enemyPreview;});
+    scene.enemyPreview={entries,model,sprites,occlusion,attack,advance,setExpression,get actors(){return model.actors;},get targetCount(){return targetCount(model.elapsed);},get elapsed(){return model.elapsed;}};
     advance(0);return scene.enemyPreview;
   }
   window.GardenEnemyPreview=Object.freeze({enabled,roster,preload,attach,key,route,enemyStates,expressionFor,spawning,targetCount,directions,worldPose,createPopulation});
