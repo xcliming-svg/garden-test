@@ -64,6 +64,7 @@
   }
   function attach(scene,spec,occupied,geometry,patrolPosition,updateHud,heroHeight){
     const m=install(scene),B=window.GardenPebbleBoundary,border=B.attach(scene);
+    const depthBase=window.GardenEnemyOcclusion.config.fairyFront&&window.GardenEnemyPreview.enabled?4:2;
     const compute=()=>B.layout(spec,geometry(occupied,0,0).garden,heroHeight,gait,count);
     let info=compute(),b=info.patrol,length=info.length,spacing=length/count;
     let scale=info.height/m.characters.garden.visibleHeight;
@@ -123,7 +124,7 @@
         if(facing)a.image.setFlipX(facing<0);
         a.image.setPosition(p.x,p.y+a.visibleHeight/2-lift)
           .setAngle(tilt+facing*gait.lean)
-          .setDepth(2+p.y/spec.height);
+          .setDepth(depthBase+p.y/spec.height);
         const emotion=emotionPose(state,emotionTime,a.visibleHeight,a.phase);
         if(isResult(state))a.image.setPosition(p.x+emotion.dx,p.y+a.visibleHeight/2-emotion.lift).setAngle(0);
         for(const tear of a.tears){

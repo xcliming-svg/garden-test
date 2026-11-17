@@ -1,7 +1,8 @@
 (function(){
   'use strict';
-  // Rendering only: the higher enemy stays opaque; lower flower/fairy fades.
-  const config=Object.freeze({flowerAlpha:.4,fairyAlpha:.5,fadeIn:.1,fadeOut:.2});
+  // Rendering-only comparison: choose whether enemies or fairies are in front.
+  const fairyFront=new URLSearchParams(window.location.search).get('occlusion')==='fairy';
+  const config=Object.freeze({fairyFront,flowerAlpha:.4,fairyAlpha:.5,enemyAlpha:.5,fadeIn:.1,fadeOut:.2});
   const cache=new WeakMap();
   function silhouette(texture){
     if(cache.has(texture))return cache.get(texture);
@@ -53,19 +54,30 @@
     const field={left:0,right:spec.width,top:spec.top,bottom:spec.height-spec.bottom};
     const visible=image=>image&&image.active&&image.visible;
     function update(images,seconds){
-      const enemies=Array.from(images).filter(i=>visible(i)&&i.alpha>0).map(shape).filter(Boolean);
-      function apply(image,min){
+      // The current opacity does not alter geometric overlap; no cascading
+      // or compounded fading when a fairy covers an enemy over a flower.
+      const enemyImages=Array.from(images).filter(visible);
+      const enemyShapes=enemyImages.map(shape);
+      const fairies=patrol.actors.map(a=>a.image).filter(visible);
+      function apply(image,min,uppers,lower=shape(image)){
         if(!visible(image))return;
-        const lower=shape(image),covered=enemies.some(upper=>covers(lower,upper,field));
+        const covered=uppers.some(upper=>covers(lower,upper,field));
         image.setAlpha(nextAlpha(image.alpha,covered,min,seconds));
       }
+      if(fairyFront){
+        const fairyShapes=fairies.map(shape);
+        for(const fairy of fairies)fairy.setAlpha(1);
+        for(let i=0;i<enemyImages.length;i++)apply(enemyImages[i],config.enemyAlpha,fairyShapes,enemyShapes[i]);
+      }else{
+        for(const enemy of enemyImages)enemy.setAlpha(1);
+        for(const fairy of fairies)apply(fairy,config.fairyAlpha,enemyShapes);
+      }
       for(const actor of patrol.actors){
-        apply(actor.image,config.fairyAlpha);
         for(const tear of actor.tears)if(tear.sprite.visible)
           tear.sprite.setAlpha(tear.baseAlpha*actor.image.alpha);
       }
-      if(scene.flowerGrowth)for(const entry of scene.flowerGrowth.entries.values())apply(entry.image,config.flowerAlpha);
-      else for(const image of scene.children.list)if(image.name?.startsWith('garden-preview-flower:'))apply(image,config.flowerAlpha);
+      if(scene.flowerGrowth)for(const entry of scene.flowerGrowth.entries.values())apply(entry.image,config.flowerAlpha,enemyShapes);
+      else for(const image of scene.children.list)if(image.name?.startsWith('garden-preview-flower:'))apply(image,config.flowerAlpha,enemyShapes);
     }
     return {update};
   }

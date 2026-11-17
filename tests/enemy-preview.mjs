@@ -48,7 +48,7 @@ const expectedTypes={"1_butterfly":["fly",1],"2_grasshopper":["jump",1],"6_mouse
 try{
  for(const [name,w,h,dpr,query] of [
   ['default',960,540,1,''],['fhd',1920,1080,1,''],['small',640,360,1,''],
-  ['full',960,540,1,'?full=1'],['full-dpr2',960,540,2,'?flower=32&person=56&full=1&slots=36'],
+  ['full',960,540,1,'?full=1'],['fairy-front',960,540,1,'?occlusion=fairy'],['full-fairy-front',960,540,1,'?full=1&occlusion=fairy'],['full-dpr2',960,540,2,'?flower=32&person=56&full=1&slots=36'],
   ['light',960,540,1,'?uitype=1'],['original',960,540,1,'?svgcolors=original'],
   ['hidden',960,540,1,'?enemies=0'],['combat',960,540,1,'?combat=1']
  ]){
@@ -165,6 +165,58 @@ try{
     });
     console.log('PASS occlusion',name,JSON.stringify(fade));
    }
+   if(name.endsWith('fairy-front')){
+    const fade=await page.evaluate(()=>{
+     const s=window.__previewGame.scene.getScene('Game'),c=s.enemyPreview,O=window.GardenEnemyOcclusion,F=s.fairyPatrol;
+     const hero=F.actors[0].image,water=F.actors[1].image,flowers=[...s.flowerGrowth.entries.values()].map(f=>f.image),flower=flowers[0];
+     const fairies=F.actors.map(a=>a.image),actual=[...c.sprites.values()].map(e=>e.image);
+     let checks=0;const check=(v,m)=>{checks++;if(!v)throw Error(m);},close=(a,b)=>Math.abs(a-b)<1e-6;
+     check(O.config.fairyFront,'fairy front enabled');
+     check(fairies.every(f=>actual.every(e=>f.depth>e.depth)),'all fairies above actual enemy sprites');
+     check(actual.every(e=>e.depth>flower.depth),'all enemies above flowers');
+     const clone=t=>s.add.image(t.x,t.y,t.texture.key).setOrigin(t.originX,t.originY)
+       .setScale(t.scaleX,t.scaleY).setAngle(t.angle).setFlip(t.flipX,t.flipY).setDepth(3.5);
+     const underHero=clone(hero),underWater=clone(water),underFlower=clone(flower);
+     const probes=[underHero,underWater,underFlower];
+     const update=dt=>c.occlusion.update(probes,dt);
+     update(.05);check(close(underHero.alpha,.75)&&close(underWater.alpha,.75),'fade midpoint');
+     update(.05);check(close(underHero.alpha,.5)&&close(underWater.alpha,.5),'fade floor');
+     check(fairies.every(f=>f.alpha===1),'fairies remain fully opaque');
+     check(close(underFlower.alpha,1)&&close(flower.alpha,.4),'enemy above flower opaque, flower fades');
+     const other=flowers.filter(f=>!probes.some(b=>O.covers(O.shape(f),O.shape(b),{left:0,right:960,top:0,bottom:540})));
+     check(other.every(f=>f.alpha===1),'uncovered flowers stay opaque');
+     // Two fairies over one enemy do not compound the fade.
+     const beforeWater={x:water.x,y:water.y,ox:water.originX,oy:water.originY,sx:water.scaleX,sy:water.scaleY,angle:water.angle,fx:water.flipX,fy:water.flipY};
+     water.setPosition(hero.x,hero.y).setOrigin(hero.originX,hero.originY).setScale(hero.scaleX,hero.scaleY).setAngle(hero.angle).setFlip(hero.flipX,hero.flipY);
+     update(.1);check(close(underHero.alpha,.5),'multiple fairies do not multiply fade');
+     water.setPosition(beforeWater.x,beforeWater.y).setOrigin(beforeWater.ox,beforeWater.oy).setScale(beforeWater.sx,beforeWater.sy).setAngle(beforeWater.angle).setFlip(beforeWater.fx,beforeWater.fy);
+     F.advance(0);
+     for(const p of probes)p.setPosition(-100,-100);
+     update(.1);check(close(underHero.alpha,.75)&&close(underWater.alpha,.75)&&close(flower.alpha,.7),'recovery midpoint');
+     update(.1);check(probes.every(p=>close(p.alpha,1))&&flowers.every(f=>close(f.alpha,1)),'full recovery');
+     underHero.setPosition(hero.x,hero.y).setDepth(hero.depth);
+     update(.1);check(underHero.alpha===1,'equal depth does not cover');
+     for(const p of probes)p.destroy();
+     // Real enemy texture and the fairy silhouette, not the transparent canvas.
+     const e=actual[0],copy=s.add.image(0,0,e.texture.key).setOrigin(e.originX,e.originY)
+       .setScale(-Math.abs(e.scaleX),e.scaleY).setAngle(15).setDepth(3.5);
+     const b=O.shape(hero);copy.setPosition((b.l+b.r)/2,(b.t+b.b)/2);
+     const field={left:0,right:960,top:0,bottom:540};
+     check(O.covers(O.shape(copy),O.shape(hero),field),'real rotated enemy silhouette overlaps fairy');
+     c.occlusion.update([copy],.1);check(close(copy.alpha,.5)&&hero.alpha===1,'real enemy fades below fairy');
+     copy.setPosition(-100,-100);c.occlusion.update([copy],.2);check(copy.alpha===1,'real enemy restored');
+     copy.destroy();
+     // Wide opaque edges with a transparent gap containing the entire fairy.
+     const tex=s.textures.createCanvas('test:fairy-front-gap',96,96),ctx=tex.getContext();
+     ctx.fillStyle='#fff';ctx.fillRect(0,0,8,96);ctx.fillRect(88,0,8,96);tex.refresh();
+     const gap=s.add.image((b.l+b.r)/2,(b.t+b.b)/2,tex.key).setDepth(3.5);
+     check(!O.covers(O.shape(gap),O.shape(hero),field),'transparent gap does not fade');
+     gap.destroy();s.textures.remove(tex.key);
+     c.occlusion.update([],1);
+     return {checks,enemyAlpha:O.config.enemyAlpha,fairyFront:O.config.fairyFront};
+    });
+    console.log('PASS fairy-front occlusion',name,JSON.stringify(fade));
+   }
    const motions=await page.evaluate(()=>{
     const s=window.__previewGame.scene.getScene('Game'),c=s.enemyPreview,F=s.fairyPatrol,L=window.GardenGameLayout.spec,M=window.GardenEnemyMotion,E=window.GardenEnemyPreview;
     const seen=new Set(),attacked=new Set(),sides=new Set(),entered=new Set(),first=[],serials=new Set();
@@ -195,7 +247,7 @@ try{
    assert.equal(motions.seen.length,12);assert.equal(motions.attacked.length,12);assert.equal(motions.entered.length,12);assert.equal(new Set(motions.first).size,12);assert.equal(motions.sides.length,8);assert.ok(motions.maxActive>1&&motions.maxActive<=200&&motions.completed>=12,JSON.stringify(motions));
    await page.screenshot({path:join(out,'enemy-'+name+'.png'),scale:'device'});
    let swarm=null;
-   if(name==='default'||name==='full'){
+   if(name==='default'||name==='full'||name.endsWith('fairy-front')){
     swarm=await page.evaluate(async()=>{
      const s=window.__previewGame.scene.getScene('Game'),c=s.enemyPreview,F=s.fairyPatrol,E=window.GardenEnemyPreview,L=window.GardenGameLayout.spec;
      c.advance(Math.max(0,120-c.elapsed));c.advance(.5);
@@ -214,7 +266,7 @@ try{
     assert.equal(swarm.target,200);assert.equal(swarm.cap,200);
     for(const v of [swarm.before,swarm.after]){
      assert.ok(v.count>=192&&v.count<=200&&v.sprites===v.count&&v.visible>=100,JSON.stringify(swarm));
-     assert.equal(v.flowers,name==='full'?100:4);assert.equal(v.fairyHeight,40);assert.ok(Math.abs(v.waterHeight-40*502/716)<.001);
+     assert.equal(v.flowers,name.startsWith('full')?100:4);assert.equal(v.fairyHeight,40);assert.ok(Math.abs(v.waterHeight-40*502/716)<.001);
     }
     await page.screenshot({path:join(out,'swarm-200-'+name+'.png'),scale:'device'});
     console.log('SWARM',name,JSON.stringify(swarm));
