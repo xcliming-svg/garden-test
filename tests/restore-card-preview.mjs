@@ -207,12 +207,18 @@ try{
      cv.width=im.width;cv.height=im.height;const ctx=cv.getContext('2d');ctx.drawImage(im,0,0);
      const at=(x,y)=>{const d=ctx.getImageData(x,y,1,1).data;return (d[0]<<16)|(d[1]<<8)|d[2];};
      const lines=[column2/2,column2].map(x=>{
-       const left=Math.round(x*z),right=Math.round((x+1)*z),top=Math.round(5*z),bottom=Math.round(25*z);
-       const expected=right-left;let valid=true;
+       // Gem ink is snapped independently; locate the visible divider within
+       // the rounding tolerance instead of assuming the icon anchor is exact.
+       const anchor=Math.round(x*z),sample=Math.round(7*z),pixels=[];
+       for(let xx=anchor-3;xx<=anchor+3;xx++)if(at(xx,sample)===0x3B3A44)pixels.push(xx);
+       if(!pixels.length)return {expected:0,valid:false,anchor,pixels};
+       const left=pixels[0],right=pixels.at(-1)+1,logical=Math.round(left/z);
+       const expected=Math.round((logical+1)*z)-Math.round(logical*z),top=Math.round(5*z),bottom=Math.round(25*z);
+       let valid=pixels.length===expected&&right-left===expected&&left===Math.round(logical*z)&&Math.abs(logical-x)<=1;
        for(let y=top;y<bottom;y++)for(let xx=left;xx<right;xx++)if(at(xx,y)!==0x3B3A44)valid=false;
        for(const y of [top-1,bottom])for(let xx=left;xx<right;xx++)if(at(xx,y)!==0x16161A)valid=false;
-       for(const xx of [left-1,right])if(at(xx,Math.round(7*z))!==0x16161A)valid=false;
-       return {expected,valid};
+       for(const xx of [left-1,right])if(at(xx,sample)!==0x16161A)valid=false;
+       return {expected,valid,anchor,pixels};
      });
      return {role:L.colors.hudDivider,lines};
    },hudPng.toString('base64'));
