@@ -61,13 +61,13 @@ for(const [cx,cy,dx,dy] of [[480,200,0,-1],[580,270,1,0],[480,340,0,1],[380,270,
   const h={...hero,center:{x:cx,y:cy}},m=A.create(spec,()=>.5);m.equip(0,'wheel');
   const target={id:1,x:cx+dx*80,y:cy+dy*80,radius:5};
   advance(m,.01,h,[target],()=>({killed:false}));
-  const q=m.state.shots[0];ok(q.span===40,'wheel height');
-  ok(Math.abs(q.x-cx-dx*44)<1e-6&&Math.abs(q.y-cy-dy*44)<1e-6,'ahead of body');
+  const q=m.state.shots[0];ok(q.span===28,'wheel height');
+  ok(Math.abs(q.x-cx-dx*38)<1e-6&&Math.abs(q.y-cy-dy*38)<1e-6,'ahead of body');
   let last=0,delta=Infinity;const distances=[];
   for(let i=1;i<=8;i++){
     q.age=i*.04;const p=A.pose(q,h),d=A.wheelTravel(q);
     ok(d-last<=delta+1e-6,'monotonic deceleration');
-    ok(Math.abs(Math.abs(p.angle)*20-d)<1e-6,'rolling without slip');
+    ok(Math.abs(Math.abs(p.angle)*14-d)<1e-6,'rolling without slip');
     ok(Math.sign(p.angle)===(dx?Math.sign(dx):Math.sign(dy)),'roll direction');
     ok(Math.abs(Math.hypot(p.x-q.x,p.y-q.y)-d)<1e-6,'linear distance agrees');
     distances.push(d);delta=d-last;last=d;
@@ -76,14 +76,14 @@ for(const [cx,cy,dx,dy] of [[480,200,0,-1],[580,270,1,0],[480,340,0,1],[380,270,
   const exit=q.exitDistance;ok(exit>0,'exit distance');
   q.age=6;const end=A.pose(q,h);
   ok(A.wheelTravel(q)>=exit,'enough travel to exit');
-  ok(end.x<=-21+1e-8||end.x>=981-1e-8||end.y<=11+1e-8||end.y>=523-1e-8,'fully outside field');
+  ok(end.x<=-15+1e-8||end.x>=975-1e-8||end.y<=17+1e-8||end.y>=517-1e-8,'fully outside field');
   q.age=0;let time=0;
   while(m.state.shots.includes(q)&&time<6.1){advance(m,.02,h,[target],()=>({killed:false}));time+=.02;}
   ok(!m.state.shots.includes(q)&&A.wheelTravel(q)>=exit,'removed after leaving');
 }
 {
   const h={...hero,visibleHeight:32},m=A.create(spec,rng);m.select('wheel');advance(m,.01,h);
-  ok(m.state.shots[0].span===32,'wheel follows actual hero height');
+  ok(m.state.shots[0].span===28,'wheel height stays fixed at agreed logical height');
 }
 {
   const near={id:1,x:480,y:160,radius:5},far={id:2,x:480,y:70,radius:5},bad={id:3,x:100,y:200,radius:5};
@@ -112,7 +112,7 @@ for(const [cx,cy,dx,dy] of [[480,200,0,-1],[580,270,1,0],[480,340,0,1],[380,270,
     ok(p.scale>=previous,'spreads outward');
     previous=p.scale;
   }
-  ok(A.tuning['yellow-floor'].span===72&&previous===1,'larger 72px ground');
+  ok(A.tuning['yellow-floor'].span===44&&previous===1,'44px visible height ground');
 }
 // Ballistic balloon and one-time ground impact use the same randomly chosen target.
 {
@@ -148,7 +148,7 @@ for(const [cx,cy,dx,dy] of [[480,200,0,-1],[580,270,1,0],[480,340,0,1],[380,270,
     const a=A.balloonSplash({...q,age:q.flight+age});
     ok(a.scale>=previous-1e-8&&a.x===q.tx&&a.y===q.ty,'puddle spreads without moving');previous=a.scale;
   }
-  ok(previous===1&&cfg.splashSpan===106,'maximum puddle span');
+  ok(previous===1&&cfg.splashSpan===44,'maximum puddle height');
   const spray=A.balloonDroplets({...q,age:q.flight+.15});
   ok(spray.every(p=>Object.values(p).every(Number.isFinite))&&spray.some(p=>Math.hypot(p.x-q.tx,p.y-q.ty)>5),'droplet motion');
   ok(A.balloonDroplets({...q,age:q.flight+.4}).length===0,'droplets expire');
@@ -163,5 +163,74 @@ for(const [cx,cy,dx,dy] of [[480,200,0,-1],[580,270,1,0],[480,340,0,1],[380,270,
   ok(hits===1,'no repeat or late puddle damage');
   advance(m,q.life-q.age+.001,hero,[target],damage);
   ok(!m.state.shots.includes(q),'splash removed after lifetime');
+}
+
+// Agreed vertical dimensions, including wide art and the water splash.
+{
+ const heights={balloon:22,boomerang:20,wheel:28,flowerpot:22,'paper-plane':22,'bouncy-ball':22,'yellow-floor':44,sprinkler:22,rock:20,broom:44};
+ for(const id of A.ids){
+   const m=A.create(spec,rng);m.select(id);advance(m,.01);const q=m.state.shots[0];
+   ok(q.size.height===heights[id]&&q.span===heights[id],'agreed visible height '+id);
+   ok(q.size.width>0,'preserved aspect '+id);
+ }
+ ok(A.defaultSize('boomerang',20).width>40,'wide boomerang');
+ ok(A.defaultSize('water-splash',44).width>100,'wide puddle');
+}
+// Broom deploys at the random ground point, independently of subsequent hero movement.
+{
+ const m=A.create(spec,()=>.5);m.equip(0,'broom');
+ const e={id:81,x:480,y:110,ground:110,radius:5};let hits=0;
+ advance(m,.01,hero,[e],()=>{hits++;return {killed:false};});
+ const q=m.state.shots[0],first=A.pose(q,hero),moved={...hero,center:{x:550,y:340}};
+ ok(q.tx===480&&q.ty===110,'broom deployed at target');
+ for(const age of [0,.3,.6,.9,1.2,1.8,2.3]){
+   const p=A.pose({...q,age},moved),same=A.pose({...q,age},hero);
+   ok(Math.abs(Math.hypot(p.x-q.tx,p.y-q.ty)-A.tuning.broom.orbit)<1e-8,'constant orbit radius');
+   ok(Math.abs(p.x-same.x)+Math.abs(p.y-same.y)<1e-8,'independent of fairy');
+ }
+ const full=A.pose({...q,age:A.tuning.broom.period},moved);
+ ok(Math.hypot(first.x-full.x,first.y-full.y)<1e-8,'full revolution');
+ for(let i=0;i<45;i++)advance(m,.02,moved,[e],()=>{hits++;return {killed:false};});
+ ok(hits===1,'broom sweeps target once per instance');
+}
+// Sprinkler remains at installation point.
+{
+ const m=A.create(spec,rng);m.select('sprinkler');advance(m,.01);const q=m.state.shots[0];
+ for(const age of [0,.1,.5,1,1.8]){
+  const p=A.pose({...q,age},hero);ok(p.x===q.tx&&p.y===q.ty,'stationary sprinkler');
+ }
+}
+// Boomerang returns on the opposite curve and reaches the moving fairy.
+{
+ const m=A.create(spec,rng);m.select('boomerang');advance(m,.01);const q=m.state.shots[0];
+ const out=A.pose({...q,age:q.flight*.5},hero),back=A.pose({...q,age:q.flight+(q.life-q.flight)*.5},hero);
+ ok(Math.hypot(out.x-back.x,out.y-back.y)>1,'separate outbound and return arcs');
+ const h={...hero,center:{x:530,y:220}},end=A.pose({...q,age:q.life},h);
+ ok(Math.hypot(end.x-h.center.x,end.y-h.center.y)<1e-8,'returns to moving fairy');
+}
+// Rock flight time scales with distance rather than fixed lifetime.
+{
+ const m=A.create(spec,()=>.5);m.equip(0,'rock');advance(m,.01,hero,[{id:1,x:480,y:100,radius:1}],()=>({killed:false}));
+ const q=m.state.shots[0];ok(Math.abs(q.life-100/A.tuning.rock.speed)<1e-8,'distance-dependent flight time');
+ const p=A.pose({...q,age:q.life*.5},hero);ok(p.y<150&&p.y>140,'short ballistic arc');
+}
+// Plane steers continuously instead of interpolating to a moving endpoint.
+{
+ const m=A.create(spec,()=>.5);m.equip(0,'paper-plane');const e={id:1,x:480,y:80,radius:1};advance(m,.01,hero,[e],()=>({killed:false}));
+ const q=m.state.shots[0],p=A.pose(q,hero);advance(m,.05,hero,[{...e,x:500}],()=>({killed:false}));
+ const n=A.pose(q,hero);ok(Math.hypot(n.x-p.x,n.y-p.y)<=A.tuning['paper-plane'].speed*.05+1e-8,'bounded glide velocity');
+ ok(Math.abs(q.glide.heading+Math.PI/2)<=A.tuning['paper-plane'].turn*.05+1e-8,'bounded turn rate');
+}
+// Ball starts its next leg at impact position and moves toward the next enemy.
+{
+ const m=A.create(spec,()=>.5);m.equip(0,'bouncy-ball');
+ const e={id:1,x:480,y:130,radius:10},f={id:2,x:540,y:125,radius:10};let count=0;
+ advance(m,.01,hero,[e],()=>({killed:false}));const q=m.state.shots[0];
+ for(let i=0;i<40&&!q.hit.has(1);i++)advance(m,.01,hero,[e,f],()=>({killed:false}));
+ ok(q.hit.has(1)&&q.targetId===2,'ball retargets after contact');
+ ok(q.leg.tx===f.x&&q.leg.ty===f.y&&q.leg.speed<A.tuning['bouncy-ball'].speed,'actual slower second leg');
+ const p=A.pose(q,hero);ok(Math.hypot(p.x-q.leg.x,p.y-q.leg.y)<1e-8,'continuous bounce origin');
+ for(let i=0;i<80&&!q.hit.has(2);i++)advance(m,.01,hero,[e,f],()=>({killed:false}));
+ ok(q.hit.has(2),'second target actually hit');
 }
 console.log('PASS equipped weapon model:',checks,'checks');
