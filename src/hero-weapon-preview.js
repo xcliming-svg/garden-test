@@ -83,22 +83,88 @@
     });
   }
   const shotLife=s=>s.life??tuning[s.kind].life;
-  // Use the collection predicate itself, including its rotating 100-degree fan,
-  // inward mirror for points inside the patrol, and 12px near exception.
-  const inAttackRange=(point,origin,bounds)=>window.GardenRelicCollection.eligible(point,origin,{bounds});
-  function randomPoint(spec,origin,bounds,random){
+  // Weapon aim is independent of the collection fan: only its nominal 550px
+  // distance is retained. The current visible garden (not the patrol rectangle)
+  // is the protected obstacle, including the candidate planting cells.
+  const inAttackRange=(point,origin)=>distance(point,origin)<=range+1e-8;
+  const installations=new Set(['yellow-floor','sprinkler','broom']);
+  const groundAim=new Set(['balloon','flowerpot',...installations]);
+  const insideField=(spec,p)=>p.x>=0&&p.x<=spec.width&&p.y>=spec.top&&p.y<=spec.height-spec.bottom;
+  const gardenOf=patrol=>patrol?.boundary?.garden||patrol?.bounds||null;
+  const expanded=(g,x,y=x)=>({left:g.left-x,right:g.right+x,top:g.top-y,bottom:g.bottom+y});
+  const insideRect=(p,g)=>!!g&&p.x>=g.left&&p.x<=g.right&&p.y>=g.top&&p.y<=g.bottom;
+  function segmentIntersects(a,b,g){
+    if(!g)return false;
+    let lo=0,hi=1;
+    for(const [k,min,max] of [['x',g.left,g.right],['y',g.top,g.bottom]]){
+      const d=b[k]-a[k];
+      if(Math.abs(d)<1e-9){if(a[k]<min||a[k]>max)return false;continue;}
+      const p=(min-a[k])/d,q=(max-a[k])/d;
+      lo=Math.max(lo,Math.min(p,q));hi=Math.min(hi,Math.max(p,q));
+      if(lo>hi)return false;
+    }
+    return true;
+  }
+  function placementExtent(kind,size){
+    if(kind==='yellow-floor')return {x:Math.max(size.width,size.height)/2+1,y:size.height/2+1};
+    if(kind==='sprinkler'){const r=Math.max(tuning.sprinkler.radius+2,Math.hypot(size.width,size.height)/2)+1;return {x:r,y:r};}
+    if(kind==='broom'){
+      const diagonal=Math.hypot(size.width,size.height);
+      const r=tuning.broom.orbit+Math.max(diagonal/2,diagonal*.4+size.height*.18)+1;
+      return {x:r,y:r};
+    }
+    return null;
+  }
+  function installationSafe(spec,kind,p,garden,size){
+    const e=placementExtent(kind,size);
+    return !!e&&p.x-e.x>=0&&p.x+e.x<=spec.width&&p.y-e.y>=spec.top&&p.y+e.y<=spec.height-spec.bottom&&
+      (!garden||!insideRect(p,expanded(garden,e.x,e.y)));
+  }
+  const wheelRadius=size=>Math.max(size.width,size.height)/2;
+  function wheelPath(spec,origin,aim,garden,size,heroHeight=40){
+    const d=distance(origin,aim);
+    if(d<1e-6)return null;
+    const dx=(aim.x-origin.x)/d,dy=(aim.y-origin.y)/d,r=wheelRadius(size),offset=heroHeight/2+r+4;
+    const start={x:origin.x+dx*offset,y:origin.y+dy*offset};
+    const exit=wheelExit(spec,start.x,start.y,dx,dy,r);
+    if(exit<=1e-6)return null;
+    const end={x:start.x+dx*exit,y:start.y+dy*exit};
+    if(garden&&(segmentIntersects(origin,start,garden)||segmentIntersects(start,end,expanded(garden,r+1))))return null;
+    return {start,dx,dy,exit,r};
+  }
+  function validAim(spec,kind,p,origin,garden,size,heroHeight=40,hasEnemy=false){
+    if(!insideField(spec,p)||!inAttackRange(p,origin)||distance(p,origin)<1e-6)return false;
+    if(kind==='wheel')return !!wheelPath(spec,origin,p,garden,size,heroHeight);
+    if(installations.has(kind))return installationSafe(spec,kind,p,garden,size);
+    if(!hasEnemy&&(kind==='balloon'||kind==='flowerpot')&&insideRect(p,garden))return false;
+    return true;
+  }
+  function randomPoint(spec,origin,garden,random,kind='rock',size=defaultSize(kind,tuning[kind].span),heroHeight=40){
     const left=Math.max(0,origin.x-range),right=Math.min(spec.width,origin.x+range);
     const top=Math.max(spec.top,origin.y-range),bottom=Math.min(spec.height-spec.bottom,origin.y+range);
     if(!(right>left&&bottom>top))return null;
-    // Uniform area sampling over the intersection with the playable field.
-    for(let i=0;i<160;i++){
-      const p={x:mix(left,right,random()),y:mix(top,bottom,random())};
-      if(distance(p,origin)>1e-6&&inAttackRange(p,origin,bounds))return p;
+    const valid=p=>validAim(spec,kind,p,origin,garden,size,heroHeight,false);
+    // Wheels sample angle, not screen area: every safe direction is equally
+    // likely even on the short sides of the viewport. No inward fan exception.
+    if(kind==='wheel'){
+      const along=a=>{
+        const dx=Math.cos(a),dy=Math.sin(a),times=[range];
+        if(dx>1e-9)times.push((right-origin.x)/dx);else if(dx<-1e-9)times.push((left-origin.x)/dx);
+        if(dy>1e-9)times.push((bottom-origin.y)/dy);else if(dy<-1e-9)times.push((top-origin.y)/dy);
+        const d=Math.min(...times);return d>1e-6?{x:origin.x+dx*d*.9,y:origin.y+dy*d*.9}:null;
+      };
+      for(let i=0;i<160;i++){const p=along(random()*Math.PI*2);if(p&&valid(p))return p;}
+      for(let i=0;i<360;i++){const p=along(i*Math.PI/180);if(p&&valid(p))return p;}
+      return null;
     }
-    // Defensive fallback for a pathological injected RNG or a tiny intersection.
-    for(let i=1;i<=12;i++)for(let j=0;j<32;j++){
-      const a=j*Math.PI/16,p={x:origin.x+i*Math.cos(a),y:origin.y+i*Math.sin(a)};
-      if(p.x>=left&&p.x<=right&&p.y>=top&&p.y<=bottom&&inAttackRange(p,origin,bounds))return p;
+    // Uniform area sampling, with deterministic full-field fallback for an
+    // injected constant RNG or a very narrow valid placement zone.
+    for(let i=0;i<240;i++){
+      const p={x:mix(left,right,random()),y:mix(top,bottom,random())};
+      if(valid(p))return p;
+    }
+    for(let y=top+1;y<=bottom;y+=4)for(let x=left+1;x<=right;x+=4){
+      const p={x,y};if(valid(p))return p;
     }
     return null;
   }
@@ -127,14 +193,21 @@
       if(!(dt>0))return;
       state.elapsed+=dt;
       const live=targets.filter(e=>e.x>=0&&e.x<=spec.width&&e.y>=spec.top&&e.y<=spec.height-spec.bottom);
-      const dead=new Set();
+      const dead=new Set(),garden=gardenOf(patrol);
+      // Planting may expand the garden while an attack is already active.
+      // Remove only ground attacks whose remaining footprint becomes unsafe.
       for(const s of state.shots){
+        if(installations.has(s.kind)&&!installationSafe(spec,s.kind,{x:s.tx,y:s.ty},garden,sizeOf(s))){s.done=true;continue;}
+        if(s.kind==='wheel'&&garden){
+          const p=pose(s,hero),end={x:s.x+s.dx*s.exitDistance,y:s.y+s.dy*s.exitDistance};
+          if(segmentIntersects(p,end,expanded(garden,wheelRadius(sizeOf(s))+1))){s.done=true;continue;}
+        }
         const previous=s.previous||pose(s,hero),oldAge=s.age;
         s.age=Math.min(shotLife(s),s.age+dt);
         const delta=s.age-oldAge;
         if(s.kind==='paper-plane'){
           const target=live.find(e=>e.id===s.targetId&&!dead.has(e.id));
-          if(target&&inAttackRange(target,s.origin,s.bounds)){s.tx=target.x;s.ty=target.y;}
+          if(target&&inAttackRange(target,s.origin)){s.tx=target.x;s.ty=target.y;}
           const cfg=tuning[s.kind],q=s.glide;
           const desired=Math.atan2(s.ty-q.y,s.tx-q.x);
           q.heading+=clamp(wrapAngle(desired-q.heading),-cfg.turn*delta,cfg.turn*delta);
@@ -175,7 +248,7 @@
               s.hit.add(e.id);state.hits++;
               if(result.killed)dead.add(e.id);
               if(s.kind==='bouncy-ball'){
-                const options=live.filter(q=>q.id!==e.id&&!dead.has(q.id)&&!s.hit.has(q.id)&&distance(p,q)<=tuning['bouncy-ball'].chainRange&&inAttackRange(q,s.origin,s.bounds));
+                const options=live.filter(q=>q.id!==e.id&&!dead.has(q.id)&&!s.hit.has(q.id)&&distance(p,q)<=tuning['bouncy-ball'].chainRange&&inAttackRange(q,s.origin));
                 const other=options[Math.floor(random()*options.length)];
                 if(other&&s.hit.size<3){
                   const speed=Math.max(180,s.leg.speed*.82);
@@ -197,19 +270,15 @@
       for(const slot of slots){
         if(state.elapsed<(next.get(slot.index)||0))continue;
         const x=hero.center.x,y=hero.center.y,origin={x,y},bounds={...patrol.bounds};
-        // In live combat choose a random eligible enemy, never the nearest.
-        // Empty fan and selector shots choose a random eligible ground point.
-        const options=!slot.preview&&damage?live.filter(e=>!dead.has(e.id)&&distance(origin,e)>1e-6&&inAttackRange(e,origin,bounds)):[];
+        const cfg=tuning[slot.id],size=measure(slot.id,cfg.span),heroHeight=hero.visibleHeight||40;
+        // Ground effects use the actual ground coordinate, never the projected
+        // airborne sprite center as a fallback for a forbidden installation.
+        const aimOf=e=>({x:e.x,y:groundAim.has(slot.id)&&Number.isFinite(e.ground)?e.ground:e.y});
+        const options=!slot.preview&&damage?live.filter(e=>!dead.has(e.id)&&validAim(spec,slot.id,aimOf(e),origin,garden,size,heroHeight,true)):[];
         const target=options[Math.floor(random()*options.length)]||null;
-        const aim=target||randomPoint(spec,origin,bounds,random);
+        const aim=target?aimOf(target):randomPoint(spec,origin,garden,random,slot.id,size,heroHeight);
         if(!aim)continue;
-        let tx=aim.x,ty=aim.y;
-        if(['flowerpot','balloon','yellow-floor','sprinkler','broom'].includes(slot.id)&&target&&Number.isFinite(target.ground)){
-          const ground={x:tx,y:target.ground};
-          if(ground.y>=spec.top&&ground.y<=spec.height-spec.bottom&&inAttackRange(ground,origin,bounds))ty=ground.y;
-        }
-        const d=Math.hypot(tx-x,ty-y)||1,dx=(tx-x)/d,dy=(ty-y)/d;
-        const cfg=tuning[slot.id],size=measure(slot.id,cfg.span);
+        const tx=aim.x,ty=aim.y,d=Math.hypot(tx-x,ty-y)||1,dx=(tx-x)/d,dy=(ty-y)/d;
         const shot={id:serial++,owner:0,slot:slot.index,preview:slot.preview,kind:slot.id,x,y,tx,ty,dx,dy,origin,bounds,age:0,targetId:target?.id??null,hit:new Set(),size,span:cfg.span};
         if(slot.id==='balloon'){
           shot.flight=balloonFlight(d);shot.life=shot.flight+tuning.balloon.splashLife;
@@ -222,10 +291,9 @@
         if(slot.id==='bouncy-ball')startLeg(shot,x,y,tx,ty,0,cfg.speed);
         if(slot.id==='rock')shot.life=Math.max(.06,d/cfg.speed);
         if(slot.id==='wheel'){
-          const span=cfg.span,r=span/2,offset=(hero.visibleHeight||40)/2+r+4;
-          shot.x=x+dx*offset;shot.y=y+dy*offset;
-          // Keep the randomly chosen aim, but roll along that ray past the screen edge.
-          shot.exitDistance=wheelExit(spec,shot.x,shot.y,dx,dy,r);
+          const path=wheelPath(spec,origin,aim,garden,size,heroHeight);
+          if(!path)continue;
+          shot.x=path.start.x;shot.y=path.start.y;shot.exitDistance=path.exit;
         }
         state.shots.push(shot);
         state.fired++;next.set(slot.index,state.elapsed+interval);
@@ -392,5 +460,5 @@
     scene.heroWeaponPreview={model,select:choose,equip,render,control:select};
     return scene.heroWeaponPreview;
   }
-  window.GardenHeroWeaponPreview=Object.freeze({enabled,combat,ids,tuning,interval,range,create,pose,defaultSize,wheelTravel,wheelExit,randomPoint,inAttackRange,potFragments,balloonFlight,balloonSplash,balloonDroplets,attach});
+  window.GardenHeroWeaponPreview=Object.freeze({enabled,combat,ids,tuning,interval,range,create,pose,defaultSize,wheelTravel,wheelExit,wheelPath,placementExtent,installationSafe,segmentIntersects,validAim,randomPoint,inAttackRange,potFragments,balloonFlight,balloonSplash,balloonDroplets,attach});
 }());
