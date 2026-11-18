@@ -35,8 +35,8 @@ function runAudit(sources){
   // Opening is time-gated, not an initial shuffle of the complete roster.
   check(R.eligibleEnemies(179.99).join(',')==='3_caterpillar','caterpillar only for three minutes');
   check(R.eligibleEnemies(180).join(',')==='3_caterpillar,4_beetle','first unlock');
-  check(R.population(0)===3&&R.population(29.99)===3&&R.population(30)===4&&R.population(60)===5&&R.population(120)===7&&R.population(3600)===65,'opening concurrent cap');
-  check(R.spawnInterval(0)===3&&R.spawnInterval(179)===3&&R.spawnInterval(180)===2.5&&R.spawnInterval(1380)===1,'opening spawn cadence');
+  check(R.population(0)===3&&R.population(29.99)===3&&R.population(30)===4&&R.population(60)===4&&R.population(120)===7&&R.population(180)===6&&R.population(3600)===65,'wave concurrent cap');
+  check(R.spawnInterval(0)===3&&R.spawnInterval(30)===2.5&&R.spawnInterval(179)===2&&R.spawnInterval(180)===3&&R.spawnInterval(1560)===1.2,'wave cadence');
   const live=E.createPopulation(spec,patrol,E.roster,()=>.37,R.population,null,true);
   live.advance(0);check(live.actors.length===1,'first spawn immediate');
   live.advance(2.99);check(live.actors.length===1,'no spawn burst');
@@ -46,22 +46,46 @@ function runAudit(sources){
   live.advance(.01);check(live.actors.length===4,'fourth enemy at 30s');
   const opening=E.createPopulation(spec,patrol,E.roster,()=>.37,R.population,null,true);
   const seen=new Set();let lastSpawn=-Infinity,lastCount=0;
-  for(let t=0;t<=1440;t++){
+  for(let t=0;t<=1600;t++){
     opening.advance(t===0?0:1);
     check(opening.actors.length<=R.population(t+1e-6),'concurrent cap');
     if(opening.spawned!==lastCount){
-      check(opening.spawned===lastCount+1,'no spawn burst');
-      check(t-lastSpawn>=R.spawnInterval(lastSpawn)-1,'spawn spacing');
-      lastCount=opening.spawned;lastSpawn=t;
+      const at=opening.actors[0].spawnTime;
+      check(opening.spawned-lastCount<=R.waveAt(at).batch,'batch limit');
+      check(at-lastSpawn+1e-6>=R.spawnInterval(lastSpawn),'spawn spacing');
+      lastCount=opening.spawned;lastSpawn=at;
     }
     for(const a of [...opening.actors]){
-      check(R.eligibleEnemies(t+1e-6).includes(a.entry.id),'no premature enemy');
+      check(R.waveAt(a.spawnTime).pool.some(([id])=>id===a.entry.id)&&R.eligibleEnemies(t+1e-6).includes(a.entry.id),'active wave species only');
+      check(a.hp===Math.round(V.hp(a.entry)*R.waveAt(a.spawnTime).hp)&&a.damageScale===R.waveAt(a.spawnTime).damage,'wave-specific stats');
       check(M.speed(a.entry,0)===M.profiles[a.entry.id].baseSpeed,'minimum enemy speed');
       seen.add(a.entry.id);opening.damage(a.id,999);
     }
   }
   check(seen.size===12,'all species eventually introduced');
   check(w.GardenFairyPatrol.speed===40&&w.GardenFairyPatrol.speedAt(40,0,80)===40&&w.GardenFairyPatrol.speedAt(40,5,80)===80,'minimum fairy speed');
+  // Spendable gems and XP remain separate, and rewards share one kill drop.
+  const progress=R.create();
+  progress.credit(6);check(progress.state.level===2&&progress.state.xp===0&&progress.state.pendingGrowth===1,'first XP level');
+  check(progress.rewardDrop(()=>.99)==='gem','no item before 30s');
+  progress.tick(30);check(progress.rewardDrop(()=>.85)==='flower'&&progress.rewardDrop(()=>.70)==='heart','protect flower and heart supply');
+  check(progress.rewardDrop(()=>.1)==='item'&&progress.state.pendingGrowth===0,'XP earns next item');
+  progress.credit(10);check(progress.state.level===3&&progress.state.totalXp===16&&progress.state.pendingGrowth===1,'second XP level');
+  const xp=progress.state.totalXp;check(progress.buy()&&progress.state.totalXp===xp&&progress.state.pendingGrowth===1,'spending does not reduce XP');
+  check(progress.rewardDrop(()=>.99)==='gem','cooldown even on rare roll');
+  progress.tick(29.99);check(progress.rewardDrop(()=>.1)==='gem','no early payout');progress.tick(.01);
+  check(progress.rewardDrop(()=>.1)==='item'&&progress.state.itemDrops===2,'second paced reward');
+  const unlucky=R.create();unlucky.tick(60);check(unlucky.rewardDrop(()=>.1)==='item','first reward guaranteed at eligible kill after 60s');
+  const rock={id:'rock',level:1},rock2={id:'rock',level:2},rock3={id:'rock',level:3};
+  check(R.itemPool(0).join(',')==='rock,boomerang,shoe,shield'&&R.itemPool(540).length===13,'item unlocks');
+  check(R.pickItem(0,[rock],()=>.1)==='rock'&&R.pickItem(0,[rock],()=>.9)!=='rock','owned upgrade favored');
+  check(R.pickItem(0,[rock3],()=>.1)!=='rock','max level excluded when alternatives exist');
+  check(R.equipmentLevel(rock,rock)===2&&R.equipmentLevel(rock2,rock)===3&&R.equipmentLevel(rock3,rock)===null&&R.equipmentLevel(null,rock)===1,'same slot upgrade');
+  // A lowering cap cannot destroy already living enemies.
+  const retained=E.createPopulation(spec,patrol,E.roster,()=>.37,R.population,null,true);
+  retained.advance(179);const oldIds=retained.actors.map(a=>a.id);
+  retained.advance(2);check(oldIds.every(id=>retained.actors.some(a=>a.id===id)),'wave transition keeps survivors');
+  check(R.waves.every(w=>w.pool.every(([id])=>R.eligibleEnemies(w.start).includes(id))&&w.cap<=R.tuning.spawnCap),'wave unlock and cap consistency');
   const placed=[];
   for(const size of [24,32])for(let x=0;x<=960;x+=24)for(let y=0;y<=540;y+=24){
     const p=R.cardPosition(spec,x,y,size,placed.slice(-8)),h=size/2;
@@ -79,9 +103,9 @@ function runAudit(sources){
     check(model.state.drops.length+(card?1:0)===1,'exactly one death drop');
     counts[kind]++;
   }
-  check(counts.gem===550&&counts.heart===150&&counts.flower===180&&counts.item===120,'exclusive distribution');
+  check(counts.gem===640&&counts.heart===150&&counts.flower===180&&counts.item===30,'exclusive base distribution');
   {
-    const m=L.create(spec,()=>.60),p={x:boundary.patrol.right,y:(boundary.patrol.top+boundary.patrol.bottom)/2};
+    const m=L.create(spec,()=>.70),p={x:boundary.patrol.right,y:(boundary.patrol.top+boundary.patrol.bottom)/2};
     const frame={bounds:boundary.patrol,length:boundary.length,speed:40};
     const advance=t=>{for(let left=t;left>1e-8;left-=.05)m.step(Math.min(.05,left),p,frame);};
     m.syncFlowers([44,45,54,55]);m.death(p.x,p.y,frame.bounds);

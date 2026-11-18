@@ -28,7 +28,7 @@
     const k=(range-8)/dist;
     return {x:x+dx*k,y:y+dy*k};
   }
-  function create(spec,random=Math.random){
+  function create(spec,random=Math.random,chooseDrop=null){
     const state={drops:[],flowers:new Map(),gems:0,hearts:0,expired:0,spawnedGems:0,spawnedHearts:0};
     let serial=0;
     const clamp=(v,min,max)=>Math.max(min,Math.min(max,v));
@@ -63,7 +63,7 @@
       return d;
     }
     function death(x,y,bounds){
-      if(window.GardenRunRules?.active){const kind=window.GardenRunRules.rollDrop(random);if(kind==='gem'||kind==='heart')spawn(kind,x,y,bounds);else return {kind,x,y};return null;}
+      if(window.GardenRunRules?.active){const kind=chooseDrop?chooseDrop(random):window.GardenRunRules.rollDrop(random);if(kind==='gem'||kind==='heart')spawn(kind,x,y,bounds);else return {kind,x,y};return null;}
       spawn('gem',x,y,bounds);
       if(random()<tuning.heartChance)spawn('heart',x+12,y,bounds);
     }
@@ -98,7 +98,7 @@
     return {state,syncFlowers,damageFlower,weakest,death,step};
   }
   function attach(scene,spec,patrol){
-    const model=create(spec),images=new Map(),I=window.GardenItemCards;
+    const model=create(spec,Math.random,scene.run?.rewardDrop),images=new Map(),I=window.GardenItemCards;
     model.syncFlowers(patrol.occupied);
     function step(dt){
       model.syncFlowers(patrol.occupied);

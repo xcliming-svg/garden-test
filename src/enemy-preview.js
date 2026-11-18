@@ -177,10 +177,10 @@
     const schedule=playable&&target===window.GardenRunRules.population, introduced=new Set();let nextSpawn=0;
     function nextEntry(){
       if(schedule){
-        const ids=window.GardenRunRules.eligibleEnemies(elapsed+1e-7),pool=entries.filter(e=>ids.includes(e.id));
+        const wave=window.GardenRunRules.waveAt(elapsed),ids=wave.pool.map(([id])=>id),pool=entries.filter(e=>ids.includes(e.id));
         const fresh=ids.map(id=>pool.find(e=>e.id===id)).find(e=>e&&!introduced.has(e.id));
         if(fresh){introduced.add(fresh.id);return fresh;}
-        if(pool.length){const weighted=pool.flatMap(e=>Array(spawning.levelWeights[e.level-1]).fill(e));return weighted[Math.min(weighted.length-1,Math.floor(random()*weighted.length))];}
+        if(pool.length){const weighted=pool.flatMap(e=>Array(wave.pool.find(([id])=>id===e.id)[1]).fill(e));return weighted[Math.min(weighted.length-1,Math.floor(random()*weighted.length))];}
       }
       if(!bag.length){
         // Show all 12 species once; subsequent 40-entry bags preserve every
@@ -205,7 +205,8 @@
       const entry=nextEntry(),side=directionBag.pop();
       const initialPath=route(spec,patrol.boundary,entry,patrol.occupied,{side,random});
       const path=playable?runPath(initialPath):initialPath;
-      const actor={id:serial++,entry,path,age:0,blink:F.blinkSchedule(serial+11),expressionState:'auto',expression:'normal',pose:null,hp:balanced?window.GardenWeaponBalance.hp(entry):entry.level,hitUntil:0,populationTime:elapsed,motionAge:0,strikes:0,pendingHits:0,persistent:playable};
+      const wave=schedule?window.GardenRunRules.waveAt(elapsed):null;
+      const actor={id:serial++,entry,path,age:0,spawnTime:elapsed,damageScale:wave?.damage??1,blink:F.blinkSchedule(serial+11),expressionState:'auto',expression:'normal',pose:null,hp:balanced?Math.round(window.GardenWeaponBalance.hp(entry)*(wave?.hp??1)):entry.level,hitUntil:0,populationTime:elapsed,motionAge:0,strikes:0,pendingHits:0,persistent:playable};
       actor.duration=M.duration(entry,'auto',path,spawning.rank);actors.push(actor);spawned++;
       updateActor(actor);return actor;
     }
@@ -235,7 +236,7 @@
           else if(a.age>=a.duration){actors.splice(i,1);completed++;}else updateActor(a);
         }
         const wanted=target(elapsed);
-        if(schedule){if(actors.length<wanted&&elapsed+1e-7>=nextSpawn){spawn();nextSpawn=elapsed+window.GardenRunRules.spawnInterval(elapsed);}}
+        if(schedule){if(actors.length<wanted&&elapsed+1e-7>=nextSpawn){const wave=window.GardenRunRules.waveAt(elapsed);for(let n=0;n<wave.batch&&actors.length<wanted;n++)spawn();nextSpawn=elapsed+wave.interval;}}
         else for(let n=0;n<spawning.maxBatch&&actors.length<wanted;n++)spawn();
       } while(left>1e-9);
       return elapsed;
@@ -331,7 +332,7 @@
           model.advance(step);
           relics.model.syncFlowers(patrol.occupied);
           for(const e of model.actors){
-            if(playable){if(e.pendingHits){const damage=Math.max(1,window.GardenRunRules.tuning.enemyDamage+(e.entry.level-1)*window.GardenRunRules.tuning.enemyDamagePerLevel-(scene.runEquipment?.defense()||0));relics.model.damageFlower(e.path.flower,damage*e.pendingHits);e.pendingHits=0;}}
+            if(playable){if(e.pendingHits){const damage=Math.max(1,Math.round((window.GardenRunRules.tuning.enemyDamage+(e.entry.level-1)*window.GardenRunRules.tuning.enemyDamagePerLevel)*e.damageScale)-(scene.runEquipment?.defense()||0));relics.model.damageFlower(e.path.flower,damage*e.pendingHits);e.pendingHits=0;}}
             else if(!e.flowerHit&&(e.pose.phase==='recover'||e.pose.phase==='return')){e.flowerHit=true;relics.model.damageFlower(e.path.flower);}
           }
           if(playable){for(const [id,f] of relics.state.flowers)if(f.energy<=0)scene.runGarden?.remove(id);if(!patrol.occupied.length)break;}
