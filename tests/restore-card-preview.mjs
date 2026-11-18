@@ -41,8 +41,10 @@ try{
    const snapshot=()=>page.evaluate(()=>{
     const s=window.__previewGame.scene.getScene('Game'),L=window.GardenGameLayout;
     const obj=n=>s.children.getByName(n),pos=o=>({x:o.x,y:o.y,visible:o.visible,alpha:o.alpha});
-    const flowers=s.children.list.filter(o=>o.name?.startsWith('placeholder:flower:')).map(pos);
-    const items=s.children.list.filter(o=>o.name?.startsWith('placeholder:item:')).map(pos);
+    // Drag raises depth and reorders the display list; retain stable card identity.
+    const byName=(a,b)=>a.name.localeCompare(b.name);
+    const flowers=s.children.list.filter(o=>o.name?.startsWith('placeholder:flower:')).sort(byName).map(pos);
+    const items=s.children.list.filter(o=>o.name?.startsWith('placeholder:item:')).sort(byName).map(pos);
     const g=L.spec.garden,cell=i=>({x:g.x+(i%g.columns)*g.pitch+g.line+g.cell/2,y:g.y+Math.floor(i/g.columns)*g.pitch+g.line+g.cell/2});
     const slot=L.bottomLayout().slots[0];
     return {flowers,items,occupied:s.fairyPatrol.occupied,enemy:!!s.enemyPreview,combat:!!s.combatPreview,
