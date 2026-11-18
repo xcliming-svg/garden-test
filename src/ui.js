@@ -135,13 +135,6 @@
     g.fillStyle(fill,1).fillRect(x+1,y+1,w-2,h-2);
     return g;
   }
-  // Shared logical edge segments for the placement grid and slot frames.
-  function placementSegments(pitch,dashed){
-    if(!dashed)return [[1,pitch-1]];
-    const segments=[];
-    for(let t=2;t<pitch-1;t+=5)segments.push([t,Math.min(3,pitch-1-t)]);
-    return segments;
-  }
   function pixelBox(scene, x, y, w, h, fill, options = {}) {
     const g = pixelGraphics(scene).setPosition(x,y);
     g.width = w; g.height = h; g.pixelBox = true;
@@ -151,21 +144,6 @@
     const cut = options.cut !== false;
     const redraw = () => {
       g.clear();
-      if(g.placementStyle){
-        const left=-w/2,top=-h/2;
-        if(g.fillAlpha)g.fillStyle(g.fillColor,g.fillAlpha).fillRect(left+1,top+1,w-2,h-2);
-        if(g.strokeAlpha){
-          g.fillStyle(g.strokeColor,g.strokeAlpha);
-          for(const [t,len] of placementSegments(w-1,g.placementStyle==='dashed')){
-            g.fillRect(left+t,top,len,1);g.fillRect(left+t,top+h-1,len,1);
-          }
-          for(const [t,len] of placementSegments(h-1,g.placementStyle==='dashed')){
-            g.fillRect(left,top+t,1,len);g.fillRect(left+w-1,top+t,1,len);
-          }
-          if(g.placementStyle==='solid'&&!cut)for(const xx of [left,left+w-1])for(const yy of [top,top+h-1])g.fillRect(xx,yy,1,1);
-        }
-        return;
-      }
       if (g.strokeWidth && g.strokeAlpha) {
         if (cut) cutFill(g,-w/2,-h/2,w,h,g.strokeColor,g.strokeAlpha);
         else g.fillStyle(g.strokeColor,g.strokeAlpha).fillRect(-w/2,-h/2,w,h);
@@ -176,9 +154,6 @@
     };
     g.setFillStyle = (color, alpha = 1) => { g.fillColor=color; g.fillAlpha=alpha; redraw(); return g; };
     g.setStrokeStyle = (width, color, alpha = 1) => { g.strokeWidth=width; g.strokeColor=color; g.strokeAlpha=alpha; redraw(); return g; };
-    g.setPlacementStyle=(style,border,face,alpha=0)=>{
-      g.placementStyle=style;g.strokeWidth=1;g.strokeColor=border;g.strokeAlpha=1;g.fillColor=face;g.fillAlpha=alpha;redraw();return g;
-    };
     redraw();
     return g;
   }
@@ -387,7 +362,7 @@
   }
 
   window.GardenUI = Object.freeze({
-    W: W, H: H, C: C, unit, tile, spacing, inkBounds, pixelGraphics, cutFill, pixelFrame, pixelBox, placementSegments, fontFamily, fontSize, menuStyle, hudLabels, hudLanguage, loadFonts, text: text, panel: panel, panelHeader, rule: rule,
+    W: W, H: H, C: C, unit, tile, spacing, inkBounds, pixelGraphics, cutFill, pixelFrame, pixelBox, fontFamily, fontSize, menuStyle, hudLabels, hudLanguage, loadFonts, text: text, panel: panel, panelHeader, rule: rule,
     background: background, button: button, overlay: overlay, fitCamera: fitCamera,
     bindEscape: bindEscape, openSubscene: openSubscene,
     closeSubscene: closeSubscene

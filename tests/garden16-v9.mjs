@@ -98,7 +98,7 @@ try{
    assert.ok(Object.values(state.enemyChecks).every(Boolean),JSON.stringify(state.enemyChecks));
    const terrain=state.terrain;
    assert.equal(terrain.stones,0);assert.ok(terrain.points>20);
-   if(name!=='light')assert.ok(terrain.occupied.every(p=>p.join(',')==='59,58,68,255')&&terrain.candidates.every(p=>p[3]===0));
+   if(name!=='light')assert.ok(terrain.occupied.every(p=>p[3]===0)&&terrain.candidates.every(p=>p[3]===0));
    assert.equal(terrain.field,name==='light'?0:6);
    assert.equal(state.palette.length,20);assert.equal(new Set(state.palette).size,20);
    assert.equal(state.material.length,16);assert.ok(Object.values(state.reference).every(c=>state.palette.includes(c)));

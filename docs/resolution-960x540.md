@@ -1,9 +1,5 @@
 # 960×540 · 사용자 참조 화면 기반 UI 비교 브랜치
 
-> **devel 현행 공통 배치:** 기본 어두운 테마 `gridStyle=unified`(생략 시 기본값). 빈 꽃밭/장착 후보는 slate 1px 점선(3px/2px)·투명 면, 점유 꽃밭/장착 카드 graphite 면·slate 실선. 꽃 growth #84A83E, 아이템 sky #6794D8: 드래그 원본 실선, 유효 후보 강조 점선, 대상 강조 실선/graphite 45% 미리보기 면/아이콘 45%, 원본 카드 25%. 완료 시 기본 실선/면, 취소 원복. 잠김 슬롯, 꽃 성장, 기존 판정 유지. 이전 `gridStyle=solid|dashed|drag` 및 밝은 테마는 기존 UI 비교용으로 보존.
-
-> **devel 꽃밭 URL 비교:** `gridColor=slate|graphite|charcoal` (#535361/#3B3A44/#16161A), `gridStyle=solid|dashed|drag` (기존 solid, 점선 3px/2px 간격) 독립 조합. `drag`는 평소 무격자, 꽃 드래그 중 후보만 growth(#84A83E) 1px 실선, 유효 대상 위에서는 대상만 표시하며 종료/취소 시 숨김. `drag`에서는 gridColor 무관. 이전 비교 모드: 잘못된 gridStyle은 solid로 복귀. gridColor 생략/오류는 slate. 기본 어두운 테마의 꽃밭에만 적용하고 카드/슬롯/정보창 및 growth 강조 유지. `full=1`과 조합 가능. `uitype=1` 밝은 흙 테마 제외. 예: `?gridColor=graphite&gridStyle=dashed`.
-
 > **devel 현행:** 꽃밭은 1px 공유 실선 slate #535361(교차점 포함, 내부 투명). 카드·장착 슬롯·정보창 외곽선과 동일. 꽃 강조 growth #84A83E, 아이템 강조 sky #6794D8, 카드·정보창 본문 graphite #3B3A44 유지. 아래 점선·이전 강조색 규격은 역사적 기록.
 
 > **devel Garden 20 v10 (main v9):** [공통 색상 가이드](./ui-color-guide.md)가 최신 색상 규격이다. 기존 16개 재질색과 어두운 UI 4색을 적용하고 나머지 고정 UI 색을 기존 16색에 통합하며, SVG 원본은 보존하며 `?svgcolors=original`에서 원본 색상을 표시한다. 아래 이전 팔레트 수치와 색상 관련 기록은 역사적 기준이다.
