@@ -2,20 +2,31 @@
   'use strict';
   // Provisional balance, in logical pixels and active simulation seconds.
   const tuning=Object.freeze({lifetime:20,heartChance:.10,heal:20,maxEnergy:100,enemyDamage:15,
-    initialSpeed:80,acceleration:480,maxSpeed:360,settleSeconds:.25,collectRadius:4});
-  // A drop belongs to its nearest patrol edge, not the nearest fairy.
-  // Clockwise route: rightward motion = north edge, then east/south/west.
-  const sides=['top','right','bottom','left'];
-  const headingSide={right:'top',down:'right',left:'bottom',up:'left'};
-  function sideOf(point,b){
-    const x=Math.max(b.left,Math.min(b.right,point.x)),y=Math.max(b.top,Math.min(b.bottom,point.y));
-    const distances=[Math.hypot(point.x-x,point.y-b.top),Math.hypot(point.x-b.right,point.y-y),
-      Math.hypot(point.x-x,point.y-b.bottom),Math.hypot(point.x-b.left,point.y-y)];
-    return sides[distances.indexOf(Math.min(...distances))];
-  }
+    initialSpeed:80,acceleration:480,maxSpeed:360,settleSeconds:.25,collectRadius:4,magnetAngle:100,nearRange:12});
+  // Smooth outward axis: normalized rectangle coordinates rotate continuously
+  // through corners, without assigning any corner to a preferred edge.
+  const halfAngleCos=Math.cos(tuning.magnetAngle*Math.PI/360);
   function eligible(drop,hero,patrol){
-    return !!hero&&!!patrol&&sideOf(drop,patrol.bounds)===headingSide[patrol.direction]
-      &&window.GardenFairyAttack.inRange(hero,drop);
+    if(!hero||!patrol||!window.GardenFairyAttack.inRange(hero,drop))return false;
+    const dx=drop.x-hero.x,dy=drop.y-hero.y,dist=Math.hypot(dx,dy);
+    if(dist<=tuning.nearRange)return true;
+    const b=patrol.bounds,mx=(b.left+b.right)/2,my=(b.top+b.bottom)/2;
+    const ax=(hero.x-mx)/Math.max(1,(b.right-b.left)/2);
+    const ay=(hero.y-my)/Math.max(1,(b.bottom-b.top)/2);
+    // Enemies may die inside the patrol rectangle. Use the inward mirror
+    // only for those drops, so they cannot become unreachable behind the fan.
+    const inward=drop.x>b.left&&drop.x<b.right&&drop.y>b.top&&drop.y<b.bottom;
+    return (dx*ax+dy*ay)*(inward?-1:1)>=dist*Math.hypot(ax,ay)*halfAngleCos-1e-8;
+  }
+  // Collision radii and heart offset can put a killed enemy's drop slightly
+  // beyond the nominal attack radius. Keep only those exceptional drops in reach.
+  function reachable(point,b){
+    if(!b)return point;
+    const x=Math.max(b.left,Math.min(b.right,point.x)),y=Math.max(b.top,Math.min(b.bottom,point.y));
+    const dx=point.x-x,dy=point.y-y,dist=Math.hypot(dx,dy),range=window.GardenFairyAttack.range;
+    if(dist<=range)return point;
+    const k=(range-8)/dist;
+    return {x:x+dx*k,y:y+dy*k};
   }
   function create(spec,random=Math.random){
     const state={drops:[],flowers:new Map(),gems:0,hearts:0,expired:0,spawnedGems:0,spawnedHearts:0};
@@ -37,18 +48,19 @@
       for(const f of state.flowers.values())if(!best||f.energy<best.energy||f.energy===best.energy&&f.id<best.id)best=f;
       return best;
     }
-    function spawn(kind,x,y){
+    function spawn(kind,x,y,bounds){
       const half=6,b=spec.blueprint;
       x=clamp(x,half,spec.width-half);y=clamp(y,spec.top+half,spec.height-spec.bottom-half);
       if(b&&x-half<b.x+b.width&&y-half<b.y+b.height&&x+half>b.x&&y+half>b.y)x=b.x+b.width+half;
-      const d={id:serial++,kind,x,y,age:0,speed:0,attracted:false};
+      const pos=reachable({x,y},bounds);
+      const d={id:serial++,kind,...pos,age:0,speed:0,attracted:false};
       state.drops.push(d);
       if(kind==='gem')state.spawnedGems++;else state.spawnedHearts++;
       return d;
     }
-    function death(x,y){
-      spawn('gem',x,y);
-      if(random()<tuning.heartChance)spawn('heart',x+12,y);
+    function death(x,y,bounds){
+      spawn('gem',x,y,bounds);
+      if(random()<tuning.heartChance)spawn('heart',x+12,y,bounds);
     }
     function step(dt,hero,patrol){
       if(!(dt>0))return;
@@ -97,10 +109,10 @@
       }
       for(const [id,image] of images)if(!alive.has(id)){I.destroyRelic(image);images.delete(id);}
     }
-    const controller={model,state:model.state,step,render};
+    const controller={model,state:model.state,step,render,death:(x,y)=>model.death(x,y,patrol.bounds)};
     scene.relicCollection=controller;
     scene.events.once('shutdown',()=>{images.clear();delete scene.relicCollection;});
     return controller;
   }
-  window.GardenRelicCollection=Object.freeze({tuning,sideOf,eligible,create,attach});
+  window.GardenRelicCollection=Object.freeze({tuning,eligible,reachable,create,attach});
 }());
