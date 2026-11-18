@@ -45,7 +45,11 @@
     }
     function weakest(){
       let best=null;
-      for(const f of state.flowers.values())if(!best||f.energy<best.energy||f.energy===best.energy&&f.id<best.id)best=f;
+      for(const f of state.flowers.values()){
+        // Live runs only spend hearts on living flowers that can benefit.
+        if(window.GardenRunRules?.active&&(f.energy<=0||f.energy>=tuning.maxEnergy))continue;
+        if(!best||f.energy<best.energy||f.energy===best.energy&&f.id<best.id)best=f;
+      }
       return best;
     }
     function spawn(kind,x,y,bounds){

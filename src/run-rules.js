@@ -20,8 +20,8 @@
   // Introduce one species at a time; never force the entire roster at the start.
   const enemyUnlocks=Object.freeze([[0,'3_caterpillar'],[180,'4_beetle'],[300,'2_grasshopper'],[420,'2_gray_bug'],[540,'1_butterfly'],[660,'2_frog'],[780,'1_cat'],[900,'6_sparrow'],[1020,'6_mouse'],[1140,'6_rabbit'],[1260,'5_bulldog'],[1380,'6_pigeon']].map(Object.freeze));
   function eligibleEnemies(seconds){return enemyUnlocks.filter(([at])=>seconds>=at).map(([,id])=>id);}
-  function population(seconds){return Math.min(tuning.spawnCap,1+Math.floor(Math.max(0,seconds)/60));}
-  function spawnInterval(seconds){return seconds<180?12:seconds<300?10:seconds<540?8:seconds<900?6:seconds<1380?4:3;}
+  function population(seconds){return Math.min(tuning.spawnCap,3+Math.floor(Math.max(0,seconds)/30));}
+  function spawnInterval(seconds){return seconds<180?3:seconds<300?2.5:seconds<540?2:seconds<900?1.5:seconds<1380?1.2:1;}
   // Full card footprint (including 4px idle lift) stays outside the entire
   // 10x10 garden, not just currently planted cells. Preserve nearest death point.
   function cardPosition(spec,x,y,size,otherCards=[]){

@@ -1,7 +1,7 @@
 name: Playable garden verification
 on:
   push:
-    branches: [feature/playable-garden-loop, feature/slow-opening-render-order, devel]
+    branches: [feature/playable-garden-loop, feature/slow-opening-render-order, feature/heart-pickup-opening-cadence, devel]
   pull_request:
     branches: [devel]
 permissions:

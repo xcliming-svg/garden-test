@@ -59,6 +59,24 @@ try{
       return true;
     });
     assert.equal(layers,true);
+    // Exercise actual scene's relic collection/render path with deterministic drops.
+    const heartCheck=await read(()=>{
+      const s=window.__previewGame.scene.getScene('Game'),r=s.relicCollection,m=r.model,T=window.GardenRelicCollection.tuning;
+      const h=s.fairyPatrol.actors[0].center,b=s.fairyPatrol.bounds;
+      const before=r.state.hearts;
+      const id=s.fairyPatrol.occupied[0];
+      for(const f of r.state.flowers.values())f.energy=T.maxEnergy;
+      const d={id:999999,kind:'heart',x:h.x,y:h.y,age:T.settleSeconds,speed:0,attracted:false};
+      r.state.drops.push(d);r.step(.05);r.render();
+      const held=r.state.drops.includes(d)&&!d.attracted&&r.state.hearts===before&&!!s.children.getByName('ground-relic:heart:'+d.id);
+      m.damageFlower(id,10);
+      for(let i=0;i<100&&r.state.drops.includes(d);i++)r.step(.05);
+      r.render();
+      return held&&r.state.hearts===before+1&&r.state.flowers.get(id).energy===100&&!s.children.getByName('ground-relic:heart:'+d.id);
+    });
+    assert.equal(heartCheck,true);
+    await page.waitForFunction(()=>{const s=window.__previewGame.scene.getScene('Game');return s.enemyPreview.model.spawned>=3;},null,{timeout:30000});
+    assert.ok(await read(()=>{const s=window.__previewGame.scene.getScene('Game');return s.enemyPreview.model.elapsed<15&&s.enemyPreview.actors.every(a=>a.entry.id==='3_caterpillar');}),'three early arrivals within 15 simulated seconds');
     await page.waitForFunction(()=>window.__previewGame.scene.getScene('Game').heroWeaponPreview.model.state.fired>0);
     await page.waitForFunction(()=>window.__previewGame.scene.getScene('Game').enemyPreview.model.kills>0,null,{timeout:60000});
     await page.keyboard.press('Escape');await page.waitForFunction(()=>window.__previewGame.scene.isActive('Pause'));

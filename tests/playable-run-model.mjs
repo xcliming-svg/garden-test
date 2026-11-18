@@ -35,8 +35,15 @@ function runAudit(sources){
   // Opening is time-gated, not an initial shuffle of the complete roster.
   check(R.eligibleEnemies(179.99).join(',')==='3_caterpillar','caterpillar only for three minutes');
   check(R.eligibleEnemies(180).join(',')==='3_caterpillar,4_beetle','first unlock');
-  check(R.population(0)===1&&R.population(59.99)===1&&R.population(60)===2&&R.population(120)===3,'slow concurrent cap');
-  check(R.spawnInterval(0)===12&&R.spawnInterval(179)===12&&R.spawnInterval(180)===10,'opening spawn cadence');
+  check(R.population(0)===3&&R.population(29.99)===3&&R.population(30)===4&&R.population(60)===5&&R.population(120)===7&&R.population(3600)===65,'opening concurrent cap');
+  check(R.spawnInterval(0)===3&&R.spawnInterval(179)===3&&R.spawnInterval(180)===2.5&&R.spawnInterval(1380)===1,'opening spawn cadence');
+  const live=E.createPopulation(spec,patrol,E.roster,()=>.37,R.population,null,true);
+  live.advance(0);check(live.actors.length===1,'first spawn immediate');
+  live.advance(2.99);check(live.actors.length===1,'no spawn burst');
+  live.advance(.01);check(live.actors.length===2,'second enemy at 3s');
+  live.advance(3);check(live.actors.length===3,'third enemy at 6s');
+  live.advance(23.99);check(live.actors.length===3,'opening cap without kills');
+  live.advance(.01);check(live.actors.length===4,'fourth enemy at 30s');
   const opening=E.createPopulation(spec,patrol,E.roster,()=>.37,R.population,null,true);
   const seen=new Set();let lastSpawn=-Infinity,lastCount=0;
   for(let t=0;t<=1440;t++){
@@ -73,6 +80,27 @@ function runAudit(sources){
     counts[kind]++;
   }
   check(counts.gem===550&&counts.heart===150&&counts.flower===180&&counts.item===120,'exclusive distribution');
+  {
+    const m=L.create(spec,()=>.60),p={x:boundary.patrol.right,y:(boundary.patrol.top+boundary.patrol.bottom)/2};
+    const frame={bounds:boundary.patrol,length:boundary.length,speed:40};
+    const advance=t=>{for(let left=t;left>1e-8;left-=.05)m.step(Math.min(.05,left),p,frame);};
+    m.syncFlowers([44,45,54,55]);m.death(p.x,p.y,frame.bounds);
+    const first=m.state.drops[0];advance(2);
+    check(m.weakest()===null&&m.state.hearts===0&&m.state.drops[0]===first&&!first.attracted&&first.x===p.x&&first.y===p.y,'full garden heart waits');
+    m.damageFlower(44,35);m.damageFlower(45,10);advance(3);
+    check(m.state.hearts===1&&m.state.flowers.get(44).energy===85&&m.state.flowers.get(45).energy===90,'heart heals weakest once damage exists');
+    m.syncFlowers([]);m.syncFlowers([44,45]);m.damageFlower(44,100);
+    m.death(p.x,p.y,frame.bounds);advance(2);
+    check(m.state.hearts===1&&m.state.drops.length===1&&!m.state.drops[0].attracted,'dead flowers cannot consume');
+    m.damageFlower(45,10);advance(.3);check(m.state.drops[0].attracted,'damaged living flower attracts');
+    m.syncFlowers([44,55]);advance(.5);
+    check(m.state.hearts===1&&m.state.drops.length===1&&!m.state.drops[0].attracted&&m.state.drops[0].speed===0,'target removed during flight cancels pickup');
+    m.damageFlower(55,5);advance(3);check(m.state.hearts===2&&m.state.flowers.get(55).energy===100,'heart can reacquire living damaged flower, capped');
+    m.death(p.x,p.y,frame.bounds);advance(30);check(m.state.drops.length===0&&m.state.expired===1&&m.state.hearts===2,'unused heart expires normally');
+    m.syncFlowers([44,45]);m.state.flowers.get(44).energy=100;m.damageFlower(45,5);
+    m.death(p.x,p.y,frame.bounds);m.death(p.x,p.y,frame.bounds);advance(3);
+    check(m.state.hearts===3&&m.state.drops.length===1&&!m.state.drops[0].attracted,'second heart waits when first restores all living flowers');
+  }
   for(const entry of E.roster){
     patrol.occupied=[44,45,54,55];
     let deaths=0;const p=E.createPopulation(spec,patrol,[entry],()=>.33,()=>1,()=>deaths++,true);
