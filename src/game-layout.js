@@ -32,6 +32,7 @@
   // 참조 트리 외형 24px = 내부 22px + 1px 프레임. 기존 대형 비교는 내부 32px 유지.
   // 이전 ?garden=36 링크는 대형 비교의 호환 별칭으로 유지한다.
   const params = new URLSearchParams(window.location.search);
+  const balancedCombat=!!(window.GardenHeroWeaponPreview?.enabled&&window.GardenHeroWeaponPreview.combat);
   const gardenMode = params.get('garden');
   const flowerMode = params.get('flower');
   const requestedFlower = flowerMode ?? (gardenMode==='36'?'32':gardenMode);
@@ -55,7 +56,7 @@
       height: blueprintHeader + blueprintGap + blueprintGrid,
       gridX: hudPadding, gridY: blueprintY + blueprintHeader + blueprintGap
     }),
-    slots: Object.freeze({ size: slotSize, cell: slotSize - 2 * cellLine, line: cellLine, gap: bottomGap, initial: 4, preview: 9, max: 10, y: height - bottomHudHeight + bottomBoundary + bottomGap, exampleCost: 999 })
+    slots: Object.freeze({ size: slotSize, cell: slotSize - 2 * cellLine, line: cellLine, gap: bottomGap, initial: 4, preview: balancedCombat?window.GardenWeaponBalance.slots:9, max: 10, y: height - bottomHudHeight + bottomBoundary + bottomGap, exampleCost: 999 })
   });
 
   const hud = Object.freeze({
@@ -325,10 +326,10 @@
   // 9개 일반 + 마지막 확장 슬롯을 최대 폭에서 검토한다. 실제 초기 슬롯 정책은 4개로 유지.
   const statKeys = Object.freeze(['dps', 'defense', 'moveSpeed']);
   const statLabels = Object.freeze({
-    dps: '초당 피해량', defense: '방어력', moveSpeed: '이동 속도'
+    dps: balancedCombat?'기준 DPS':'초당 피해량', defense: '방어력', moveSpeed: '이동 속도'
   });
   // 모든 수치는 UI 비교용 임시 값. 실제 게임 계산식/단위/확률과 무관하다.
-  const baseStats = Object.freeze({ dps: 20, defense: 12, moveSpeed: 100 });
+  const baseStats = Object.freeze(balancedCombat?{dps:0,defense:0,moveSpeed:window.GardenFairyPatrol.speed}:{dps:20,defense:12,moveSpeed:100});
   const previewItems = Object.freeze([
     { name: '신발', desc: '이동 속도가 증가합니다.', stats: { moveSpeed: 10 } },
     { name: '스프링클러', desc: '회전형 공격을 추가합니다.', stats: { dps: 18 } },
@@ -375,9 +376,9 @@
     hudBoundary(g, spec.top + spec.fieldHeight);
     const layout = bottomLayout();
     layout.slotFrames = layout.slots.map((slot,i) => {
-      const disabled=i===s.preview;
+      const disabled=i>=s.preview;
       const frame=U.pixelBox(scene,slot.x+slot.size/2,slot.y+slot.size/2,slot.size,slot.size,disabled?colors.disabledFill:colors.emptySlotFill,{strokeWidth:s.line,border:disabled?colors.disabledBorder:colors.normalBorder}).setName('slot-frame:'+i);
-      if(disabled)layout.alignCost=drawSlotCost(scene,slot.x+s.line,slot.y+s.line,s.cell,s.exampleCost);
+      if(disabled&&i===s.preview)layout.alignCost=drawSlotCost(scene,slot.x+s.line,slot.y+s.line,s.cell,s.exampleCost);
       return frame;
     });
     // 기존 확장 슬롯은 표시만 하며 드롭/클릭 대상으로 등록하지 않는다.
@@ -746,9 +747,8 @@
       if(card.drop)card.drop.dragging=false;
       if (index >= 0&&(!ballMode||(!equipped[index]&&scene.combatPreview.model.equip(card.id,index)))) {
         equipped[index] = card.item;
-        scene.heroWeaponPreview?.equip(index,card.item.id);
-        card.consumed = true;
-        card.marker.disableInteractive().setVisible(false);
+        scene.heroWeaponPreview?.equip(index,card.item.id,card.item.level);
+        if(!balancedCombat){card.consumed = true;card.marker.disableInteractive().setVisible(false);}
       }
       refresh();
     }
