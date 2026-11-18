@@ -9,7 +9,7 @@ runInNewContext(read('src/palette.js'),{window,URLSearchParams});
 const palette=window.GardenPalette.hex;
 const roles=JSON.parse(read('scripts/svg-palette-roles.json'));
 const paint=/\b(fill|stroke|stop-color)="(#[\da-fA-F]{6})"/g;
-assert.equal(Object.keys(roles).length,43);
+assert.equal(Object.keys(roles).length,58);
 assert.equal(new Set(Object.values(palette)).size,16);
 for(const [f,sequence] of Object.entries(roles)){
  const original=read(join('assets',f));let i=0;
@@ -25,4 +25,4 @@ for(const [f,sequence] of Object.entries(roles)){
  assert.equal(original.replace(paint,'$1="COLOR"'),converted.replace(paint,'$1="COLOR"'),f+' geometry changed');
  for(const m of converted.matchAll(paint))assert.ok(Object.values(palette).includes(m[2]),f);
 }
-console.log('PASS 43 original SVGs; only paint colors changed in generated copies');
+console.log('PASS 58 original SVGs; only paint colors changed in generated copies');

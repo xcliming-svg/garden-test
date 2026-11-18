@@ -1696,5 +1696,211 @@
       "#62AB40",
       "growth"
     ]
+  ],
+  "items/01_shoe.svg": [
+    [
+      "#68B13E",
+      "growthLight"
+    ],
+    [
+      "#3A8031",
+      "growth"
+    ],
+    [
+      "#FDF7E6",
+      "paper"
+    ],
+    [
+      "#FCF7E5",
+      "paper"
+    ],
+    [
+      "#FDF0D8",
+      "sand"
+    ]
+  ],
+  "items/03_water_splash.svg": [
+    [
+      "#0196FD",
+      "sky"
+    ]
+  ],
+  "items/05_balloon.svg": [
+    [
+      "#64C8FD",
+      "skyLight"
+    ],
+    [
+      "#4098DE",
+      "sky"
+    ],
+    [
+      "#64C8FD",
+      "skyLight"
+    ]
+  ],
+  "items/05_boomerang.svg": [
+    [
+      "#FDCB3D",
+      "gold"
+    ]
+  ],
+  "items/05_shield.svg": [
+    [
+      "#3A83D0",
+      "sky"
+    ],
+    [
+      "#72BAE6",
+      "skyLight"
+    ]
+  ],
+  "items/05_wheel.svg": [
+    [
+      "#5C5B75",
+      "stone"
+    ],
+    [
+      "#88889E",
+      "silver"
+    ],
+    [
+      "#F9F9FB",
+      "paper"
+    ],
+    [
+      "#FDFDFD",
+      "paper"
+    ],
+    [
+      "#F9F9FB",
+      "paper"
+    ],
+    [
+      "#F9F9FB",
+      "paper"
+    ],
+    [
+      "#FDFDFD",
+      "paper"
+    ]
+  ],
+  "items/06_flowerpot.svg": [
+    [
+      "#F28F4F",
+      "sand"
+    ],
+    [
+      "#B05D2D",
+      "bark"
+    ],
+    [
+      "#D3672B",
+      "clay"
+    ]
+  ],
+  "items/07_gem.svg": [
+    [
+      "#75BEFC",
+      "skyLight"
+    ],
+    [
+      "#3FBBFB",
+      "sky"
+    ]
+  ],
+  "items/07_heart.svg": [
+    [
+      "#FD6E71",
+      "red"
+    ]
+  ],
+  "items/1_종이비행기_단일파츠(1).svg": [
+    [
+      "#B3B1AC",
+      "silver"
+    ],
+    [
+      "#E4DED8",
+      "paper"
+    ],
+    [
+      "#E4DED8",
+      "paper"
+    ]
+  ],
+  "items/2_탱탱볼_단일파츠(3).svg": [
+    [
+      "#FA4A46",
+      "red"
+    ]
+  ],
+  "items/3_노랑장판_단일파츠(1).svg": [
+    [
+      "#D89D31",
+      "gold"
+    ],
+    [
+      "#B96C2B",
+      "clay"
+    ],
+    [
+      "#EEB84F",
+      "sand"
+    ],
+    [
+      "#B96C2B",
+      "clay"
+    ],
+    [
+      "#D89D32",
+      "gold"
+    ]
+  ],
+  "items/3_스프링쿨러_단일파츠(4).svg": [
+    [
+      "#959494",
+      "silver"
+    ],
+    [
+      "#959494",
+      "silver"
+    ],
+    [
+      "#959494",
+      "silver"
+    ],
+    [
+      "#2B6C6F",
+      "sky"
+    ]
+  ],
+  "items/4_돌_단일파츠(1).svg": [
+    [
+      "#868685",
+      "silver"
+    ],
+    [
+      "#686767",
+      "stone"
+    ]
+  ],
+  "items/4_빗자루_단일파츠(1).svg": [
+    [
+      "#835837",
+      "bark"
+    ],
+    [
+      "#CDA851",
+      "gold"
+    ],
+    [
+      "#835837",
+      "bark"
+    ],
+    [
+      "#CDA851",
+      "gold"
+    ]
   ]
 }
