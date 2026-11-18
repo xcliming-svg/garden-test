@@ -415,35 +415,33 @@
 
   // 필드 드롭도 참조 노드의 색/테두리를 적용하고 16px 원본과 함께 부유시킨다.
   // 꽃 24px, 아이템 32px 히트 영역은 고정하고 장착 슬롯/스냅 고스트는 기존 카드 표현 유지.
-  function floatingDrop(scene, marker, index) {
-    const [border, face, image] = marker.list;
-    border.setVisible(true);
-    face.setVisible(true);
-    const shadow = scene.add.ellipse(0, marker.height / 2 + 3, 12, 3, R.n.shadow, 0.25);
-    marker.add(shadow);
-    const period = 1800, phase = index * 317;
-    function update(time) {
-      const floating = marker.visible && marker.depth < 30;
-      shadow.setVisible(floating);
-      if (!floating) {
-        border.setY(0);
-        face.setY(0);
-        image.setY(0);
-        return;
+  // Same idle lift for SVG and legacy drop cards, without a ground shadow.
+  function floatingDrop(marker,index) {
+    const period=1800,phase=index*317;
+    function apply(lift){
+      marker.floatLift=lift;
+      for(const child of marker.list){
+        child.setY((child===marker.levelLabel?child.levelBaseY:0)-lift);
       }
-      const lift = (1 - Math.cos((time + phase) * Math.PI * 2 / period)) * 2;
-      border.setY(-Math.round(lift));
-      face.setY(-Math.round(lift));
-      image.setY(-Math.round(lift));
-      shadow.setScale(1 - lift * 0.0625, 1);
-      shadow.setAlpha(1 - lift * 0.125);
+    }
+    marker.resetFloat=()=>apply(0);
+    function update(time){
+      const lift=marker.visible&&marker.depth<30?
+        Math.round((1-Math.cos((time+phase)*Math.PI*2/period))*2):0;
+      apply(lift);
     }
     update(0);
     return update;
   }
+  function animateFloatingDrops(scene,markers){
+    const animations=markers.map((marker,index)=>floatingDrop(marker,index));
+    const updateDrops=time=>animations.forEach(update=>update(time));
+    scene.events.on('update',updateDrops);
+    scene.events.once('shutdown',()=>scene.events.off('update',updateDrops));
+  }
 
   function drawMarkers(scene, types=Object.keys(samples)) {
-    const cards = [], flowers = [], animations = [];
+    const cards = [], flowers = [], floating = [];
     Object.entries(samples).filter(([type])=>types.includes(type)).forEach(([type, positions]) => {
       const asset = assets[type];
       positions.forEach(([baseX, baseY], i) => {
@@ -457,16 +455,14 @@
           .setName('placeholder:' + asset.assetKey + ':' + i);
         if (type === 'item' || type === 'flower') {
           marker.setDepth(5);
-          animations.push(floatingDrop(scene, marker, animations.length));
+          floating.push(marker);
         }
         if (type === 'item') cards.push({ item: previewItems[i], marker, x, y, idleDepth:marker.depth });
         if (type === 'flower') flowers.push({ marker, x, y, spriteName, idleDepth:marker.depth });
       });
     });
     // Scene update는 일시정지 중 멈추고 shutdown에서 정리된다.
-    const updateDrops = time => animations.forEach(update => update(time));
-    scene.events.on('update', updateDrops);
-    scene.events.once('shutdown', () => scene.events.off('update', updateDrops));
+    animateFloatingDrops(scene,floating);
     return { cards, flowers };
   }
 
@@ -815,7 +811,7 @@
         if (card.consumed || dragging) return;
         dragging = card; pinned = null; hovered = null;
         if(card.drop)card.drop.dragging=true;
-        marker.setDepth(30);
+        marker.setDepth(30);marker.resetFloat?.();
         dragTo(pointer);
       });
       marker.on('drag', pointer => { if (dragging === card) dragTo(pointer); });
@@ -1083,7 +1079,7 @@
       marker.on('pointerout', () => { if (!dragging) marker.setStrokeStyle(0, colors.flowerBorder, 0); });
       marker.on('dragstart', pointer => {
         if (flower.consumed || dragging) return;
-        dragging = flower; marker.setDepth(30).setStrokeStyle(1, colors.flowerBorder, 1); refreshSoil(); move(pointer);
+        dragging = flower; marker.resetFloat?.(); marker.setDepth(30).setStrokeStyle(1, colors.flowerBorder, 1); refreshSoil(); move(pointer);
       });
       marker.on('drag', pointer => { if (dragging === flower) move(pointer); });
       marker.on('dragend', pointer => { if (dragging === flower) finish(pointer, true); });
@@ -1128,5 +1124,5 @@
     },itemPreview,markers.flowers);
   }
 
-  window.GardenGameLayout = Object.freeze({ spec, assets, colors, spacing, hud, slotCost, formatHudTime, formatHudCount, hudColumns, bottomStats, itemTooltip, replacementTitle, bottomLayout, sumPreviewStats, getPreviewStats, tooltipPosition, gardenCandidates, gardenGridRects, gardenRaster, gardenHit, patrolBounds, patrolPosition, nearestPatrolDistance, draw });
+  window.GardenGameLayout = Object.freeze({ spec, assets, colors, spacing, hud, slotCost, formatHudTime, formatHudCount, hudColumns, bottomStats, itemTooltip, replacementTitle, bottomLayout, sumPreviewStats, getPreviewStats, tooltipPosition, gardenCandidates, gardenGridRects, gardenRaster, gardenHit, patrolBounds, patrolPosition, nearestPatrolDistance, animateFloatingDrops, draw });
 }());

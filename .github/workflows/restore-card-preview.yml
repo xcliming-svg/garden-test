@@ -1,7 +1,7 @@
 name: Restored card preview verification
 on:
   push:
-    branches: [feature/restore-card-preview, feature/svg-item-cards, feature/item-art-refinement, feature/item-tooltip-preview, feature/item-span-uniform, feature/item-shoe-wheel-colors, feature/svg-asset-cache-refresh, feature/restore-wheel-gray, feature/sticky-slow-tooltip, devel]
+    branches: [feature/restore-card-preview, feature/svg-item-cards, feature/item-art-refinement, feature/item-tooltip-preview, feature/item-span-uniform, feature/item-shoe-wheel-colors, feature/svg-asset-cache-refresh, feature/restore-wheel-gray, feature/sticky-slow-tooltip, feature/item-level-float, devel]
   pull_request:
     branches: [devel]
 permissions:

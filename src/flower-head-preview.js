@@ -231,7 +231,7 @@
           o.setInteractive({useHandCursor:true,draggable:true});scene.input.setDraggable(o);
           o.on('pointerover',()=>{if(!dragging)o.setStrokeStyle(1,colors.flowerBorder,1);});
           o.on('pointerout',()=>{if(!dragging)o.setStrokeStyle(0,0,0);});
-          o.on('dragstart',p=>{if(dragging||f.consumed)return;dragging=f;target=-1;o.setDepth(30).setStrokeStyle(1,colors.flowerBorder,1);refreshSoil(-1);move(p);});
+          o.on('dragstart',p=>{if(dragging||f.consumed)return;dragging=f;target=-1;o.resetFloat?.();o.setDepth(30).setStrokeStyle(1,colors.flowerBorder,1);refreshSoil(-1);move(p);});
           o.on('drag',p=>{if(dragging===f)move(p);});
           o.on('dragend',p=>{if(dragging===f)finish(p,true);});
         }

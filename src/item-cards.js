@@ -5,6 +5,7 @@
   const params=new URLSearchParams(window.location.search);
   const enabled=window.GardenFairyPatrol.enabled&&!window.GardenEnemyPreview.enabled&&G.enabled&&params.get('cards')!=='0'&&params.get('cards')!=='legacy';
   // UI-only specimen values. These never feed patrol, projectile or enemy state.
+  const minLevel=1,maxLevel=3;
   const entries=Object.freeze([
     ['shoe','신발','01_shoe.svg','이동 속도가 증가합니다.','moveSpeed',10],
     ['balloon','물풍선','05_balloon.svg','떨어진 지점에서 터지며 주변 적들에게 피해를 줍니다.','dps',24],
@@ -18,7 +19,7 @@
     ['sprinkler','스프링클러','3_스프링쿨러_단일파츠(4).svg','원형으로 물을 뿌려 주변 적들을 공격합니다.','dps',18],
     ['rock','돌멩이','4_돌_단일파츠(1).svg','적을 향해 돌멩이를 던져 기본 공격을 합니다.','dps',12],
     ['broom','빗자루','4_빗자루_단일파츠(1).svg','빗자루를 휘둘러 범위 내의 적들을 공격합니다.','dps',20]
-  ].map(([id,name,file,desc,stat,value,tooltipEffect])=>Object.freeze({id,name,file,desc,stats:Object.freeze(stat?{[stat]:value}:{}),tooltipEffect})));
+  ].map(([id,name,file,desc,stat,value,tooltipEffect])=>Object.freeze({id,name,file,desc,level:minLevel,stats:Object.freeze(stat?{[stat]:value}:{}),tooltipEffect})));
   // The source's bristle centre (1097,572) and handle tip (1183,380)
   // define its longitudinal axis. Rotate that axis to -45° before cropping,
   // so the diagonal can occupy the card without enlarging the card itself.
@@ -130,8 +131,39 @@
     };
     return group;
   }
+  // Position the entire painted glyph AND shadow inside the bottom-right edge.
+  // Padding prevents the 1px shadow from being clipped by the text texture.
+  function setLevelLabel(group,level){
+    if(!Number.isInteger(level)||level<minLevel||level>maxLevel){
+      group.levelLabel?.setVisible(false);return;
+    }
+    const value='Lv.'+level;
+    let label=group.levelLabel;
+    if(!label){
+      label=U.text(group.scene,0,0,value,8,'#FFFFFF').setName('item-level');
+      label.setPadding(0,0,2,2);
+      group.add(label);group.levelLabel=label;
+      label.alignVisible=()=>{
+        const c=label.canvas,ctx=label.context,z=label.style.resolution;
+        const data=ctx.getImageData(0,0,c.width,c.height).data;
+        let right=0,bottom=0;
+        for(let y=0;y<c.height;y++)for(let x=0;x<c.width;x++){
+          if(!data[(y*c.width+x)*4+3])continue;
+          right=Math.max(right,x+1);bottom=Math.max(bottom,y+1);
+        }
+        const edge=group.width/2-1;
+        label.levelBaseY=edge-bottom/z;
+        label.setPosition(edge-right/z,label.levelBaseY-(group.floatLift||0));
+      };
+      label.alignVisible();
+    }else if(label.text!==value){
+      label.setText(value);label.alignVisible();
+    }
+    label.setVisible(true);
+  }
   function setIcon(group,item){
     if(item?.texture)fit(group.list[2],item.texture,itemSpan(group.width));
+    setLevelLabel(group,item?.texture?item.level:undefined);
   }
   function draw(scene,spec,assets){
     const cards=[],flowers=[],ground=[];
@@ -145,7 +177,8 @@
       const item=entries[i],texture=trim(scene,item.id,raw(item.id));
       const x=682+(i%4)*56,y=126+Math.floor(i/4)*56;
       const marker=card(scene,x,y,assets.item.dropSize,texture,'item',item.id).setName('placeholder:item:'+String(i).padStart(2,'0'));
-      cards.push({marker,x,y,idleDepth:marker.depth,item:Object.freeze({id:item.id,name:item.name,texture,desc:item.desc,stats:item.stats,tooltipEffect:item.tooltipEffect})});
+      setLevelLabel(marker,item.level);
+      cards.push({marker,x,y,idleDepth:marker.depth,item:Object.freeze({id:item.id,name:item.name,texture,desc:item.desc,level:item.level,stats:item.stats,tooltipEffect:item.tooltipEffect})});
     }
     for(let i=0;i<relics.length;i++){
       const item=relics[i],texture=trim(scene,item.id,raw(item.id));
@@ -153,9 +186,10 @@
       const image=fit(scene.add.image(x,y,texture),texture,item.span).setDepth(4).setName('ground-relic:'+item.id);
       ground.push(image);
     }
+    window.GardenGameLayout.animateFloatingDrops(scene,[...flowers,...cards].map(entry=>entry.marker));
     scene.itemCardPreview={cards,flowers,ground};
     scene.events.once('shutdown',()=>delete scene.itemCardPreview);
     return {cards,flowers};
   }
-  window.GardenItemCards=Object.freeze({enabled,entries,relics,preload,draw,setIcon,key,broomRotation,itemSpan});
+  window.GardenItemCards=Object.freeze({enabled,entries,relics,preload,draw,setIcon,key,broomRotation,itemSpan,minLevel,maxLevel,setLevelLabel});
 }());

@@ -41,7 +41,7 @@ try{
    };
    const snapshot=()=>page.evaluate(()=>{
     const s=window.__previewGame.scene.getScene('Game'),L=window.GardenGameLayout;
-    const obj=n=>s.children.getByName(n),pos=o=>({x:o.x,y:o.y,visible:o.visible,alpha:o.alpha,texture:o.list?.[2]?.texture.key,textureWidth:o.list?.[2]?.frame.width,textureHeight:o.list?.[2]?.frame.height,span:o.list?.[2]?Math.max(o.list[2].displayWidth,o.list[2].displayHeight):undefined});
+    const obj=n=>s.children.getByName(n),pos=o=>({x:o.x,y:o.y,visible:o.visible,alpha:o.alpha,texture:o.list?.[2]?.texture.key,textureWidth:o.list?.[2]?.frame.width,textureHeight:o.list?.[2]?.frame.height,span:o.list?.[2]?Math.max(o.list[2].displayWidth,o.list[2].displayHeight):undefined,lift:o.floatLift,level:o.levelLabel?.text,children:o.list?.length,levelY:o.levelLabel?.y,levelBaseY:o.levelLabel?.levelBaseY});
     // Drag raises depth and reorders the display list; retain stable card identity.
     const byName=(a,b)=>a.name.localeCompare(b.name);
     const flowers=s.children.list.filter(o=>o.name?.startsWith('placeholder:flower:')).sort(byName).map(pos);
@@ -49,7 +49,7 @@ try{
     const g=L.spec.garden,cell=i=>({x:g.x+(i%g.columns)*g.pitch+g.line+g.cell/2,y:g.y+Math.floor(i/g.columns)*g.pitch+g.line+g.cell/2});
     const slot=L.bottomLayout().slots[0];
     const ground=s.children.list.filter(o=>o.name?.startsWith('ground-relic:')).map(o=>({name:o.name,texture:o.texture.key,visible:o.visible,span:Math.max(o.displayWidth,o.displayHeight),interactive:!!o.input}));
-    return {flowers,items,ground,gearTexture:obj('preview-equipped:0').list[2].texture.key,ghostTexture:obj('item-preview-ghost').list[2].texture.key,occupied:s.fairyPatrol.occupied,enemy:!!s.enemyPreview,combat:!!s.combatPreview,
+    return {flowers,items,ground,gearTexture:obj('preview-equipped:0').list[2].texture.key,gearLevel:obj('preview-equipped:0').levelLabel?.text,ghostLevel:obj('item-preview-ghost').levelLabel?.text,ghostTexture:obj('item-preview-ghost').list[2].texture.key,occupied:s.fairyPatrol.occupied,enemy:!!s.enemyPreview,combat:!!s.combatPreview,
      fairy:s.fairyPatrol.actors.length,stage:s.flowerGrowth.entries.size,slot:{x:slot.x+slot.size/2,y:slot.y+slot.size/2},slot2:{x:L.bottomLayout().slots[1].x+slot.size/2,y:slot.y+slot.size/2},candidate:cell(43),invalid:cell(44),
      ghost:obj('garden-preview-ghost').visible,gear:obj('preview-equipped:0').visible,tip:obj('item-preview-tooltip').visible,
      speed:obj('stat-value:moveSpeed').text,defense:obj('stat-value:defense').text,dps:obj('stat-value:dps').text,patrolSpeed:s.fairyPatrol.speed,hudStats:Object.fromEntries(s.children.list.filter(o=>o.name?.startsWith('stat-value:')).map(o=>[o.name,o.text])),hudDeltas:s.children.list.filter(o=>o.name?.startsWith('stat-delta:')&&o.visible).map(o=>[o.name,o.text]),tipRows:obj('item-preview-tooltip').list.filter(o=>typeof o.text==='string').map(o=>o.text),progress:obj('hud-progress-value').text};
@@ -66,6 +66,27 @@ try{
    assert.ok(colors.shoe.fb575f>100&&colors.shoe.d23840>100,'red shoe rendered');assert.equal(colors.shoe.c3d968,undefined);
    assert.ok(colors.wheel['706975']>100&&colors.wheel['96919b']>100,'grey rim and grey spokes rendered');assert.equal(colors.wheel['4e352e'],undefined);
    assert.equal(initial.flowers.length,6);assert.equal(initial.items.length,12);assert.equal(initial.ground.length,2);
+   assert.ok(initial.flowers.every(o=>o.children===3&&!o.level),'no flower badge or ground shadow');
+   assert.ok(initial.items.every(o=>o.children===4&&o.level==='Lv.1'),'level text only, no ground shadow');
+   const floatCheck=await page.evaluate(()=>{
+    const s=window.__previewGame.scene.getScene('Game'),items=s.itemCardPreview.cards,flowers=s.itemCardPreview.flowers;
+    const labels=items.map(({marker})=>{
+      const l=marker.levelLabel,z=l.style.resolution,c=l.canvas,data=l.context.getImageData(0,0,c.width,c.height).data;
+      let right=0,bottom=0,white=0,dark=0;
+      for(let y=0;y<c.height;y++)for(let x=0;x<c.width;x++){
+       const i=(y*c.width+x)*4;if(!data[i+3])continue;
+       right=Math.max(right,x+1);bottom=Math.max(bottom,y+1);
+       if(data[i]>240&&data[i+1]>240&&data[i+2]>240)white++;
+       if(data[i]<32&&data[i+1]<32&&data[i+2]<32)dark++;
+      }
+      return {right:l.x+right/z,bottom:l.levelBaseY+bottom/z,white,dark,offsetX:l.style.shadowOffsetX,offsetY:l.style.shadowOffsetY,blur:l.style.shadowBlur};
+    });
+    return {labels,lifts:[...items,...flowers].map(({marker})=>marker.floatLift),synchronized:[...items,...flowers].every(({marker})=>marker.list.slice(0,3).every(o=>o.y===-marker.floatLift)&&(!marker.levelLabel||Math.abs(marker.levelLabel.y-marker.levelLabel.levelBaseY+marker.floatLift)<.001))};
+   });
+   assert.ok(floatCheck.labels.every(l=>Math.abs(l.right-15)<.01&&Math.abs(l.bottom-15)<.01&&l.white>0&&l.dark>0&&l.offsetX===1&&l.offsetY===1&&l.blur===0),'white text and shadow remain inside card');
+   assert.ok(floatCheck.synchronized);assert.ok(floatCheck.lifts.every(v=>v>=0&&v<=4));
+   assert.ok(new Set(floatCheck.lifts).size>1,'staggered floating phases');
+   await page.waitForFunction(old=>{const s=window.__previewGame.scene.getScene('Game');return s.itemCardPreview.cards.some(({marker},i)=>marker.floatLift!==old[i]);},floatCheck.lifts);
    assert.equal(new Set(initial.flowers.map(o=>o.texture)).size,6);
    assert.equal(new Set(initial.items.map(o=>o.texture)).size,12);
    assert.ok(initial.flowers.every(o=>o.texture.startsWith('item-svg:trim:flower-')&&Math.abs(o.span-18)<.01));
@@ -118,14 +139,14 @@ try{
    await drag(initial.flowers[0],initial.invalid);let state=await snapshot();
    assert.equal(state.stage,4);assert.equal(state.flowers[0].visible,true);
    await drag(initial.flowers[0],initial.candidate,false);state=await snapshot();
-   assert.equal(state.ghost,true);assert.equal(state.flowers[0].alpha,.25);
+   assert.equal(state.ghost,true);assert.equal(state.flowers[0].alpha,.25);assert.equal(state.flowers[0].lift,0);
    await page.mouse.up();state=await snapshot();
    assert.equal(state.stage,5);assert.ok(state.occupied.includes(43));assert.equal(state.flowers[0].visible,false);assert.equal(state.progress,'5%');assert.equal(state.ghost,false);
    // Hover, equip, then replace using the restored item-card UI.
    await page.mouse.move(...coords(initial.items[0].x,initial.items[0].y));
    assert.equal((await snapshot()).tip,true);
-   await drag(initial.items[0],initial.slot,false);state=await snapshot();assert.equal(state.ghostTexture,initial.items[0].texture);assert.equal(state.speed,'110');assert.equal(state.patrolSpeed,initial.patrolSpeed);await page.mouse.up();state=await snapshot();
-   assert.equal(state.items[0].visible,false);assert.equal(state.gear,true);assert.equal(state.gearTexture,initial.items[0].texture);assert.equal(state.speed,'110');assert.equal(state.patrolSpeed,initial.patrolSpeed);
+   await drag(initial.items[0],initial.slot,false);state=await snapshot();assert.equal(state.ghostTexture,initial.items[0].texture);assert.equal(state.ghostLevel,'Lv.1');assert.equal(state.items[0].lift,0);assert.equal(state.speed,'110');assert.equal(state.patrolSpeed,initial.patrolSpeed);await page.mouse.up();state=await snapshot();
+   assert.equal(state.items[0].visible,false);assert.equal(state.gear,true);assert.equal(state.gearTexture,initial.items[0].texture);assert.equal(state.gearLevel,'Lv.1');assert.equal(state.speed,'110');assert.equal(state.patrolSpeed,initial.patrolSpeed);
    await drag(initial.items[1],initial.slot);state=await snapshot();
    assert.equal(state.items[1].visible,false);assert.equal(state.gear,true);assert.equal(state.gearTexture,initial.items[1].texture);assert.equal(state.speed,'100');assert.equal(state.dps,'44');assert.equal(state.patrolSpeed,initial.patrolSpeed);
    await drag(initial.items[3],initial.slot);state=await snapshot();assert.equal(state.defense,'18');assert.equal(state.dps,'20');assert.equal(state.patrolSpeed,initial.patrolSpeed);
