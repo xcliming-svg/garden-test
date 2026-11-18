@@ -61,6 +61,14 @@ ok(!B.eligibleHeight('yellow-floor',{lift:12})&&!B.eligibleHeight('balloon',{lif
  const m=model();for(let i=0;i<10;i++)m.equip(i,'rock');const es=[enemy(1,480,100,{hp:10}),enemy(2,510,100,{hp:10})];
  step(m,.8,es,()=>({killed:false,hp:10}));ok(m.state.fired===2,'avoid redundant target reservation');
 }
+{
+ const context={...window,location:{search:'?weaponSlots=4&weaponLevel=3&balanceWave=2&enemyCount=50&weaponLoadout=rock,rock,invalid,paper-plane,flowerpot,wheel'}};
+ vm.runInNewContext(readFileSync('src/weapon-balance.js','utf8'),{window:context,URLSearchParams});
+ const Q=context.GardenWeaponBalance;
+ ok(Q.slots===4&&Q.level===3&&Q.balanceWave===2&&Q.enemyCount===50,'query parsing');
+ ok(Q.loadout.join(',')==='rock,rock,paper-plane,flowerpot','preset filtering and slot cap');
+ ok(B.finiteTarget(2,0,0,0)===1&&B.finiteTarget(2,.1,1,1)===2&&B.finiteTarget(2,5,0,2)===0,'finite no replenishment');
+}
 const entries=E.roster.map(e=>({...e,width:e.span,height:e.span}));
 {
  const p=E.createPopulation(spec,patrol,entries.filter(e=>e.attackType==='approach'),seeded(17),()=>1,null,true);p.advance(0);const a=p.actors[0];
@@ -73,7 +81,7 @@ function simulate(label,loadout,seconds,target,level=1,full=false,fixed=false){
  const rng=seeded(42),g=full?{left:364,right:595,top:150,bottom:381}:garden,cells=full?Array.from({length:100},(_,i)=>i):occupied;
  const b=window.GardenPebbleBoundary.layout(spec,g,40,{lift:.5,tilt:1.25,lean:.5},11),p={bounds:b.patrol,boundary:b,occupied:cells,finished:false},h={...hero,center:{x:0,y:0}};
  let pop;
- const wanted=fixed?(time)=>Math.min(200,pop.actors.length+Math.max(0,Math.min(200,Math.floor(time*10)+1)-pop.spawned)):target;
+ const wanted=fixed?(time)=>B.finiteTarget(200,time,pop.actors.length,pop.spawned):target;
  pop=E.createPopulation(spec,p,entries,rng,wanted,null,true);
  const m=A.create(spec,seeded(147),A.defaultSize,true);
  loadout.forEach((id,i)=>m.equip(i,id,level));
