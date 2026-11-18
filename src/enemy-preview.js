@@ -248,7 +248,7 @@
     const fixed=weaponCombat?window.GardenWeaponBalance.enemyCount:null;
     const finite=weaponCombat?window.GardenWeaponBalance.balanceWave:null;
     let model;
-    const target=finite!==null?t=>Math.min(200,model.actors.length+Math.max(0,Math.min(finite,Math.floor(t*10)+1)-model.spawned)):
+    const target=finite!==null?t=>window.GardenWeaponBalance.finiteTarget(finite,t,model.actors.length,model.spawned):
       fixed!==null?()=>fixed:simulation?simulationTarget:targetCount;
     const relics=(A.enabled||weaponCombat)?window.GardenRelicCollection.attach(scene,spec,patrol):null;
     model=createPopulation(spec,patrol,entries,Math.random,target,relics?.death,!!weaponCombat);
