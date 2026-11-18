@@ -55,6 +55,17 @@ try{
         return {selected:m.state.selected,owners:m.state.shots.map(q=>q.owner),enemy:!!s.enemyPreview};
       });
       assert.equal(actual.selected,id);assert.ok(actual.owners.length&&actual.owners.every(x=>x===0));assert.equal(actual.enemy,false);
+      if(['wheel','yellow-floor','sprinkler','broom'].includes(id)){
+        const safe=await page.evaluate(id=>{
+          const s=window.__previewGame.scene.getScene('Game'),A=window.GardenHeroWeaponPreview;
+          const g=s.fairyPatrol.boundary.garden,q=s.heroWeaponPreview.model.state.shots.find(q=>q.kind===id);
+          if(!q)return false;
+          const spec=window.GardenGameLayout.spec;
+          if(id==='wheel')return !!A.wheelPath(spec,q.origin,{x:q.tx,y:q.ty},g,q.size,s.fairyPatrol.actors[0].visibleHeight);
+          return A.installationSafe(spec,id,{x:q.tx,y:q.ty},g,q.size);
+        },id);
+        assert.equal(safe,true,'garden-safe '+id);
+      }
     }
     // Independent broom orbit is centered at the deployed point, not the moving fairy.
     await select.selectOption('broom');
