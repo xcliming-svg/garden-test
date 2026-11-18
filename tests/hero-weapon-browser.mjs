@@ -48,7 +48,30 @@ try{
       });
       assert.equal(actual.selected,id);assert.ok(actual.owners.length&&actual.owners.every(x=>x===0));assert.equal(actual.enemy,false);
     }
+    // Real loaded water-splash SVG replaces the intact balloon at landing.
+    await select.selectOption('balloon');
+    await page.waitForFunction(()=>{
+      const s=window.__previewGame.scene.getScene('Game'),A=window.GardenHeroWeaponPreview;
+      return s.heroWeaponPreview.model.state.shots.some(q=>{
+        const o=s.children.getByName('hero-weapon:balloon:'+q.id);
+        return q.kind==='balloon'&&q.age<q.flight&&o?.texture.key.startsWith('item-svg:trim:balloon:display:');
+      });
+    });
+    await page.waitForFunction(()=>{
+      const s=window.__previewGame.scene.getScene('Game');
+      return s.heroWeaponPreview.model.state.shots.some(q=>{
+        const p=s.children.getByName('hero-weapon:balloon:splash:'+q.id);
+        return q.kind==='balloon'&&q.age>=q.flight+.14&&p?.texture.key.startsWith('item-svg:trim:water-splash:display:')&&
+          Math.abs(Math.max(p.displayWidth,p.displayHeight)-106)<.001&&Math.abs(p.x-q.tx)<.001&&Math.abs(p.y-q.ty)<.001&&
+          !s.children.getByName('hero-weapon:balloon:'+q.id)&&p.depth<2;
+      });
+    });
+    assert.equal(await page.evaluate(()=>{
+      const s=window.__previewGame.scene.getScene('Game');
+      return s.textures.exists('item-svg:source:water-splash')&&s.itemCardPreview.cards.length===12;
+    }),true);
     await select.selectOption('rock');await page.waitForTimeout(100);
+    assert.equal(await page.evaluate(()=>window.__previewGame.scene.getScene('Game').children.list.some(o=>o.name?.startsWith('hero-weapon:balloon:'))),false);
     await page.keyboard.press('Escape');await page.waitForFunction(()=>window.__previewGame.scene.isActive('Pause'));
     assert.equal(await select.isVisible(),false);
     const read=()=>page.evaluate(()=>window.__previewGame.scene.getScene('Game').heroWeaponPreview.model.state.elapsed);
