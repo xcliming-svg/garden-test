@@ -169,7 +169,7 @@ for(const [cx,cy,dx,dy] of [[480,200,0,-1],[580,270,1,0],[480,340,0,1],[380,270,
 
 // Agreed vertical dimensions, including wide art and the water splash.
 {
- const heights={balloon:22,boomerang:28,wheel:28,flowerpot:22,'paper-plane':22,'bouncy-ball':22,'yellow-floor':44,sprinkler:24,rock:10,broom:44};
+ const heights={balloon:22,boomerang:28,wheel:28,flowerpot:22,'paper-plane':22,'bouncy-ball':22,'yellow-floor':44,sprinkler:24,rock:12,broom:44};
  for(const id of A.ids){
    const m=A.create(spec,rng);m.select(id);advance(m,.01);const q=m.state.shots[0];
    ok(Math.abs((id==='boomerang'?Math.max(q.size.width,q.size.height):q.size.height)-heights[id])<1e-8&&q.span===heights[id],'agreed visible height '+id);
@@ -358,8 +358,8 @@ for(const [cx,cy,dx,dy] of [[480,200,0,-1],[580,270,1,0],[480,340,0,1],[380,270,
 
 // The query parameter changes the actual shot size, not just its displayed label.
 {
-  const cases=[['',10],['?rockSize=4',4],['?rockSize=9',9],['?rockSize=12.5',12.5],['?rockSize=40',40],
-    ['?rockSize=0',10],['?rockSize=-5',10],['?rockSize=41',10],['?rockSize=abc',10],['?rockSize=Infinity',10],['?rockSize=',10],['?rockSize=%20',10],['?enemies=1&weapons=1&rockSize=8',8]];
+  const cases=[['',12],['?rockSize=4',4],['?rockSize=9',9],['?rockSize=12.5',12.5],['?rockSize=40',40],
+    ['?rockSize=0',12],['?rockSize=-5',12],['?rockSize=41',12],['?rockSize=abc',12],['?rockSize=Infinity',12],['?rockSize=',12],['?rockSize=%20',12],['?enemies=1&weapons=1&rockSize=8',8]];
   for(const [search,expected] of cases){
     const context={...window,location:{search}};
     vm.runInNewContext(readFileSync('src/hero-weapon-preview.js','utf8'),{window:context,URLSearchParams});
