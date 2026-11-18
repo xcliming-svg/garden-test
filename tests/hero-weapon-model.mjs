@@ -169,7 +169,7 @@ for(const [cx,cy,dx,dy] of [[480,200,0,-1],[580,270,1,0],[480,340,0,1],[380,270,
 
 // Agreed vertical dimensions, including wide art and the water splash.
 {
- const heights={balloon:22,boomerang:28,wheel:28,flowerpot:22,'paper-plane':22,'bouncy-ball':22,'yellow-floor':44,sprinkler:24,rock:16,broom:44};
+ const heights={balloon:22,boomerang:28,wheel:28,flowerpot:22,'paper-plane':22,'bouncy-ball':22,'yellow-floor':44,sprinkler:24,rock:10,broom:44};
  for(const id of A.ids){
    const m=A.create(spec,rng);m.select(id);advance(m,.01);const q=m.state.shots[0];
    ok(Math.abs((id==='boomerang'?Math.max(q.size.width,q.size.height):q.size.height)-heights[id])<1e-8&&q.span===heights[id],'agreed visible height '+id);
@@ -354,5 +354,31 @@ for(const [cx,cy,dx,dy] of [[480,200,0,-1],[580,270,1,0],[480,340,0,1],[380,270,
    ok(Object.values(p).every(Number.isFinite),'finite drop geometry');
    ok(Math.hypot(p.x-q.tx,p.y-q.ty)<=cfg.radius+.001,'water within radius');
  }}
+}
+
+// The query parameter changes the actual shot size, not just its displayed label.
+{
+  const cases=[['',10],['?rockSize=4',4],['?rockSize=9',9],['?rockSize=12.5',12.5],['?rockSize=40',40],
+    ['?rockSize=0',10],['?rockSize=-5',10],['?rockSize=41',10],['?rockSize=abc',10],['?rockSize=Infinity',10],['?rockSize=',10],['?rockSize=%20',10],['?enemies=1&weapons=1&rockSize=8',8]];
+  for(const [search,expected] of cases){
+    const context={...window,location:{search}};
+    vm.runInNewContext(readFileSync('src/hero-weapon-preview.js','utf8'),{window:context,URLSearchParams});
+    const W=context.GardenHeroWeaponPreview;
+    ok(W.tuning.rock.span===expected,'rockSize '+search);
+    for(const id of W.ids)if(id!=='rock')ok(W.tuning[id].span===A.tuning[id].span,'unchanged other size');
+    const m=W.create(spec,()=>.4);m.select('rock');advance(m,.01);const q=m.state.shots[0];
+    ok(q.span===expected&&q.size.height===expected,'rock shot uses parameter');
+    ok(Math.abs(q.size.width/q.size.height-100/78)<1e-8,'rock aspect ratio preserved');
+    // An offset from the straight collision path lies outside the small rock
+    // radius but inside the large rock radius, proving collision follows size.
+    const hitModel=W.create(spec,()=>.5);hitModel.equip(0,'rock');
+    const aim={id:1,x:580,y:200,radius:0};
+    advance(hitModel,.01,hero,[aim],()=>({killed:false}));
+    const shot=hitModel.state.shots[0],middle=W.pose({...shot,age:shot.life/2},hero);
+    const edge={id:2,x:middle.x,y:middle.y+expected*.4-.15,radius:0};
+    let hits=0;
+    advance(hitModel,shot.life/2,hero,[edge],()=>{hits++;return {killed:false};});
+    ok(hits===1,'collision uses selected rock height');
+  }
 }
 console.log('PASS equipped weapon model:',checks,'checks');
