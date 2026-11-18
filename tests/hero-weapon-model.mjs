@@ -169,13 +169,13 @@ for(const [cx,cy,dx,dy] of [[480,200,0,-1],[580,270,1,0],[480,340,0,1],[380,270,
 
 // Agreed vertical dimensions, including wide art and the water splash.
 {
- const heights={balloon:22,boomerang:20,wheel:28,flowerpot:22,'paper-plane':22,'bouncy-ball':22,'yellow-floor':44,sprinkler:22,rock:20,broom:44};
+ const heights={balloon:22,boomerang:28,wheel:28,flowerpot:22,'paper-plane':22,'bouncy-ball':22,'yellow-floor':44,sprinkler:24,rock:16,broom:44};
  for(const id of A.ids){
    const m=A.create(spec,rng);m.select(id);advance(m,.01);const q=m.state.shots[0];
    ok(Math.abs((id==='boomerang'?Math.max(q.size.width,q.size.height):q.size.height)-heights[id])<1e-8&&q.span===heights[id],'agreed visible height '+id);
    ok(q.size.width>0,'preserved aspect '+id);
  }
- ok(Math.abs(A.defaultSize('boomerang',20).width-20)<1e-8&&A.defaultSize('boomerang',20).height<10,'longest-side boomerang');
+ ok(Math.abs(A.defaultSize('boomerang',28).width-28)<1e-8&&Math.abs(A.defaultSize('boomerang',28).height-13.328)<1e-8,'longest-side boomerang');
  ok(A.defaultSize('water-splash',44).width>100,'wide puddle');
 }
 // Broom deploys at the random ground point, independently of subsequent hero movement.
