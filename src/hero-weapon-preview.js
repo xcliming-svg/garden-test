@@ -3,7 +3,7 @@
   // Equipped weapons and isolated selector comparison share one attack model.
   const params=new URLSearchParams(window.location.search);
   // Preview-only logical height override. Invalid or missing values use the default.
-  const rockSizeLimits=Object.freeze({min:4,max:40,default:10});
+  const rockSizeLimits=Object.freeze({min:4,max:40,default:12});
   function resolveRockSize(value){
     if(typeof value!=='string'||value.trim()==='')return rockSizeLimits.default;
     const n=Number(value);
