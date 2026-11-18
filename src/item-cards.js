@@ -6,7 +6,6 @@
   const enabled=window.GardenFairyPatrol.enabled&&!window.GardenEnemyPreview.enabled&&G.enabled&&params.get('cards')!=='0'&&params.get('cards')!=='legacy';
   const entries=Object.freeze([
     ['shoe','신발','01_shoe.svg'],
-    ['water-splash','물보라','03_water_splash.svg'],
     ['balloon','풍선','05_balloon.svg'],
     ['boomerang','부메랑','05_boomerang.svg'],
     ['shield','방패','05_shield.svg'],
@@ -54,17 +53,65 @@
     tex.refresh();tex.setFilter(Phaser.Textures.FilterMode.LINEAR);
     return k;
   }
-  function fit(image,texture,span){
-    image.setTexture(texture);
-    const {width,height}=image.frame;
-    const scale=span/Math.max(width,height);
-    return image.setDisplaySize(width*scale,height*scale);
+  // A 512px texture sampled directly at 24px in WebGL loses thin strokes.
+  // Pre-filter the artwork at the current output pixel size, then sample the
+  // near-native texture with LINEAR. Keep the source and logical bounds intact.
+  const displayState=new WeakMap();
+  function state(scene){
+    if(displayState.has(scene))return displayState.get(scene);
+    const images=new Map(),keys=new Set();
+    const resize=()=>{
+      const previous=new Set(keys);keys.clear();
+      for(const [image,info] of images)fit(image,info.texture,info.span);
+      for(const k of previous)if(!keys.has(k)&&scene.textures.exists(k))scene.textures.remove(k);
+    };
+    const cleanup=()=>{
+      scene.scale.off('resize',resize);
+      images.clear();displayState.delete(scene);
+      // Textures are tiny and shared across restarts; old scale variants
+      // are released on resize, not while display objects are shutting down.
+    };
+    scene.scale.on('resize',resize);
+    scene.events.once('shutdown',cleanup);
+    const result={images,keys};displayState.set(scene,result);return result;
   }
-  function card(scene,x,y,size,texture,kind){
+  function downsample(source,width,height,ctx){
+    let current=source;
+    // Successive area-like reductions prevent aliasing of narrow SVG details.
+    while(current.width>width*2||current.height>height*2){
+      const c=document.createElement('canvas');
+      c.width=Math.max(width,Math.ceil(current.width/2));
+      c.height=Math.max(height,Math.ceil(current.height/2));
+      const step=c.getContext('2d');
+      step.imageSmoothingEnabled=true;step.imageSmoothingQuality='high';
+      step.drawImage(current,0,0,c.width,c.height);current=c;
+    }
+    ctx.imageSmoothingEnabled=true;ctx.imageSmoothingQuality='high';
+    ctx.clearRect(0,0,width,height);
+    ctx.drawImage(current,0,0,width,height);
+  }
+  function fit(image,texture,span){
+    const scene=image.scene,source=scene.textures.get(texture).getSourceImage();
+    const scale=span/Math.max(source.width,source.height);
+    const logicalW=source.width*scale,logicalH=source.height*scale;
+    const zoom=scene.cameras.main.zoom||1;
+    const width=Math.max(1,Math.round(logicalW*zoom)),height=Math.max(1,Math.round(logicalH*zoom));
+    const k=texture+':display:'+width+'x'+height;
+    const cache=state(scene);cache.keys.add(k);cache.images.set(image,{texture,span});
+    if(!scene.textures.exists(k)){
+      const tex=scene.textures.createCanvas(k,width,height);
+      downsample(source,width,height,tex.getContext());
+      tex.refresh();tex.setFilter(Phaser.Textures.FilterMode.LINEAR);
+    }
+    if(image.texture.key!==k)image.setTexture(k);
+    return image.setDisplaySize(logicalW,logicalH);
+  }
+  const itemSpan=(size,id)=>size-(id==='broom'?4:8);
+  function card(scene,x,y,size,texture,kind,id){
     const R=P.reference.n;
     const border=U.pixelBox(scene,0,0,size,size,R.tabBorder);
     const face=U.pixelBox(scene,0,0,size-2,size-2,R.tab,{cut:false});
-    const image=fit(scene.add.image(0,0,texture),texture,size-6-(kind==='item'?2:0));
+    const image=fit(scene.add.image(0,0,texture),texture,kind==='item'?itemSpan(size,id):size-6);
     const group=scene.add.container(x,y,[border,face,image]).setSize(size,size).setDepth(5);
     group.setStrokeStyle=(_width,_color,alpha)=>{
       border.setFillStyle(alpha?(kind==='flower'?R.flowerBorder:R.itemBorder):R.tabBorder,1);return group;
@@ -72,7 +119,7 @@
     return group;
   }
   function setIcon(group,item){
-    if(item?.texture)fit(group.list[2],item.texture,group.width-8);
+    if(item?.texture)fit(group.list[2],item.texture,itemSpan(group.width,item.id));
   }
   function draw(scene,spec,assets){
     const cards=[],flowers=[],ground=[];
@@ -85,7 +132,7 @@
     for(let i=0;i<entries.length;i++){
       const item=entries[i],texture=trim(scene,item.id,raw(item.id));
       const x=682+(i%4)*56,y=126+Math.floor(i/4)*56;
-      const marker=card(scene,x,y,assets.item.dropSize,texture,'item').setName('placeholder:item:'+String(i).padStart(2,'0'));
+      const marker=card(scene,x,y,assets.item.dropSize,texture,'item',item.id).setName('placeholder:item:'+String(i).padStart(2,'0'));
       cards.push({marker,x,y,idleDepth:marker.depth,item:Object.freeze({id:item.id,name:item.name,texture,desc:'일반 아이템 · 효과 미구현',stats:Object.freeze({})})});
     }
     for(let i=0;i<relics.length;i++){

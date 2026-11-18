@@ -1,7 +1,7 @@
 name: Restored card preview verification
 on:
   push:
-    branches: [feature/restore-card-preview, feature/svg-item-cards, devel]
+    branches: [feature/restore-card-preview, feature/svg-item-cards, feature/item-art-refinement, devel]
   pull_request:
     branches: [devel]
 permissions:

@@ -40,7 +40,7 @@ try{
    };
    const snapshot=()=>page.evaluate(()=>{
     const s=window.__previewGame.scene.getScene('Game'),L=window.GardenGameLayout;
-    const obj=n=>s.children.getByName(n),pos=o=>({x:o.x,y:o.y,visible:o.visible,alpha:o.alpha,texture:o.list?.[2]?.texture.key,span:o.list?.[2]?Math.max(o.list[2].displayWidth,o.list[2].displayHeight):undefined});
+    const obj=n=>s.children.getByName(n),pos=o=>({x:o.x,y:o.y,visible:o.visible,alpha:o.alpha,texture:o.list?.[2]?.texture.key,textureWidth:o.list?.[2]?.frame.width,textureHeight:o.list?.[2]?.frame.height,span:o.list?.[2]?Math.max(o.list[2].displayWidth,o.list[2].displayHeight):undefined});
     // Drag raises depth and reorders the display list; retain stable card identity.
     const byName=(a,b)=>a.name.localeCompare(b.name);
     const flowers=s.children.list.filter(o=>o.name?.startsWith('placeholder:flower:')).sort(byName).map(pos);
@@ -56,15 +56,33 @@ try{
    const start=async()=>{await click(480,252);await page.waitForFunction(()=>window.__previewGame.scene.getScene('Game').fairyPatrol?.actors.length===11);};
    await start();
    const initial=await snapshot();
-   assert.equal(initial.flowers.length,6);assert.equal(initial.items.length,13);assert.equal(initial.ground.length,2);
+   assert.equal(initial.flowers.length,6);assert.equal(initial.items.length,12);assert.equal(initial.ground.length,2);
    assert.equal(new Set(initial.flowers.map(o=>o.texture)).size,6);
-   assert.equal(new Set(initial.items.map(o=>o.texture)).size,13);
+   assert.equal(new Set(initial.items.map(o=>o.texture)).size,12);
    assert.ok(initial.flowers.every(o=>o.texture.startsWith('item-svg:trim:flower-')&&Math.abs(o.span-18)<.01));
-   assert.ok(initial.items.every(o=>o.texture.startsWith('item-svg:trim:')&&Math.abs(o.span-24)<.01));
-   assert.ok(initial.ground.every(o=>o.visible&&!o.interactive&&['item-svg:trim:gem','item-svg:trim:heart'].includes(o.texture)));
+   assert.ok(initial.items.every(o=>o.texture.startsWith('item-svg:trim:')&&Math.abs(o.span-(o.texture.includes(':broom:')?28:24))<.01));
+   assert.ok(initial.items.every(o=>!o.texture.includes('water-splash')));
+   assert.ok([...initial.items,...initial.flowers].every(o=>Math.abs(Math.max(o.textureWidth,o.textureHeight)-o.span*w/960)<=1),'native output-sized textures');
+   assert.ok(initial.ground.every(o=>o.visible&&!o.interactive&&/^item-svg:trim:(gem|heart):display:/.test(o.texture)));
    assert.ok([...initial.flowers,...initial.items].every(o=>o.visible));
    assert.equal(initial.enemy,false);assert.equal(initial.combat,false);assert.equal(initial.stage,4);
+   const art=await page.evaluate(()=>{
+    const scene=window.__previewGame.scene.getScene('Game'),wheel=scene.textures.get('item-svg:trim:wheel').getSourceImage(),ctx=wheel.getContext('2d');
+    const {data}=ctx.getImageData(0,0,wheel.width,wheel.height);
+    let holes=0,white=0;
+    for(let y=Math.floor(wheel.height*.25);y<wheel.height*.75;y++)for(let x=Math.floor(wheel.width*.25);x<wheel.width*.75;x++){
+     const i=(y*wheel.width+x)*4;if(data[i+3]===0)holes++;if(data[i+3]>240&&data[i]>230&&data[i+1]>230&&data[i+2]>220)white++;
+    }
+    return {holes,white};
+   });
+   assert.ok(art.holes>100,'wheel center has transparent gaps');assert.equal(art.white,0);
    await page.screenshot({path:join(out,'cards-'+w+'-initial.png')});
+   // Resizing must rebuild output-sized textures without changing logical bounds.
+   await page.setViewportSize({width:1920,height:1080});
+   await page.waitForFunction(()=>window.__previewGame.scene.getScene('Game').children.getByName('placeholder:item:00').list[2].frame.width===48||window.__previewGame.scene.getScene('Game').children.getByName('placeholder:item:00').list[2].frame.height===48);
+   const enlarged=await snapshot();assert.ok(enlarged.items.every(o=>Math.abs(Math.max(o.textureWidth,o.textureHeight)-2*o.span)<=1));
+   await page.setViewportSize({width:w,height:h});
+   await page.waitForFunction(expected=>{const o=window.__previewGame.scene.getScene('Game').children.getByName('placeholder:item:00').list[2];return Math.max(o.frame.width,o.frame.height)===expected;},Math.round(24*w/960));
    // Real pointer drag: invalid occupied cell, then valid adjacent cell with ghost.
    await drag(initial.flowers[0],initial.invalid);let state=await snapshot();
    assert.equal(state.stage,4);assert.equal(state.flowers[0].visible,true);
@@ -90,7 +108,7 @@ try{
    await start();state=await snapshot();assert.equal(state.stage,4);assert.equal(state.gear,false);
    assert.ok([...state.flowers,...state.items].every(o=>o.visible));
    assert.deepEqual(errors,[]);assert.deepEqual(failed,[]);assert.deepEqual(enemyRequests,[]);
-   console.log('PASS '+w+'x'+h+': all 21 SVG assets, pointer drag, tooltip, equip/replace, pause, restart, no enemy requests');
+   console.log('PASS '+w+'x'+h+': all 20 SVG assets, pointer drag, tooltip, equip/replace, pause, restart, no enemy requests');
   }finally{await page.close();}
  }
 }finally{await browser.close();server.close();}
