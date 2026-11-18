@@ -29,11 +29,13 @@
     Object.freeze({id:'gem',name:'보석',file:'gem_1000.svg',span:12}),
     Object.freeze({id:'heart',name:'하트',file:'heart_1000.svg',span:12})
   ]);
+  // Attack-only effect: not a card, weapon choice or relic.
+  const effects=Object.freeze([Object.freeze({id:'water-splash',file:'03_water_splash.svg'})]);
   const raw=id=>'item-svg:source:'+id, key=id=>'item-svg:trim:'+id;
   const flowerId=name=>'flower-'+name;
   function preload(scene){
     // HUD gem is shared by every game mode, even when SVG drop cards are disabled.
-    for(const item of enabled?[...entries,...relics]:relics){
+    for(const item of enabled?[...entries,...relics,...effects]:relics){
       const k=raw(item.id);
       if(!scene.textures.exists(k))scene.load.svg(k,window.GardenSvgPalette.path('items/'+item.file),{width:512,height:512});
     }
@@ -195,6 +197,11 @@
     const texture=trim(scene,id,raw(id));
     return fit(scene.add.image(x,y,texture),texture,span);
   }
+  function effectImage(scene,id,x,y,span){
+    if(!effects.some(effect=>effect.id===id))throw Error('Unknown weapon effect: '+id);
+    const texture=trim(scene,id,raw(id));
+    return fit(scene.add.image(x,y,texture),texture,span);
+  }
   function relicImage(scene,kind,x,y){
     const item=relics.find(r=>r.id===kind),texture=trim(scene,kind,raw(kind));
     return fit(scene.add.image(x,y,texture),texture,item.span).setDepth(4);
@@ -228,5 +235,5 @@
     scene.events.once('shutdown',()=>delete scene.itemCardPreview);
     return {cards,flowers};
   }
-  window.GardenItemCards=Object.freeze({enabled,entries,relics,preload,draw,setIcon,key,broomRotation,itemSpan,minLevel,maxLevel,setLevelLabel,gemIcon,gemInk,relicImage,destroyRelic,weaponImage});
+  window.GardenItemCards=Object.freeze({enabled,entries,relics,preload,draw,setIcon,key,broomRotation,itemSpan,minLevel,maxLevel,setLevelLabel,gemIcon,gemInk,relicImage,destroyRelic,weaponImage,effectImage});
 }());
