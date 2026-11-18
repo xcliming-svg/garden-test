@@ -37,7 +37,12 @@ try{
       const points={right:{x:mx,y:b.top-10},down:{x:b.right+10,y:my},
         left:{x:mx,y:b.bottom+10},up:{x:b.left-10,y:my}};
       const opposite={right:'left',left:'right',down:'up',up:'down'};
-      const point=points[hero.direction],other=points[opposite[hero.direction]];
+      const axis={x:(hero.center.x-mx)/((b.right-b.left)/2),y:(hero.center.y-my)/((b.bottom-b.top)/2)};
+      const scale=30/Math.hypot(axis.x,axis.y);
+      const point={x:hero.center.x+axis.x*scale,y:hero.center.y+axis.y*scale};
+      const other=points[opposite[hero.direction]];
+      check(window.GardenRelicCollection.eligible(point,hero.center,{bounds:b}),'outward fan admits point');
+      check(!window.GardenRelicCollection.eligible(other,hero.center,{bounds:b}),'opposite side outside fan');
       const prior=R.state.gems;
       m.death(point.x,point.y);for(let i=0;i<60;i++)R.step(.05);
       R.render();F.refreshHud();
@@ -78,7 +83,7 @@ try{
       check(R.state.expired===expired&&!R.state.drops.length,'no drops lost on lap');
       return checks;
     });
-    assert.equal(result,13);assert.deepEqual(errors,[]);
+    assert.equal(result,15);assert.deepEqual(errors,[]);
     console.log('PASS relic browser',width,height,result);
     await page.close();
   }
