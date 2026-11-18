@@ -734,11 +734,13 @@
         const showItem = !!equipped[index] && !(dragging && target===index);
         // 후보는 기존 프레임 색만 변경한다. 장착 카드와 빈 슬롯의 프레임은 동시에 표시하지 않는다.
         layout.slotFrames[index].setStrokeStyle(s.line,active?colors.itemBorder:colors.normalBorder,1).setVisible(!showItem);
+        window.GardenItemCards.setIcon(slotItems[index],equipped[index]);
         slotItems[index].setStrokeStyle(s.line,colors.itemBorder,active?1:0).setVisible(showItem).setAlpha(1);
       });
       ghost.setVisible(false);
       if (dragging && target >= 0) {
         const anchor = slotAnchor(target);
+        window.GardenItemCards.setIcon(ghost,dragging.item);
         ghost.setPosition(anchor.x, anchor.y).setVisible(true);
       }
       renderStats();
@@ -1107,7 +1109,7 @@
     drawBlueprint(scene);
     const fairy=window.GardenFairyPatrol.enabled;
     const cardMode=fairy&&!window.GardenEnemyPreview.enabled&&params.get('cards')!=='0';
-    const markers=cardMode?drawMarkers(scene,['flower','item']):{cards:[],flowers:[]};
+    const markers=cardMode?(window.GardenItemCards.enabled?window.GardenItemCards.draw(scene,spec,assets):drawMarkers(scene,['flower','item'])):{cards:[],flowers:[]};
     const itemPreview=drawItemPreview(scene,layout,markers.cards,cardMode?undefined:window.GardenCombatPreview.tuning.walkSpeed,!cardMode);
     const status=text(scene,spec.width-10,spec.top+spacing.base,fairy?(window.GardenEnemyPreview.enabled&&window.GardenFairyAttack.enabled?'자동 공격 · 요정 11명':'정원 순찰 · 요정 11명'):'테스트 전투 · 공 1개',bottomStats.fontSize,colors.label,'right').setDepth(16).setName(fairy?'fairy-patrol-status':'combat-ball-count');
     window.GardenFlowerHeadPreview.draw(scene,spec,colors,gardenRaster,patrolBounds,patrolPosition,(elapsed,kills,gems,occupied)=>{

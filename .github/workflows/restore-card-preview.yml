@@ -1,7 +1,7 @@
 name: Restored card preview verification
 on:
   push:
-    branches: [feature/restore-card-preview]
+    branches: [feature/restore-card-preview, feature/svg-item-cards, devel]
   pull_request:
     branches: [devel]
 permissions:
@@ -19,6 +19,7 @@ jobs:
         env:
           PLAYWRIGHT_SKIP_BROWSER_DOWNLOAD: '1'
       - run: for file in src/*.js tests/restore-card-preview.mjs; do node --check "$file"; done
+      - run: node scripts/recolor-svg.mjs
       - run: node tests/restore-card-preview.mjs
       - run: node tests/garden16-v9.mjs
       - uses: actions/upload-artifact@v4

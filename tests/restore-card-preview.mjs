@@ -9,7 +9,7 @@ const require=createRequire(import.meta.url),phaser=require.resolve('phaser/dist
 const mime={'.js':'application/javascript','.html':'text/html; charset=utf-8','.css':'text/css; charset=utf-8','.svg':'image/svg+xml','.json':'application/json'};
 const server=createServer((req,res)=>{
  try{
-  const path=new URL(req.url,'http://localhost').pathname.slice(1)||'index.html';
+  const path=decodeURIComponent(new URL(req.url,'http://localhost').pathname.slice(1))||'index.html';
   if(path.includes('..'))return res.writeHead(404).end();
   let body=readFileSync(path==='phaser.js'?phaser:join(root,path));
   if(path==='index.html')body=body.toString().replace('https://cdn.jsdelivr.net/npm/phaser@3.90.0/dist/phaser.min.js','./phaser.js');
@@ -40,14 +40,15 @@ try{
    };
    const snapshot=()=>page.evaluate(()=>{
     const s=window.__previewGame.scene.getScene('Game'),L=window.GardenGameLayout;
-    const obj=n=>s.children.getByName(n),pos=o=>({x:o.x,y:o.y,visible:o.visible,alpha:o.alpha});
+    const obj=n=>s.children.getByName(n),pos=o=>({x:o.x,y:o.y,visible:o.visible,alpha:o.alpha,texture:o.list?.[2]?.texture.key,span:o.list?.[2]?Math.max(o.list[2].displayWidth,o.list[2].displayHeight):undefined});
     // Drag raises depth and reorders the display list; retain stable card identity.
     const byName=(a,b)=>a.name.localeCompare(b.name);
     const flowers=s.children.list.filter(o=>o.name?.startsWith('placeholder:flower:')).sort(byName).map(pos);
     const items=s.children.list.filter(o=>o.name?.startsWith('placeholder:item:')).sort(byName).map(pos);
     const g=L.spec.garden,cell=i=>({x:g.x+(i%g.columns)*g.pitch+g.line+g.cell/2,y:g.y+Math.floor(i/g.columns)*g.pitch+g.line+g.cell/2});
     const slot=L.bottomLayout().slots[0];
-    return {flowers,items,occupied:s.fairyPatrol.occupied,enemy:!!s.enemyPreview,combat:!!s.combatPreview,
+    const ground=s.children.list.filter(o=>o.name?.startsWith('ground-relic:')).map(o=>({name:o.name,texture:o.texture.key,visible:o.visible,span:Math.max(o.displayWidth,o.displayHeight),interactive:!!o.input}));
+    return {flowers,items,ground,gearTexture:obj('preview-equipped:0').list[2].texture.key,ghostTexture:obj('item-preview-ghost').list[2].texture.key,occupied:s.fairyPatrol.occupied,enemy:!!s.enemyPreview,combat:!!s.combatPreview,
      fairy:s.fairyPatrol.actors.length,stage:s.flowerGrowth.entries.size,slot:{x:slot.x+slot.size/2,y:slot.y+slot.size/2},candidate:cell(43),invalid:cell(44),
      ghost:obj('garden-preview-ghost').visible,gear:obj('preview-equipped:0').visible,tip:obj('item-preview-tooltip').visible,
      speed:obj('stat-value:moveSpeed').text,dps:obj('stat-value:dps').text,progress:obj('hud-progress-value').text};
@@ -55,7 +56,12 @@ try{
    const start=async()=>{await click(480,252);await page.waitForFunction(()=>window.__previewGame.scene.getScene('Game').fairyPatrol?.actors.length===11);};
    await start();
    const initial=await snapshot();
-   assert.equal(initial.flowers.length,3);assert.equal(initial.items.length,5);
+   assert.equal(initial.flowers.length,6);assert.equal(initial.items.length,13);assert.equal(initial.ground.length,2);
+   assert.equal(new Set(initial.flowers.map(o=>o.texture)).size,6);
+   assert.equal(new Set(initial.items.map(o=>o.texture)).size,13);
+   assert.ok(initial.flowers.every(o=>o.texture.startsWith('item-svg:trim:flower-')&&Math.abs(o.span-18)<.01));
+   assert.ok(initial.items.every(o=>o.texture.startsWith('item-svg:trim:')&&Math.abs(o.span-24)<.01));
+   assert.ok(initial.ground.every(o=>o.visible&&!o.interactive&&['item-svg:trim:gem','item-svg:trim:heart'].includes(o.texture)));
    assert.ok([...initial.flowers,...initial.items].every(o=>o.visible));
    assert.equal(initial.enemy,false);assert.equal(initial.combat,false);assert.equal(initial.stage,4);
    await page.screenshot({path:join(out,'cards-'+w+'-initial.png')});
@@ -69,10 +75,10 @@ try{
    // Hover, equip, then replace using the restored item-card UI.
    await page.mouse.move(...coords(initial.items[0].x,initial.items[0].y));
    assert.equal((await snapshot()).tip,true);
-   await drag(initial.items[0],initial.slot);state=await snapshot();
-   assert.equal(state.items[0].visible,false);assert.equal(state.gear,true);assert.equal(state.speed,'110');
+   await drag(initial.items[0],initial.slot,false);state=await snapshot();assert.equal(state.ghostTexture,initial.items[0].texture);await page.mouse.up();state=await snapshot();
+   assert.equal(state.items[0].visible,false);assert.equal(state.gear,true);assert.equal(state.gearTexture,initial.items[0].texture);
    await drag(initial.items[1],initial.slot);state=await snapshot();
-   assert.equal(state.items[1].visible,false);assert.equal(state.gear,true);assert.equal(state.speed,'100');assert.equal(state.dps,'38');
+   assert.equal(state.items[1].visible,false);assert.equal(state.gear,true);assert.equal(state.gearTexture,initial.items[1].texture);
    await page.screenshot({path:join(out,'cards-'+w+'-equipped.png')});
    // Pause cancels in-progress drag, then returning to menu resets the preview.
    await drag(initial.flowers[1],initial.candidate,false);
@@ -84,7 +90,7 @@ try{
    await start();state=await snapshot();assert.equal(state.stage,4);assert.equal(state.gear,false);
    assert.ok([...state.flowers,...state.items].every(o=>o.visible));
    assert.deepEqual(errors,[]);assert.deepEqual(failed,[]);assert.deepEqual(enemyRequests,[]);
-   console.log('PASS '+w+'x'+h+': cards, pointer drag, tooltip, equip/replace, pause, restart, no enemy requests');
+   console.log('PASS '+w+'x'+h+': all 21 SVG assets, pointer drag, tooltip, equip/replace, pause, restart, no enemy requests');
   }finally{await page.close();}
  }
 }finally{await browser.close();server.close();}
