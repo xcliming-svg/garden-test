@@ -57,6 +57,16 @@ try{
    const start=async()=>{await click(480,252);await page.waitForFunction(()=>window.__previewGame.scene.getScene('Game').fairyPatrol?.actors.length===11);};
    await start();
    const initial=await snapshot();
+   const uiColors=await page.evaluate(()=>{
+    const P=window.GardenPalette,s=window.__previewGame.scene.getScene('Game'),o=n=>s.children.getByName(n);
+    const card=o('placeholder:item:00'),slot=o('slot-frame:0'),locked=o('slot-frame:9');
+    return {palette:Object.values(P.hex),material:Object.values(P.materialHex),roles:Object.values(P.reference.hex),card:[card.list[0].fillColor,card.list[1].fillColor],slot:[slot.strokeColor,slot.fillColor],locked:[locked.strokeColor,locked.fillColor]};
+   });
+   assert.equal(uiColors.palette.length,20);assert.equal(uiColors.material.length,16);
+   assert.ok(uiColors.roles.every(c=>uiColors.palette.includes(c)));
+   assert.deepEqual(uiColors.card,[0x535361,0x3B3A44]);
+   assert.deepEqual(uiColors.slot,[0x535361,0x16161A]);
+   assert.deepEqual(uiColors.locked,[0x535361,0x16161A]);
    const bottom=await page.evaluate(()=>{
     const s=window.__previewGame.scene.getScene('Game'),L=window.GardenGameLayout,b=L.bottomLayout();
     const statObjects=s.children.list.filter(o=>o.name?.startsWith('stat-'));
@@ -88,14 +98,14 @@ try{
       for(let y=0;y<c.height;y++)for(let x=0;x<c.width;x++){
        const i=(y*c.width+x)*4;if(!data[i+3])continue;
        right=Math.max(right,x+1);bottom=Math.max(bottom,y+1);
-       if(data[i]>240&&data[i+1]>240&&data[i+2]>240)white++;
+       if(data[i]>=240&&data[i+1]>=237&&data[i+2]>=229)white++;
        if(data[i]<32&&data[i+1]<32&&data[i+2]<32)dark++;
       }
-      return {right:l.x+right/z,bottom:l.levelBaseY+bottom/z,white,dark,offsetX:l.style.shadowOffsetX,offsetY:l.style.shadowOffsetY,blur:l.style.shadowBlur};
+      return {right:l.x+right/z,bottom:l.levelBaseY+bottom/z,white,dark,color:l.style.color,offsetX:l.style.shadowOffsetX,offsetY:l.style.shadowOffsetY,blur:l.style.shadowBlur};
     });
     return {labels,lifts:[...items,...flowers].map(({marker})=>marker.floatLift),synchronized:[...items,...flowers].every(({marker})=>marker.list.slice(0,3).every(o=>o.y===-marker.floatLift)&&(!marker.levelLabel||Math.abs(marker.levelLabel.y-marker.levelLabel.levelBaseY+marker.floatLift)<.001))};
    });
-   assert.ok(floatCheck.labels.every(l=>Math.abs(l.right-14)<.01&&Math.abs(l.bottom-14)<.01&&l.white>0&&l.dark>0&&l.offsetX===1&&l.offsetY===1&&l.blur===0),'white text and shadow have 2px outer inset on right and bottom');
+   assert.ok(floatCheck.labels.every(l=>Math.abs(l.right-14)<.01&&Math.abs(l.bottom-14)<.01&&l.white>0&&l.dark>0&&l.color.toUpperCase()==='#F4F1E9'&&l.offsetX===1&&l.offsetY===1&&l.blur===0),'paper text and shadow have 2px outer inset on right and bottom');
    assert.ok(floatCheck.synchronized);assert.ok(floatCheck.lifts.every(v=>v>=0&&v<=4));
    assert.ok(new Set(floatCheck.lifts).size>1,'staggered floating phases');
    await page.waitForFunction(old=>{const s=window.__previewGame.scene.getScene('Game');return s.itemCardPreview.cards.some(({marker},i)=>marker.floatLift!==old[i]);},floatCheck.lifts);

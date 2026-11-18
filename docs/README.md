@@ -9,7 +9,7 @@
 
 > **devel 자동 공격 비교:** 기본 실행에 새싹 요정 5발 빨강·물 요정 2발 노랑 자동 발사 및 적 피격/처치가 추가됐다. `?attack=0`은 이전 비전투 군집 비교, 요정 전면 기본, `?full=1`은 100칸으로 조합 가능하다. [공격 규격](./enemy-preview.md). 꽃 피해·실제 웨이브·보상 미구현.
 
-> **main/devel Garden 16 v9:** [공통 색상 가이드](./ui-color-guide.md)가 최신 색상 규격이다. 16개 기본색 및 UI 파생 음영을 적용하고, SVG 원본은 보존하며 `?svgcolors=original`에서 원본 색상을 표시한다. 아래 이전 팔레트 수치와 색상 관련 기록은 역사적 기준이다.
+> **devel Garden 20 v10 (main v9):** [공통 색상 가이드](./ui-color-guide.md)가 최신 색상 규격이다. 기존 16개 재질색과 어두운 UI 4색을 적용하고 나머지 고정 UI 색을 기존 16색에 통합하며, SVG 원본은 보존하며 `?svgcolors=original`에서 원본 색상을 표시한다. 아래 이전 팔레트 수치와 색상 관련 기록은 역사적 기준이다.
 
 > **devel 군집 전투 미리보기:** 적 12종 가시 긴 변 24~40px, 시간에 따라 동시 목표 1→200마리(120초). 12종 최초 순환 뒤 레벨별 출현 비중 60/30/10%. 초기 4칸 및 `?full=1` 100칸. 꽃과 요정의 기본 크기·속도·모션 유지. 실제 전투/충돌/웨이브 규칙 아님. [무작위 출현 및 모션 규격](./enemy-preview.md).
 
@@ -30,7 +30,7 @@
 | [deployment.md](./deployment.md) | main/devel GitHub Pages 배포 구성, 초기 설정 및 검증 방법 |
 | [resolution-960x540.md](./resolution-960x540.md) | 현재 devel 실험 규격, 변경 범위 및 검증 |
 | [ui-spacing-guide.md](./ui-spacing-guide.md) | 용도별 공통 간격 3/5/10/20px, 패딩·정렬 및 예외 적용 가이드 |
-| [ui-color-guide.md](./ui-color-guide.md) | Garden 16 공통 UI·에셋 색상 원본, 명도/소재/상태 규칙, 신규 객체 제작 및 검증 |
+| [ui-color-guide.md](./ui-color-guide.md) | Garden 20 v10 공통 UI·에셋 색상 원본, 명도/소재/상태 규칙, 신규 객체 제작 및 검증 |
 | [ui-scale-audit.md](./ui-scale-audit.md) | 960×540 논리 규격·실제 화면 간격·배율 감사 |
 | [ui-metrics-benchmark.md](./ui-metrics-benchmark.md) | 실제 브라우저 10개 UI 시안 비교, 측정 기준, 순위 및 J안 선정 |
 | [implementation.md](./implementation.md) | 현재 게임의 설계 및 구현 상태. 시스템별 적용 사항, 확정된 미구현 사항, 코드 위치 |

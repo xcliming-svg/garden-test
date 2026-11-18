@@ -47,7 +47,7 @@ try{
    await page.waitForFunction(()=>{const s=window.__previewGame.scene.getScene('Game');return s.fairyPatrol?.actors.length===11&&s.enemyPreview?.entries.length===12&&s.flowerGrowth?.entries.size>0});
    const state=await page.evaluate(()=>{
     const s=window.__previewGame.scene.getScene('Game'),P=window.GardenPalette,G=window.GardenSvgPalette;
-    const allowed=new Set(Object.values(P.n)),cv=document.createElement('canvas'),ctx=cv.getContext('2d',{willReadFrequently:true});
+    const allowed=new Set(Object.values(P.materialN)),cv=document.createElement('canvas'),ctx=cv.getContext('2d',{willReadFrequently:true});
     function read(key){const im=s.textures.get(key).getSourceImage();cv.width=im.width;cv.height=im.height;ctx.drawImage(im,0,0);const d=ctx.getImageData(0,0,cv.width,cv.height).data;let opaque=0,off=0;const colors=new Set();for(let i=0;i<d.length;i+=4){if(d[i+3]===255){const c=(d[i]<<16)|(d[i+1]<<8)|d[i+2];opaque++;colors.add(c);if(!allowed.has(c))off++;}}return {key,opaque,off,colors:[...colors]}}
     const art=s.enemyPreview.entries.map(e=>read('enemy-preview:'+e.id+':base'));
     for(const key of ['fairy:garden:normal','fairy:water:normal','garden-pebble:stone','garden-pebble:silver','fairy:eyes'])art.push(read(key));
@@ -88,7 +88,7 @@ try{
       path:s.fairyPatrol.length};
     const F=window.GardenFlowerGrowth;
     for(const n of F.names)for(let stage=1;stage<=3;stage++)art.push(read(F.key(n,stage)));
-    return {palette:Object.values(P.hex),reference:P.reference.hex,enabled:G.enabled,art,outlines,enemyChecks,initialTint,adaptive,config,outlineCount:actors.filter(a=>a.outline).length,fade,enemyFade,outlineFade,synced,terrain,actors:s.fairyPatrol.actors.length,enemies:s.enemyPreview.entries.length,flowers:s.flowerGrowth.entries.size};
+    return {palette:Object.values(P.hex),material:Object.values(P.materialHex),reference:P.reference.hex,enabled:G.enabled,art,outlines,enemyChecks,initialTint,adaptive,config,outlineCount:actors.filter(a=>a.outline).length,fade,enemyFade,outlineFade,synced,terrain,actors:s.fairyPatrol.actors.length,enemies:s.enemyPreview.entries.length,flowers:s.flowerGrowth.entries.size};
    });
    assert.equal(state.actors,11);assert.equal(state.flowers,query.includes('full=1')?100:4);
    assert.deepEqual(state.config,{enabled,color,width,hex:state.palette[Object.keys({bark:0,stone:0,clay:0,silver:0,paper:0,sand:0,gold:0,red:0,redDark:0,pink:0,growth:0,growthLight:0,sky:0,skyLight:0,lavender:0,violet:0}).indexOf(color)]});
@@ -100,8 +100,10 @@ try{
    assert.equal(terrain.stones,0);assert.ok(terrain.points>20);
    if(name!=='light')assert.ok(terrain.occupied.every(p=>p[3]===0)&&terrain.candidates.every(p=>p[3]===0));
    assert.equal(terrain.field,name==='light'?0:6);
-   assert.equal(state.palette.length,16);assert.equal(new Set(state.palette).size,16);
-   assert.deepEqual(state.palette,['#4E352E','#706975','#AD7850','#96919B','#F4F1E9','#F5D3A5','#F6BB48','#FB575F','#D23840','#EB6A83','#84A83E','#C3D968','#6794D8','#91B8F7','#AB75DA','#824DB6']);
+   assert.equal(state.palette.length,20);assert.equal(new Set(state.palette).size,20);
+   assert.equal(state.material.length,16);assert.ok(Object.values(state.reference).every(c=>state.palette.includes(c)));
+   assert.deepEqual(state.material,['#4E352E','#706975','#AD7850','#96919B','#F4F1E9','#F5D3A5','#F6BB48','#FB575F','#D23840','#EB6A83','#84A83E','#C3D968','#6794D8','#91B8F7','#AB75DA','#824DB6']);
+   assert.deepEqual(state.palette,[...state.material,'#0D0D0E','#16161A','#3B3A44','#535361']);
    const original=name==='original';assert.equal(state.enabled,!original);
    const prefix='/assets/'+(original?'':'palette16/');
    assert.equal([...paths].filter(p=>p.startsWith(prefix+'enemies/')&&p.endsWith('.svg')).length,12);
@@ -109,7 +111,7 @@ try{
    assert.equal([...paths].filter(p=>p.startsWith(prefix+'fairies/')&&p.endsWith('.svg')).length,4);
    assert.equal([...paths].filter(p=>p.startsWith(prefix+'pebbles/')&&p.endsWith('.svg')).length,2);
    if(!original)for(const a of state.art)assert.ok(a.opaque>0&&a.off/a.opaque<.08,JSON.stringify({key:a.key,opaque:a.opaque,off:a.off}));
-   if(name!=='light'){assert.equal(state.reference.background,'#0D0D0E');assert.equal(state.reference.panel,'#3B3A44');assert.equal(state.reference.redText,'#F89596');}
+   if(name!=='light'){assert.equal(state.reference.background,'#0D0D0E');assert.equal(state.reference.panel,'#3B3A44');assert.equal(state.reference.redText,'#FB575F');assert.equal(state.reference.header,'#535361');assert.equal(state.reference.hudLabel,'#96919B');}
    assert.deepEqual(errors,[]);assert.deepEqual(failures,[]);
    await page.screenshot({path:join(out,'garden16-v9-'+name+'.png')});
    if(name==='default'){

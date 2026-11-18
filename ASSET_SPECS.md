@@ -9,7 +9,7 @@
 
 > **devel 자동 구슬:** 런타임 원형 6논리 px, 빨강 red #FB575F/노랑 gold #F6BB48, bark 외곽 및 paper 하이라이트. 기존 원본 SVG 수정/추가 없음. Depth 6 및 전장 마스크. [공격 규격](./docs/enemy-preview.md).
 
-> **main/devel Garden 16 v9:** [공통 색상 가이드](./docs/ui-color-guide.md)가 최신 색상 규격이다. 16개 기본색 및 UI 파생 음영을 적용하고, SVG 원본은 보존하며 `?svgcolors=original`에서 원본 색상을 표시한다. 아래 이전 팔레트 수치와 색상 관련 기록은 역사적 기준이다.
+> **devel Garden 20 v10 (main v9):** [공통 색상 가이드](./docs/ui-color-guide.md)가 최신 색상 규격이다. 기존 16개 재질색과 어두운 UI 4색을 적용하고 나머지 고정 UI 색을 기존 16색에 통합하며, SVG 원본은 보존하며 `?svgcolors=original`에서 원본 색상을 표시한다. 아래 이전 팔레트 수치와 색상 관련 기록은 역사적 기준이다.
 
 > **devel 적 동물 12종:** 원본 SVG 1000×1000 12종과 눈 좌표 JSON 보존. 512px AA/LINEAR 합성, 기존 요정 눈 normal/closed/angry/dizzy 사용. 꽃 셀 22px·주인공 가시 40px 기준 4개 공격 유형×3레벨, 가시 긴 변 목표 24~40px, 원본 종횡비 유지. 단일 SVG 기반 전신 이동·공격 변환, 추가 동작 에셋 없음. [규격](./docs/enemy-preview.md).
 

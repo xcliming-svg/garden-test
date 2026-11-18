@@ -1,7 +1,7 @@
-name: Garden 16 v9 verification
+name: Garden 20 v10 verification
 on:
   push:
-    branches: [feature/garden16-v9, devel, main]
+    branches: [feature/garden16-v9, feature/garden20-v10, devel, main]
   pull_request:
     branches: [devel, main]
 permissions:

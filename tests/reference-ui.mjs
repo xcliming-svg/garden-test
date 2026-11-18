@@ -322,8 +322,8 @@ for(const c of configs){
   check('Garden 16 exactly 16 shared game colors and semantic roles',await page.evaluate(()=>{
     const P=window.GardenPalette,R=P.reference,L=window.GardenGameLayout,U=window.GardenUI;
     const expected=['#4E352E','#706975','#AD7850','#96919B','#F4F1E9','#F5D3A5','#F6BB48','#FB575F','#D23840','#EB6A83','#84A83E','#C3D968','#6794D8','#91B8F7','#AB75DA','#824DB6'];
-    return Object.values(P.hex).length===16&&new Set(Object.values(P.hex)).size===16&&expected.every(c=>Object.values(P.hex).includes(c))&&R.baseHex===P.hex&&R.hex.background==='#0D0D0E'&&R.hex.panel==='#3B3A44'&&R.hex.redText==='#F89596'&&
-      U.C.button===L.colors.normalFill&&U.C.muted===L.colors.hudLabel&&L.colors.label===L.colors.hudLabel&&
+    return Object.values(P.hex).length===20&&new Set(Object.values(P.hex)).size===20&&Object.values(P.materialHex).length===16&&expected.every(c=>Object.values(P.materialHex).includes(c))&&Object.values(R.hex).every(c=>Object.values(P.hex).includes(c))&&R.baseHex===P.hex&&R.hex.background==='#0D0D0E'&&R.hex.panel==='#3B3A44'&&R.hex.redText==='#FB575F'&&
+      U.C.button===L.colors.normalFill&&U.C.muted===L.colors.label&&L.colors.hudLabel===R.hex.hudLabel&&
       U.C.panelAlt===R.n.selected&&U.C.subtle===U.C.border&&L.colors.progressBorder===U.C.border&&
       L.colors.progressTrack===L.colors.disabledFill&&R.n.hudLight===R.n.gridLine&&L.colors.blueprintLine===R.n.gridLine;
   }));
@@ -701,7 +701,7 @@ for(const c of configs){
   await button('MainMenu','성공 화면');await page.waitForFunction(()=>window.__benchmarkGame.scene.isActive('Victory'));inspectMenu(await menuMetrics('Victory'),'Victory');await menuAudit('Victory');
   await button('Victory','메인 메뉴');await page.waitForFunction(()=>window.__benchmarkGame.scene.isActive('MainMenu'));await button('MainMenu','실패 화면');await page.waitForFunction(()=>window.__benchmarkGame.scene.isActive('Defeat'));inspectMenu(await menuMetrics('Defeat'),'Defeat');await menuAudit('Defeat');
   check('runtime errors',errors.length===0,errors.join('; '));
-  check('tooltip gap and palette role contract',await page.evaluate(()=>{let L=window.GardenGameLayout,T=L.itemTooltip,p=L.tooltipPosition({x:400,y:200,size:24},T.width,100,L.spec.top+L.spec.fieldHeight);return T.width===L.hud.barWidth&&T.width===158&&T.gap===T.padding&&p.x===417&&T.padding===5&&T.padding===L.spec.blueprint.padding&&T.bottomPadding===T.padding&&T.rowGap===5&&T.lineSpacing===4&&T.strokeWidth===1&&T.background===L.colors.normalFill&&T.header===window.GardenPalette.reference.n.header&&T.description===L.colors.hudLabel&&!('divider' in T)}));
+  check('tooltip gap and palette role contract',await page.evaluate(()=>{let L=window.GardenGameLayout,T=L.itemTooltip,p=L.tooltipPosition({x:400,y:200,size:24},T.width,100,L.spec.top+L.spec.fieldHeight);return T.width===L.hud.barWidth&&T.width===158&&T.gap===T.padding&&p.x===417&&T.padding===5&&T.padding===L.spec.blueprint.padding&&T.bottomPadding===T.padding&&T.rowGap===5&&T.lineSpacing===4&&T.strokeWidth===1&&T.background===L.colors.normalFill&&T.header===window.GardenPalette.reference.n.header&&T.description===window.GardenPalette.reference.hex.label&&!('divider' in T)}));
   const locales=await page.evaluate(()=>window.GardenUI.hudLabels);
   const localeResults=[];
   for(const [lang, labels] of Object.entries(locales)){
@@ -830,7 +830,7 @@ for(const c of configs){
     await move(10,200);
     const state=await snapshotColors();
     if(mode==='default')baseline=JSON.stringify(state);
-    check('removed color mode '+mode+' identical locked-slot garden and original UI',JSON.stringify(state)===baseline&&state.mismatch===0&&state.colors.gardenSoil===0x16161a&&state.colors.gardenBorder===0x535361&&state.colors.gardenSoil===state.locked[0]&&state.colors.gardenBorder===state.locked[1]&&state.normal[0]===0x3B3A44&&state.cards.every(c=>c[0]===0x535361&&c[1]===0x3B3A44),JSON.stringify(state));
+    check('removed color mode '+mode+' identical locked-slot garden and original UI',JSON.stringify(state)===baseline&&state.mismatch===0&&state.colors.gardenSoil===0x16161a&&state.colors.gardenBorder===0x535361&&state.colors.gardenSoil===state.locked[0]&&state.colors.gardenBorder===state.locked[1]&&state.normal[0]===0x16161A&&state.cards.every(c=>c[0]===0x535361&&c[1]===0x3B3A44),JSON.stringify(state));
     if(mode==='default'||mode==='10'){
       for(const [w,h] of [[960,540],[1920,1080]]){
         await page.setViewportSize({width:w,height:h});

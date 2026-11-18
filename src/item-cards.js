@@ -162,7 +162,7 @@
     const value='Lv.'+level;
     let label=group.levelLabel;
     if(!label){
-      label=U.text(group.scene,0,0,value,8,'#FFFFFF').setName('item-level');
+      label=U.text(group.scene,0,0,value,8,P.hex.paper).setName('item-level');
       label.setPadding(0,0,2,2);
       group.add(label);group.levelLabel=label;
       label.alignVisible=()=>{

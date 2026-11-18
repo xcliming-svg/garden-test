@@ -8,7 +8,7 @@
   const scriptSrc=typeof document==='undefined'?'':(document.currentScript?.getAttribute('src')||'');
   const revision=scriptSrc.match(/[?&]v=([0-9a-f]{40})(?:&|$)/i)?.[1];
   const path=relative=>'assets/'+(enabled?'palette16/':'')+relative+(revision?'?v='+revision:'');
-  const rgb=Object.values(window.GardenPalette.n).map(n=>[n>>16&255,n>>8&255,n&255]);
+  const rgb=Object.values(window.GardenPalette.materialN).map(n=>[n>>16&255,n>>8&255,n&255]);
   const cache=new Map();
   function nearest(r,g,b){
     r=Math.round(r);g=Math.round(g);b=Math.round(b);

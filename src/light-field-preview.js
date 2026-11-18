@@ -1,9 +1,9 @@
 (function(){
   'use strict';
   const P=window.GardenPalette;
-  // Sampled from the supplied screenshot (not a screenshot-as-background).
-  const grass=[0x83a650,0x8cae56,0x7a9b49,0x92b35d,0x759748,0x9cba65,0x688a3f];
-  const dirt=[0xa16a3e,0xad7849,0x81512e,0xc18c54];
+  // Warm comparison is restricted to the approved material colors.
+  const grass=[P.n.growth,P.n.growthLight,P.n.growth,P.n.growthLight,P.n.growth,P.n.growthLight,P.n.growth];
+  const dirt=[P.n.clay,P.n.clay,P.n.bark,P.n.sand];
   function hash(x,y){let h=(Math.imul(x+17,374761393)+Math.imul(y+31,668265263))|0;h=Math.imul(h^(h>>>13),1274126177);return (h^(h>>>16))>>>0;}
   const css=c=>'#'+c.toString(16).padStart(6,'0');
   function field(scene,spec){

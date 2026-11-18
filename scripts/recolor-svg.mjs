@@ -6,7 +6,7 @@ import assert from 'node:assert/strict';
 const read=p=>readFileSync(p,'utf8').replace(/\r\n/g,'\n').trimEnd()+'\n';
 const window={location:{search:''}};
 runInNewContext(read('src/palette.js'),{window,URLSearchParams});
-const palette=window.GardenPalette.hex;
+const palette=window.GardenPalette.materialHex;
 const roles=JSON.parse(read('scripts/svg-palette-roles.json'));
 const paint=/\b(fill|stroke|stop-color)="(#[\da-fA-F]{6})"/g;
 const normalizedPaint=/\b(fill|stroke|stop-color)="(#[\da-fA-F]{6}|none)"/g;
