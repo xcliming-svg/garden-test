@@ -293,7 +293,7 @@
 
   const bottomInk = U.inkBounds;
 
-  function drawSlotCost(scene, x, y, size, value) {
+  function drawSlotCost(scene, x, y, size, value, visible=true) {
     const c = slotCost, centerY = y + size / 2;
     const cost = text(scene, x + size / 2, 0, String(value), c.fontSize, colors.disabledText, 'center').setName('slot-cost-value');
     const icon = window.GardenItemCards.gemIcon(scene,c.iconSize).setName('slot-cost-icon');
@@ -320,6 +320,7 @@
       cost.setMask(mask);
       cost.once('destroy', () => { mask.destroy(); clip.destroy(); });
     }
+    if(!visible){cost.setVisible(false);icon.setVisible(false);}
     return alignCost;
   }
 
@@ -343,6 +344,7 @@
     equipped.forEach(item => {
       if (item) statKeys.forEach(key => { result[key] += item.stats[key] || 0; });
     });
+    if(balancedCombat)result.dps=Math.round(result.dps*10)/10;
     return result;
   }
 
@@ -378,7 +380,7 @@
     layout.slotFrames = layout.slots.map((slot,i) => {
       const disabled=i>=s.preview;
       const frame=U.pixelBox(scene,slot.x+slot.size/2,slot.y+slot.size/2,slot.size,slot.size,disabled?colors.disabledFill:colors.emptySlotFill,{strokeWidth:s.line,border:disabled?colors.disabledBorder:colors.normalBorder}).setName('slot-frame:'+i);
-      if(disabled&&i===s.preview)layout.alignCost=drawSlotCost(scene,slot.x+s.line,slot.y+s.line,s.cell,s.exampleCost);
+      if(disabled&&i===s.preview||s.preview===s.max&&i===s.max-1)layout.alignCost=drawSlotCost(scene,slot.x+s.line,slot.y+s.line,s.cell,s.exampleCost,disabled);
       return frame;
     });
     // 기존 확장 슬롯은 표시만 하며 드롭/클릭 대상으로 등록하지 않는다.
@@ -584,7 +586,7 @@
       if(combatSpeed!==undefined){current.moveSpeed=combatSpeed;next.moveSpeed=combatSpeed;}
       const rows = layout.alignCost();
       stats.forEach(row => {
-        const d = next[row.key] - current[row.key];
+        const d = Math.round((next[row.key] - current[row.key])*10)/10;
         row.value.setText(String(next[row.key]));
         row.delta.setText(d ? signed(d) : '').setColor(d > 0 ? R.hex.green : d < 0 ? R.hex.redText : colors.value)
           .setVisible(d !== 0);
