@@ -1902,5 +1902,17 @@
       "#CDA851",
       "gold"
     ]
+  ],
+  "items/gem_1000.svg": [
+    [
+      "#63C2F8",
+      "skyLight"
+    ]
+  ],
+  "items/heart_1000.svg": [
+    [
+      "#F75853",
+      "red"
+    ]
   ]
 }

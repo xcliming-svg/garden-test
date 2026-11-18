@@ -57,7 +57,7 @@ try{
    const start=async()=>{await click(480,252);await page.waitForFunction(()=>window.__previewGame.scene.getScene('Game').fairyPatrol?.actors.length===11);};
    await start();
    const initial=await snapshot();
-   for(const file of ['01_shoe.svg','05_wheel.svg'])assert.ok(svgRequests.some(u=>u.pathname.endsWith('/assets/palette16/items/'+file)&&u.searchParams.get('v')===revision),'versioned SVG request '+file);
+   for(const file of ['01_shoe.svg','05_wheel.svg','gem_1000.svg','heart_1000.svg'])assert.ok(svgRequests.some(u=>u.pathname.endsWith('/assets/palette16/items/'+file)&&u.searchParams.get('v')===revision),'versioned SVG request '+file);
    const colors=await page.evaluate(()=>{
     const scene=window.__previewGame.scene.getScene('Game');
     function palette(id){const c=scene.textures.get('item-svg:trim:'+id).getSourceImage(),data=c.getContext('2d').getImageData(0,0,c.width,c.height).data,result={};for(let i=0;i<data.length;i+=4)if(data[i+3]===255){const k=[data[i],data[i+1],data[i+2]].map(v=>v.toString(16).padStart(2,'0')).join('');result[k]=(result[k]||0)+1;}return result;}
@@ -94,6 +94,18 @@ try{
    assert.ok(initial.items.every(o=>!o.texture.includes('water-splash')));
    assert.ok([...initial.items,...initial.flowers].every(o=>Math.abs(Math.max(o.textureWidth,o.textureHeight)-o.span*w/960)<=1),'native output-sized textures');
    assert.ok(initial.ground.every(o=>o.visible&&!o.interactive&&/^item-svg:trim:(gem|heart):display:/.test(o.texture)));
+   assert.equal(initial.ground.find(o=>o.name==='ground-relic:gem').span,12);
+   assert.equal(initial.ground.find(o=>o.name==='ground-relic:heart').span,14);
+   const relicColors=await page.evaluate(()=>{
+    const s=window.__previewGame.scene.getScene('Game');
+    return ['gem','heart'].map(id=>{
+     const c=s.textures.get('item-svg:trim:'+id).getSourceImage(),data=c.getContext('2d').getImageData(0,0,c.width,c.height).data;
+     const fills=new Set();
+     for(let i=0;i<data.length;i+=4)if(data[i+3]===255)fills.add([data[i],data[i+1],data[i+2]].map(v=>v.toString(16).padStart(2,'0')).join(''));
+     return [...fills];
+    });
+   });
+   assert.deepEqual(relicColors,[['91b8f7'],['fb575f']]);
    assert.ok([...initial.flowers,...initial.items].every(o=>o.visible));
    assert.equal(initial.enemy,false);assert.equal(initial.combat,false);assert.equal(initial.stage,4);
    const expected=[

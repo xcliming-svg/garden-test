@@ -11,7 +11,7 @@ const roles=JSON.parse(read('scripts/svg-palette-roles.json'));
 const paint=/\b(fill|stroke|stop-color)="(#[\da-fA-F]{6})"/g;
 const normalizedPaint=/\b(fill|stroke|stop-color)="(#[\da-fA-F]{6}|none)"/g;
 const potSeam='<path d="M673,413c0-7.04-13.03-1.25-17.65,.43c-8.3,3.02-18.65,3.03-27.35,4.57c-32.52,5.76-64.4,2.1-97-1c-11.88-1.13-23.52-7-35-7" fill="none" stroke="'+palette.bark+'" stroke-width="5" stroke-linecap="round"/>\n';
-assert.equal(Object.keys(roles).length,58);
+assert.equal(Object.keys(roles).length,60);
 assert.equal(new Set(Object.values(palette)).size,16);
 for(const [f,sequence] of Object.entries(roles)){
  const original=read(join('assets',f));let i=0;
@@ -31,4 +31,4 @@ for(const [f,sequence] of Object.entries(roles)){
  if(transparentWheel)assert.equal((converted.match(/fill="none"/g)||[]).length,5,'wheel gaps must be transparent');
  for(const m of converted.matchAll(paint))assert.ok(Object.values(palette).includes(m[2]),f);
 }
-console.log('PASS 58 original SVGs; paint roles, wheel transparency and pot seam verified');
+console.log('PASS 60 original SVGs; paint roles, wheel transparency and pot seam verified');
