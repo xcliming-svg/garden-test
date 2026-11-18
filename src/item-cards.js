@@ -3,7 +3,8 @@
   // Inspect all supplied items independently of combat, using their vector artwork.
   const G=window.GardenFlowerGrowth,U=window.GardenUI,P=window.GardenPalette;
   const params=new URLSearchParams(window.location.search);
-  const enabled=window.GardenFairyPatrol.enabled&&!window.GardenEnemyPreview.enabled&&G.enabled&&params.get('cards')!=='0'&&params.get('cards')!=='legacy';
+  const weaponCombat=window.GardenEnemyPreview.enabled&&params.get('weapons')==='1'&&params.get('attack')!=='0';
+  const enabled=window.GardenFairyPatrol.enabled&&(!window.GardenEnemyPreview.enabled||weaponCombat)&&G.enabled&&params.get('cards')!=='0'&&params.get('cards')!=='legacy';
   // UI-only specimen values. These never feed patrol, projectile or enemy state.
   const minLevel=1,maxLevel=3;
   const entries=Object.freeze([
@@ -201,7 +202,7 @@
   function destroyRelic(image){
     displayState.get(image.scene)?.images.delete(image);image.destroy();
   }
-  function draw(scene,spec,assets){
+  function draw(scene,spec,assets,showGround=true){
     const cards=[],flowers=[],ground=[];
     for(let i=0;i<G.names.length;i++){
       const name=G.names[i],texture=trim(scene,flowerId(name),G.key(name,G.maxStage,100));
@@ -216,7 +217,7 @@
       setLevelLabel(marker,item.level);
       cards.push({marker,x,y,idleDepth:marker.depth,item:Object.freeze({id:item.id,name:item.name,texture,desc:item.desc,level:item.level,stats:item.stats,tooltipEffect:item.tooltipEffect})});
     }
-    for(let i=0;i<relics.length;i++){
+    for(let i=0;showGround&&i<relics.length;i++){
       const item=relics[i],texture=trim(scene,item.id,raw(item.id));
       const x=212+i*56,y=360;
       const image=fit(scene.add.image(x,y,texture),texture,item.span).setDepth(4).setName('ground-relic:'+item.id);

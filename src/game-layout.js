@@ -745,7 +745,8 @@
       card.marker.setDepth(card.idleDepth??(ballMode?5:0)).setPosition(card.x, card.y).setAlpha(1);
       if(card.drop)card.drop.dragging=false;
       if (index >= 0&&(!ballMode||(!equipped[index]&&scene.combatPreview.model.equip(card.id,index)))) {
-        equipped[index] = card.item; // 테스트 장착 상태.
+        equipped[index] = card.item;
+        scene.heroWeaponPreview?.equip(index,card.item.id);
         card.consumed = true;
         card.marker.disableInteractive().setVisible(false);
       }
@@ -1080,10 +1081,11 @@
     const layout=drawSlots(scene);
     drawBlueprint(scene);
     const fairy=window.GardenFairyPatrol.enabled;
-    const cardMode=fairy&&!window.GardenEnemyPreview.enabled&&params.get('cards')!=='0';
-    const markers=cardMode?(window.GardenItemCards.enabled?window.GardenItemCards.draw(scene,spec,assets):drawMarkers(scene,['flower','item'])):{cards:[],flowers:[]};
+    const weaponCombat=!!(window.GardenHeroWeaponPreview?.enabled&&window.GardenHeroWeaponPreview.combat);
+    const cardMode=fairy&&(!window.GardenEnemyPreview.enabled||weaponCombat)&&params.get('cards')!=='0';
+    const markers=cardMode?(window.GardenItemCards.enabled?window.GardenItemCards.draw(scene,spec,assets,!weaponCombat):drawMarkers(scene,['flower','item'])):{cards:[],flowers:[]};
     const itemPreview=drawItemPreview(scene,layout,markers.cards,cardMode?undefined:window.GardenCombatPreview.tuning.walkSpeed,!cardMode);
-    const status=text(scene,spec.width-10,spec.top+spacing.base,fairy?(window.GardenEnemyPreview.enabled&&window.GardenFairyAttack.enabled?'자동 공격 · 요정 11명':'정원 순찰 · 요정 11명'):'테스트 전투 · 공 1개',bottomStats.fontSize,colors.label,'right').setDepth(16).setName(fairy?'fairy-patrol-status':'combat-ball-count');
+    const status=text(scene,spec.width-10,spec.top+spacing.base,fairy?(weaponCombat?'장착 무기 · 나뭇잎 요정':window.GardenEnemyPreview.enabled&&window.GardenFairyAttack.enabled?'자동 공격 · 요정 11명':'정원 순찰 · 요정 11명'):'테스트 전투 · 공 1개',bottomStats.fontSize,colors.label,'right').setDepth(16).setName(fairy?'fairy-patrol-status':'combat-ball-count');
     window.GardenFlowerHeadPreview.draw(scene,spec,colors,gardenRaster,patrolBounds,patrolPosition,(elapsed,kills,gems,occupied)=>{
       if(scene.flowerGrowth)scene.flowerGrowth.render(elapsed);
       updateHud(elapsed,kills,gems,occupied);

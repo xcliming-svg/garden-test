@@ -192,7 +192,7 @@
       do {
         const dt=Math.min(spawning.step,left);left-=dt;elapsed+=dt;
         for(let i=actors.length-1;i>=0;i--){
-          const a=actors[i];a.age+=dt;
+          const a=actors[i];a.age+=dt*(elapsed<(a.slowUntil||0)?1-(a.slowAmount||0):1);
           if(a.age>=a.duration){actors.splice(i,1);completed++;}else updateActor(a);
         }
         const wanted=target(elapsed);
@@ -211,7 +211,11 @@
       if(a.hp===0){actors.splice(i,1);kills++;onDeath?.(a.pose.x,a.pose.ground);return {killed:true,hp:0};}
       a.hitUntil=elapsed+window.GardenFairyAttack.tuning.hitSeconds;updateActor(a);return {killed:false,hp:a.hp};
     }
-    return {actors,advance,setExpression,damage,get elapsed(){return elapsed;},get spawned(){return spawned;},get completed(){return completed;},get kills(){return kills;}};
+    function slow(id,amount,duration){
+      const a=actors.find(e=>e.id===id);if(!a)return false;
+      a.slowAmount=Math.max(0,Math.min(.9,amount));a.slowUntil=Math.max(a.slowUntil||0,elapsed+duration);return true;
+    }
+    return {actors,advance,setExpression,damage,slow,get elapsed(){return elapsed;},get spawned(){return spawned;},get completed(){return completed;},get kills(){return kills;}};
   }
   function attach(scene,spec,patrol){
     if(!enabled)return null;
@@ -221,14 +225,15 @@
     });
     const target=simulation?simulationTarget:targetCount;
     const A=window.GardenFairyAttack;
-    const relics=A.enabled?window.GardenRelicCollection.attach(scene,spec,patrol):null;
+    const weaponCombat=window.GardenHeroWeaponPreview?.combat&&window.GardenHeroWeaponPreview.enabled;
+    const relics=(A.enabled||weaponCombat)?window.GardenRelicCollection.attach(scene,spec,patrol):null;
     const model=createPopulation(spec,patrol,entries,Math.random,target,relics?.death),sprites=new Map();
     const occlusion=window.GardenEnemyOcclusion.attach(scene,spec,patrol);
     // The playable field clips partial entry/exit sprites; HUD is never covered.
     const clip=scene.make.graphics({x:0,y:0,add:false});
     clip.fillStyle(0xffffff,1).fillRect(0,spec.top,spec.width,spec.height-spec.top-spec.bottom);
     const fieldMask=clip.createGeometryMask();
-    const attack=A.enabled?A.attach(scene,spec,patrol,model,fieldMask):null;
+    const attack=A.enabled&&!weaponCombat?A.attach(scene,spec,patrol,model,fieldMask):null;
     function render(){
       const alive=new Set(model.actors.map(a=>a.id));
       for(const [id,sprite] of sprites)if(!alive.has(id)){sprite.image.destroy();sprite.shadow.destroy();sprites.delete(id);}
@@ -250,24 +255,24 @@
     }
     function advance(seconds){
       const dt=Math.max(0,Number.isFinite(seconds)?seconds:0);
-      if(!attack)model.advance(dt);
+      if(!relics)model.advance(dt);
       else if(!patrol.finished){
         if(dt===0)model.advance(0);
         let left=dt;
         while(left>1e-8){
           const step=Math.min(left,A.tuning.step);left-=step;
-          const previous=new Map(attack.positions().map(e=>[e.id,e]));
+          const previous=new Map((attack?.positions()||[]).map(e=>[e.id,e]));
           model.advance(step);
           // A completed strike damages its designated flower exactly once.
           relics.model.syncFlowers(patrol.occupied);
           for(const e of model.actors)if(!e.flowerHit&&(e.pose.phase==='recover'||e.pose.phase==='return')){
             e.flowerHit=true;relics.model.damageFlower(e.path.flower);
           }
-          attack.step(step,previous);relics.step(step);
+          attack?.step(step,previous);relics.step(step);
         }
       }
       render();
-      if(attack){attack.render();relics.render();patrol.refreshHud();}
+      if(relics){attack?.render();relics.render();patrol.refreshHud();}
       occlusion.update(Array.from(sprites.values(),s=>s.image),dt);
       return model.elapsed;
     }

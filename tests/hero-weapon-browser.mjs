@@ -56,10 +56,44 @@ try{
     await page.keyboard.press('Escape');await select.waitFor();assert.equal(await select.inputValue(),'rock');
     await select.selectOption('');
     assert.equal(await page.evaluate(()=>window.__previewGame.scene.getScene('Game').heroWeaponPreview.model.state.shots.length),0);
+    // Actual pointer drags: equipped weapons start automatically without a selector.
+    async function dragItem(id,index){
+      const points=await page.evaluate(({id,index})=>{
+        const s=window.__previewGame.scene.getScene('Game');
+        const c=s.itemCardPreview.cards.find(c=>c.item.id===id).marker;
+        const slot=s.children.getByName('preview-slot:'+index);
+        return {from:{x:c.x,y:c.y},to:{x:slot.x,y:slot.y}};
+      },{id,index});
+      const canvas=await page.locator('canvas').boundingBox();
+      const coords=p=>[canvas.x+p.x*canvas.width/960,canvas.y+p.y*canvas.height/540];
+      await page.mouse.move(...coords(points.from));await page.mouse.down();
+      await page.mouse.move(...coords(points.to),{steps:12});await page.mouse.up();
+    }
+    await dragItem('rock',0);
+    await page.waitForFunction(()=>window.__previewGame.scene.getScene('Game').heroWeaponPreview.model.state.shots.some(s=>s.kind==='rock'&&s.slot===0&&!s.preview));
+    assert.equal(await select.isDisabled(),true);
+    await dragItem('wheel',1);
+    await page.waitForFunction(()=>window.__previewGame.scene.getScene('Game').heroWeaponPreview.model.state.shots.some(s=>s.kind==='wheel'&&s.slot===1));
+    await dragItem('shield',0);
+    assert.deepEqual(await page.evaluate(()=>{const m=window.__previewGame.scene.getScene('Game').heroWeaponPreview.model;return {gear:m.state.equipped,old:m.state.shots.some(s=>s.slot===0)};}),{gear:['','wheel'],old:false});
+    await dragItem('shoe',1);assert.equal(await select.isDisabled(),false);
+    assert.equal(await page.evaluate(()=>window.__previewGame.scene.getScene('Game').heroWeaponPreview.model.state.shots.length),0);
     await page.evaluate(()=>window.__previewGame.scene.getScene('Game').scene.stop());
     await select.waitFor({state:'detached'});
     assert.deepEqual(errors,[]);
     console.log('PASS hero weapon preview',width,height,ids.length-1);
+    // Dedicated live enemy mode has no old radial attack and accepts weapon cards.
+    await page.goto('http://127.0.0.1:'+server.address().port+'/?enemies=1&weapons=1');
+    await page.waitForFunction(()=>window.__previewGame?.scene.isActive('MainMenu'));
+    const liveBox=await page.locator('canvas').boundingBox();
+    await page.mouse.click(liveBox.x+480*liveBox.width/960,liveBox.y+252*liveBox.height/540);
+    await select.waitFor();
+    await page.waitForFunction(()=>window.__previewGame.scene.getScene('Game').enemyPreview?.actors.length>0);
+    assert.equal(await page.evaluate(()=>window.__previewGame.scene.getScene('Game').enemyPreview.attack),null);
+    await dragItem('rock',0);
+    await page.waitForFunction(()=>window.__previewGame.scene.getScene('Game').heroWeaponPreview.model.state.hits>0,{},{timeout:60000});
+    assert.equal(await page.evaluate(()=>window.__previewGame.scene.getScene('Game').heroWeaponPreview.model.state.shots.every(s=>s.owner===0)),true);
+    assert.deepEqual(errors,[]);
     await page.close();
   }
 }finally{await browser?.close();await new Promise(r=>server.close(r));}
