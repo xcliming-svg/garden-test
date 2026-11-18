@@ -27,6 +27,7 @@
     return {...d,level:n+1,damage:d.damage[n],cooldown:d.cooldown[n],slow:d.slow?.[n]};
   };
   const hp=e=>({approach:10,charge:12,jump:10,fly:8}[e.attackType]||10)*e.level;
+  const finiteTarget=(total,elapsed,active,spawned)=>Math.min(200,active+Math.max(0,Math.min(total,Math.floor(elapsed*10)+1)-spawned));
   const groundContact=e=>(e.lift??0)<=3;
   const distance=(a,b)=>Math.hypot(a.x-b.x,a.y-b.y);
   const ground=e=>({x:e.x,y:e.ground??e.y});
@@ -136,5 +137,5 @@
     options.sort((a,b)=>b.score-a.score||a.target.id-b.target.id);
     return options[0]||null;
   }
-  window.GardenWeaponBalance=Object.freeze({data,stats,hp,level,slots,enemyCount,balanceWave,loadout,groundContact,eligibleHeight,ground,target,amount,nominalDps,choose});
+  window.GardenWeaponBalance=Object.freeze({data,stats,hp,level,slots,enemyCount,balanceWave,loadout,finiteTarget,groundContact,eligibleHeight,ground,target,amount,nominalDps,choose});
 }());
