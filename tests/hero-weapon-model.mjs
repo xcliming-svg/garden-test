@@ -34,4 +34,46 @@ m.select('balloon');m.step(.05,hero,[{id:1,x:480,y:110,radius:8}],()=>{throw Err
 m.equip(0,'rock');m.equip(2,'wheel');m.step(.05,hero);
 ok(m.state.shots.length===2&&m.state.shots.every(s=>!s.preview),'multiple equipped weapons');
 m.equip(0,'shoe');ok(m.state.shots.length===1&&m.state.shots[0].kind==='wheel','replacement only');
+// Wheel creates a hero-height wheel ahead of the body, then rolls without slip.
+for(const [direction,dx,dy] of [['right',0,-1],['down',1,0],['left',0,1],['up',-1,0]]){
+  const h={...hero,direction,visibleHeight:40,center:{x:480,y:270}},m=A.create(spec);
+  m.select('wheel');m.step(.01,h);const q=m.state.shots[0];
+  ok(q.span===40,'wheel height');
+  ok(Math.abs(q.x-h.center.x-dx*44)<1e-6&&Math.abs(q.y-h.center.y-dy*44)<1e-6,'ahead of body');
+  let last=0,delta=Infinity;
+  for(let i=1;i<=8;i++){
+    q.age=i*.2;const p=A.pose(q,h),d=A.wheelTravel(q);
+    ok(d-last<=delta+1e-6,'monotonic deceleration');
+    ok(Math.abs(Math.abs(p.angle)*20-d)<1e-6,'rolling without slip');
+    ok(Math.sign(p.angle)===(dx?Math.sign(dx):Math.sign(dy)),'roll direction');
+    delta=d-last;last=d;
+  }
+}
+{
+  const m=A.create(spec);m.select('wheel');
+  m.step(.01,{...hero,visibleHeight:40,center:{x:480,y:60}});
+  ok(m.state.shots.length===0,'no wheel spawned into HUD or body');
+  m.step(.01,{...hero,visibleHeight:32});
+  ok(m.state.shots[0].span===32,'wheel follows actual hero height');
+}
+{
+  const m=A.create(spec);m.select('flowerpot');m.step(.01,hero);const q=m.state.shots[0];
+  const ys=[0,.1,.2,.3,.4].map(age=>A.pose({...q,age},hero).y);
+  for(let i=2;i<ys.length;i++)ok(ys[i]-ys[i-1]>ys[i-1]-ys[i-2],'gravity accelerates');
+  q.age=.51;ok(A.pose(q,hero).alpha===1&&A.potFragments(q).length===0,'intact until impact');
+  q.age=.52;ok(A.pose(q,hero).alpha===0&&A.potFragments(q).length===12,'shatters on impact');
+  q.age=.8;ok(A.potFragments(q).every(p=>Object.values(p).filter(v=>typeof v==='number').every(Number.isFinite)),'finite shards');
+  q.age=1.15;ok(A.potFragments(q).every(p=>p.alpha<1e-8),'shards fade');
+}
+{
+  const m=A.create(spec);m.select('yellow-floor');m.step(.01,hero);const q=m.state.shots[0];
+  let previous=0;
+  for(const age of [0,.08,.16,.24,.32]){
+    const p=A.pose({...q,age},hero);
+    ok(p.x===q.tx&&p.y===q.ty,'stationary ground placement');
+    ok(p.scale>=previous,'spreads outward');
+    previous=p.scale;
+  }
+  ok(A.tuning['yellow-floor'].span===72&&previous===1,'larger 72px ground');
+}
 console.log('PASS equipped weapon model:',checks,'checks');
