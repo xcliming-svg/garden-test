@@ -4,20 +4,25 @@
   const G=window.GardenFlowerGrowth,U=window.GardenUI,P=window.GardenPalette;
   const params=new URLSearchParams(window.location.search);
   const enabled=window.GardenFairyPatrol.enabled&&!window.GardenEnemyPreview.enabled&&G.enabled&&params.get('cards')!=='0'&&params.get('cards')!=='legacy';
+  // UI-only specimen values. These never feed patrol, projectile or enemy state.
   const entries=Object.freeze([
-    ['shoe','신발','01_shoe.svg'],
-    ['balloon','풍선','05_balloon.svg'],
-    ['boomerang','부메랑','05_boomerang.svg'],
-    ['shield','방패','05_shield.svg'],
-    ['wheel','바퀴','05_wheel.svg'],
-    ['flowerpot','화분','06_flowerpot.svg'],
-    ['paper-plane','종이비행기','1_종이비행기_단일파츠(1).svg'],
-    ['bouncy-ball','탱탱볼','2_탱탱볼_단일파츠(3).svg'],
-    ['yellow-floor','노랑 장판','3_노랑장판_단일파츠(1).svg'],
-    ['sprinkler','스프링쿨러','3_스프링쿨러_단일파츠(4).svg'],
-    ['rock','돌','4_돌_단일파츠(1).svg'],
-    ['broom','빗자루','4_빗자루_단일파츠(1).svg']
-  ].map(([id,name,file])=>Object.freeze({id,name,file})));
+    ['shoe','신발','01_shoe.svg','이동 속도가 증가합니다.','moveSpeed',10],
+    ['balloon','물풍선','05_balloon.svg','떨어진 지점에서 터지며 주변 적들에게 피해를 줍니다.','dps',24],
+    ['boomerang','부메랑','05_boomerang.svg','날아갔다 돌아오며 경로상의 적들을 공격합니다.','dps',18],
+    ['shield','방패','05_shield.svg','방어력이 증가합니다.','defense',6],
+    ['wheel','바퀴','05_wheel.svg','적을 향해 돌진하며 경로상의 적들에게 피해를 줍니다.','dps',22],
+    ['flowerpot','화분','06_flowerpot.svg','적의 머리 위로 떨어져 피해를 줍니다.','dps',26],
+    ['paper-plane','종이비행기','1_종이비행기_단일파츠(1).svg','적을 추적해 명중할 때까지 날아갑니다.','dps',20],
+    ['bouncy-ball','탱탱볼','2_탱탱볼_단일파츠(3).svg','적에게 부딪히면 튕겨 나가 다른 적을 공격합니다.','dps',16],
+    ['yellow-floor','끈끈이','3_노랑장판_단일파츠(1).svg','영역에 들어온 적의 이동 속도를 감소시킵니다.','dps',8],
+    ['sprinkler','스프링클러','3_스프링쿨러_단일파츠(4).svg','원형으로 물을 뿌려 주변 적들을 공격합니다.','dps',18],
+    ['rock','돌멩이','4_돌_단일파츠(1).svg','적을 향해 돌멩이를 던져 기본 공격을 합니다.','dps',12],
+    ['broom','빗자루','4_빗자루_단일파츠(1).svg','빗자루를 휘둘러 범위 내의 적들을 공격합니다.','dps',20]
+  ].map(([id,name,file,desc,stat,value])=>Object.freeze({id,name,file,desc,stats:Object.freeze({[stat]:value})})));
+  // The source's bristle centre (1097,572) and handle tip (1183,380)
+  // define its longitudinal axis. Rotate that axis to -45° before cropping,
+  // so the diagonal can occupy the card without enlarging the card itself.
+  const broomRotation=-Math.PI/4-Math.atan2(380-572,1183-1097);
   const relics=Object.freeze([
     Object.freeze({id:'gem',name:'보석',file:'07_gem.svg',span:12}),
     Object.freeze({id:'heart',name:'하트',file:'07_heart.svg',span:14})
@@ -37,9 +42,16 @@
     if(scene.textures.exists(k))return k;
     if(!scene.textures.exists(sourceKey))throw Error('Missing item SVG: '+sourceKey);
     const source=scene.textures.get(sourceKey).getSourceImage();
-    const c=document.createElement('canvas');c.width=source.width;c.height=source.height;
+    const c=document.createElement('canvas');
+    const rotate=id==='broom'?broomRotation:0;
+    c.width=rotate?Math.ceil(Math.hypot(source.width,source.height))+2:source.width;
+    c.height=rotate?c.width:source.height;
     const ctx=c.getContext('2d',{willReadFrequently:true});
-    ctx.drawImage(source,0,0);
+    if(rotate){
+      ctx.translate(c.width/2,c.height/2);ctx.rotate(rotate);
+      ctx.drawImage(source,-source.width/2,-source.height/2);
+      ctx.setTransform(1,0,0,1,0,0);
+    }else ctx.drawImage(source,0,0);
     const {data}=ctx.getImageData(0,0,c.width,c.height);
     let left=c.width,right=-1,top=c.height,bottom=-1;
     for(let y=0;y<c.height;y++)for(let x=0;x<c.width;x++){
@@ -106,7 +118,7 @@
     if(image.texture.key!==k)image.setTexture(k);
     return image.setDisplaySize(logicalW,logicalH);
   }
-  const itemSpan=(size,id)=>size-(id==='broom'?4:8);
+  const itemSpan=(size,id)=>size-(id==='broom'?3:8);
   function card(scene,x,y,size,texture,kind,id){
     const R=P.reference.n;
     const border=U.pixelBox(scene,0,0,size,size,R.tabBorder);
@@ -133,7 +145,7 @@
       const item=entries[i],texture=trim(scene,item.id,raw(item.id));
       const x=682+(i%4)*56,y=126+Math.floor(i/4)*56;
       const marker=card(scene,x,y,assets.item.dropSize,texture,'item',item.id).setName('placeholder:item:'+String(i).padStart(2,'0'));
-      cards.push({marker,x,y,idleDepth:marker.depth,item:Object.freeze({id:item.id,name:item.name,texture,desc:'일반 아이템 · 효과 미구현',stats:Object.freeze({})})});
+      cards.push({marker,x,y,idleDepth:marker.depth,item:Object.freeze({id:item.id,name:item.name,texture,desc:item.desc,stats:item.stats})});
     }
     for(let i=0;i<relics.length;i++){
       const item=relics[i],texture=trim(scene,item.id,raw(item.id));
@@ -145,5 +157,5 @@
     scene.events.once('shutdown',()=>delete scene.itemCardPreview);
     return {cards,flowers};
   }
-  window.GardenItemCards=Object.freeze({enabled,entries,relics,preload,draw,setIcon,key});
+  window.GardenItemCards=Object.freeze({enabled,entries,relics,preload,draw,setIcon,key,broomRotation,itemSpan});
 }());

@@ -51,7 +51,7 @@ try{
     return {flowers,items,ground,gearTexture:obj('preview-equipped:0').list[2].texture.key,ghostTexture:obj('item-preview-ghost').list[2].texture.key,occupied:s.fairyPatrol.occupied,enemy:!!s.enemyPreview,combat:!!s.combatPreview,
      fairy:s.fairyPatrol.actors.length,stage:s.flowerGrowth.entries.size,slot:{x:slot.x+slot.size/2,y:slot.y+slot.size/2},candidate:cell(43),invalid:cell(44),
      ghost:obj('garden-preview-ghost').visible,gear:obj('preview-equipped:0').visible,tip:obj('item-preview-tooltip').visible,
-     speed:obj('stat-value:moveSpeed').text,dps:obj('stat-value:dps').text,progress:obj('hud-progress-value').text};
+     speed:obj('stat-value:moveSpeed').text,defense:obj('stat-value:defense').text,dps:obj('stat-value:dps').text,patrolSpeed:s.fairyPatrol.speed,tipRows:obj('item-preview-tooltip').list.filter(o=>typeof o.text==='string').map(o=>o.text),progress:obj('hud-progress-value').text};
    });
    const start=async()=>{await click(480,252);await page.waitForFunction(()=>window.__previewGame.scene.getScene('Game').fairyPatrol?.actors.length===11);};
    await start();
@@ -60,12 +60,34 @@ try{
    assert.equal(new Set(initial.flowers.map(o=>o.texture)).size,6);
    assert.equal(new Set(initial.items.map(o=>o.texture)).size,12);
    assert.ok(initial.flowers.every(o=>o.texture.startsWith('item-svg:trim:flower-')&&Math.abs(o.span-18)<.01));
-   assert.ok(initial.items.every(o=>o.texture.startsWith('item-svg:trim:')&&Math.abs(o.span-(o.texture.includes(':broom:')?28:24))<.01));
+   assert.ok(initial.items.every(o=>o.texture.startsWith('item-svg:trim:')&&Math.abs(o.span-(o.texture.includes(':broom:')?29:24))<.01));
    assert.ok(initial.items.every(o=>!o.texture.includes('water-splash')));
    assert.ok([...initial.items,...initial.flowers].every(o=>Math.abs(Math.max(o.textureWidth,o.textureHeight)-o.span*w/960)<=1),'native output-sized textures');
    assert.ok(initial.ground.every(o=>o.visible&&!o.interactive&&/^item-svg:trim:(gem|heart):display:/.test(o.texture)));
    assert.ok([...initial.flowers,...initial.items].every(o=>o.visible));
    assert.equal(initial.enemy,false);assert.equal(initial.combat,false);assert.equal(initial.stage,4);
+   const expected=[
+    ['신발','이동 속도 +10'],['물풍선','초당 피해량 +24'],['부메랑','초당 피해량 +18'],
+    ['방패','방어력 +6'],['바퀴','초당 피해량 +22'],['화분','초당 피해량 +26'],
+    ['종이비행기','초당 피해량 +20'],['탱탱볼','초당 피해량 +16'],['끈끈이','초당 피해량 +8'],
+    ['스프링클러','초당 피해량 +18'],['돌멩이','초당 피해량 +12'],['빗자루','초당 피해량 +20']
+   ];
+   for(let i=0;i<expected.length;i++){
+    await page.mouse.move(...coords(initial.items[i].x,initial.items[i].y));
+    const state=await snapshot();assert.equal(state.tip,true);
+    assert.equal(state.tipRows[0],expected[i][0]);
+    assert.ok(state.tipRows.includes(expected[i][1]));
+    assert.match(state.tipRows[1],/(합니다|줍니다|갑니다|시킵니다)\.$/);
+    assert.equal(state.patrolSpeed,initial.patrolSpeed);
+   }
+   await page.mouse.move(...coords(10,250));
+   const diagonal=await page.evaluate(()=>{
+    const W=window.GardenItemCards,s=window.__previewGame.scene.getScene('Game');
+    const t=s.textures.get(W.key('broom')).getSourceImage();
+    return {angle:Math.atan2(380-572,1183-1097)+W.broomRotation,w:t.width,h:t.height};
+   });
+   assert.ok(Math.abs(diagonal.angle+Math.PI/4)<1e-10);
+   assert.ok(Math.min(diagonal.w,diagonal.h)/Math.max(diagonal.w,diagonal.h)>.75,'diagonal broom fills both card dimensions');
    const art=await page.evaluate(()=>{
     const scene=window.__previewGame.scene.getScene('Game'),wheel=scene.textures.get('item-svg:trim:wheel').getSourceImage(),ctx=wheel.getContext('2d');
     const {data}=ctx.getImageData(0,0,wheel.width,wheel.height);
@@ -93,10 +115,11 @@ try{
    // Hover, equip, then replace using the restored item-card UI.
    await page.mouse.move(...coords(initial.items[0].x,initial.items[0].y));
    assert.equal((await snapshot()).tip,true);
-   await drag(initial.items[0],initial.slot,false);state=await snapshot();assert.equal(state.ghostTexture,initial.items[0].texture);await page.mouse.up();state=await snapshot();
-   assert.equal(state.items[0].visible,false);assert.equal(state.gear,true);assert.equal(state.gearTexture,initial.items[0].texture);
+   await drag(initial.items[0],initial.slot,false);state=await snapshot();assert.equal(state.ghostTexture,initial.items[0].texture);assert.equal(state.speed,'110');assert.equal(state.patrolSpeed,initial.patrolSpeed);await page.mouse.up();state=await snapshot();
+   assert.equal(state.items[0].visible,false);assert.equal(state.gear,true);assert.equal(state.gearTexture,initial.items[0].texture);assert.equal(state.speed,'110');assert.equal(state.patrolSpeed,initial.patrolSpeed);
    await drag(initial.items[1],initial.slot);state=await snapshot();
-   assert.equal(state.items[1].visible,false);assert.equal(state.gear,true);assert.equal(state.gearTexture,initial.items[1].texture);
+   assert.equal(state.items[1].visible,false);assert.equal(state.gear,true);assert.equal(state.gearTexture,initial.items[1].texture);assert.equal(state.speed,'100');assert.equal(state.dps,'44');assert.equal(state.patrolSpeed,initial.patrolSpeed);
+   await drag(initial.items[3],initial.slot);state=await snapshot();assert.equal(state.defense,'18');assert.equal(state.dps,'20');assert.equal(state.patrolSpeed,initial.patrolSpeed);
    await page.screenshot({path:join(out,'cards-'+w+'-equipped.png')});
    // Pause cancels in-progress drag, then returning to menu resets the preview.
    await drag(initial.flowers[1],initial.candidate,false);
