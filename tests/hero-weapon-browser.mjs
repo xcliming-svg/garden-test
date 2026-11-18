@@ -158,8 +158,22 @@ try{
     await page.waitForFunction(()=>window.__previewGame.scene.getScene('Game').enemyPreview?.actors.length>0);
     assert.equal(await page.evaluate(()=>window.__previewGame.scene.getScene('Game').enemyPreview.attack),null);
     await dragItem('rock',0);
+    await dragItem('rock',9);
+    assert.equal(await page.evaluate(()=>{const s=window.__previewGame.scene.getScene('Game');return s.heroWeaponPreview.model.state.equipped[9]==='rock'&&s.itemCardPreview.cards.find(c=>c.item.id==='rock').marker.visible;}),true);
     await page.waitForFunction(()=>window.__previewGame.scene.getScene('Game').heroWeaponPreview.model.state.hits>0,{},{timeout:60000});
     assert.equal(await page.evaluate(()=>window.__previewGame.scene.getScene('Game').heroWeaponPreview.model.state.shots.every(s=>s.owner===0)),true);
+    assert.deepEqual(errors,[]);
+    // Finite comparison starts with a level 3 preset, including repeated cards.
+    await page.goto('http://127.0.0.1:'+server.address().port+'/?enemies=1&weapons=1&weaponSlots=4&weaponLevel=3&balanceWave=2&weaponLoadout=rock,rock,paper-plane,flowerpot');
+    await page.waitForFunction(()=>window.__previewGame?.scene.isActive('MainMenu'));
+    const presetBox=await page.locator('canvas').boundingBox();
+    await page.mouse.click(presetBox.x+480*presetBox.width/960,presetBox.y+252*presetBox.height/540);
+    await select.waitFor();
+    await page.waitForFunction(()=>{
+      const s=window.__previewGame.scene.getScene('Game'),m=s.heroWeaponPreview.model;
+      return s.enemyPreview.model.spawned===2&&m.state.equipped.join(',')==='rock,rock,paper-plane,flowerpot'&&m.state.levels.every(l=>l===3)&&!s.children.getByName('preview-slot:4');
+    });
+    assert.equal(await page.evaluate(()=>window.__previewGame.scene.getScene('Game').enemyPreview.actors.every(a=>a.hp<=window.GardenWeaponBalance.hp(a.entry))),true);
     assert.deepEqual(errors,[]);
     // Parameterized size reaches the actual rendered sprite at both resolutions.
     await page.goto('http://127.0.0.1:'+server.address().port+'/?rockSize=9');
