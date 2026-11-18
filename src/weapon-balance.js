@@ -76,14 +76,13 @@
     else if(id==='sprinkler'||id==='broom')t=.65;
     const q=e.predict?e.predict(t):e;
     const aim=g?ground(q):{x:q.x,y:q.y};
-    // Rock follows a shallow screen-space parabola; offset its aim so the
-    // projectile passes the predicted center at the chosen impact time.
+    // The rock trajectory ends at the predicted center; the bow is visual motion.
     return {aim,predicted:q,delay:t};
   }
   function choose(id,level,origin,targets,shots,valid,tuning,balloonFlight,size){
     const s=stats(id,level),single=id==='rock'||id==='paper-plane'||id==='flowerpot';
     const reserved=new Map();
-    for(const shot of shots)if(!shot.done&&shot.targetId!=null&&['rock','paper-plane','flowerpot'].includes(shot.kind)&&!shot.burstDone){
+    for(const shot of shots)if(!shot.done&&shot.targetId!=null&&['rock','paper-plane','flowerpot'].includes(shot.kind)&&!shot.burstDone&&!shot.hit?.has(shot.targetId)){
       const a=stats(shot.kind,shot.level);reserved.set(shot.targetId,(reserved.get(shot.targetId)||0)+amount(shot.kind,a,0,true));
     }
     const options=[];
@@ -93,6 +92,7 @@
       if(!eligibleHeight(id,predicted)||!valid(aim)||distance(aim,origin)>s.range)continue;
       let score=threat(e);
       const remain=Math.max(0,(e.hp??10)-(reserved.get(e.id)||0));
+      if(single&&remain===0&&e.attackIn>delay+.15)continue;
       if(single&&remain===0)score-=30;
       if(id==='rock')score+=(remain>0&&remain<=s.damage?4:0)-distance(origin,aim)/180;
       if(id==='paper-plane')score+=(e.attackType==='fly'?5:e.attackType==='jump'?3:0)+(distance(origin,aim)>280?1:0);
