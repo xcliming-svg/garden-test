@@ -16,7 +16,7 @@
         const needed=R.blueprint.filter(([cell,name])=>scene.flowerGrowth.entries.get(cell)?.name!==name).map(([,name])=>name);
         id=choose(needed.length&&Math.random()<.75?needed:G.names);
       }
-      if(kind==='item'&&!id)id=choose([...I.entries,I.water]).id;
+      if(kind==='item'&&!id)id=choose(I.entries).id;
       const card=I.createDrop(scene,spec,assets,kind,id,x,y,serial++);
       card.age=0;card.kind=kind;card.id=id;
       card.float=L.floatingDrop(card.marker,serial);

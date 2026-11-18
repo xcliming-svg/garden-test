@@ -33,6 +33,7 @@
   // 참조 트리 외형 24px = 내부 22px + 1px 프레임. 기존 대형 비교는 내부 32px 유지.
   // 이전 ?garden=36 링크는 대형 비교의 호환 별칭으로 유지한다.
   const params = new URLSearchParams(window.location.search);
+  const balancedCombat=!!(window.GardenHeroWeaponPreview?.enabled&&window.GardenHeroWeaponPreview.combat);
   const gardenMode = params.get('garden');
   const flowerMode = params.get('flower');
   const requestedFlower = flowerMode ?? (gardenMode==='36'?'32':gardenMode);
@@ -56,7 +57,7 @@
       height: blueprintHeader + blueprintGap + blueprintGrid,
       gridX: hudPadding, gridY: blueprintY + blueprintHeader + blueprintGap
     }),
-    slots: Object.freeze({ size: slotSize, cell: slotSize - 2 * cellLine, line: cellLine, gap: bottomGap, initial: 4, preview: 9, max: 10, y: height - bottomHudHeight + bottomBoundary + bottomGap, exampleCost: 999 })
+    slots: Object.freeze({ size: slotSize, cell: slotSize - 2 * cellLine, line: cellLine, gap: bottomGap, initial: 4, preview: balancedCombat?window.GardenWeaponBalance.slots:9, max: 10, y: height - bottomHudHeight + bottomBoundary + bottomGap, exampleCost: 999 })
   });
 
   const hud = Object.freeze({
@@ -293,7 +294,7 @@
 
   const bottomInk = U.inkBounds;
 
-  function drawSlotCost(scene, x, y, size, value) {
+  function drawSlotCost(scene, x, y, size, value, visible=true) {
     const c = slotCost, centerY = y + size / 2;
     const cost = text(scene, x + size / 2, 0, String(value), c.fontSize, colors.disabledText, 'center').setName('slot-cost-value');
     const icon = window.GardenItemCards.gemIcon(scene,c.iconSize).setName('slot-cost-icon');
@@ -321,16 +322,17 @@
       cost.once('destroy', () => { mask.destroy(); clip.destroy(); });
     }
     alignCost.move=(slot,price,show,affordable)=>{x=slot.x+spec.slots.line;cost.setX(x+size/2).setText(String(price??0)).setColor(affordable?R.hex.green:colors.disabledText).setVisible(show);icon.setVisible(show);alignCost();};
+    if(!visible){cost.setVisible(false);icon.setVisible(false);}
     return alignCost;
   }
 
   // 9개 일반 + 마지막 확장 슬롯을 최대 폭에서 검토한다. 실제 초기 슬롯 정책은 4개로 유지.
   const statKeys = Object.freeze(['dps', 'defense', 'moveSpeed']);
   const statLabels = Object.freeze({
-    dps: '초당 피해량', defense: '방어력', moveSpeed: '이동 속도'
+    dps: balancedCombat?'기준 DPS':'초당 피해량', defense: '방어력', moveSpeed: '이동 속도'
   });
   // 모든 수치는 UI 비교용 임시 값. 실제 게임 계산식/단위/확률과 무관하다.
-  const baseStats = Object.freeze(playable?{dps:0,defense:0,moveSpeed:40}:{ dps: 20, defense: 12, moveSpeed: 100 });
+  const baseStats = Object.freeze(balancedCombat?{dps:0,defense:0,moveSpeed:window.GardenFairyPatrol.speed}:{dps:20,defense:12,moveSpeed:100});
   const previewItems = Object.freeze([
     { name: '신발', desc: '이동 속도가 증가합니다.', stats: { moveSpeed: 10 } },
     { name: '스프링클러', desc: '회전형 공격을 추가합니다.', stats: { dps: 18 } },
@@ -344,7 +346,8 @@
     equipped.forEach(item => {
       if (item) statKeys.forEach(key => { result[key] += item.stats[key] || 0; });
     });
-    if(playable){result.moveSpeed=Math.min(80,result.moveSpeed);result.dps=Math.round(result.dps*100)/100;}
+    if(playable)result.moveSpeed=Math.min(80,result.moveSpeed);
+    if(balancedCombat)result.dps=Math.round(result.dps*10)/10;
     return result;
   }
 
@@ -378,9 +381,9 @@
     hudBoundary(g, spec.top + spec.fieldHeight);
     const layout = bottomLayout();
     layout.slotFrames = layout.slots.map((slot,i) => {
-      const disabled=i===s.preview;
+      const disabled=i>=s.preview;
       const frame=U.pixelBox(scene,slot.x+slot.size/2,slot.y+slot.size/2,slot.size,slot.size,disabled?colors.disabledFill:colors.emptySlotFill,{strokeWidth:s.line,border:disabled?colors.disabledBorder:colors.normalBorder}).setName('slot-frame:'+i);
-      if(disabled)layout.alignCost=drawSlotCost(scene,slot.x+s.line,slot.y+s.line,s.cell,s.exampleCost);
+      if(disabled&&i===s.preview||s.preview===s.max&&i===s.max-1)layout.alignCost=drawSlotCost(scene,slot.x+s.line,slot.y+s.line,s.cell,s.exampleCost,disabled);
       return frame;
     });
     if(playable){
@@ -603,7 +606,7 @@
       if(combatSpeed!==undefined){current.moveSpeed=combatSpeed;next.moveSpeed=combatSpeed;}
       const rows = layout.alignCost();
       stats.forEach(row => {
-        const d = next[row.key] - current[row.key];
+        const d = Math.round((next[row.key] - current[row.key])*10)/10;
         row.value.setText(String(next[row.key]));
         row.delta.setText(d ? signed(d) : '').setColor(d > 0 ? R.hex.green : d < 0 ? R.hex.redText : colors.value)
           .setVisible(d !== 0);
@@ -759,7 +762,7 @@
       dragging.marker.setPosition(anchor.x, anchor.y).setAlpha(target >= 0 ? 0.25 : 1);
     }
     function equipItem(index,item){
-      equipped[index]=item;scene.heroWeaponPreview?.equip(index,item.id);
+      equipped[index]=item;scene.heroWeaponPreview?.equip(index,item.id,item.level);
       if(playable){const stats=sumPreviewStats(equipped);scene.fairyPatrol?.setSpeed(stats.moveSpeed);scene.fairyPatrol?.setCount(1+equipped.filter(i=>i?.id==='water-fairy').length);}
     }
     function canEquip(index,item){
@@ -776,8 +779,7 @@
       if(card.drop)card.drop.dragging=false;
       if (index >= 0&&canEquip(index,card.item)&&(!ballMode||(!equipped[index]&&scene.combatPreview.model.equip(card.id,index)))) {
         equipItem(index,card.item);
-        card.consumed = true;
-        card.marker.disableInteractive().setVisible(false);
+        if(playable||!balancedCombat){card.consumed = true;card.marker.disableInteractive().setVisible(false);}
         if(playable)scene.runDrops?.consume(card);
       }
       refresh();
@@ -850,7 +852,14 @@
       scene.scale.off('resize', resizePreview);
     });
     function refreshSlots(){slots.forEach((slot,i)=>{const p=slotAnchor(i);slotItems[i].setPosition(p.x,p.y);const zone=slotZones[i];zone.setPosition(p.x,p.y);if(i<unlocked())zone.setInteractive({useHandCursor:true});else zone.disableInteractive();});refresh();}
-    const controller={register,unregister,equipped,refreshSlots,equipInitial(){equipItem(0,window.GardenItemCards.runItem(scene,window.GardenRunRules.tuning.starterRock));refresh();},isDragging:card=>dragging===card,defense:()=>sumPreviewStats(equipped).defense};
+    function applyLoadout(){
+      if(playable||!balancedCombat||!scene.heroWeaponPreview)return;
+      window.GardenWeaponBalance.loadout.forEach((id,index)=>{
+        const card=cards.find(c=>c.item.id===id);
+        if(card&&index<equipped.length&&scene.heroWeaponPreview.equip(index,id,card.item.level))equipped[index]=card.item;
+      });refresh();
+    }
+    const controller={applyLoadout,register,unregister,equipped,refreshSlots,equipInitial(){equipItem(0,window.GardenItemCards.runItem(scene,window.GardenRunRules.tuning.starterRock));refresh();},isDragging:card=>dragging===card,defense:()=>sumPreviewStats(equipped).defense};
     if(playable){scene.runEquipment=controller;refreshSlots();scene.events.once('shutdown',()=>delete scene.runEquipment);}else refresh();
     return controller;
   }

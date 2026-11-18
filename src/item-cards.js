@@ -8,6 +8,7 @@
   const enabled=window.GardenFairyPatrol.enabled&&(!window.GardenEnemyPreview.enabled||weaponCombat)&&G.enabled&&params.get('cards')!=='0'&&params.get('cards')!=='legacy';
   // UI-only specimen values. These never feed patrol, projectile or enemy state.
   const minLevel=1,maxLevel=3;
+  const balance=window.GardenWeaponBalance;
   const entries=Object.freeze([
     ['shoe','신발','01_shoe.svg','이동 속도가 증가합니다.','moveSpeed',10],
     ['balloon','물풍선','05_balloon.svg','떨어진 지점에서 터지며 주변 적들에게 피해를 줍니다.','dps',24],
@@ -20,27 +21,31 @@
     ['yellow-floor','끈끈이','3_노랑장판_단일파츠(1).svg','영역에 들어온 적의 이동 속도를 감소시킵니다.',null,0,'적 이동 속도 -30%'],
     ['sprinkler','스프링클러','3_스프링쿨러_단일파츠(4).svg','원형으로 물을 뿌려 주변 적들을 공격합니다.','dps',18],
     ['rock','돌멩이','4_돌_단일파츠(1).svg','적을 향해 돌멩이를 던져 기본 공격을 합니다.','dps',12],
-    ['broom','빗자루','4_빗자루_단일파츠(1).svg','빗자루를 휘둘러 범위 내의 적들을 공격합니다.','dps',20]
+    ['broom','빗자루','4_빗자루_단일파츠(1).svg','설치 지점 주변을 돌며 적들을 쓸어 공격합니다.','dps',20],
+    ['water-fairy','물방울 요정',null,'물방울 요정 카드입니다. 장착 효과는 미정입니다.',null,0]
   ].map(([id,name,file,desc,stat,value,tooltipEffect])=>Object.freeze({id,name,file,desc,level:minLevel,stats:Object.freeze(stat?{[stat]:value}:{}),tooltipEffect})));
   // The source's bristle centre (1097,572) and handle tip (1183,380)
   // define its longitudinal axis. Rotate that axis to -45° before cropping,
   // so the diagonal can occupy the card without enlarging the card itself.
   const broomRotation=-Math.PI/4-Math.atan2(380-572,1183-1097);
-  const water=Object.freeze({id:'water-fairy',name:'물방울 요정',desc:'장착하면 돌멩이만 사용하는 물방울 요정이 순찰에 합류합니다.',level:1,stats:Object.freeze({dps:1.67})});
   const relics=Object.freeze([
     Object.freeze({id:'gem',name:'보석',file:'gem_1000.svg',span:12}),
     Object.freeze({id:'heart',name:'하트',file:'heart_1000.svg',span:12})
   ]);
+  // Attack-only effect: not a card, weapon choice or relic.
+  const effects=Object.freeze([Object.freeze({id:'water-splash',file:'03_water_splash.svg'})]);
   const raw=id=>'item-svg:source:'+id, key=id=>'item-svg:trim:'+id;
   const flowerId=name=>'flower-'+name;
   function preload(scene){
     // HUD gem is shared by every game mode, even when SVG drop cards are disabled.
-    for(const item of enabled?[...entries,...relics]:relics){
+    for(const item of enabled?[...entries,...relics,...effects]:relics){
+      if(!item.file)continue; // Fairy art is preloaded by GardenFairyPatrol.
       const k=raw(item.id);
       if(!scene.textures.exists(k))scene.load.svg(k,window.GardenSvgPalette.path('items/'+item.file),{width:512,height:512});
     }
     // Growth already preloads healthy full-bloom SVGs at native source resolution.
   }
+  const cropGeometry=new WeakMap();
   function trim(scene,id,sourceKey){
     const k=key(id);
     if(scene.textures.exists(k))return k;
@@ -67,6 +72,7 @@
     const tex=scene.textures.createCanvas(k,w,h);
     tex.getContext().drawImage(c,left,top,w,h,0,0,w,h);
     tex.refresh();tex.setFilter(Phaser.Textures.FilterMode.LINEAR);
+    cropGeometry.set(tex,{left,top,width:w,height:h,sourceWidth:source.width,sourceHeight:source.height});
     return k;
   }
   // A 512px texture sampled directly at 24px in WebGL loses thin strokes.
@@ -192,11 +198,38 @@
     if(item?.texture)fit(group.list[2],item.texture,itemSpan(group.width));
     setLevelLabel(group,item?.texture?item.level:undefined);
   }
-  function weaponImage(scene,id,x,y,span){
-    if(!entries.some(item=>item.id===id))throw Error('Unknown weapon: '+id);
-    const texture=trim(scene,id,raw(id));
-    return fit(scene.add.image(x,y,texture),texture,span);
+  // Combat art uses visible height, except the approved longest-side boomerang.
+  // Card/relic sizing stays independent. The sprinkler's original hub is not
+  // the center of its asymmetric alpha bounds: map source points through crop.
+  function attackSize(scene,id,span){
+    if(!entries.some(item=>item.id===id)&&!effects.some(effect=>effect.id===id))throw Error('Unknown attack art: '+id);
+    const texture=trim(scene,id,raw(id)),tex=scene.textures.get(texture),source=tex.getSourceImage();
+    const scale=span/(id==='boomerang'?Math.max(source.width,source.height):source.height);
+    const result={width:source.width*scale,height:source.height*scale};
+    if(id==='sprinkler'){
+      const crop=cropGeometry.get(tex);
+      // Source path coordinate system (the same transform in original/palette SVG).
+      const point=(x,y)=>{
+        const sx=1.024174965995*(500+3.2710280374*(x-157.75))-11.965094088847;
+        const sy=1.024174965995*(500+3.2710280374*(y-547.25))-11.923102915242;
+        return {x:(sx/1000*crop.sourceWidth-crop.left)/crop.width,y:(sy/1000*crop.sourceHeight-crop.top)/crop.height};
+      };
+      result.pivot=point(157,525);
+      result.nozzles=[[254,476],[61,476],[157,628]].map(([x,y])=>{
+        const q=point(x,y);
+        return {x:(q.x-result.pivot.x)*result.width,y:(q.y-result.pivot.y)*result.height};
+      });
+    }
+    return result;
   }
+  function attackImage(scene,id,x,y,span){
+    const size=attackSize(scene,id,span),texture=key(id);
+    const image=fit(scene.add.image(x,y,texture),texture,Math.max(size.width,size.height));
+    if(size.pivot)image.setOrigin(size.pivot.x,size.pivot.y);
+    return image;
+  }
+  function weaponImage(scene,id,x,y,span){return attackImage(scene,id,x,y,span);}
+  function effectImage(scene,id,x,y,span){return attackImage(scene,id,x,y,span);}
   function relicImage(scene,kind,x,y){
     const item=relics.find(r=>r.id===kind),texture=trim(scene,kind,raw(kind));
     return fit(scene.add.image(x,y,texture),texture,item.span).setDepth(4);
@@ -205,11 +238,13 @@
     displayState.get(image.scene)?.images.delete(image);image.destroy();
   }
   function runItem(scene,id){
-    const item=id===water.id?water:entries.find(e=>e.id===id);
+    const original=entries.find(e=>e.id===id);
+    const item=id==='water-fairy'?{...original,desc:'장착하면 돌멩이만 사용하는 물방울 요정이 순찰에 합류합니다.'}:original;
     if(!item)throw Error('Unknown item: '+id);
-    const texture=id===water.id?trim(scene,id,'fairy:water:normal'):trim(scene,id,raw(id));
-    const stats=Object.freeze({...item.stats,...(item.stats.dps&&id!==water.id?{dps:1.25}:{})});
-    return Object.freeze({...item,texture,stats});
+    const texture=id==='water-fairy'?trim(scene,id,window.GardenFairyPatrol.key('water','normal')):trim(scene,id,raw(id));
+    const st=balance.stats(id,1),stats=Object.freeze(id==='water-fairy'?{dps:balance.nominalDps('rock',1)}:st?{dps:balance.nominalDps(id,1)}:item.stats);
+    const detail=st?(id==='yellow-floor'?'감속 '+Math.round(st.slow*100)+'%':'피해 '+(Array.isArray(st.damage)?st.damage.join('/'):st.damage))+' · '+st.cooldown+'초 · '+st.range+'px':item.tooltipEffect;
+    return Object.freeze({...item,texture,stats,tooltipEffect:detail});
   }
   function createDrop(scene,spec,assets,kind,id,x,y,serial){
     const isFlower=kind==='flower';
@@ -222,6 +257,9 @@
   function disposeCard(marker){const image=marker.list[2];if(image)displayState.get(marker.scene)?.images.delete(image);marker.destroy();}
   function draw(scene,spec,assets,showGround=true){
     const cards=[],flowers=[],ground=[];
+    const F=window.GardenFairyPatrol;
+    // Reuse the exact normal-expression texture, including manifest-aligned eyes.
+    F.install(scene);
     for(let i=0;i<G.names.length;i++){
       const name=G.names[i],texture=trim(scene,flowerId(name),G.key(name,G.maxStage,100));
       const x=156+(i%3)*56,y=192+Math.floor(i/3)*56;
@@ -229,7 +267,14 @@
       flowers.push({marker,x,y,spriteName:name,idleDepth:marker.depth});
     }
     for(let i=0;i<entries.length;i++){
-      const item=entries[i],texture=trim(scene,item.id,raw(item.id));
+      const original=entries[i],st=weaponCombat?balance.stats(original.id,balance.level):null;
+      let item=original;
+      if(weaponCombat){
+        const desc=st||original.id==='water-fairy'?original.desc:'전투 효과 미구현 (비교용 카드)';
+        const detail=st?(original.id==='yellow-floor'?'감속 '+Math.round(st.slow*100)+'%':'피해 '+(Array.isArray(st.damage)?st.damage.join('/'):st.damage))+' · '+st.cooldown+'초 · '+st.range+'px':'';
+        item={...original,desc,level:balance.level,stats:st?{dps:balance.nominalDps(original.id,balance.level)}:{},tooltipEffect:detail};
+      }
+      const texture=trim(scene,item.id,item.id==='water-fairy'?F.key('water','normal'):raw(item.id));
       const x=682+(i%4)*56,y=126+Math.floor(i/4)*56;
       const marker=card(scene,x,y,assets.item.dropSize,texture,'item',item.id).setName('placeholder:item:'+String(i).padStart(2,'0'));
       setLevelLabel(marker,item.level);
@@ -246,5 +291,5 @@
     scene.events.once('shutdown',()=>delete scene.itemCardPreview);
     return {cards,flowers};
   }
-  window.GardenItemCards=Object.freeze({enabled,entries,water,relics,preload,draw,runItem,createDrop,disposeCard,setIcon,key,broomRotation,itemSpan,minLevel,maxLevel,setLevelLabel,gemIcon,gemInk,relicImage,destroyRelic,weaponImage});
+  window.GardenItemCards=Object.freeze({enabled,entries,relics,preload,draw,runItem,createDrop,disposeCard,setIcon,key,broomRotation,itemSpan,minLevel,maxLevel,setLevelLabel,gemIcon,gemInk,relicImage,destroyRelic,weaponImage,effectImage,attackSize});
 }());

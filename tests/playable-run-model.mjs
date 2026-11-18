@@ -1,10 +1,10 @@
 import {readFileSync} from 'node:fs';
 function runAudit(sources){
   const w={location:{search:''}},doc={documentElement:{dataset:{playable:'true'}}};
-  for(const f of ['run-rules','palette','fairy-patrol','enemy-motion','pebble-boundary','fairy-attack','enemy-preview','flower-growth','item-cards','hero-weapon-preview','relic-collection']){
+  for(const f of ['run-rules','palette','fairy-patrol','enemy-motion','pebble-boundary','fairy-attack','enemy-preview','weapon-balance','flower-growth','item-cards','hero-weapon-preview','relic-collection']){
     new Function('window','document','URLSearchParams',sources[f])(w,doc,URLSearchParams);
   }
-  const R=w.GardenRunRules,E=w.GardenEnemyPreview,M=w.GardenEnemyMotion,B=w.GardenPebbleBoundary,A=w.GardenHeroWeaponPreview,L=w.GardenRelicCollection;
+  const R=w.GardenRunRules,E=w.GardenEnemyPreview,M=w.GardenEnemyMotion,B=w.GardenPebbleBoundary,A=w.GardenHeroWeaponPreview,L=w.GardenRelicCollection,V=w.GardenWeaponBalance;
   let checks=0;const check=(v,msg)=>{checks++;if(!v)throw Error(msg);};
   const r=R.create();
   check(r.state.slotCount===4&&r.state.gems===0&&R.tuning.starterRock==='rock','initial run');
@@ -43,12 +43,15 @@ function runAudit(sources){
   check(counts.gem===550&&counts.heart===150&&counts.flower===180&&counts.item===120,'exclusive distribution');
   for(const entry of E.roster){
     patrol.occupied=[44,45,54,55];
-    let deaths=0;const p=E.createPopulation(spec,patrol,[entry],()=>.33,()=>1,()=>deaths++);
+    let deaths=0;const p=E.createPopulation(spec,patrol,[entry],()=>.33,()=>1,()=>deaths++,true);
     p.advance(0);const first=p.actors[0],id=first.id;
     const travel=M.travelTime(entry,first.path,0),period=M.duration(entry,'attack',first.path);
     p.advance(travel+period*4+.1);
     check(p.actors.length===1&&p.actors[0].id===id&&p.completed===0,'persistent '+entry.id);
     check(first.pendingHits>=4,'repeat strikes '+entry.id);
+    check(first.hp===V.hp(entry),'v1 HP retained');
+    const predicted=V.target(first).predict(period*3);
+    check(predicted.phase!=='return'&&Math.hypot(predicted.x-first.path.originX,predicted.ground-first.path.originY)<16&&Number.isFinite(predicted.attackIn),'persistent prediction');
     check(first.pose.phase!=='return'&&Math.hypot(first.pose.x-first.path.originX,first.pose.ground-first.path.originY)<=16,'stays at flower');
     const old=first.path.flower;patrol.occupied=patrol.occupied.filter(i=>i!==old);const pos={x:first.pose.x,y:first.pose.ground};
     p.advance(.05);
@@ -57,17 +60,18 @@ function runAudit(sources){
     check(p.damage(id,99).killed&&deaths===1&&p.kills===1&&p.actors.length===0,'only death removes');
   }
   const hero={index:0,type:'garden',direction:'right',center:{x:480,y:200}},water={index:1,type:'water',direction:'right',center:{x:470,y:210}};
-  const weapon=A.create(spec),target=[{id:1,x:480,y:100,radius:10}];
+  const weapon=A.create(spec,Math.random,A.defaultSize,true),target=[{id:1,x:480,y:100,ground:110,lift:0,radius:10,hp:100,phase:'move'}];
+  patrol.bounds=boundary.patrol;
   check(weapon.equip(0,R.tuning.starterRock),'starter rock equipped');
-  let hits=0;for(let i=0;i<100;i++)weapon.step(.05,hero,target,()=>{hits++;return {killed:false};},null,[water]);
+  let hits=0;for(let i=0;i<100;i++)weapon.step(.05,hero,target,()=>{hits++;return {killed:false};},null,patrol,null,[water]);
   check(hits>0&&weapon.state.fired>0,'starter auto attack');
   check(weapon.state.shots.every(s=>s.owner===0||s.owner===1&&s.kind==='rock'),'water rock only');
   check(weapon.equip(9,'wheel'),'tenth slot weapon');
   check(!weapon.equip(10,'rock'),'reject eleventh slot');
-  weapon.step(.05,hero,target,()=>({killed:false}));
+  weapon.step(.05,hero,target,()=>({killed:false}),null,patrol);
   check(weapon.state.shots.every(s=>s.owner===0),'removed companion stops attacks');
   return {checks,counts};
 }
-const files=['run-rules','palette','fairy-patrol','enemy-motion','pebble-boundary','fairy-attack','enemy-preview','flower-growth','item-cards','hero-weapon-preview','relic-collection'];
+const files=['run-rules','palette','fairy-patrol','enemy-motion','pebble-boundary','fairy-attack','enemy-preview','weapon-balance','flower-growth','item-cards','hero-weapon-preview','relic-collection'];
 const sources=Object.fromEntries(files.map(f=>[f,readFileSync('src/'+f+'.js','utf8')]));
 console.log('PASS playable run',runAudit(sources));

@@ -161,7 +161,17 @@
     for(let i=1;i<points.length;i++){const [end,n]=points[i],[start,m]=points[i-1];if(t<end)return Math.floor(m+(n-m)*Math.max(0,t-start)/(end-start));}
     return 0;
   }
-  function createPopulation(spec,patrol,entries,random=Math.random,target=targetCount,onDeath=null){
+  // Shared by live movement and the v1 predictive targeting model.
+  function runMotion(entry,path,age){
+    const M=window.GardenEnemyMotion,approach=M.travelTime(entry,path,spawning.rank);
+    return worldPose(null,path,age<approach?M.sample(entry,'auto',age,path,spawning.rank):M.sample(entry,'attack',age-approach,path,spawning.rank),entry);
+  }
+  function runAttackIn(entry,path,age){
+    const M=window.GardenEnemyMotion,p=M.profiles[entry.id],first=M.travelTime(entry,path,spawning.rank)+p.windup+p.strike;
+    const cycle=M.duration(entry,'attack',path,spawning.rank),delta=first-age;
+    return delta>=0?delta:((delta%cycle)+cycle)%cycle;
+  }
+  function createPopulation(spec,patrol,entries,random=Math.random,target=targetCount,onDeath=null,balanced=false){
     const M=window.GardenEnemyMotion,F=window.GardenFairyPatrol;
     const actors=[];let bag=[],directionBag=[],serial=0,elapsed=0,spawned=0,completed=0,kills=0;
     function nextEntry(){
@@ -188,18 +198,18 @@
       const entry=nextEntry(),side=directionBag.pop();
       const initialPath=route(spec,patrol.boundary,entry,patrol.occupied,{side,random});
       const path=playable?runPath(initialPath):initialPath;
-      const actor={id:serial++,entry,path,age:0,blink:F.blinkSchedule(serial+11),expressionState:'auto',expression:'normal',pose:null,hp:entry.level,hitUntil:0,motionAge:0,strikes:0,pendingHits:0};
+      const actor={id:serial++,entry,path,age:0,blink:F.blinkSchedule(serial+11),expressionState:'auto',expression:'normal',pose:null,hp:balanced?window.GardenWeaponBalance.hp(entry):entry.level,hitUntil:0,populationTime:elapsed,motionAge:0,strikes:0,pendingHits:0,persistent:playable};
       actor.duration=M.duration(entry,'auto',path,spawning.rank);actors.push(actor);spawned++;
       updateActor(actor);return actor;
     }
     function updateActor(a){
+      a.populationTime=elapsed;
       if(playable){
         const approach=M.travelTime(a.entry,a.path,spawning.rank),p=M.profiles[a.entry.id];
         const attackAge=Math.max(0,a.motionAge-approach),period=M.duration(a.entry,'attack',a.path,spawning.rank);
         const strikes=attackAge>=p.windup+p.strike?1+Math.floor((attackAge-p.windup-p.strike)/period):0;
         if(strikes>a.strikes){a.pendingHits+=strikes-a.strikes;a.strikes=strikes;}
-        const sample=a.motionAge<approach?M.sample(a.entry,'auto',a.motionAge,a.path,spawning.rank):M.sample(a.entry,'attack',attackAge,a.path,spawning.rank);
-        a.pose=worldPose(spec,a.path,sample,a.entry);
+        a.pose=runMotion(a.entry,a.path,a.motionAge);
       }else a.pose=worldPose(spec,a.path,M.sample(a.entry,'auto',a.age,a.path,spawning.rank),a.entry);
       a.expression=expressionFor(a.expressionState==='auto'&&elapsed<a.hitUntil?'hit':a.expressionState,a.pose.phase,a.blink(a.age));
     }
@@ -211,7 +221,9 @@
       do {
         const dt=Math.min(spawning.step,left);left-=dt;elapsed+=dt;
         for(let i=actors.length-1;i>=0;i--){
-          const a=actors[i],step=dt*(elapsed<(a.slowUntil||0)?1-(a.slowAmount||0):1);a.age+=step;
+          const a=actors[i];
+          const slowed=elapsed<(a.slowUntil||0)&&(!balanced||!(a.entry.attackType==='charge'&&a.pose.phase==='strike')&&a.pose.lift<=3);
+          const step=dt*(slowed?1-(a.slowAmount||0):1);a.age+=step;
           if(playable){if(!patrol.occupied.includes(a.path.flower))retarget(a);a.motionAge+=step;updateActor(a);}
           else if(a.age>=a.duration){actors.splice(i,1);completed++;}else updateActor(a);
         }
@@ -233,9 +245,30 @@
     }
     function slow(id,amount,duration){
       const a=actors.find(e=>e.id===id);if(!a)return false;
-      a.slowAmount=Math.max(0,Math.min(.9,amount));a.slowUntil=Math.max(a.slowUntil||0,elapsed+duration);return true;
+      const value=Math.max(0,Math.min(.9,amount));
+      if(balanced){
+        if(a.pose.lift>3||a.entry.attackType==='charge'&&a.pose.phase==='strike')return false;
+        if(elapsed<(a.slowUntil||0)&&value<a.slowAmount)return false;
+        if(elapsed>=(a.slowUntil||0)||value>a.slowAmount){a.slowAmount=value;a.slowUntil=elapsed+duration;return true;}
+      }
+      a.slowAmount=value;a.slowUntil=Math.max(a.slowUntil||0,elapsed+duration);return true;
     }
-    return {actors,advance,setExpression,damage,slow,get elapsed(){return elapsed;},get spawned(){return spawned;},get completed(){return completed;},get kills(){return kills;}};
+    function push(id,pixels){
+      if(!balanced)return false;
+      const a=actors.find(e=>e.id===id);
+      if(!a||a.pose.lift>3||!['move','windup'].includes(a.pose.phase)||elapsed<(a.pushUntil||0))return false;
+      const speed=M.profiles[a.entry.id].baseSpeed;
+      const distance=pixels*(a.entry.level===3?.5:1);
+      // Rewind on the original approach path, never cross back through a completed strike.
+      const stage=M.travelTime(a.entry,a.path,spawning.rank);
+      if(playable){
+        if(a.motionAge<stage)a.motionAge=Math.max(0,a.motionAge-distance/speed);
+        else{const offset=Math.hypot(a.pose.x-a.path.originX,a.pose.ground-a.path.originY)+distance;a.path=runPath({...a.path,start:a.path.target+offset});a.motionAge=0;a.strikes=0;}
+      }
+      else a.age=Math.max(0,Math.min(a.age,stage)-distance/speed);
+      a.pushUntil=elapsed+.6;updateActor(a);return true;
+    }
+    return {actors,advance,setExpression,damage,slow,push,get elapsed(){return elapsed;},get spawned(){return spawned;},get completed(){return completed;},get kills(){return kills;}};
   }
   function attach(scene,spec,patrol){
     if(!enabled)return null;
@@ -243,11 +276,16 @@
       const scale=e.span/Math.max(e.bounds.width,e.bounds.height);
       return {...e,scale,width:e.bounds.width*scale,height:e.bounds.height*scale};
     });
-    const target=playable?window.GardenRunRules.population:simulation?simulationTarget:targetCount;
     const A=window.GardenFairyAttack;
     const weaponCombat=window.GardenHeroWeaponPreview?.combat&&window.GardenHeroWeaponPreview.enabled;
+    const fixed=weaponCombat?window.GardenWeaponBalance.enemyCount:null;
+    const finite=weaponCombat?window.GardenWeaponBalance.balanceWave:null;
+    let model;
+    const target=playable?window.GardenRunRules.population:finite!==null?t=>window.GardenWeaponBalance.finiteTarget(finite,t,model.actors.length,model.spawned):
+      fixed!==null?()=>fixed:simulation?simulationTarget:targetCount;
     const relics=(A.enabled||weaponCombat)?window.GardenRelicCollection.attach(scene,spec,patrol):null;
-    const model=createPopulation(spec,patrol,entries,Math.random,target,relics?.death),sprites=new Map();
+    model=createPopulation(spec,patrol,entries,Math.random,target,relics?.death,!!weaponCombat);
+    const sprites=new Map();
     const occlusion=window.GardenEnemyOcclusion.attach(scene,spec,patrol);
     // The playable field clips partial entry/exit sprites; HUD is never covered.
     const clip=scene.make.graphics({x:0,y:0,add:false});
@@ -304,5 +342,5 @@
     scene.enemyPreview={entries,model,sprites,occlusion,attack,advance,setExpression,get actors(){return model.actors;},get targetCount(){return target(model.elapsed);},get elapsed(){return model.elapsed;}};
     advance(0);return scene.enemyPreview;
   }
-  window.GardenEnemyPreview=Object.freeze({enabled,roster,preload,attach,key,route,enemyStates,expressionFor,spawning,targetCount,directions,worldPose,createPopulation,simulation,simulationTarget});
+  window.GardenEnemyPreview=Object.freeze({enabled,roster,preload,attach,key,route,enemyStates,expressionFor,spawning,targetCount,directions,worldPose,runMotion,runAttackIn,createPopulation,simulation,simulationTarget});
 }());

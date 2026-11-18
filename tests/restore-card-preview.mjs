@@ -108,7 +108,7 @@ try{
    });
    assert.ok(colors.shoe.fb575f>100&&colors.shoe.d23840>100,'red shoe rendered');assert.equal(colors.shoe.c3d968,undefined);
    assert.ok(colors.wheel['706975']>100&&colors.wheel['96919b']>100,'grey rim and grey spokes rendered');assert.equal(colors.wheel['4e352e'],undefined);
-   assert.equal(initial.flowers.length,6);assert.equal(initial.items.length,12);assert.equal(initial.ground.length,2);
+   assert.equal(initial.flowers.length,6);assert.equal(initial.items.length,13);assert.equal(initial.ground.length,2);
    assert.ok(initial.flowers.every(o=>o.children===3&&!o.level),'no flower badge or ground shadow');
    assert.ok(initial.items.every(o=>o.children===4&&o.level==='Lv.1'),'level text only, no ground shadow');
    const floatCheck=await page.evaluate(()=>{
@@ -131,7 +131,7 @@ try{
    assert.ok(new Set(floatCheck.lifts).size>1,'staggered floating phases');
    await page.waitForFunction(old=>{const s=window.__previewGame.scene.getScene('Game');return s.itemCardPreview.cards.some(({marker},i)=>marker.floatLift!==old[i]);},floatCheck.lifts);
    assert.equal(new Set(initial.flowers.map(o=>o.texture)).size,6);
-   assert.equal(new Set(initial.items.map(o=>o.texture)).size,12);
+   assert.equal(new Set(initial.items.map(o=>o.texture)).size,13);
    assert.ok(initial.flowers.every(o=>o.texture.startsWith('item-svg:trim:flower-')&&Math.abs(o.span-18)<.01));
    assert.ok(initial.items.every(o=>o.texture.startsWith('item-svg:trim:')&&Math.abs(o.span-24)<.01));
    assert.ok(initial.items.every(o=>!o.texture.includes('water-splash')));
@@ -181,6 +181,18 @@ try{
     assert.match(state.tipRows[1],/(합니다|줍니다|갑니다|시킵니다)\.$/);
     assert.equal(state.patrolSpeed,initial.patrolSpeed);
    }
+   const fairy=initial.items[12];
+   await page.mouse.move(...coords(fairy.x,fairy.y));
+   const fairyTip=await snapshot();
+   assert.equal(fairyTip.tipRows[0],'물방울 요정');
+   assert.match(fairyTip.tipRows[1],/장착 효과는 미정/);
+   const fairyColors=await page.evaluate(()=>{
+     const scene=window.__previewGame.scene.getScene('Game'),c=scene.textures.get('item-svg:trim:water-fairy').getSourceImage();
+     const d=c.getContext('2d').getImageData(0,0,c.width,c.height).data,result={};
+     for(let i=0;i<d.length;i+=4)if(d[i+3]===255){const k=[d[i],d[i+1],d[i+2]].map(v=>v.toString(16).padStart(2,'0')).join('');result[k]=(result[k]||0)+1;}
+     return result;
+   });
+   assert.ok(fairyColors['6794d8']>100&&fairyColors['f5d3a5']>100&&fairyColors['4e352e']>10,'composited original water fairy including both eyes');
    await page.mouse.move(...coords(10,250));
    const diagonal=await page.evaluate(()=>{
     const W=window.GardenItemCards,s=window.__previewGame.scene.getScene('Game');
