@@ -222,7 +222,7 @@
     const target=simulation?simulationTarget:targetCount;
     const A=window.GardenFairyAttack;
     const relics=A.enabled?window.GardenRelicCollection.attach(scene,spec,patrol):null;
-    const model=createPopulation(spec,patrol,entries,Math.random,target,relics?.model.death),sprites=new Map();
+    const model=createPopulation(spec,patrol,entries,Math.random,target,relics?.death),sprites=new Map();
     const occlusion=window.GardenEnemyOcclusion.attach(scene,spec,patrol);
     // The playable field clips partial entry/exit sprites; HUD is never covered.
     const clip=scene.make.graphics({x:0,y:0,add:false});
