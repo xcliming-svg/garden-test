@@ -7,7 +7,7 @@
 
 > **이전 카드 복원 비교 (`?cards=legacy`):** 꽃 카드 3개·아이템 카드 5개와 요정 11명 순찰을 표시하고 적/자동 공격을 숨긴다. 꽃은 인접 빈 칸에 배치, 아이템은 일반 슬롯에 임시 장착/교체한다. `?enemies=1`은 기존 군집·자동 공격, `?attack=0`은 비전투 군집, `?densitySim=1`은 밀집 비교, `?cards=0`은 카드 없는 순찰이다. `?combat=1` 기존 전투 유지. 실제 아이템 효과·드롭·보상 아님.
 
-> **devel 화면 확정:** 돌담 없음·요정 전면·기존 어두운 잔디 및 투명 점선. 직전 지형/Z 비교 제거. [규격](./ui-color-guide.md).
+> **devel 화면 확정:** 돌담 없음·요정 전면·기존 어두운 잔디 및 투명 실선. 직전 지형/Z 비교 제거. [규격](./ui-color-guide.md).
 
 > **devel 요정 밀집 외곽선:** 11명 동시 stone↔paper 1px 디졸브, 적 외곽선 없음. `densitySim=1` 밀집/해소 시뮬레이션. [규격](./fairy-patrol.md).
 
@@ -33,11 +33,11 @@
 
 > **devel 수호자 걷기:** `guardian-walk-preview.js`가 선택된 파생 4프레임 텍스처를 생성하며 전투 모델의 경과 시간과 이동 좌표를 이용해 프레임/좌우 반전을 갱신한다. 기존 모델 및 기본 정적 스프라이트 유지. [규격](./flower-head-preview.md).
 
-> **devel 테마 비교:** `palette.js`의 `uitype=1` reference 분기와 `light-field-preview.js`로 전장/흙을 렌더링한다. 기존 검정/점선 기본 및 전투 상태와 판정은 공유한다. [규격](./flower-head-preview.md).
+> **devel 테마 비교:** `palette.js`의 `uitype=1` reference 분기와 `light-field-preview.js`로 전장/흙을 렌더링한다. 기존 어두운 실선 기본 및 전투 상태와 판정은 공유한다. [규격](./flower-head-preview.md).
 
 > **devel 배경 장식 제거:** `field-decor-preview.js`는 로드/호출하지 않는다. 기존 전장과 정원 판정·순찰·전투 유지.
 
-> **devel 확장 후보 점선/순찰:** `dashed-grid-preview.js`에서 점유 및 후보의 합집합 공유 경계만 렌더링하고, 해당 외접 사각형 기준 5px 몸체 여백의 순찰 경로를 계산한다. 모델의 기존 배치/전투 판정 유지. [규격](./flower-head-preview.md).
+> **devel 확장 후보 실선/순찰:** `dashed-grid-preview.js`에서 점유 및 후보의 합집합 공유 경계만 렌더링하고, 해당 외접 사각형 기준 5px 몸체 여백의 순찰 경로를 계산한다. 모델의 기존 배치/전투 판정 유지. [규격](./flower-head-preview.md).
 
 > **devel 점선 그리드 및 필드 장식:** `dashed-grid-preview.js`로 전체 그리드 및 후보 강조, `field-decor-preview.js`로 시드 고정 배경 장식. 기존 잔디 렌더링 비활성, 정원 판정·순찰·전투 유지. [규격](./flower-head-preview.md).
 

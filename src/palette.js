@@ -22,7 +22,7 @@
     disabledBorder:slate,hover:hex.silver,text:hex.paper,label:hex.paper,hudLabel:hex.silver,disabled:hex.silver,
     green:hex.growthLight,red:hex.red,redText:hex.red,warning:hex.gold,icon:hex.silver,shadow:ink,
     track:hud,barFrame:panel,garden:hud,gardenBorder:slate,
-    flowerBorder:hex.growthLight,itemBorder:hex.skyLight
+    flowerBorder:hex.growth,itemBorder:hex.sky
   });
   // Keep all existing material roles and SVG quantization restricted to the original 16.
   const artHex=Object.freeze({...materialHex,ink:hex.bark,slate:hex.stone,teal:hex.sky});

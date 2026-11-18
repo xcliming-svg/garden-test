@@ -518,7 +518,7 @@ for(const c of configs){
     const px=ctx.getImageData(0,0,cv.width,cv.height).data,z=t.zoom,R=Math.round;
     const vertical=side==='above',fixed=R((vertical?a.x:a.y)*z);
     const rgb=v=>{const x=vertical?fixed:v,y=vertical?v:fixed,i=(y*cv.width+x)*4;return (px[i]<<16)|(px[i+1]<<8)|px[i+2];};
-    const cardColors=[0x91B8F7,0x3B3A44],tipColors=[0x535361,0x454450,0x3B3A44];
+    const cardColors=[0x6794D8,0x3B3A44],tipColors=[0x535361,0x3B3A44];
     const edge=(expected,colors,high,limit=Infinity)=>{
       // Prefer the border itself; when a subpixel border vanishes, use its fill.
       // In the vertical case exclude the separate HUD boundary, which shares the panel fill.
@@ -576,7 +576,7 @@ for(const c of configs){
   const slot=initial.slots[0],last=initial.slots[9];
   const cardState=async name=>page.evaluate(name=>{const o=window.__benchmarkGame.scene.getScene('Game').children.getByName(name);return {border:o.list[0].fillColor,face:o.list[1].fillColor,alpha:o.alpha};},name);
   const slotState=async()=>page.evaluate(()=>{const s=window.__benchmarkGame.scene.getScene('Game');return Array.from({length:10},(_,i)=>{const b=s.children.getByName('slot-frame:'+i),o=s.children.getByName('preview-equipped:'+i);return {border:o?.visible?o.list[0].fillColor:b.strokeColor,face:o?.visible?o.list[1].fillColor:b.fillColor,single:!(o?.visible&&b.visible)};});});
-  const sky=0x91B8F7,slate=0x535361,panel=0x3B3A44;
+  const sky=0x6794D8,slate=0x535361,panel=0x3B3A44;
   const slotHighlights=async(target)=>slotState().then(a=>a.every((v,i)=>v.single&&v.border===(i<9&&(target===-1||target===i)?sky:slate)));
   const a=await coords('placeholder:item:0');await move(a.x,a.y);
   check('item hover sky border only',JSON.stringify(await cardState('placeholder:item:0'))===JSON.stringify({border:sky,face:panel,alpha:1}));
@@ -584,7 +584,7 @@ for(const c of configs){
   check('item drag sky on all nine usable slots, locked neutral',await slotState().then(a=>a.every((v,i)=>v.single&&v.border===(i===9?slate:sky)&&v.face===(i===9?0x16161a:panel))));
   await page.screenshot({path:join(out,'item-drag-borders.png')});
   await move(slot.x+3,slot.y+3);
-  check('item target sky with one slot border and ghost icon',await page.evaluate(()=>{const s=window.__benchmarkGame.scene.getScene('Game'),g=s.children.getByName('item-preview-ghost');return g.visible&&!g.list[0].visible&&!g.list[1].visible&&s.children.getByName('slot-frame:0').strokeColor===0x91B8F7&&!s.children.getByName('preview-slot-highlight');}));
+  check('item target sky with one slot border and ghost icon',await page.evaluate(()=>{const s=window.__benchmarkGame.scene.getScene('Game'),g=s.children.getByName('item-preview-ghost');return g.visible&&!g.list[0].visible&&!g.list[1].visible&&s.children.getByName('slot-frame:0').strokeColor===0x6794D8&&!s.children.getByName('preview-slot-highlight');}));
   check('item off-center pointer retains translucent cursor card and centered ghost',await page.evaluate(({x,y,size})=>{const s=window.__benchmarkGame.scene.getScene('Game'),o=s.children.getByName('placeholder:item:0'),f=s.children.getByName('slot-frame:0'),g=s.children.getByName('item-preview-ghost');return o.width===size&&o.height===size&&f.width===size&&f.height===size&&o.x===x+3&&o.y===y+3&&g.x===x+size/2&&g.y===y+size/2&&o.alpha===0.25&&g.list[2].displayWidth===16;},slot));
   check('item valid target alone highlighted',await slotHighlights(0));
   await page.screenshot({path:join(out,'item-target-only.png')});
@@ -621,7 +621,7 @@ for(const c of configs){
   console.log('TOOLTIP_PADDING_REPORT '+JSON.stringify(tipPixels));
   const delta=await gameMetrics();inspectGame(delta,'replacement stats');
   check('dragged item follows target',await page.evaluate(({x,y})=>{const s=window.__benchmarkGame.scene.getScene('Game'),o=s.children.getByName('placeholder:item:3'),ghost=s.children.getByName('item-preview-ghost');return Math.abs(o.x-x)<1&&Math.abs(o.y-y)<1&&o.alpha===0.25&&ghost.visible&&Math.abs(ghost.x-x)<1&&Math.abs(ghost.y-y)<1;},{x:slot.x+slot.size/2,y:slot.y+slot.size/2}));
-  check('dragging image centered and shadow hidden',await page.evaluate(()=>{const o=window.__benchmarkGame.scene.getScene('Game').children.getByName('placeholder:item:3');return o.list[2].y===0&&o.list[1].y===0&&!o.list[3].visible&&o.list[0].visible&&o.list[0].y===0&&o.list[1].visible&&o.list[1].fillColor===0x3B3A44&&o.list[0].fillColor===0x91B8F7;}));
+  check('dragging image centered and shadow hidden',await page.evaluate(()=>{const o=window.__benchmarkGame.scene.getScene('Game').children.getByName('placeholder:item:3');return o.list[2].y===0&&o.list[1].y===0&&!o.list[3].visible&&o.list[0].visible&&o.list[0].y===0&&o.list[1].visible&&o.list[1].fillColor===0x3B3A44&&o.list[0].fillColor===0x6794D8;}));
   await page.mouse.up();
   check('equipped item keeps original slot frame',await page.evaluate(()=>{const o=window.__benchmarkGame.scene.getScene('Game').children.getByName('preview-equipped:0');return o.visible&&o.list.length===3&&o.list[0].visible&&o.list[1].visible&&o.list[2].y===0;}));
   check('replace',await page.evaluate(()=>window.__benchmarkGame.scene.getScene('Game').children.getByName('preview-equipped:0').visible&&!window.__benchmarkGame.scene.getScene('Game').children.getByName('placeholder:item:3').visible));
@@ -634,7 +634,7 @@ for(const c of configs){
   let g=initial.garden;
   const targetFlower={x:g.x+4*g.pitch+g.line+g.cell/2,y:g.y+3*g.pitch+g.line+g.cell/2};
   const flowerPos=await coords('placeholder:flower:0');await move(flowerPos.x,flowerPos.y);
-  check('flower hover green border only',JSON.stringify(await cardState('placeholder:flower:0'))===JSON.stringify({border:0xC3D968,face:panel,alpha:1}));
+  check('flower hover green border only',JSON.stringify(await cardState('placeholder:flower:0'))===JSON.stringify({border:0x84A83E,face:panel,alpha:1}));
   const flowerGridState=async(target=-1)=>page.evaluate(target=>{
     const L=window.GardenGameLayout,g=L.spec.garden,s=window.__benchmarkGame.scene.getScene('Game'),occupied=new Set([44,45,54,55]),candidates=L.gardenCandidates(occupied),visible=new Set([...occupied,...candidates]),t=s.textures.get('ui-test:garden-soil:'+g.cell),ctx=t.getContext();
     const pixels=ctx.getImageData(0,0,g.size,g.size).data;
@@ -657,7 +657,7 @@ for(const c of configs){
   },target);
   await drag('placeholder:flower:0',10,200,false);
   check('flower drag candidate borders only, no overlay',await flowerGridState().then(a=>a.mismatch===0&&a.green===a.expectedGreen&&a.green>0&&a.noOverlay));
-  check('flower drag card green border and neutral face',JSON.stringify(await cardState('placeholder:flower:0'))===JSON.stringify({border:0xC3D968,face:panel,alpha:1}));
+  check('flower drag card green border and neutral face',JSON.stringify(await cardState('placeholder:flower:0'))===JSON.stringify({border:0x84A83E,face:panel,alpha:1}));
   const activeGardenPng=await page.screenshot({path:join(out,'flower-drag-borders.png')});
   const activeGardenSeams=await captureGardenSeams(page,activeGardenPng,g,1);
   check('flower drag visible single green candidate borders',activeSeams(activeGardenSeams,1)&&idleSeam(activeGardenSeams.vertical,1)&&idleSeam(activeGardenSeams.horizontal,1),JSON.stringify(activeGardenSeams));

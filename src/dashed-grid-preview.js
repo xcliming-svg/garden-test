@@ -1,7 +1,7 @@
 (function(){
   'use strict';
-  const P=window.GardenPalette.roles.n;
-  const colors=Object.freeze({base:P.slate,active:P.growth});
+  const R=window.GardenPalette.reference.n;
+  const colors=Object.freeze({base:R.gardenBorder,active:R.flowerBorder});
 
   const all=g=>new Set(Array.from({length:g.columns*g.rows},(_,i)=>i));
   const visible=(occupied,candidates)=>new Set([...occupied,...candidates]);
@@ -17,8 +17,8 @@
       top:garden.top-gap-guardianHeight/2,bottom:garden.bottom+gap+guardianHeight/2};
     return {garden,patrol,gap};
   }
-  // A shared one-pixel edge is drawn exactly once. Leave the intersections
-  // empty and cut the edge into short dashes in logical (not screen) pixels.
+  // Solid shared 1px borders, including intersections. Active edges take
+  // precedence at junctions; draw every logical border pixel only once.
   function rectangles(g,occupied,candidates,hover=null){
     const rects=[],p=g.pitch,shown=visible(occupied,candidates);
     const get=(x,y)=>x>=0&&x<g.columns&&y>=0&&y<g.rows?y*g.columns+x:-1;
@@ -30,28 +30,33 @@
     }
     function edge(x,y,horizontal,c){
       if(c===null)return;
-      for(let t=2;t<p-1;t+=5){
-        const length=Math.min(3,p-1-t);
-        rects.push(horizontal?{x:x+t,y,w:length,h:1,color:c}:{x,y:y+t,w:1,h:length,color:c});
-      }
+      rects.push(horizontal?{x:x+1,y,w:p-1,h:1,color:c}:{x,y:y+1,w:1,h:p-1,color:c});
     }
     for(let y=0;y<=g.rows;y++)for(let x=0;x<g.columns;x++)
       edge(x*p,y*p,true,color(get(x,y-1),get(x,y)));
     for(let x=0;x<=g.columns;x++)for(let y=0;y<g.rows;y++)
       edge(x*p,y*p,false,color(get(x-1,y),get(x,y)));
+    for(let y=0;y<=g.rows;y++)for(let x=0;x<=g.columns;x++){
+      const cells=[get(x-1,y-1),get(x,y-1),get(x-1,y),get(x,y)];
+      const incident=[color(cells[0],cells[1]),color(cells[2],cells[3]),color(cells[0],cells[2]),color(cells[1],cells[3])];
+      const c=incident.includes(colors.active)?colors.active:incident.includes(colors.base)?colors.base:null;
+      if(c!==null)rects.push({x:x*p,y:y*p,w:1,h:1,color:c});
+    }
     return rects;
   }
   function draw(ctx,g,z,raster,occupied,candidates,hover){
     ctx.clearRect(0,0,raster.width,raster.height);ctx.globalAlpha=1;
 
+    // Match gardenRaster's shared axis mapping, including 1 physical px
+    // minimum border thickness when scaled below the logical resolution.
+    const axis=(base,offset)=>v=>{
+      const n=Math.floor(v/g.pitch),start=Math.round((base+n*g.pitch)*z);
+      if(v%g.pitch===0)return start-offset;
+      return Math.min(Math.round((base+(n+1)*g.pitch)*z),Math.max(start+1,Math.round((base+v)*z)))-offset;
+    };
+    const ax=axis(g.x,raster.x),ay=axis(g.y,raster.y);
     for(const r of rectangles(g,occupied,candidates,hover)){
-      let x=Math.round((g.x+r.x)*z)-raster.x,y=Math.round((g.y+r.y)*z)-raster.y;
-      const right=Math.round((g.x+r.x+r.w)*z)-raster.x,bottom=Math.round((g.y+r.y+r.h)*z)-raster.y;
-      // At fractional zoom the outermost one-pixel edge may round to the
-      // canvas endpoint. Snap it inward rather than clipping the edge away.
-      if(r.w===1)x=Math.min(x,raster.width-1);
-      if(r.h===1)y=Math.min(y,raster.height-1);
-      const w=Math.min(raster.width-x,r.w===1?Math.max(1,right-x):right-x),h=Math.min(raster.height-y,r.h===1?Math.max(1,bottom-y):bottom-y);
+      const x=ax(r.x),y=ay(r.y),w=ax(r.x+r.w)-x,h=ay(r.y+r.h)-y;
       if(w<=0||h<=0)continue;
       ctx.fillStyle='#'+r.color.toString(16).padStart(6,'0');ctx.fillRect(x,y,w,h);
     }
