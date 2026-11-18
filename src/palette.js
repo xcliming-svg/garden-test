@@ -17,7 +17,7 @@
   const uiType=new URLSearchParams(window.location.search).get('uitype')==='1'?1:0;
   const darkReference=Object.freeze({
     background:ink,hud,panel,tab:panel,header,selected:slate,button:panel,
-    disabledFill:hud,divider:ink,hudEdge:panel,hudLight:slate,
+    disabledFill:hud,divider:ink,hudDivider:panel,hudEdge:panel,hudLight:slate,
     tabBorder:slate,gridLine:slate,panelBorder:hex.stone,border:hex.stone,
     disabledBorder:slate,hover:hex.silver,text:hex.paper,label:hex.paper,hudLabel:hex.silver,disabled:hex.silver,
     green:hex.growthLight,red:hex.red,redText:hex.red,warning:hex.gold,icon:hex.silver,shadow:ink,
@@ -33,7 +33,7 @@
   const lightReference = Object.freeze({...darkReference,
     background:hex.growth,hud:hex.sand,panel:hex.sand,tab:hex.sand,
     header:hex.clay,selected:hex.gold,button:hex.sand,disabledFill:hex.clay,
-    divider:hex.clay,hudEdge:hex.bark,hudLight:hex.gold,
+    divider:hex.clay,hudDivider:hex.clay,hudEdge:hex.bark,hudLight:hex.gold,
     tabBorder:hex.bark,gridLine:hex.bark,panelBorder:hex.bark,border:hex.bark,
     disabledBorder:hex.bark,hover:hex.bark,text:hex.bark,label:hex.bark,
     hudLabel:hex.bark,disabled:hex.bark,green:hex.bark,red:hex.redDark,

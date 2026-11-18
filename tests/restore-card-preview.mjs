@@ -90,10 +90,11 @@ try{
    const bottom=await page.evaluate(()=>{
     const s=window.__previewGame.scene.getScene('Game'),L=window.GardenGameLayout,b=L.bottomLayout();
     const statObjects=s.children.list.filter(o=>o.name?.startsWith('stat-'));
-    return {labels:statObjects.filter(o=>o.name.startsWith('stat-label:')).map(o=>({key:o.name.slice(11),text:o.text,x:o.x})).sort((a,b)=>a.x-b.x),names:statObjects.map(o=>o.name).sort(),right:b.right,column:L.bottomStats.columnWidth,slotLeft:b.slotLeft,slotWidth:b.totalWidth,base:L.sumPreviewStats([]),filtered:L.sumPreviewStats([{stats:{hp:100,luck:5,pickupRange:20,dps:4}}])};
+    return {labels:statObjects.filter(o=>o.name.startsWith('stat-label:')).map(o=>({key:o.name.slice(11),text:o.text,x:o.x,color:o.style.color.toUpperCase()})).sort((a,b)=>a.x-b.x),values:statObjects.filter(o=>o.name.startsWith('stat-value:')).map(o=>o.style.color.toUpperCase()),names:statObjects.map(o=>o.name).sort(),right:b.right,column:L.bottomStats.columnWidth,slotLeft:b.slotLeft,slotWidth:b.totalWidth,base:L.sumPreviewStats([]),filtered:L.sumPreviewStats([{stats:{hp:100,luck:5,pickupRange:20,dps:4}}])};
    });
    assert.deepEqual(bottom.labels.map(o=>[o.key,o.text]),[['dps','초당 피해량'],['defense','방어력'],['moveSpeed','이동 속도']]);
-   assert.ok(bottom.labels.every((o,i)=>o.x===bottom.right+(i+.5)*bottom.column));
+   assert.ok(bottom.labels.every((o,i)=>o.x===bottom.right+(i+.5)*bottom.column&&o.color==='#96919B'));
+   assert.deepEqual(bottom.values,['#F4F1E9','#F4F1E9','#F4F1E9']);
    assert.deepEqual(bottom.names,['dps','defense','moveSpeed'].flatMap(k=>['label','value','delta'].map(t=>'stat-'+t+':'+k)).sort());
    assert.deepEqual(bottom.base,{dps:20,defense:12,moveSpeed:100});
    assert.deepEqual(bottom.filtered,{dps:24,defense:12,moveSpeed:100});
@@ -198,7 +199,16 @@ try{
     return {holes,white};
    });
    assert.ok(art.holes>100,'wheel center has transparent gaps');assert.equal(art.white,0);
-   await page.screenshot({path:join(out,'cards-'+w+'-initial.png')});
+   const hudPng=await page.screenshot({path:join(out,'cards-'+w+'-initial.png')});
+   const divider=await page.evaluate(async b64=>{
+     const s=window.__previewGame.scene.getScene('Game'),L=window.GardenGameLayout,A=window.GardenItemCards,z=s.cameras.main.zoom,icon=s.children.getByName('hud-gem-icon'),b=A.gemInk(icon);
+     const column2=(Math.round(icon.x*z)+b.left)/z-L.hud.padding;
+     const im=await createImageBitmap(await(await fetch('data:image/png;base64,'+b64)).blob()),cv=document.createElement('canvas');
+     cv.width=im.width;cv.height=im.height;const ctx=cv.getContext('2d');ctx.drawImage(im,0,0);
+     const at=(x,y)=>{const d=ctx.getImageData(Math.floor(x*z),Math.floor(y*z),1,1).data;return (d[0]<<16)|(d[1]<<8)|d[2];};
+     return {role:L.colors.hudDivider,lines:[at(column2/2+1,7),at(column2+1,7)],background:at(column2+4,7)};
+   },hudPng.toString('base64'));
+   assert.deepEqual(divider,{role:0x3B3A44,lines:[0x3B3A44,0x3B3A44],background:0x16161A});
    // Resizing must rebuild output-sized textures without changing logical bounds.
    await page.setViewportSize({width:1920,height:1080});
    await page.waitForFunction(()=>window.__previewGame.scene.getScene('Game').children.getByName('placeholder:item:00').list[2].frame.width===48||window.__previewGame.scene.getScene('Game').children.getByName('placeholder:item:00').list[2].frame.height===48);

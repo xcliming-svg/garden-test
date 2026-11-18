@@ -81,7 +81,7 @@
 
   // 정원과 잠김 슬롯은 같은 면/보더 색상 역할을 공유한다.
   const colors = Object.freeze({
-    field: R.n.background, hud: R.n.hud, hudBorder: R.n.hudEdge, hudDivider: R.n.divider,
+    field: R.n.background, hud: R.n.hud, hudBorder: R.n.hudEdge, hudDivider: R.n.hudDivider,
     label: R.hex.label, hudLabel: R.hex.hudLabel, value: R.hex.text,
     gridFill: R.n.tab, gridLine: R.n.gridLine, gridBorder: R.n.tabBorder,
     normalFill: R.n.tab, normalBorder: R.n.tabBorder, emptySlotFill: R.n.hud,
@@ -568,7 +568,7 @@
       const size = bottomStats.fontSize;
       return {
         key, x,
-        label: text(scene, x, layout.centerY, statLabels[key], size, colors.label, 'center').setName('stat-label:' + key),
+        label: text(scene, x, layout.centerY, statLabels[key], size, colors.hudLabel, 'center').setName('stat-label:' + key),
         value: text(scene, x, layout.centerY, '', bottomStats.valueSize, colors.value, 'center').setName('stat-value:' + key),
         delta: text(scene, x, layout.centerY, '', bottomStats.valueSize, colors.value, 'center').setName('stat-delta:' + key)
       };
