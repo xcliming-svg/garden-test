@@ -64,9 +64,9 @@ try{
    });
    assert.equal(uiColors.palette.length,20);assert.equal(uiColors.material.length,16);
    assert.ok(uiColors.roles.every(c=>uiColors.palette.includes(c)));
-   assert.deepEqual(uiColors.card,[0x535361,0x3B3A44]);
-   assert.deepEqual(uiColors.slot,[0x535361,0x16161A]);
-   assert.deepEqual(uiColors.locked,[0x535361,0x16161A]);
+   assert.deepEqual(uiColors.card,[0x3B3A44,0x3B3A44]);
+   assert.deepEqual(uiColors.slot,[0x3B3A44,0x16161A]);
+   assert.deepEqual(uiColors.locked,[0x3B3A44,0x16161A]);
    const gridState=()=>page.evaluate(()=>{
     const s=window.__previewGame.scene.getScene('Game'),L=window.GardenGameLayout,G=window.GardenDashedGridPreview,g=L.spec.garden,z=s.cameras.main.zoom;
     const occ=new Set(s.fairyPatrol.occupied),candidates=L.gardenCandidates(occ),shown=new Set([...occ,...candidates]);
@@ -86,7 +86,7 @@ try{
    });
    const idleGrid=await gridState();assert.ok(idleGrid.edges&&idleGrid.junctions&&idleGrid.centers,JSON.stringify(idleGrid));
    assert.deepEqual(idleGrid.used,[0x3B3A44]);assert.equal(idleGrid.base,0x3B3A44);assert.equal(idleGrid.active,0x84A83E);
-   assert.equal(idleGrid.flowerFace,0);assert.ok(idleGrid.cornerCards);assert.equal(idleGrid.flower,0x3B3A44);assert.equal(idleGrid.tip,0x535361);
+   assert.equal(idleGrid.flowerFace,0);assert.ok(idleGrid.cornerCards);assert.equal(idleGrid.flower,0x3B3A44);assert.equal(idleGrid.tip,0x3B3A44);assert.equal(idleGrid.card,0x3B3A44);assert.equal(idleGrid.slot,0x3B3A44);
    const bottom=await page.evaluate(()=>{
     const s=window.__previewGame.scene.getScene('Game'),L=window.GardenGameLayout,b=L.bottomLayout();
     const statObjects=s.children.list.filter(o=>o.name?.startsWith('stat-'));
@@ -221,7 +221,7 @@ try{
    await page.mouse.move(...coords(initial.items[0].x,initial.items[0].y));
    assert.equal((await snapshot()).tip,true);
     const focused=await page.evaluate(()=>{const s=window.__previewGame.scene.getScene('Game');return {card:s.children.getByName('placeholder:item:00').list[0].fillColor,tip:s.children.getByName('item-preview-tooltip').list[0].strokeColor};});
-    assert.deepEqual(focused,{card:0x6794D8,tip:0x535361});
+    assert.deepEqual(focused,{card:0x6794D8,tip:0x3B3A44});
    await drag(initial.items[0],initial.slot,false);state=await snapshot();assert.equal(state.ghostTexture,initial.items[0].texture);assert.equal(state.ghostLevel,'Lv.1');assert.equal(state.items[0].lift,0);assert.equal(state.speed,'110');assert.equal(state.patrolSpeed,initial.patrolSpeed);await page.mouse.up();state=await snapshot();
    assert.equal(state.items[0].visible,false);assert.equal(state.gear,true);assert.equal(state.gearTexture,initial.items[0].texture);assert.equal(state.gearLevel,'Lv.1');assert.equal(state.speed,'110');assert.equal(state.patrolSpeed,initial.patrolSpeed);
    await drag(initial.items[1],initial.slot,false);state=await snapshot();

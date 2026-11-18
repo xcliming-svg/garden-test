@@ -1,7 +1,7 @@
 name: Restored card preview verification
 on:
   push:
-    branches: [feature/restore-card-preview, feature/svg-item-cards, feature/item-art-refinement, feature/item-tooltip-preview, feature/item-span-uniform, feature/item-shoe-wheel-colors, feature/svg-asset-cache-refresh, feature/restore-wheel-gray, feature/sticky-slow-tooltip, feature/item-level-float, feature/item-level-inset, feature/new-relic-svg, feature/relic-size-uniform, feature/hud-gem-svg, feature/bottom-hud-three-stats, feature/garden20-v10, feature/solid-garden-shared-borders, feature/flower-corner-frames, feature/flower-graphite-frames, devel]
+    branches: [feature/restore-card-preview, feature/svg-item-cards, feature/item-art-refinement, feature/item-tooltip-preview, feature/item-span-uniform, feature/item-shoe-wheel-colors, feature/svg-asset-cache-refresh, feature/restore-wheel-gray, feature/sticky-slow-tooltip, feature/item-level-float, feature/item-level-inset, feature/new-relic-svg, feature/relic-size-uniform, feature/hud-gem-svg, feature/bottom-hud-three-stats, feature/garden20-v10, feature/solid-garden-shared-borders, feature/flower-corner-frames, feature/flower-graphite-frames, feature/graphite-item-frames, devel]
   pull_request:
     branches: [devel]
 permissions:

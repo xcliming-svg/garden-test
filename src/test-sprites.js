@@ -119,7 +119,7 @@
     const R = window.GardenPalette.reference.n;
     const U = window.GardenUI;
     const flower=kind==='flower'&&window.GardenPalette.uiType!==1;
-    const baseBorder=flower?R.flowerFrame:R.tabBorder;
+    const baseBorder=flower?R.flowerFrame:R.itemFrame;
     const border=flower?U.cornerFrame(scene,0,0,size,baseBorder):U.pixelBox(scene,0,0,size,size,baseBorder);
     const activeBorder = kind === 'flower' ? R.flowerBorder : R.itemBorder;
     const faceColor = R.tab;

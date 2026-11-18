@@ -19,7 +19,7 @@
     installBall(scene);
     const R=window.GardenPalette.reference.n;
     const flower=kind==='flower'&&window.GardenPalette.uiType!==1;
-    const baseBorder=flower?R.flowerFrame:R.tabBorder;
+    const baseBorder=flower?R.flowerFrame:R.itemFrame;
     const border=flower?U.cornerFrame(scene,0,0,size,baseBorder):U.pixelBox(scene,0,0,size,size,baseBorder);
     const face=U.pixelBox(scene,0,0,size-2,size-2,R.tab,{cut:false,alpha:flower?0:1});
     const tex=kind==='flower'?flowerKey(name,flowerSize):'combat:ball';
