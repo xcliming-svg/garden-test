@@ -36,8 +36,10 @@ try{
       return {fairies:s.fairyPatrol.actors.length,enemies:!!s.enemyPreview,shots:s.heroWeaponPreview.model.state.shots.length};
     });
     assert.deepEqual(initial,{fairies:11,enemies:false,shots:0});
+    const expectedSizes={boomerang:28,rock:16,sprinkler:24};
     for(const id of ids.slice(1)){
       await select.selectOption(id);
+      if(id in expectedSizes)assert.equal(await page.evaluate(id=>window.GardenHeroWeaponPreview.tuning[id].span,id),expectedSizes[id]);
       await page.waitForFunction(id=>{
         const s=window.__previewGame.scene.getScene('Game'),m=s.heroWeaponPreview.model;
         return m.state.shots.some(q=>q.kind===id)&&s.children.list.some(q=>q.name?.startsWith('hero-weapon:'+id+':'));
