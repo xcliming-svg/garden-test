@@ -21,6 +21,8 @@
 
 2026-11-16: main 배포 워크플로의 push 대상에 main을 추가했다. main 또는 devel에 push하면 두 버전이 최신 상태로 함께 배포된다. main에서 실행한 배포는 두 버전의 로컬 JS URL에 각각 커밋 SHA를 추가한다. main 배포 수정을 devel에도 통합하여 양쪽 브랜치에서 동일한 자동 배포 및 JS 캐시 갱신을 적용한다. 게임 소스 및 에셋은 변경하지 않는다.
 
+2026-11-18: `src/svg-palette.js`는 배포된 자신의 스크립트 URL의 40자리 SHA(`v`)를 SVG 경로에도 붙인다. 원본 색상 비교 모드에도 동일하게 적용하며, 로컬에서 버전 없는 스크립트를 실행하는 경우 기존 상대 경로를 유지한다. 신규 배포마다 SVG 캐시 키가 달라지므로 오래된 색상 자산을 재사용하는 문제를 방지한다.
+
 ## 근거
 
 - GitHub 공식 문서 (2026-11-12 확인): [사용자 정의 Pages 워크플로](https://docs.github.com/en/pages/getting-started-with-github-pages/using-custom-workflows-with-github-pages), [게시 소스 설정](https://docs.github.com/en/pages/getting-started-with-github-pages/configuring-a-publishing-source-for-your-github-pages-site).

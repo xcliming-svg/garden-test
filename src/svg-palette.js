@@ -2,7 +2,12 @@
   'use strict';
   // Approved palette is default; original SVGs remain selectable.
   const enabled=new URLSearchParams(window.location.search).get('svgcolors')!=='original';
-  const path=relative=>'assets/'+(enabled?'palette16/':'')+relative;
+  // Pages stamps each local script URL with its branch revision. Use the
+  // same revision for SVG requests so a redeploy cannot reuse stale artwork.
+  // Local unversioned runs retain their existing paths.
+  const scriptSrc=typeof document==='undefined'?'':(document.currentScript?.getAttribute('src')||'');
+  const revision=scriptSrc.match(/[?&]v=([0-9a-f]{40})(?:&|$)/i)?.[1];
+  const path=relative=>'assets/'+(enabled?'palette16/':'')+relative+(revision?'?v='+revision:'');
   const rgb=Object.values(window.GardenPalette.n).map(n=>[n>>16&255,n>>8&255,n&255]);
   const cache=new Map();
   function nearest(r,g,b){

@@ -7,12 +7,13 @@ import {chromium} from 'playwright';
 const root=process.cwd(),out=resolve('benchmark-results');mkdirSync(out,{recursive:true});
 const require=createRequire(import.meta.url),phaser=require.resolve('phaser/dist/phaser.min.js');
 const mime={'.js':'application/javascript','.html':'text/html; charset=utf-8','.css':'text/css; charset=utf-8','.svg':'image/svg+xml','.json':'application/json'};
+const revision='0556bf9000000000000000000000000000000000';
 const server=createServer((req,res)=>{
  try{
   const path=decodeURIComponent(new URL(req.url,'http://localhost').pathname.slice(1))||'index.html';
   if(path.includes('..'))return res.writeHead(404).end();
   let body=readFileSync(path==='phaser.js'?phaser:join(root,path));
-  if(path==='index.html')body=body.toString().replace('https://cdn.jsdelivr.net/npm/phaser@3.90.0/dist/phaser.min.js','./phaser.js');
+  if(path==='index.html')body=body.toString().replace('https://cdn.jsdelivr.net/npm/phaser@3.90.0/dist/phaser.min.js','./phaser.js').replace('./src/svg-palette.js"','./src/svg-palette.js?v='+revision+'"');
   if(path==='src/main.js')body=body.toString().replace("  window.addEventListener('resize',","  window.__previewGame = game;\n  window.addEventListener('resize',");
   res.writeHead(200,{'content-type':mime[extname(path)]||'application/octet-stream'}).end(body);
  }catch(e){res.writeHead(500).end(String(e));}
@@ -23,10 +24,10 @@ const browser=await chromium.launch({channel:'chrome',headless:true,args:['--no-
 try{
  for(const [w,h] of [[960,540],[1280,720]]){
   const page=await browser.newPage({viewport:{width:w,height:h}});
-  const errors=[],failed=[],enemyRequests=[];
+  const errors=[],failed=[],enemyRequests=[],svgRequests=[];
   page.on('pageerror',e=>errors.push(String(e)));
   page.on('requestfailed',r=>failed.push(r.url()));
-  page.on('request',r=>{if(r.url().includes('/enemies/'))enemyRequests.push(r.url());});
+  page.on('request',r=>{const u=new URL(r.url());if(u.pathname.includes('/enemies/'))enemyRequests.push(r.url());if(u.pathname.endsWith('.svg'))svgRequests.push(u);});
   try{
    await page.goto(url+'/index.html');
    await page.waitForFunction(()=>window.__previewGame?.scene.isActive('MainMenu'));
@@ -56,6 +57,14 @@ try{
    const start=async()=>{await click(480,252);await page.waitForFunction(()=>window.__previewGame.scene.getScene('Game').fairyPatrol?.actors.length===11);};
    await start();
    const initial=await snapshot();
+   for(const file of ['01_shoe.svg','05_wheel.svg'])assert.ok(svgRequests.some(u=>u.pathname.endsWith('/assets/palette16/items/'+file)&&u.searchParams.get('v')===revision),'versioned SVG request '+file);
+   const colors=await page.evaluate(()=>{
+    const scene=window.__previewGame.scene.getScene('Game');
+    function palette(id){const c=scene.textures.get('item-svg:trim:'+id).getSourceImage(),data=c.getContext('2d').getImageData(0,0,c.width,c.height).data,result={};for(let i=0;i<data.length;i+=4)if(data[i+3]===255){const k=[data[i],data[i+1],data[i+2]].map(v=>v.toString(16).padStart(2,'0')).join('');result[k]=(result[k]||0)+1;}return result;}
+    return {shoe:palette('shoe'),wheel:palette('wheel')};
+   });
+   assert.ok(colors.shoe.fb575f>100&&colors.shoe.d23840>100,'red shoe rendered');assert.equal(colors.shoe.c3d968,undefined);
+   assert.ok(colors.wheel['4e352e']>100&&colors.wheel['96919b']>100,'brown rim and grey spokes rendered');assert.equal(colors.wheel['706975'],undefined);
    assert.equal(initial.flowers.length,6);assert.equal(initial.items.length,12);assert.equal(initial.ground.length,2);
    assert.equal(new Set(initial.flowers.map(o=>o.texture)).size,6);
    assert.equal(new Set(initial.items.map(o=>o.texture)).size,12);
@@ -135,4 +144,3 @@ try{
   }finally{await page.close();}
  }
 }finally{await browser.close();server.close();}
-
