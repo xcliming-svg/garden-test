@@ -1,5 +1,7 @@
 # garden-test
 
+> **devel 무기 밸런스 v1:** 실제 장착 전투의 스탯/상성/10슬롯 비교와 검증 결과는 [docs/weapon-balance-v1.md](./docs/weapon-balance-v1.md) 참조. 기본 모션 비교 유지.
+
 > **devel 나뭇잎 요정 장착 무기:** 기본 새 게임은 적 없이 시작하며 하단 슬롯에 장착한 무기는 나뭇잎 요정만 자동 발사한다. 여러 무기 독립 발사 및 교체 반영. 신발·방패는 공격 없음. 셀렉트는 무장착 시 시각 비교 전용. `?enemies=1&weapons=1`에서 실제 적 피해/감속·처치 드롭 확인. 기존 명시적 전투 비교는 유지. [무기 규격](./docs/hero-weapon-preview.md).
 
 
