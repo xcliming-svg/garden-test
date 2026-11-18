@@ -95,7 +95,7 @@ try{
    assert.ok([...initial.items,...initial.flowers].every(o=>Math.abs(Math.max(o.textureWidth,o.textureHeight)-o.span*w/960)<=1),'native output-sized textures');
    assert.ok(initial.ground.every(o=>o.visible&&!o.interactive&&/^item-svg:trim:(gem|heart):display:/.test(o.texture)));
    assert.equal(initial.ground.find(o=>o.name==='ground-relic:gem').span,12);
-   assert.equal(initial.ground.find(o=>o.name==='ground-relic:heart').span,14);
+   assert.equal(initial.ground.find(o=>o.name==='ground-relic:heart').span,12);
    const relicColors=await page.evaluate(()=>{
     const s=window.__previewGame.scene.getScene('Game');
     return ['gem','heart'].map(id=>{

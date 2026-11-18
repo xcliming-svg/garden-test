@@ -26,7 +26,7 @@
   const broomRotation=-Math.PI/4-Math.atan2(380-572,1183-1097);
   const relics=Object.freeze([
     Object.freeze({id:'gem',name:'보석',file:'gem_1000.svg',span:12}),
-    Object.freeze({id:'heart',name:'하트',file:'heart_1000.svg',span:14})
+    Object.freeze({id:'heart',name:'하트',file:'heart_1000.svg',span:12})
   ]);
   const raw=id=>'item-svg:source:'+id, key=id=>'item-svg:trim:'+id;
   const flowerId=name=>'flower-'+name;
