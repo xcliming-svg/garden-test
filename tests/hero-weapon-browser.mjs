@@ -36,7 +36,7 @@ try{
       return {fairies:s.fairyPatrol.actors.length,enemies:!!s.enemyPreview,shots:s.heroWeaponPreview.model.state.shots.length};
     });
     assert.deepEqual(initial,{fairies:11,enemies:false,shots:0});
-    const expectedSizes={boomerang:28,rock:16,sprinkler:24};
+    const expectedSizes={boomerang:28,rock:10,sprinkler:24};
     for(const id of ids.slice(1)){
       await select.selectOption(id);
       if(id in expectedSizes)assert.equal(await page.evaluate(id=>window.GardenHeroWeaponPreview.tuning[id].span,id),expectedSizes[id]);
@@ -160,6 +160,21 @@ try{
     await dragItem('rock',0);
     await page.waitForFunction(()=>window.__previewGame.scene.getScene('Game').heroWeaponPreview.model.state.hits>0,{},{timeout:60000});
     assert.equal(await page.evaluate(()=>window.__previewGame.scene.getScene('Game').heroWeaponPreview.model.state.shots.every(s=>s.owner===0)),true);
+    assert.deepEqual(errors,[]);
+    // Parameterized size reaches the actual rendered sprite at both resolutions.
+    await page.goto('http://127.0.0.1:'+server.address().port+'/?rockSize=9');
+    await page.waitForFunction(()=>window.__previewGame?.scene.isActive('MainMenu'));
+    const sizeBox=await page.locator('canvas').boundingBox();
+    await page.mouse.click(sizeBox.x+480*sizeBox.width/960,sizeBox.y+252*sizeBox.height/540);
+    await select.waitFor();
+    await select.selectOption('rock');
+    await page.waitForFunction(()=>{
+      const s=window.__previewGame.scene.getScene('Game');
+      return s.heroWeaponPreview.model.state.shots.some(q=>{
+        const image=s.children.getByName('hero-weapon:rock:'+q.id);
+        return q.kind==='rock'&&q.size.height===9&&image&&Math.abs(image.displayHeight-9)<.001;
+      });
+    });
     assert.deepEqual(errors,[]);
     await page.close();
   }
