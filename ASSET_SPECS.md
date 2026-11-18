@@ -1,6 +1,6 @@
 # 전장 UI 및 에셋 규격
 
-> **현행 SVG 아이템 비교:** [SVG 아이템 규격](./docs/item-cards.md). 512px SVG 원본에서 화면 배율별 고품질 축소, 알파 경계 기준 꽃 카드 18px·일반 카드 12종 모두 24px(빗자루 축 45° 대각선 유지)·보석 12px·하트 14px. 기존 카드 외형 유지. 바퀴 외륜 bark·스포크 silver, 신발 red/redDark·기존 끈/밑창, 스프링클러 silver/sky 유지.
+> **현행 SVG 아이템 비교:** [SVG 아이템 규격](./docs/item-cards.md). 512px SVG 원본에서 화면 배율별 고품질 축소, 알파 경계 기준 꽃 카드 18px·일반 카드 12종 모두 24px(빗자루 축 45° 대각선 유지)·보석 12px·하트 14px. 기존 카드 외형 유지. 바퀴 외륜 stone·스포크 silver, 신발 red/redDark·기존 끈/밑창, 스프링클러 silver/sky 유지.
 
 
 > **devel 요정 외곽선:** stone #706975 ↔ paper #F4F1E9, 1 논리 px, 전체 요정 공유 색 보간, 적 외곽선 없음. 정적 비교 outlineColor, outlineWidth 0.5~1.5, outline=0 유지. 원본 실루엣 외측 링, SVG·충돌 불변.

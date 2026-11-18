@@ -64,7 +64,7 @@ try{
     return {shoe:palette('shoe'),wheel:palette('wheel')};
    });
    assert.ok(colors.shoe.fb575f>100&&colors.shoe.d23840>100,'red shoe rendered');assert.equal(colors.shoe.c3d968,undefined);
-   assert.ok(colors.wheel['4e352e']>100&&colors.wheel['96919b']>100,'brown rim and grey spokes rendered');assert.equal(colors.wheel['706975'],undefined);
+   assert.ok(colors.wheel['706975']>100&&colors.wheel['96919b']>100,'grey rim and grey spokes rendered');assert.equal(colors.wheel['4e352e'],undefined);
    assert.equal(initial.flowers.length,6);assert.equal(initial.items.length,12);assert.equal(initial.ground.length,2);
    assert.equal(new Set(initial.flowers.map(o=>o.texture)).size,6);
    assert.equal(new Set(initial.items.map(o=>o.texture)).size,12);
