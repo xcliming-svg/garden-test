@@ -67,24 +67,35 @@ try{
    assert.deepEqual(uiColors.card,[0x535361,0x3B3A44]);
    assert.deepEqual(uiColors.slot,[0x535361,0x16161A]);
    assert.deepEqual(uiColors.locked,[0x535361,0x16161A]);
-   const gridState=()=>page.evaluate(()=>{
+   const gridState=(hover=null)=>page.evaluate(hover=>{
     const s=window.__previewGame.scene.getScene('Game'),L=window.GardenGameLayout,G=window.GardenDashedGridPreview,g=L.spec.garden,z=s.cameras.main.zoom;
     const occ=new Set(s.fairyPatrol.occupied),candidates=L.gardenCandidates(occ),shown=new Set([...occ,...candidates]);
-    const texture=s.children.getByName('garden-preview-soil').texture.getSourceImage(),ctx=texture.getContext('2d');
-    const data=ctx.getImageData(0,0,texture.width,texture.height).data;
-    const raster=L.gardenRaster(shown,g,z),at=(x,y)=>{const i=((Math.round((g.y+y)*z)-raster.y)*texture.width+Math.round((g.x+x)*z)-raster.x)*4;return data[i+3]===255?(data[i]<<16)|(data[i+1]<<8)|data[i+2]:null;};
-    const has=(x,y)=>x>=0&&x<g.columns&&y>=0&&y<g.rows&&shown.has(y*g.columns+x);
+    const texture=s.children.getByName('garden-preview-soil').texture.getSourceImage(),ctx=texture.getContext('2d'),data=ctx.getImageData(0,0,texture.width,texture.height).data;
+    const raster=L.gardenRaster(shown,g,z),at=(x,y)=>{const i=((Math.round((g.y+y)*z)-raster.y)*texture.width+Math.round((g.x+x)*z)-raster.x)*4;return {color:(data[i]<<16)|(data[i+1]<<8)|data[i+2],alpha:data[i+3]};};
+    const get=(x,y)=>x>=0&&x<g.columns&&y>=0&&y<g.rows?y*g.columns+x:-1;
+    const target=candidates.has(hover)?hover:null;
+    const edge=(a,b)=>target!==null&&(a===target||b===target)?[0x84A83E,true,3]:hover!==null&&(candidates.has(a)||candidates.has(b))?[0x84A83E,false,2]:occ.has(a)||occ.has(b)?[0x535361,true,1]:candidates.has(a)||candidates.has(b)?[0x535361,false,0]:null;
+    const compare=(x,y,e,k)=>{const a=at(x,y),expected=e&&(e[1]||k>=2&&k<g.pitch-1&&(k-2)%5<3);return expected?a.alpha===255&&a.color===e[0]:a.alpha===0;};
     let edges=true,centers=true,junctions=true;
-    for(let y=0;y<=g.rows;y++)for(let x=0;x<g.columns;x++)for(let t=1;t<g.pitch;t++)if((at(x*g.pitch+t,y*g.pitch)!==null)!==(has(x,y)||has(x,y-1)))edges=false;
-    for(let y=0;y<g.rows;y++)for(let x=0;x<=g.columns;x++)for(let t=1;t<g.pitch;t++)if((at(x*g.pitch,y*g.pitch+t)!==null)!==(has(x,y)||has(x-1,y)))edges=false;
-    for(let y=0;y<=g.rows;y++)for(let x=0;x<=g.columns;x++)if((at(x*g.pitch,y*g.pitch)!==null)!==(has(x,y)||has(x-1,y)||has(x,y-1)||has(x-1,y-1)))junctions=false;
-    for(let y=0;y<g.rows;y++)for(let x=0;x<g.columns;x++)if(at(x*g.pitch+g.cell/2,y*g.pitch+g.cell/2)!==null)centers=false;
-    const used=new Set();for(let i=0;i<data.length;i+=4)if(data[i+3])used.add((data[i]<<16)|(data[i+1]<<8)|data[i+2]);
-    const target=[at(3*g.pitch+2,4*g.pitch),at(3*g.pitch,4*g.pitch+2),at(4*g.pitch,4*g.pitch+2),at(3*g.pitch+2,5*g.pitch)];
-    return {edges,junctions,centers,used:[...used].sort((a,b)=>a-b),target,base:G.colors.base,active:G.colors.active,flower:s.children.getByName('placeholder:flower:0').list[0].fillColor,flowerFace:s.children.getByName('placeholder:flower:0').list[1].fillColor,card:s.children.getByName('placeholder:item:00').list[0].fillColor,slot:s.children.getByName('slot-frame:0').strokeColor,tip:L.itemTooltip.accent};
-   });
+    for(let y=0;y<=g.rows;y++)for(let x=0;x<g.columns;x++)for(let k=1;k<g.pitch;k++)if(!compare(x*g.pitch+k,y*g.pitch,edge(get(x,y-1),get(x,y)),k))edges=false;
+    for(let y=0;y<g.rows;y++)for(let x=0;x<=g.columns;x++)for(let k=1;k<g.pitch;k++)if(!compare(x*g.pitch,y*g.pitch+k,edge(get(x-1,y),get(x,y)),k))edges=false;
+    for(let y=0;y<=g.rows;y++)for(let x=0;x<=g.columns;x++){
+     const a=get(x-1,y-1),b=get(x,y-1),c=get(x-1,y),d=get(x,y);
+     const e=[edge(a,b),edge(c,d),edge(a,c),edge(b,d)].filter(v=>v?.[1]).sort((a,b)=>b[2]-a[2])[0];
+     if(!compare(x*g.pitch,y*g.pitch,e,0))junctions=false;
+    }
+    for(let i=0;i<100;i++){const p=at(i%g.columns*g.pitch+1+g.cell/2,Math.floor(i/g.columns)*g.pitch+1+g.cell/2);
+     if(occ.has(i)?p.alpha!==255||p.color!==0x3B3A44:i===target?Math.abs(p.alpha-115)>1:p.alpha!==0)centers=false;
+    }
+    return {edges,junctions,centers,style:G.lineStyle,base:G.colors.base,active:G.colors.active,flower:s.children.getByName('placeholder:flower:0').list[0].fillColor,flowerFace:s.children.getByName('placeholder:flower:0').list[1].fillColor,tip:L.itemTooltip.accent};
+   },hover);
    const idleGrid=await gridState();assert.ok(idleGrid.edges&&idleGrid.junctions&&idleGrid.centers,JSON.stringify(idleGrid));
-   assert.deepEqual(idleGrid.used,[0x535361]);assert.equal(idleGrid.base,0x535361);assert.equal(idleGrid.active,0x84A83E);
+   assert.equal(idleGrid.style,'unified');assert.equal(idleGrid.base,0x535361);assert.equal(idleGrid.active,0x84A83E);
+   const slotState=()=>page.evaluate(()=>{
+    const s=window.__previewGame.scene.getScene('Game');
+    return Array.from({length:10},(_,i)=>{const f=s.children.getByName('slot-frame:'+i),c=s.children.getByName('preview-equipped:'+i);return {style:f.placementStyle??null,alpha:f.fillAlpha,face:f.fillColor,border:f.strokeColor,frame:f.visible,card:!!c?.visible,cardBorder:c?.list[0].visible,cardFace:c?.list[1].fillColor};});
+   });
+   assert.ok((await slotState()).slice(0,9).every(f=>f.style==='dashed'&&f.alpha===0&&f.border===0x535361&&f.frame&&!f.card));
    assert.equal(idleGrid.flowerFace,0x3B3A44);assert.equal(idleGrid.flower,0x535361);assert.equal(idleGrid.tip,0x535361);
    const bottom=await page.evaluate(()=>{
     const s=window.__previewGame.scene.getScene('Game'),L=window.GardenGameLayout,b=L.bottomLayout();
@@ -208,22 +219,34 @@ try{
    // Real pointer drag: invalid occupied cell, then valid adjacent cell with ghost.
    await drag(initial.flowers[0],initial.invalid);let state=await snapshot();
    assert.equal(state.stage,4);assert.equal(state.flowers[0].visible,true);
-   await drag(initial.flowers[0],initial.candidate,false);state=await snapshot();
+   await drag(initial.flowers[0],{x:250,y:250},false);
+   const allCandidates=await gridState(-1);assert.ok(allCandidates.edges&&allCandidates.junctions&&allCandidates.centers,JSON.stringify(allCandidates));
+   await page.screenshot({path:join(out,'cards-'+w+'-flower-candidates.png')});
+   await page.mouse.move(...coords(initial.candidate.x,initial.candidate.y),{steps:12});state=await snapshot();
    assert.equal(state.ghost,true);assert.equal(state.flowers[0].alpha,.25);assert.equal(state.flowers[0].lift,0);
-    const hotGrid=await gridState();assert.ok(hotGrid.edges&&hotGrid.junctions&&hotGrid.centers,JSON.stringify(hotGrid));
-    assert.deepEqual(hotGrid.used,[0x535361,0x84A83E]);assert.ok(hotGrid.target.every(c=>c===0x84A83E),JSON.stringify(hotGrid));
+    const hotGrid=await gridState(43);assert.ok(hotGrid.edges&&hotGrid.junctions&&hotGrid.centers,JSON.stringify(hotGrid));
     assert.equal(hotGrid.flower,0x84A83E);
     await page.screenshot({path:join(out,'cards-'+w+'-flower-highlight.png')});
    await page.mouse.up();state=await snapshot();
    assert.equal(state.stage,5);assert.ok(state.occupied.includes(43));assert.equal(state.flowers[0].visible,false);assert.equal(state.progress,'5%');assert.equal(state.ghost,false);
+   const plantedGrid=await gridState();assert.ok(plantedGrid.edges&&plantedGrid.junctions&&plantedGrid.centers,JSON.stringify(plantedGrid));
    // Hover, equip, then replace using the restored item-card UI.
    await page.mouse.move(...coords(initial.items[0].x,initial.items[0].y));
    assert.equal((await snapshot()).tip,true);
     const focused=await page.evaluate(()=>{const s=window.__previewGame.scene.getScene('Game');return {card:s.children.getByName('placeholder:item:00').list[0].fillColor,tip:s.children.getByName('item-preview-tooltip').list[0].strokeColor};});
     assert.deepEqual(focused,{card:0x6794D8,tip:0x535361});
-   await drag(initial.items[0],initial.slot,false);state=await snapshot();assert.equal(state.ghostTexture,initial.items[0].texture);assert.equal(state.ghostLevel,'Lv.1');assert.equal(state.items[0].lift,0);assert.equal(state.speed,'110');assert.equal(state.patrolSpeed,initial.patrolSpeed);await page.mouse.up();state=await snapshot();
+   await drag(initial.items[0],{x:650,y:400},false);
+   assert.ok((await slotState()).slice(0,9).every(f=>f.style==='dashed'&&f.alpha===0&&f.border===0x6794D8&&f.frame));
+   await page.screenshot({path:join(out,'cards-'+w+'-item-candidates.png')});
+   await page.mouse.move(...coords(initial.slot.x,initial.slot.y),{steps:12});state=await snapshot();
+   const hotSlots=await slotState();assert.deepEqual([hotSlots[0].style,hotSlots[0].alpha,hotSlots[0].face,hotSlots[0].border],['solid',.45,0x3B3A44,0x6794D8]);
+   assert.ok(hotSlots.slice(1,9).every(f=>f.style==='dashed'&&f.alpha===0&&f.border===0x6794D8));
+   assert.equal(state.ghostTexture,initial.items[0].texture);assert.equal(state.ghostLevel,'Lv.1');assert.equal(state.items[0].lift,0);assert.equal(state.items[0].alpha,.25);assert.equal(state.speed,'110');assert.equal(state.patrolSpeed,initial.patrolSpeed);await page.mouse.up();state=await snapshot();
    assert.equal(state.items[0].visible,false);assert.equal(state.gear,true);assert.equal(state.gearTexture,initial.items[0].texture);assert.equal(state.gearLevel,'Lv.1');assert.equal(state.speed,'110');assert.equal(state.patrolSpeed,initial.patrolSpeed);
-   await drag(initial.items[1],initial.slot,false);state=await snapshot();
+   const equippedSlot=(await slotState())[0];assert.ok(equippedSlot.card&&equippedSlot.cardBorder&&!equippedSlot.frame&&equippedSlot.cardFace===0x3B3A44);
+   await drag(initial.items[1],{x:650,y:400},false);
+   const replaceCandidate=(await slotState())[0];assert.ok(replaceCandidate.card&&!replaceCandidate.cardBorder&&replaceCandidate.frame&&replaceCandidate.style==='dashed'&&replaceCandidate.border===0x6794D8);
+   await page.mouse.move(...coords(initial.slot.x,initial.slot.y),{steps:12});state=await snapshot();
     assert.equal(await page.evaluate(()=>window.__previewGame.scene.getScene('Game').children.getByName('slot-frame:0').strokeColor),0x6794D8);
     await page.screenshot({path:join(out,'cards-'+w+'-item-highlight.png')});
     await page.mouse.up();state=await snapshot();

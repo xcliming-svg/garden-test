@@ -377,6 +377,7 @@
     layout.slotFrames = layout.slots.map((slot,i) => {
       const disabled=i===s.preview;
       const frame=U.pixelBox(scene,slot.x+slot.size/2,slot.y+slot.size/2,slot.size,slot.size,disabled?colors.disabledFill:colors.emptySlotFill,{strokeWidth:s.line,border:disabled?colors.disabledBorder:colors.normalBorder}).setName('slot-frame:'+i);
+      if(!disabled&&window.GardenDashedGridPreview.unified)frame.setPlacementStyle('dashed',colors.normalBorder,colors.emptySlotFill,0);
       if(disabled)layout.alignCost=drawSlotCost(scene,slot.x+s.line,slot.y+s.line,s.cell,s.exampleCost);
       return frame;
     });
@@ -704,10 +705,20 @@
       slots.forEach((slot, index) => {
         const active = dragging ? target < 0 || target === index : !!(focus && focus.slot===index && equipped[index]);
         const showItem = !!equipped[index] && !(dragging && target===index);
-        // 후보는 기존 프레임 색만 변경한다. 장착 카드와 빈 슬롯의 프레임은 동시에 표시하지 않는다.
-        layout.slotFrames[index].setStrokeStyle(s.line,active?colors.itemBorder:colors.normalBorder,1).setVisible(!showItem);
-        window.GardenItemCards.setIcon(slotItems[index],equipped[index]);
-        slotItems[index].setStrokeStyle(s.line,colors.itemBorder,active?1:0).setVisible(showItem).setAlpha(1);
+        const frame=layout.slotFrames[index],item=slotItems[index];
+        window.GardenItemCards.setIcon(item,equipped[index]);
+        if(window.GardenDashedGridPreview.unified){
+          const candidate=!!dragging&&(!ballMode||!equipped[index]),hot=candidate&&target===index;
+          // Eligible occupied slots retain their face and icon; the dashed
+          // frame replaces their border until the drag is released.
+          frame.setPlacementStyle(hot?'solid':'dashed',candidate?colors.itemBorder:colors.normalBorder,hot?colors.normalFill:colors.emptySlotFill,hot?.45:0)
+            .setVisible(!showItem||candidate);
+          item.list[0].setVisible(!candidate);
+          item.setStrokeStyle(s.line,colors.itemBorder,!dragging&&active?1:0).setVisible(showItem).setAlpha(1);
+        }else{
+          frame.setStrokeStyle(s.line,active?colors.itemBorder:colors.normalBorder,1).setVisible(!showItem);
+          item.setStrokeStyle(s.line,colors.itemBorder,active?1:0).setVisible(showItem).setAlpha(1);
+        }
       });
       ghost.setVisible(false);
       if (dragging && target >= 0) {
