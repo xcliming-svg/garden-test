@@ -114,4 +114,54 @@ for(const [cx,cy,dx,dy] of [[480,200,0,-1],[580,270,1,0],[480,340,0,1],[380,270,
   }
   ok(A.tuning['yellow-floor'].span===72&&previous===1,'larger 72px ground');
 }
+// Ballistic balloon and one-time ground impact use the same randomly chosen target.
+{
+  const cfg=A.tuning.balloon;
+  const target={id:51,x:480,y:110,ground:125,radius:5};
+  const m=A.create(spec,()=>.5);m.equip(0,'balloon');
+  let hits=0;
+  const damage=()=>{hits++;return {killed:false};};
+  advance(m,.01,hero,[target],damage);
+  const q=m.state.shots[0];
+  ok(q.tx===target.x&&q.ty===target.ground,'ground target chosen');
+  ok(R.eligible({x:q.tx,y:q.ty},q.origin,patrol),'balloon uses relic range');
+  ok(q.flight>=cfg.minFlight&&q.flight<=cfg.maxFlight,'bounded flight time');
+  const samples=[0,.2,.4,.6,.8,1].map(u=>{
+    const a=A.pose({...q,age:q.flight*u},hero);
+    return {u,x:a.x,y:a.y,z:(q.y+(q.ty-q.y)*u)-a.y-cfg.span/2};
+  });
+  for(let i=0;i<samples.length-1;i++){
+    const p=samples[i];
+    const expected=cfg.launchHeight*(1-p.u)+.5*cfg.gravity*q.flight*q.flight*p.u*(1-p.u);
+    ok(Math.abs(p.z-expected)<1e-8,'true parabolic height');
+    ok(Math.abs(p.x-(q.x+(q.tx-q.x)*p.u))<1e-8,'constant ground-plane velocity');
+  }
+  ok(samples[2].z>samples[0].z&&samples[2].z>samples[4].z,'rises then falls');
+  const before={...q,age:q.flight-1e-6},impact={...q,age:q.flight};
+  ok(A.pose(before,hero).alpha===1&&A.balloonSplash(before)===null&&A.balloonDroplets(before).length===0,'intact before contact');
+  ok(Math.abs(A.pose(before,hero).y+cfg.span/2-q.ty)<.001,'balloon bottom reaches ground');
+  ok(A.pose(impact,hero).alpha===0&&A.balloonSplash(impact)!==null,'replaced at exact contact');
+  ok(A.balloonSplash(impact).x===q.tx&&A.balloonSplash(impact).y===q.ty,'puddle stationary at impact');
+  ok(A.balloonDroplets(impact).length===12,'12 water droplets');
+  let previous=0;
+  for(const age of [0,.035,.07,.105,.14,.25]){
+    const a=A.balloonSplash({...q,age:q.flight+age});
+    ok(a.scale>=previous-1e-8&&a.x===q.tx&&a.y===q.ty,'puddle spreads without moving');previous=a.scale;
+  }
+  ok(previous===1&&cfg.splashSpan===106,'maximum puddle span');
+  const spray=A.balloonDroplets({...q,age:q.flight+.15});
+  ok(spray.every(p=>Object.values(p).every(Number.isFinite))&&spray.some(p=>Math.hypot(p.x-q.tx,p.y-q.ty)>5),'droplet motion');
+  ok(A.balloonDroplets({...q,age:q.flight+.4}).length===0,'droplets expire');
+  ok(A.balloonSplash({...q,age:q.life}).alpha<1e-8,'puddle fades');
+  advance(m,q.flight-1e-6,hero,[target],damage);
+  ok(hits===0,'no damage in flight');
+  advance(m,.00001,hero,[target],damage);
+  ok(hits===1&&q.burstDone,'one impact hit');
+  const late={...target,id:52};
+  advance(m,.1,hero,[target,late],damage);
+  advance(m,.1,hero,[target,late],damage);
+  ok(hits===1,'no repeat or late puddle damage');
+  advance(m,q.life-q.age+.001,hero,[target],damage);
+  ok(!m.state.shots.includes(q),'splash removed after lifetime');
+}
 console.log('PASS equipped weapon model:',checks,'checks');
