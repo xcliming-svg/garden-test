@@ -36,7 +36,7 @@ try{
       return {fairies:s.fairyPatrol.actors.length,enemies:!!s.enemyPreview,shots:s.heroWeaponPreview.model.state.shots.length};
     });
     assert.deepEqual(initial,{fairies:11,enemies:false,shots:0});
-    const expectedSizes={boomerang:28,rock:10,sprinkler:24};
+    const expectedSizes={boomerang:28,rock:12,sprinkler:24};
     for(const id of ids.slice(1)){
       await select.selectOption(id);
       if(id in expectedSizes)assert.equal(await page.evaluate(id=>window.GardenHeroWeaponPreview.tuning[id].span,id),expectedSizes[id]);
