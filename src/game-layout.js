@@ -84,7 +84,7 @@
     field: R.n.background, hud: R.n.hud, hudBorder: R.n.hudEdge, hudDivider: R.n.divider,
     label: R.hex.label, hudLabel: R.hex.hudLabel, value: R.hex.text,
     gridFill: R.n.tab, gridLine: R.n.gridLine, gridBorder: R.n.tabBorder,
-    normalFill: R.n.tab, normalBorder: R.n.itemFrame, emptySlotFill: R.n.hud,
+    normalFill: R.n.tab, normalBorder: R.n.tabBorder, emptySlotFill: R.n.hud,
     progressTrack: R.n.track, progressBorder: R.n.border, progressFill: R.n.green,
     disabledFill: R.n.disabledFill, disabledBorder: R.n.disabledBorder, disabledText: R.hex.disabled,
     gardenSoil: R.n.garden, gardenSoilAlpha: 1, gardenBorder: R.n.gardenBorder,
@@ -376,7 +376,7 @@
     const layout = bottomLayout();
     layout.slotFrames = layout.slots.map((slot,i) => {
       const disabled=i===s.preview;
-      const frame=U.pixelBox(scene,slot.x+slot.size/2,slot.y+slot.size/2,slot.size,slot.size,disabled?colors.disabledFill:colors.emptySlotFill,{strokeWidth:s.line,border:colors.normalBorder}).setName('slot-frame:'+i);
+      const frame=U.pixelBox(scene,slot.x+slot.size/2,slot.y+slot.size/2,slot.size,slot.size,disabled?colors.disabledFill:colors.emptySlotFill,{strokeWidth:s.line,border:disabled?colors.disabledBorder:colors.normalBorder}).setName('slot-frame:'+i);
       if(disabled)layout.alignCost=drawSlotCost(scene,slot.x+s.line,slot.y+s.line,s.cell,s.exampleCost);
       return frame;
     });
@@ -504,7 +504,7 @@
   // 정보창의 중성 회색 테두리, 보라색 제목 바와 HUD 공통 회색 본문.
   const itemTooltip = Object.freeze({
     width: hud.barWidth, padding: blueprintPadding, gap: blueprintPadding, bottomPadding: blueprintPadding, fontSize: 10, titleSize: 10,
-    rowGap: hudGap, lineSpacing: 4, strokeWidth: 1, accent: R.n.itemFrame,
+    rowGap: hudGap, lineSpacing: 4, strokeWidth: 1, accent: R.n.tabBorder,
     background: R.n.tab, header: R.n.header,
     title: colors.value, description: R.hex.label, hint: R.hex.label
   });

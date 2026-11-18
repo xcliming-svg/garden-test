@@ -21,7 +21,7 @@
     tabBorder:slate,gridLine:slate,panelBorder:hex.stone,border:hex.stone,
     disabledBorder:slate,hover:hex.silver,text:hex.paper,label:hex.paper,hudLabel:hex.silver,disabled:hex.silver,
     green:hex.growthLight,red:hex.red,redText:hex.red,warning:hex.gold,icon:hex.silver,shadow:ink,
-    track:hud,barFrame:panel,garden:hud,gardenBorder:slate,flowerFrame:hex.graphite,itemFrame:hex.graphite,
+    track:hud,barFrame:panel,garden:hud,gardenBorder:slate,flowerFrame:hex.graphite,
     flowerBorder:hex.growth,itemBorder:hex.sky
   });
   // Keep all existing material roles and SVG quantization restricted to the original 16.
@@ -38,7 +38,7 @@
     disabledBorder:hex.bark,hover:hex.bark,text:hex.bark,label:hex.bark,
     hudLabel:hex.bark,disabled:hex.bark,green:hex.bark,red:hex.redDark,
     redText:hex.redDark,warning:hex.bark,icon:hex.bark,shadow:hex.bark,track:hex.paper,
-    barFrame:hex.clay,garden:hex.clay,gardenBorder:hex.bark,flowerFrame:hex.bark,itemFrame:hex.bark,
+    barFrame:hex.clay,garden:hex.clay,gardenBorder:hex.bark,flowerFrame:hex.bark,
     flowerBorder:hex.growth,itemBorder:hex.sky
   });
   const referenceHex=uiType===1?lightReference:darkReference;
