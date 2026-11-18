@@ -146,7 +146,7 @@
     ctx.putImageData(image,0,0);texture.refresh();
     texture.setFilter(Phaser.Textures.FilterMode.NEAREST);
   }
-  function draw(scene, spec, colors, gardenRaster, patrolBounds, patrolPosition, updateHud, itemPreview) {
+  function draw(scene, spec, colors, gardenRaster, patrolBounds, patrolPosition, updateHud, itemPreview, previewFlowers=[]) {
     const fairy=window.GardenFairyPatrol.enabled;
     install(scene,spec.garden.cell);if(!fairy)installEnemy(scene);
     const g=spec.garden,params=new URLSearchParams(window.location.search),occupied=fairy&&params.get('full')!=='1'?new Set([44,45,54,55]):window.GardenCombatPreview.initialGarden(spec);
@@ -193,6 +193,52 @@
     if(fairy){
       const patrol=window.GardenFairyPatrol.attach(scene,spec,occupied,geometry,patrolPosition,updateHud,guardianSize);
       window.GardenEnemyPreview.attach(scene,spec,patrol);
+      if(previewFlowers.length){
+        // Static card inspection: plant into the existing garden, never create combat loot.
+        const L=window.GardenGameLayout;
+        const ghost=scene.add.image(0,0,growth?G.key(types[0],1):key(types[0],g.cell))
+          .setDepth(15).setAlpha(.45).setVisible(false).setName('garden-preview-ghost');
+        let dragging=null,target=-1;
+        const point=p=>scene.cameras.main.getWorldPoint(p.x,p.y);
+        const hit=p=>L.gardenHit(p.x,p.y,g);
+        function move(pointer){
+          if(!dragging)return;
+          const p=point(pointer),next=hit(p),valid=L.gardenCandidates(occupied).has(next);
+          if(next!==target){target=next;refreshSoil(target);}
+          dragging.marker.setPosition(p.x,p.y).setAlpha(valid?.25:1);
+          ghost.setVisible(valid);
+          if(valid){
+            const c=center(target),s=growth?G.displaySize(g.cell):g.cell;
+            ghost.setTexture(growth?G.key(dragging.spriteName,1):key(dragging.spriteName,g.cell))
+              .setOrigin(.5,growth?.856:.5).setDisplaySize(s,s)
+              .setPosition(c.x,growth?c.y+g.cell/2-1:c.y);
+          }
+        }
+        function finish(pointer,accept){
+          if(!dragging)return;
+          const f=dragging,i=accept&&pointer?hit(point(pointer)):-1;
+          dragging=null;target=-1;
+          f.marker.setDepth(f.idleDepth).setPosition(f.x,f.y).setAlpha(1).setStrokeStyle(0,0,0);
+          if(L.gardenCandidates(occupied).has(i)){
+            occupied.add(i);addFlower(i,f.spriteName,patrol.elapsed);
+            f.consumed=true;f.marker.disableInteractive().setVisible(false);
+            patrol.refreshHud();
+          }
+          ghost.setVisible(false);refreshSoil(null);
+        }
+        for(const f of previewFlowers){
+          const o=f.marker;
+          o.setInteractive({useHandCursor:true,draggable:true});scene.input.setDraggable(o);
+          o.on('pointerover',()=>{if(!dragging)o.setStrokeStyle(1,colors.flowerBorder,1);});
+          o.on('pointerout',()=>{if(!dragging)o.setStrokeStyle(0,0,0);});
+          o.on('dragstart',p=>{if(dragging||f.consumed)return;dragging=f;target=-1;o.setDepth(30).setStrokeStyle(1,colors.flowerBorder,1);refreshSoil(-1);move(p);});
+          o.on('drag',p=>{if(dragging===f)move(p);});
+          o.on('dragend',p=>{if(dragging===f)finish(p,true);});
+        }
+        const cancel=()=>finish(null,false);
+        scene.input.on('gameout',cancel);scene.events.on('pause',cancel);
+        scene.events.once('shutdown',()=>{scene.input.off('gameout',cancel);scene.events.off('pause',cancel);});
+      }
       return;
     }
     const bounds=clampedBounds(occupied),start=patrolPosition(bounds,(bounds.right-bounds.left)/2);

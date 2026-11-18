@@ -33,7 +33,7 @@ try{
   const errors=[],failed=[];page.on('pageerror',e=>errors.push(String(e)));page.on('requestfailed',r=>failed.push(r.url()));
   try{
    // Background sampling requires an empty battlefield; new enemy display has its own tests.
-   await page.goto(url+'/index.html'+(query?query+'&':'?')+'enemies=0');
+   await page.goto(url+'/index.html'+(query?query+'&':'?')+'enemies=0&cards=0');
    await page.waitForFunction(()=>window.__previewGame?.scene.isActive('MainMenu'));
    const box=await page.locator('canvas').boundingBox();
    await page.mouse.click(box.x+480*box.width/960,box.y+252*box.height/540);
