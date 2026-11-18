@@ -1,5 +1,7 @@
 # 개발 문서
 
+> **장착 무기 밸런스 v1 (devel):** `?enemies=1&weapons=1`에서 무기별 피해·사거리·쿨타임·레벨, 적 HP, 높이별 상성, 예측 조준 및 중복 10슬롯을 적용한다. `weaponSlots`, `weaponLevel`, `enemyCount`, `balanceWave`, `weaponLoadout` 비교 가능. [현행 밸런스 규격 및 시험 결과](./weapon-balance-v1.md). 기본 적 없는 모션과 기존 구슬 전투는 유지한다.
+
 > **devel 나뭇잎 요정 장착 무기:** 기본 새 게임은 적 없이 시작하며 하단 슬롯에 장착한 무기는 나뭇잎 요정만 자동 발사한다. 여러 무기 독립 발사 및 교체 반영. 신발·방패는 공격 없음. 셀렉트는 무장착 시 시각 비교 전용. `?enemies=1&weapons=1`에서 실제 적 피해/감속·처치 드롭 확인. 기존 명시적 전투 비교는 유지. [무기 규격](./hero-weapon-preview.md). 보석 획득 판정과 무기 360° 조준은 분리하며, 바퀴는 정원 관통 금지, 설치형은 정원 외부의 안전한 위치만 허용한다.
 
 
@@ -31,6 +33,7 @@
 
 | 문서 | 역할 |
 | --- | --- |
+| [weapon-balance-v1.md](./weapon-balance-v1.md) | 무기/적 스탯, 상성, 10슬롯 조합 및 실제 모델 시험 |
 | [project-foundations.md](./project-foundations.md) | 엔진 버전 선정 근거, 초기 화면 구성의 참고 자료 및 개발 단계 이력 |
 | [deployment.md](./deployment.md) | main/devel GitHub Pages 배포 구성, 초기 설정 및 검증 방법 |
 | [resolution-960x540.md](./resolution-960x540.md) | 현재 devel 실험 규격, 변경 범위 및 검증 |
