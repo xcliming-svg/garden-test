@@ -11,7 +11,7 @@
     for(let i=0;i<kinds.length;i++){total+=tuning.dropWeights[i];if(r<total)return kinds[i];}
     return 'item';
   }
-  const stageAt=age=>Math.min(3,1+Math.floor(Math.max(0,age)/tuning.growthSeconds));
+  const stageAt=age=>Math.min(3,1+Math.floor((Math.max(0,age)+1e-7)/tuning.growthSeconds));
   function completion(entries){
     const required=new Map(blueprint);let matches=0;
     for(const [id,f] of entries)if(required.get(id)===f.name&&f.stage===3)matches++;

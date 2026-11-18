@@ -19,7 +19,7 @@ function runAudit(sources){
     check(r.state.displayGems===r.state.gems,'settled balance');
   }
   check(r.state.slotCount===10&&R.cost(10)===null&&!r.buy(),'max slots');
-  check(R.stageAt(0)===1&&R.stageAt(7.99)===1&&R.stageAt(8)===2&&R.stageAt(16)===3&&R.stageAt(200)===3,'monotonic growth');
+  check(R.stageAt(0)===1&&R.stageAt(7.99)===1&&R.stageAt(8)===2&&R.stageAt(16-1e-9)===3&&R.stageAt(16)===3&&R.stageAt(200)===3,'monotonic growth');
   check(R.completion(new Map())===0,'empty blueprint');
   const garden=new Map(R.initial.map(([i,name])=>[i,{name,stage:3}]));
   check(R.completion(garden)===25,'initial 4 of 16');
