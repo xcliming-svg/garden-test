@@ -47,7 +47,7 @@ try{
         const s=window.__previewGame.scene.getScene('Game'),A=window.GardenHeroWeaponPreview;
         return s.heroWeaponPreview.model.state.shots.some(q=>{
           const p=s.children.getByName('hero-weapon:'+id+':'+q.id);
-          return q.kind===id&&p&&Math.abs(p.displayHeight-A.tuning[id].span)<.001;
+          return q.kind===id&&p&&Math.abs((id==='boomerang'?Math.max(p.displayWidth,p.displayHeight):p.displayHeight)-A.tuning[id].span)<.001;
         });
       },id);
       const actual=await page.evaluate(()=>{
@@ -67,6 +67,18 @@ try{
         assert.equal(safe,true,'garden-safe '+id);
       }
     }
+    // The asymmetric sprinkler head rotates around its original SVG hub,
+    // not the bounding-box center; particles begin at each actual nozzle.
+    await select.selectOption('sprinkler');
+    await page.waitForFunction(()=>{
+      const s=window.__previewGame.scene.getScene('Game'),A=window.GardenHeroWeaponPreview;
+      return s.heroWeaponPreview.model.state.shots.some(q=>{
+        if(q.kind!=='sprinkler'||q.age<.35)return false;
+        const p=s.children.getByName('hero-weapon:sprinkler:'+q.id);
+        return p&&Math.abs(p.originX-q.size.pivot.x)<.001&&Math.abs(p.originY-q.size.pivot.y)<.001&&
+          p.originY<.45&&Math.hypot(p.x-q.tx,p.y-q.ty)<.001&&A.sprinklerDrops(q).length>=9;
+      });
+    });
     // Independent broom orbit is centered at the deployed point, not the moving fairy.
     await select.selectOption('broom');
     await page.waitForFunction(()=>{
