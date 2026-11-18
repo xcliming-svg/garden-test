@@ -69,10 +69,13 @@ const entries=E.roster.map(e=>({...e,width:e.span,height:e.span}));
  ok(p.slow(a.id,.5,.4)&&!p.slow(a.id,.4,.6)&&a.slowAmount===.5,'strongest slow only');p.advance(.1);
  ok(p.push(a.id,12)&&!p.push(a.id,12),'push cooldown');
 }
-function simulate(label,loadout,seconds,target,level=1,full=false){
+function simulate(label,loadout,seconds,target,level=1,full=false,fixed=false){
  const rng=seeded(42),g=full?{left:364,right:595,top:150,bottom:381}:garden,cells=full?Array.from({length:100},(_,i)=>i):occupied;
  const b=window.GardenPebbleBoundary.layout(spec,g,40,{lift:.5,tilt:1.25,lean:.5},11),p={bounds:b.patrol,boundary:b,occupied:cells,finished:false},h={...hero,center:{x:0,y:0}};
- const pop=E.createPopulation(spec,p,entries,rng,target,null,true),m=A.create(spec,rng,A.defaultSize,true);
+ let pop;
+ const wanted=fixed?(time)=>Math.min(200,pop.actors.length+Math.max(0,Math.min(200,Math.floor(time*10)+1)-pop.spawned)):target;
+ pop=E.createPopulation(spec,p,entries,rng,wanted,null,true);
+ const m=A.create(spec,seeded(147),A.defaultSize,true);
  loadout.forEach((id,i)=>m.equip(i,id,level));
  const dt=.05,w=p.bounds.right-p.bounds.left,v=p.bounds.bottom-p.bounds.top,L=2*(w+v);let flowerStrikes=0,peak=0,activeShots=0;
  for(let t=0;t<seconds-1e-8;t+=dt){
@@ -101,5 +104,7 @@ const results=[
  simulate('late10-wheel',Array(10).fill('wheel'),20,()=>200),
  simulate('full10-L3',mixed,20,()=>200,3,true)
 ];
+const finite=[...ids.map(id=>simulate('fixed10-'+id,Array(10).fill(id),40,()=>0,1,false,true)),simulate('fixed10-mixed',mixed,40,()=>0,1,false,true)];
 console.log('BALANCE RESULTS',JSON.stringify(results));
+console.log('FIXED ARRIVALS',JSON.stringify(finite));
 console.log('PASS weapon balance:',checks,'checks');
