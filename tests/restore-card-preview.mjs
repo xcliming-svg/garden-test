@@ -85,8 +85,8 @@ try{
     return {edges,junctions,centers,used:[...used].sort((a,b)=>a-b),target,base:G.colors.base,active:G.colors.active,flower:s.children.getByName('placeholder:flower:0').list[0].fillColor,flowerFace:s.children.getByName('placeholder:flower:0').list[1].fillAlpha,cornerCards:s.itemCardPreview.flowers.every(({marker:m})=>m.list[0].cornerFrame&&m.list[1].fillAlpha===0),card:s.children.getByName('placeholder:item:00').list[0].fillColor,slot:s.children.getByName('slot-frame:0').strokeColor,tip:L.itemTooltip.accent};
    });
    const idleGrid=await gridState();assert.ok(idleGrid.edges&&idleGrid.junctions&&idleGrid.centers,JSON.stringify(idleGrid));
-   assert.deepEqual(idleGrid.used,[0x535361]);assert.equal(idleGrid.base,0x535361);assert.equal(idleGrid.active,0x84A83E);
-   assert.equal(idleGrid.flowerFace,0);assert.ok(idleGrid.cornerCards);assert.equal(idleGrid.flower,0x535361);assert.equal(idleGrid.tip,0x535361);
+   assert.deepEqual(idleGrid.used,[0x3B3A44]);assert.equal(idleGrid.base,0x3B3A44);assert.equal(idleGrid.active,0x84A83E);
+   assert.equal(idleGrid.flowerFace,0);assert.ok(idleGrid.cornerCards);assert.equal(idleGrid.flower,0x3B3A44);assert.equal(idleGrid.tip,0x535361);
    const bottom=await page.evaluate(()=>{
     const s=window.__previewGame.scene.getScene('Game'),L=window.GardenGameLayout,b=L.bottomLayout();
     const statObjects=s.children.list.filter(o=>o.name?.startsWith('stat-'));
@@ -212,7 +212,7 @@ try{
    await drag(initial.flowers[0],initial.candidate,false);state=await snapshot();
    assert.equal(state.ghost,true);assert.equal(state.flowers[0].alpha,.25);assert.equal(state.flowers[0].lift,0);
     const hotGrid=await gridState();assert.ok(hotGrid.edges&&hotGrid.junctions&&hotGrid.centers,JSON.stringify(hotGrid));
-    assert.deepEqual(hotGrid.used,[0x535361,0x84A83E]);assert.ok(hotGrid.target.every(c=>c===0x84A83E),JSON.stringify(hotGrid));
+    assert.deepEqual(hotGrid.used,[0x3B3A44,0x84A83E]);assert.ok(hotGrid.target.every(c=>c===0x84A83E),JSON.stringify(hotGrid));
     assert.equal(hotGrid.flower,0x84A83E);
     await page.screenshot({path:join(out,'cards-'+w+'-flower-highlight.png')});
    await page.mouse.up();state=await snapshot();

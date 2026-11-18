@@ -1,7 +1,7 @@
 (function(){
   'use strict';
   const R=window.GardenPalette.reference.n;
-  const colors=Object.freeze({base:R.gardenBorder,active:R.flowerBorder});
+  const colors=Object.freeze({base:R.flowerFrame,active:R.flowerBorder});
 
   const all=g=>new Set(Array.from({length:g.columns*g.rows},(_,i)=>i));
   const visible=(occupied,candidates)=>new Set([...occupied,...candidates]);

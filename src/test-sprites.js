@@ -119,14 +119,15 @@
     const R = window.GardenPalette.reference.n;
     const U = window.GardenUI;
     const flower=kind==='flower'&&window.GardenPalette.uiType!==1;
-    const border=flower?U.cornerFrame(scene,0,0,size,R.tabBorder):U.pixelBox(scene,0,0,size,size,R.tabBorder);
+    const baseBorder=flower?R.flowerFrame:R.tabBorder;
+    const border=flower?U.cornerFrame(scene,0,0,size,baseBorder):U.pixelBox(scene,0,0,size,size,baseBorder);
     const activeBorder = kind === 'flower' ? R.flowerBorder : R.itemBorder;
     const faceColor = R.tab;
     const face = U.pixelBox(scene,0,0,size-2,size-2,faceColor,{cut:false,alpha:flower?0:1});
     const image = sprite(scene, 0, 0, name, iconSize);
     const group = scene.add.container(x, y, [border, face, image]).setSize(size, size);
     group.setStrokeStyle = (_width, _color, alpha) => {
-      border.setFillStyle(alpha ? activeBorder : R.tabBorder, 1);
+      border.setFillStyle(alpha ? activeBorder : baseBorder, 1);
       return group;
     };
     return group;
