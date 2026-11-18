@@ -3,7 +3,8 @@
   // Random incoming enemy population. Original SVGs keep their embedded eyes hidden.
   const params=new URLSearchParams(window.location.search);
   // Card inspection is the default; retain explicit swarm/attack comparisons.
-  const enabled=window.GardenFairyPatrol.enabled&&params.get('enemies')!=='0'&&
+  const playable=!!window.GardenRunRules?.active;
+  const enabled=playable||window.GardenFairyPatrol.enabled&&params.get('enemies')!=='0'&&
     (params.get('enemies')==='1'||params.get('attack')!==null||params.get('densitySim')==='1');
   const size=512,root='assets/enemies/',anchorKey='enemy-preview:anchors';
   const enemyStates=Object.freeze(['auto','normal','attack','hit']);
@@ -172,28 +173,47 @@
       }
       return bag.pop();
     }
+    function runPath(path){return {...path,stage:path.target+Math.min(10,path.start-path.target)};}
+    function retarget(a){
+      const g=spec.garden,point={x:a.pose.x,y:a.pose.ground};
+      const cells=patrol.occupied.map(index=>({index,x:g.x+(index%g.columns)*g.pitch+g.line+g.cell/2,y:g.y+Math.floor(index/g.columns)*g.pitch+g.line+g.cell-1}));
+      const target=cells.sort((b,c)=>Math.hypot(b.x-point.x,b.y-point.y)-Math.hypot(c.x-point.x,c.y-point.y))[0];
+      if(!target)return;
+      const dx=point.x-target.x,dy=point.y-target.y,length=Math.hypot(dx,dy);
+      a.path=runPath({start:target.x+length,target:target.x,ground:target.y,originX:target.x,originY:target.y,ux:length?dx/length:1,uy:length?dy/length:0,flower:target.index,side:a.path.side});
+      a.motionAge=0;a.strikes=0;a.flowerHit=false;
+    }
     function spawn(){
       if(!directionBag.length)directionBag=shuffled(directions,random);
       const entry=nextEntry(),side=directionBag.pop();
-      const path=route(spec,patrol.boundary,entry,patrol.occupied,{side,random});
-      const actor={id:serial++,entry,path,age:0,blink:F.blinkSchedule(serial+11),expressionState:'auto',expression:'normal',pose:null,hp:entry.level,hitUntil:0};
+      const initialPath=route(spec,patrol.boundary,entry,patrol.occupied,{side,random});
+      const path=playable?runPath(initialPath):initialPath;
+      const actor={id:serial++,entry,path,age:0,blink:F.blinkSchedule(serial+11),expressionState:'auto',expression:'normal',pose:null,hp:entry.level,hitUntil:0,motionAge:0,strikes:0,pendingHits:0};
       actor.duration=M.duration(entry,'auto',path,spawning.rank);actors.push(actor);spawned++;
       updateActor(actor);return actor;
     }
     function updateActor(a){
-      a.pose=worldPose(spec,a.path,M.sample(a.entry,'auto',a.age,a.path,spawning.rank),a.entry);
+      if(playable){
+        const approach=M.travelTime(a.entry,a.path,spawning.rank),p=M.profiles[a.entry.id];
+        const attackAge=Math.max(0,a.motionAge-approach),period=M.duration(a.entry,'attack',a.path,spawning.rank);
+        const strikes=attackAge>=p.windup+p.strike?1+Math.floor((attackAge-p.windup-p.strike)/period):0;
+        if(strikes>a.strikes){a.pendingHits+=strikes-a.strikes;a.strikes=strikes;}
+        const sample=a.motionAge<approach?M.sample(a.entry,'auto',a.motionAge,a.path,spawning.rank):M.sample(a.entry,'attack',attackAge,a.path,spawning.rank);
+        a.pose=worldPose(spec,a.path,sample,a.entry);
+      }else a.pose=worldPose(spec,a.path,M.sample(a.entry,'auto',a.age,a.path,spawning.rank),a.entry);
       a.expression=expressionFor(a.expressionState==='auto'&&elapsed<a.hitUntil?'hit':a.expressionState,a.pose.phase,a.blink(a.age));
     }
     function advance(seconds){
-      if(patrol.finished)return elapsed;
+      if(patrol.finished||(playable&&!patrol.occupied.length))return elapsed;
       // Substeps retain smooth entry/exit and avoid a backlog burst after a
       // delayed frame. The target is a concurrent count, not cumulative spawns.
       let left=Math.max(0,Number.isFinite(seconds)?seconds:0);
       do {
         const dt=Math.min(spawning.step,left);left-=dt;elapsed+=dt;
         for(let i=actors.length-1;i>=0;i--){
-          const a=actors[i];a.age+=dt*(elapsed<(a.slowUntil||0)?1-(a.slowAmount||0):1);
-          if(a.age>=a.duration){actors.splice(i,1);completed++;}else updateActor(a);
+          const a=actors[i],step=dt*(elapsed<(a.slowUntil||0)?1-(a.slowAmount||0):1);a.age+=step;
+          if(playable){if(!patrol.occupied.includes(a.path.flower))retarget(a);a.motionAge+=step;updateActor(a);}
+          else if(a.age>=a.duration){actors.splice(i,1);completed++;}else updateActor(a);
         }
         const wanted=target(elapsed);
         for(let n=0;n<spawning.maxBatch&&actors.length<wanted;n++)spawn();
@@ -223,7 +243,7 @@
       const scale=e.span/Math.max(e.bounds.width,e.bounds.height);
       return {...e,scale,width:e.bounds.width*scale,height:e.bounds.height*scale};
     });
-    const target=simulation?simulationTarget:targetCount;
+    const target=playable?window.GardenRunRules.population:simulation?simulationTarget:targetCount;
     const A=window.GardenFairyAttack;
     const weaponCombat=window.GardenHeroWeaponPreview?.combat&&window.GardenHeroWeaponPreview.enabled;
     const relics=(A.enabled||weaponCombat)?window.GardenRelicCollection.attach(scene,spec,patrol):null;
@@ -263,11 +283,12 @@
           const step=Math.min(left,A.tuning.step);left-=step;
           const previous=new Map((attack?.positions()||[]).map(e=>[e.id,e]));
           model.advance(step);
-          // A completed strike damages its designated flower exactly once.
           relics.model.syncFlowers(patrol.occupied);
-          for(const e of model.actors)if(!e.flowerHit&&(e.pose.phase==='recover'||e.pose.phase==='return')){
-            e.flowerHit=true;relics.model.damageFlower(e.path.flower);
+          for(const e of model.actors){
+            if(playable){if(e.pendingHits){const damage=Math.max(1,window.GardenRunRules.tuning.enemyDamage+(e.entry.level-1)*window.GardenRunRules.tuning.enemyDamagePerLevel-(scene.runEquipment?.defense()||0));relics.model.damageFlower(e.path.flower,damage*e.pendingHits);e.pendingHits=0;}}
+            else if(!e.flowerHit&&(e.pose.phase==='recover'||e.pose.phase==='return')){e.flowerHit=true;relics.model.damageFlower(e.path.flower);}
           }
+          if(playable){for(const [id,f] of relics.state.flowers)if(f.energy<=0)scene.runGarden?.remove(id);if(!patrol.occupied.length)break;}
           attack?.step(step,previous);relics.step(step);
         }
       }

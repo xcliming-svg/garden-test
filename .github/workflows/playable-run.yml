@@ -1,0 +1,24 @@
+name: Playable garden verification
+on:
+  push:
+    branches: [feature/playable-garden-loop, devel]
+  pull_request:
+    branches: [devel]
+permissions:
+  contents: read
+jobs:
+  run:
+    runs-on: ubuntu-latest
+    timeout-minutes: 8
+    steps:
+      - uses: actions/checkout@v6
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - run: for file in src/*.js tests/*.mjs; do node --check "$file"; done
+      - run: node tests/playable-run-model.mjs
+      - run: node tests/hero-weapon-model.mjs && node tests/relic-collection.mjs
+      - run: npm install --no-save --package-lock=false playwright@1.51.1 phaser@3.90.0
+        env:
+          PLAYWRIGHT_SKIP_BROWSER_DOWNLOAD: '1'
+      - run: node tests/playable-run-browser.mjs

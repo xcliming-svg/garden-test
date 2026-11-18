@@ -1,5 +1,7 @@
 # GitHub Pages — main/devel 동시 배포
 
+> **2026-11-19:** devel 기본 실행은 실제 플레이. 개발용 비교 진입점 `lab.html`이 있는 브랜치에 한해 해당 HTML도 복사하고 스크립트 캐시 버전을 부여한다. main 파일과 배포 경로는 변경하지 않는다.
+
 - 2026-11-12: main `7198cba`에서 `devel` 생성 후 `feature/resolution-960x540`의 `b18a6c6`을 fast-forward 병합했다. main의 게임 소스는 변경하지 않는다.
 - [배포 워크플로](../.github/workflows/deploy-pages.yml)는 main 또는 devel push 시 main/devel 최신 커밋을 각각 가져와 정적 실행 파일만 하나의 Pages artifact에 조립한다. 원본 브랜치 간 파일 복제나 main 병합을 수행하지 않는다. `assets/fonts`의 라이선스 파일도 함께 복사한다.
 

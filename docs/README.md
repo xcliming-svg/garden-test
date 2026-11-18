@@ -1,5 +1,7 @@
 # 개발 문서
 
+> **devel 기본 플레이:** [플레이 통합 규격](./playable-run.md)이 게임 동작 및 임시 밸런스의 최신 기준이다. 아래 미리보기 문서는 `lab.html`에 보존된 비교 동작을 설명한다.
+
 > **devel 나뭇잎 요정 장착 무기:** 기본 새 게임은 적 없이 시작하며 하단 슬롯에 장착한 무기는 나뭇잎 요정만 자동 발사한다. 여러 무기 독립 발사 및 교체 반영. 신발·방패는 공격 없음. 셀렉트는 무장착 시 시각 비교 전용. `?enemies=1&weapons=1`에서 실제 적 피해/감속·처치 드롭 확인. 기존 명시적 전투 비교는 유지. [무기 규격](./hero-weapon-preview.md).
 
 
@@ -31,6 +33,7 @@
 
 | 문서 | 역할 |
 | --- | --- |
+| [playable-run.md](./playable-run.md) | 실제 게임 루프·초기 장비·드롭·도안·성장·적 지속 공격·슬롯·승패 및 검증 |
 | [project-foundations.md](./project-foundations.md) | 엔진 버전 선정 근거, 초기 화면 구성의 참고 자료 및 개발 단계 이력 |
 | [deployment.md](./deployment.md) | main/devel GitHub Pages 배포 구성, 초기 설정 및 검증 방법 |
 | [resolution-960x540.md](./resolution-960x540.md) | 현재 devel 실험 규격, 변경 범위 및 검증 |

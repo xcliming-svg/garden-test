@@ -4,6 +4,7 @@
   // 화면 및 아이템 UI 검토 전용. 임시 장착 상태는 씬 안에서만 사용한다.
   // 실제 전투, 획득, 재화 소비, 슬롯 확장 및 저장 로직은 없다.
   // 픽셀 로그라이크의 정보 밀도/여백을 참고. 8px 배수는 강제하지 않는다.
+  const playable=!!window.GardenRunRules?.active;
   const P = window.GardenPalette;
   const R = P.reference;
   const testSprites = window.GardenTestSprites;
@@ -24,7 +25,7 @@
   const bottomGap = 3, bottomBoundary = 2;
   // 32px 기본 슬롯 + 상하 3px 여백 + HUD 경계선 2px. 비교 URL은 유지한다.
   const slotMode = new URLSearchParams(window.location.search).get('slots');
-  const slotSize = slotMode === '24' ? 24 : slotMode === '36' ? 36 : 32;
+  const slotSize = playable?36:slotMode === '24' ? 24 : slotMode === '36' ? 36 : 32;
   const bottomHudHeight = bottomBoundary + slotSize + 2 * bottomGap;
   const fieldHeight = height - topHudHeight - bottomHudHeight;
   const blueprintTopGap = hudPadding;
@@ -259,7 +260,7 @@
       if(fillWidth>0)progressGraphics.fillStyle(colors.progressFill,1).fillRect(barX+2,barY+2,fillWidth,hud.barHeight-4);
       progressText.setText(progress+'%');
     }
-    setProgress(stress?hud.previewProgress:4);
+    setProgress(stress?hud.previewProgress:playable?0:4);
     // Actual glyph/outline gaps on the native output grid, with fixed column and gauge anchors.
     const align = () => {
       const z = scene.cameras.main.zoom, gap = Math.round(hud.gap * z);
@@ -285,7 +286,7 @@
       pairs[0].number.setText(formatHudTime(Math.floor(seconds/3600),Math.floor(seconds/60)%60,seconds%60));
       pairs[1].number.setText(formatHudCount(kills));
       gemNumber.setText(formatHudCount(gems));
-      if(occupied!==lastOccupied)setProgress(Math.round(100*occupied/(spec.garden.columns*spec.garden.rows)));
+      if(occupied!==lastOccupied)setProgress(playable?occupied:Math.round(100*occupied/(spec.garden.columns*spec.garden.rows)));
       lastSecond=seconds;lastKills=kills;lastGems=gems;lastOccupied=occupied;align();
     };
   }
@@ -319,6 +320,7 @@
       cost.setMask(mask);
       cost.once('destroy', () => { mask.destroy(); clip.destroy(); });
     }
+    alignCost.move=(slot,price,show,affordable)=>{x=slot.x+spec.slots.line;cost.setX(x+size/2).setText(String(price??0)).setColor(affordable?R.hex.green:colors.disabledText).setVisible(show);icon.setVisible(show);alignCost();};
     return alignCost;
   }
 
@@ -328,7 +330,7 @@
     dps: '초당 피해량', defense: '방어력', moveSpeed: '이동 속도'
   });
   // 모든 수치는 UI 비교용 임시 값. 실제 게임 계산식/단위/확률과 무관하다.
-  const baseStats = Object.freeze({ dps: 20, defense: 12, moveSpeed: 100 });
+  const baseStats = Object.freeze(playable?{dps:0,defense:0,moveSpeed:40}:{ dps: 20, defense: 12, moveSpeed: 100 });
   const previewItems = Object.freeze([
     { name: '신발', desc: '이동 속도가 증가합니다.', stats: { moveSpeed: 10 } },
     { name: '스프링클러', desc: '회전형 공격을 추가합니다.', stats: { dps: 18 } },
@@ -342,12 +344,13 @@
     equipped.forEach(item => {
       if (item) statKeys.forEach(key => { result[key] += item.stats[key] || 0; });
     });
+    if(playable){result.moveSpeed=Math.min(80,result.moveSpeed);result.dps=Math.round(result.dps*100)/100;}
     return result;
   }
 
   function getPreviewStats(equipped, index, incoming) {
     const next = equipped.slice();
-    if (Number.isInteger(index) && index >= 0 && index < spec.slots.preview) next[index] = incoming;
+    if (Number.isInteger(index) && index >= 0 && index < (playable?spec.slots.max:spec.slots.preview)) next[index] = incoming;
     return sumPreviewStats(next);
   }
 
@@ -380,7 +383,21 @@
       if(disabled)layout.alignCost=drawSlotCost(scene,slot.x+s.line,slot.y+s.line,s.cell,s.exampleCost);
       return frame;
     });
-    // 기존 확장 슬롯은 표시만 하며 드롭/클릭 대상으로 등록하지 않는다.
+    if(playable){
+      const count=()=>scene.run.state.slotCount;
+      const buyZone=scene.add.zone(0,s.y+s.size/2,s.size,s.size).setDepth(23).setName('run-slot-purchase').setInteractive({useHandCursor:true});
+      layout.updateSlots=()=>{
+        const n=count(),shown=Math.min(n+1,s.max),left=Math.floor((spec.width-shown*s.size-(shown-1)*s.gap)/2);
+        layout.slots.forEach((slot,i)=>{slot.x=left+i*(s.size+s.gap);const f=layout.slotFrames[i],locked=i===n;f.setPosition(slot.x+s.size/2,s.y+s.size/2).setFillStyle(locked?colors.disabledFill:colors.emptySlotFill).setStrokeStyle(s.line,locked?colors.disabledBorder:colors.normalBorder).setVisible(i<shown);});
+        const price=window.GardenRunRules.cost(n),show=price!==null,slot=layout.slots[Math.min(n,s.max-1)];
+        buyZone.setPosition(slot.x+s.size/2,s.y+s.size/2).setVisible(show);if(show)buyZone.setInteractive({useHandCursor:true});else buyZone.disableInteractive();
+        layout.alignCost.move(slot,price,show,scene.run.state.gems>=price);
+        scene.runEquipment?.refreshSlots();
+      };
+      buyZone.on('pointerdown',()=>{if(scene.run.buy())layout.updateSlots();});
+      layout.updateCost=()=>{const n=count(),price=window.GardenRunRules.cost(n);layout.alignCost.move(layout.slots[Math.min(n,s.max-1)],price,price!==null,scene.run.state.gems>=price);};
+      layout.updateSlots();
+    }
     return layout;
   }
 
@@ -398,7 +415,7 @@
     marker.resetFloat=()=>apply(0);
     function update(time){
       const lift=marker.visible&&marker.depth<30?
-        Math.round((1-Math.cos((time+phase)*Math.PI*2/period))*2):0;
+        (playable?((1-Math.cos((time+phase)*Math.PI*2/period))*2):Math.round((1-Math.cos((time+phase)*Math.PI*2/period))*2)):0;
       apply(lift);
     }
     update(0);
@@ -443,6 +460,7 @@
     const body = U.pixelGraphics(scene).setDepth(10).setName('blueprint-body');
     // 제목 박스와 그리드를 독립 외곽선으로 그리고 사이에 3px 공백을 둔다.
     grid(body, b.gridX, b.gridY, b, colors.gridFill, colors.blueprintLine);
+    const targets=playable?window.GardenRunRules.blueprint.map(([id,name])=>{const x=b.gridX+b.frame+b.line+(id%10)*b.pitch+b.cell/2,y=b.gridY+b.frame+b.line+Math.floor(id/10)*b.pitch+b.cell/2;return scene.add.image(x,y,window.GardenFlowerGrowth.key(name,3)).setDisplaySize(11,11).setDepth(11).setName('blueprint-flower:'+id);}):[];
 
     const header = U.pixelGraphics(scene).setDepth(11).setName('blueprint-header');
     text(scene, b.x + b.padding, b.y + b.header / 2 - 0.75, '도안', b.fontSize, colors.hudLabel, 'left').setDepth(12).setName('blueprint-title');
@@ -465,7 +483,7 @@
       .setDepth(13).setName('blueprint-toggle').setInteractive({ useHandCursor: true })
       .on('pointerdown', () => {
         expanded = !expanded;
-        body.setVisible(expanded);
+        body.setVisible(expanded);targets.forEach(t=>t.setVisible(expanded));
         drawArrow();
       });
   }
@@ -550,11 +568,13 @@
   function drawItemPreview(scene, layout, cards, combatSpeed, ballMode=false) {
     const U = window.GardenUI;
     const s = spec.slots;
-    const equipped = Array(s.preview).fill(null);
+    const equipped = Array(playable?s.max:s.preview).fill(null);
+    const unlocked=()=>playable?scene.run.state.slotCount:s.preview;
     let hovered = null, pinned = null, dragging = null, target = -1;
     const clickable = new Set();
     const slotItems = [];
-    const slots = layout.slots.slice(0, s.preview);
+    const slots = layout.slots.slice(0, playable?s.max:s.preview);
+    const slotZones=[];
     // 꽃과 동일하게 스냅 미리보기는 아이콘만 표시한다. 외곽선과 면은 슬롯이 담당한다.
     const makeCard=(x,y)=>ballMode?window.GardenLootPreview.card(scene,x,y,assets.item.cardSize,assets.item.size):testSprites.itemCard(scene,x,y,'wheelbarrow',assets.item.cardSize,assets.item.size);
     const ghost = makeCard(0,0)
@@ -702,6 +722,7 @@
         card.marker.setStrokeStyle(active ? 1 : 0, colors.itemBorder, active ? 1 : 0);
       });
       slots.forEach((slot, index) => {
+        if(playable&&index>=unlocked()){slotItems[index].setVisible(false);return;}
         const active = dragging ? target < 0 || target === index : !!(focus && focus.slot===index && equipped[index]);
         const showItem = !!equipped[index] && !(dragging && target===index);
         // 후보는 기존 프레임 색만 변경한다. 장착 카드와 빈 슬롯의 프레임은 동시에 표시하지 않는다.
@@ -720,14 +741,14 @@
     }
     function point(pointer) { return scene.cameras.main.getWorldPoint(pointer.x, pointer.y); }
     function hitSlot(p) {
-      return slots.findIndex(slot => p.x >= slot.x && p.x < slot.x + slot.size &&
+      return slots.findIndex((slot,index) => index<unlocked()&&p.x >= slot.x && p.x < slot.x + slot.size &&
         p.y >= slot.y && p.y < slot.y + slot.size);
     }
     function dragTo(pointer) {
       if (!dragging) return;
       const p = point(pointer);
       target = hitSlot(p);
-      if(ballMode&&target>=0&&equipped[target])target=-1;
+      if(target>=0&&((ballMode&&equipped[target])||!canEquip(target,dragging.item)))target=-1;
       const half = assets.item.dropSize / 2;
       // 원본 카드는 계속 커서를 따라가고, 목적지 미리보기만 중앙에 붙는다.
       const anchor = {
@@ -737,6 +758,15 @@
       refresh();
       dragging.marker.setPosition(anchor.x, anchor.y).setAlpha(target >= 0 ? 0.25 : 1);
     }
+    function equipItem(index,item){
+      equipped[index]=item;scene.heroWeaponPreview?.equip(index,item.id);
+      if(playable){const stats=sumPreviewStats(equipped);scene.fairyPatrol?.setSpeed(stats.moveSpeed);scene.fairyPatrol?.setCount(1+equipped.filter(i=>i?.id==='water-fairy').length);}
+    }
+    function canEquip(index,item){
+      if(!playable)return true;
+      const next=equipped.slice();next[index]=item;
+      return next.some(i=>i?.stats.dps>0);
+    }
     function finishDrag(pointer, accept) {
       if (!dragging) return;
       const card = dragging;
@@ -744,11 +774,11 @@
       dragging = null; target = -1; hovered = null; pinned = null;
       card.marker.setDepth(card.idleDepth??(ballMode?5:0)).setPosition(card.x, card.y).setAlpha(1);
       if(card.drop)card.drop.dragging=false;
-      if (index >= 0&&(!ballMode||(!equipped[index]&&scene.combatPreview.model.equip(card.id,index)))) {
-        equipped[index] = card.item;
-        scene.heroWeaponPreview?.equip(index,card.item.id);
+      if (index >= 0&&canEquip(index,card.item)&&(!ballMode||(!equipped[index]&&scene.combatPreview.model.equip(card.id,index)))) {
+        equipItem(index,card.item);
         card.consumed = true;
         card.marker.disableInteractive().setVisible(false);
+        if(playable)scene.runDrops?.consume(card);
       }
       refresh();
     }
@@ -771,7 +801,7 @@
         .setDepth(20).setName('preview-equipped:' + index).setVisible(false));
       const zone = scene.add.zone(center.x, center.y, slot.size, slot.size).setDepth(21)
         .setName('preview-slot:' + index).setInteractive({ useHandCursor: true });
-      bindFocus(zone, { slot: index });
+      slotZones.push(zone);bindFocus(zone, { slot: index });
     });
     function bindCard(card){
       const marker = card.marker;
@@ -795,6 +825,7 @@
       clickable.delete(card.marker);
       if(hovered?.card===card)hovered=null;if(pinned?.card===card)pinned=null;
       if(dragging===card){dragging=null;target=-1;}
+      if(playable)refresh();
     }
     const dismiss = (pointer, over) => {
       if (!dragging && !(over || []).some(obj => clickable.has(obj))) {
@@ -818,8 +849,10 @@
       scene.events.off('pause', cancel);
       scene.scale.off('resize', resizePreview);
     });
-    refresh();
-    return {register,unregister};
+    function refreshSlots(){slots.forEach((slot,i)=>{const p=slotAnchor(i);slotItems[i].setPosition(p.x,p.y);const zone=slotZones[i];zone.setPosition(p.x,p.y);if(i<unlocked())zone.setInteractive({useHandCursor:true});else zone.disableInteractive();});refresh();}
+    const controller={register,unregister,equipped,refreshSlots,equipInitial(){equipItem(0,window.GardenItemCards.runItem(scene,window.GardenRunRules.tuning.starterRock));refresh();},isDragging:card=>dragging===card,defense:()=>sumPreviewStats(equipped).defense};
+    if(playable){scene.runEquipment=controller;refreshSlots();scene.events.once('shutdown',()=>delete scene.runEquipment);}else refresh();
+    return controller;
   }
 
   // 정원 UI 검토 전용: 중앙 2×2에서 시작하고 테스트 꽃 이미지만 배치한다.
@@ -1077,24 +1110,26 @@
     g.fillStyle(colors.field, 1).fillRect(0, spec.top, spec.width, spec.fieldHeight);
     if(P.uiType===1)window.GardenLightFieldPreview.field(scene,spec);
     else window.GardenDarkFieldPreview.field(scene,spec);
+    if(playable)scene.run=window.GardenRunRules.create();
     const updateHud=drawHud(scene);
     const layout=drawSlots(scene);
-    drawBlueprint(scene);
+    if(!playable)drawBlueprint(scene);
     const fairy=window.GardenFairyPatrol.enabled;
     const weaponCombat=!!(window.GardenHeroWeaponPreview?.enabled&&window.GardenHeroWeaponPreview.combat);
     const cardMode=fairy&&(!window.GardenEnemyPreview.enabled||weaponCombat)&&params.get('cards')!=='0';
-    const markers=cardMode?(window.GardenItemCards.enabled?window.GardenItemCards.draw(scene,spec,assets,!weaponCombat):drawMarkers(scene,['flower','item'])):{cards:[],flowers:[]};
+    const markers=playable?{cards:[],flowers:[]}:cardMode?(window.GardenItemCards.enabled?window.GardenItemCards.draw(scene,spec,assets,!weaponCombat):drawMarkers(scene,['flower','item'])):{cards:[],flowers:[]};
     const itemPreview=drawItemPreview(scene,layout,markers.cards,cardMode?undefined:window.GardenCombatPreview.tuning.walkSpeed,!cardMode);
-    const status=text(scene,spec.width-10,spec.top+spacing.base,fairy?(weaponCombat?'장착 무기 · 나뭇잎 요정':window.GardenEnemyPreview.enabled&&window.GardenFairyAttack.enabled?'자동 공격 · 요정 11명':'정원 순찰 · 요정 11명'):'테스트 전투 · 공 1개',bottomStats.fontSize,colors.label,'right').setDepth(16).setName(fairy?'fairy-patrol-status':'combat-ball-count');
+    const status=playable?null:text(scene,spec.width-10,spec.top+spacing.base,fairy?(weaponCombat?'장착 무기 · 나뭇잎 요정':window.GardenEnemyPreview.enabled&&window.GardenFairyAttack.enabled?'자동 공격 · 요정 11명':'정원 순찰 · 요정 11명'):'테스트 전투 · 공 1개',bottomStats.fontSize,colors.label,'right').setDepth(16).setName(fairy?'fairy-patrol-status':'combat-ball-count');
     window.GardenFlowerHeadPreview.draw(scene,spec,colors,gardenRaster,patrolBounds,patrolPosition,(elapsed,kills,gems,occupied)=>{
       if(scene.flowerGrowth)scene.flowerGrowth.render(elapsed);
-      updateHud(elapsed,kills,gems,occupied);
+      updateHud(elapsed,kills,gems,playable&&scene.flowerGrowth?window.GardenRunRules.completion(scene.flowerGrowth.entries):occupied);
       if(fairy)return;
       const count=scene.combatPreview.state.ballCount;
       const label='테스트 전투 · 공 '+count+'개';
       if(status.text!==label)status.setText(label);
     },itemPreview,markers.flowers);
+    if(playable){itemPreview.equipInitial();drawBlueprint(scene);window.GardenRunDrops.attach(scene,spec,assets,itemPreview,layout);}
   }
 
-  window.GardenGameLayout = Object.freeze({ spec, assets, colors, spacing, hud, slotCost, formatHudTime, formatHudCount, hudColumns, bottomStats, itemTooltip, replacementTitle, bottomLayout, sumPreviewStats, getPreviewStats, tooltipPosition, gardenCandidates, gardenGridRects, gardenRaster, gardenHit, patrolBounds, patrolPosition, nearestPatrolDistance, animateFloatingDrops, draw });
+  window.GardenGameLayout = Object.freeze({ spec, assets, colors, spacing, hud, slotCost, formatHudTime, formatHudCount, hudColumns, bottomStats, itemTooltip, replacementTitle, bottomLayout, sumPreviewStats, getPreviewStats, tooltipPosition, gardenCandidates, gardenGridRects, gardenRaster, gardenHit, patrolBounds, patrolPosition, nearestPatrolDistance, floatingDrop, animateFloatingDrops, draw });
 }());

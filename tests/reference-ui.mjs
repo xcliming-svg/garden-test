@@ -25,7 +25,7 @@ const server=createServer((req,res)=>{
       body=variants[id][parts[1]];
       if(path==='src/main.js')body=replace(body,"  window.addEventListener('resize',", "  window.__benchmarkGame = game;\n  window.addEventListener('resize',");
     }else {
-      body=readFileSync(join(root,path));
+      body=readFileSync(join(root,path==='index.html'?'lab.html':path));
       if(path==='index.html')body=body.toString().replace('https://cdn.jsdelivr.net/npm/phaser@3.90.0/dist/phaser.min.js','./phaser.js');
     }
     res.writeHead(200,{'content-type':mime[extname(path)]||'application/octet-stream','cache-control':'no-store'}).end(body);

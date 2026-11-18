@@ -59,6 +59,7 @@
       return d;
     }
     function death(x,y,bounds){
+      if(window.GardenRunRules?.active){const kind=window.GardenRunRules.rollDrop(random);if(kind==='gem'||kind==='heart')spawn(kind,x,y,bounds);else return {kind,x,y};return null;}
       spawn('gem',x,y,bounds);
       if(random()<tuning.heartChance)spawn('heart',x+12,y,bounds);
     }
@@ -98,7 +99,9 @@
     function step(dt){
       model.syncFlowers(patrol.occupied);
       const hero=patrol.actors[0];
+      const before=model.state.gems;
       model.step(dt,hero?.center,{bounds:patrol.bounds,direction:hero?.direction,length:patrol.length,speed:patrol.speed});
+      if(scene.run&&model.state.gems>before)scene.run.credit(model.state.gems-before);
     }
     function render(){
       const alive=new Set();
@@ -109,7 +112,7 @@
       }
       for(const [id,image] of images)if(!alive.has(id)){I.destroyRelic(image);images.delete(id);}
     }
-    const controller={model,state:model.state,step,render,death:(x,y)=>model.death(x,y,patrol.bounds)};
+    const controller={model,state:model.state,step,render,death:(x,y)=>{const drop=model.death(x,y,patrol.bounds);if(drop)scene.runDrops?.spawn(drop.kind,x,y);}};
     scene.relicCollection=controller;
     scene.events.once('shutdown',()=>{images.clear();delete scene.relicCollection;});
     return controller;

@@ -147,6 +147,7 @@
     texture.setFilter(Phaser.Textures.FilterMode.NEAREST);
   }
   function draw(scene, spec, colors, gardenRaster, patrolBounds, patrolPosition, updateHud, itemPreview, previewFlowers=[]) {
+    const playable=!!window.GardenRunRules?.active;
     const fairy=window.GardenFairyPatrol.enabled;
     install(scene,spec.garden.cell);if(!fairy)installEnemy(scene);
     const g=spec.garden,params=new URLSearchParams(window.location.search),occupied=fairy&&params.get('full')!=='1'?new Set([44,45,54,55]):window.GardenCombatPreview.initialGarden(spec);
@@ -173,12 +174,12 @@
     function center(i){return {x:g.x+(i%g.columns)*g.pitch+g.line+g.cell/2,y:g.y+Math.floor(i/g.columns)*g.pitch+g.line+g.cell/2};}
     const G=window.GardenFlowerGrowth, growth=G.enabled?G.attach(scene,g):null;
     const types=growth?G.names:flowers;
-    function addFlower(i,name,born=0){
+    function addFlower(i,name,born=0,mature=false){
       const p=center(i);
-      if(growth)growth.plant(i,name,p,born);
+      if(growth)growth.plant(i,name,p,born,mature);
       else scene.add.image(p.x,p.y,key(name,g.cell)).setDisplaySize(g.cell,g.cell).setDepth(1).setName('garden-preview-flower:'+i);
     }
-    [...occupied].forEach((i,n)=>addFlower(i,types[n%types.length]));
+    [...occupied].forEach((i,n)=>addFlower(i,types[n%types.length],0,playable));
     function clampedBounds(keys){return geometry(keys).patrol;}
     function plant(model,drop,index){
       const next=new Set(occupied);next.add(index);
@@ -194,7 +195,7 @@
       const patrol=window.GardenFairyPatrol.attach(scene,spec,occupied,geometry,patrolPosition,updateHud,guardianSize);
       window.GardenEnemyPreview.attach(scene,spec,patrol);
       window.GardenHeroWeaponPreview?.attach(scene,spec,patrol);
-      if(previewFlowers.length){
+      if(playable||previewFlowers.length){
         // Static card inspection: plant into the existing garden, never create combat loot.
         const L=window.GardenGameLayout;
         const ghost=scene.add.image(0,0,growth?G.key(types[0],1):key(types[0],g.cell))
@@ -202,13 +203,14 @@
         let dragging=null,target=-1;
         const point=p=>scene.cameras.main.getWorldPoint(p.x,p.y);
         const hit=p=>L.gardenHit(p.x,p.y,g);
+        function valid(i,f){return L.gardenCandidates(occupied).has(i)||(playable&&occupied.has(i)&&growth.entries.get(i)?.name!==f.spriteName);}
         function move(pointer){
           if(!dragging)return;
-          const p=point(pointer),next=hit(p),valid=L.gardenCandidates(occupied).has(next);
+          const p=point(pointer),next=hit(p),allowed=valid(next,dragging);
           if(next!==target){target=next;refreshSoil(target);}
-          dragging.marker.setPosition(p.x,p.y).setAlpha(valid?.25:1);
-          ghost.setVisible(valid);
-          if(valid){
+          dragging.marker.setPosition(p.x,p.y).setAlpha(allowed?.25:1);
+          ghost.setVisible(allowed);
+          if(allowed){
             const c=center(target),s=growth?G.displaySize(g.cell):g.cell;
             ghost.setTexture(growth?G.key(dragging.spriteName,1):key(dragging.spriteName,g.cell))
               .setOrigin(.5,growth?.856:.5).setDisplaySize(s,s)
@@ -220,14 +222,16 @@
           const f=dragging,i=accept&&pointer?hit(point(pointer)):-1;
           dragging=null;target=-1;
           f.marker.setDepth(f.idleDepth).setPosition(f.x,f.y).setAlpha(1).setStrokeStyle(0,0,0);
-          if(L.gardenCandidates(occupied).has(i)){
-            occupied.add(i);addFlower(i,f.spriteName,patrol.elapsed);
-            f.consumed=true;f.marker.disableInteractive().setVisible(false);
+          if(valid(i,f)){
+            if(occupied.has(i)){growth.remove(i);scene.relicCollection?.state.flowers.delete(i);}
+            occupied.add(i);addFlower(i,f.spriteName,scene.run?.state.elapsed??patrol.elapsed);
+            scene.relicCollection?.model.syncFlowers(occupied);
+            f.consumed=true;f.marker.disableInteractive().setVisible(false);if(playable)scene.runDrops?.consume(f);
             patrol.refreshHud();
           }
           ghost.setVisible(false);refreshSoil(null);
         }
-        for(const f of previewFlowers){
+        function register(f){
           const o=f.marker;
           o.setInteractive({useHandCursor:true,draggable:true});scene.input.setDraggable(o);
           o.on('pointerover',()=>{if(!dragging)o.setStrokeStyle(1,colors.flowerBorder,1);});
@@ -236,6 +240,8 @@
           o.on('drag',p=>{if(dragging===f)move(p);});
           o.on('dragend',p=>{if(dragging===f)finish(p,true);});
         }
+        for(const f of previewFlowers)register(f);
+        if(playable){scene.runGarden={occupied,register,remove(id){if(!occupied.delete(id))return false;growth.remove(id);refreshSoil(null);return true;},isDragging:f=>dragging===f};scene.events.once('shutdown',()=>delete scene.runGarden);}
         const cancel=()=>finish(null,false);
         scene.input.on('gameout',cancel);scene.events.on('pause',cancel);
         scene.events.once('shutdown',()=>{scene.input.off('gameout',cancel);scene.events.off('pause',cancel);});

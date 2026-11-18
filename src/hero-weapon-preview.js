@@ -2,7 +2,8 @@
   'use strict';
   // Equipped weapons and isolated selector comparison share one attack model.
   const params=new URLSearchParams(window.location.search);
-  const combat=window.GardenEnemyPreview.enabled&&params.get('weapons')==='1'&&params.get('attack')!=='0';
+  const playable=!!window.GardenRunRules?.active;
+  const combat=playable||window.GardenEnemyPreview.enabled&&params.get('weapons')==='1'&&params.get('attack')!=='0';
   const enabled=window.GardenFairyPatrol.enabled&&(!window.GardenEnemyPreview.enabled||combat)&&
     window.GardenFlowerGrowth.enabled&&params.get('cards')!=='0'&&params.get('cards')!=='legacy';
   const items=window.GardenItemCards.entries.filter(i=>i.id!=='shoe'&&i.id!=='shield');
@@ -33,7 +34,7 @@
       state.shots=state.shots.filter(s=>!s.preview);next.delete(-1);return true;
     }
     function equip(index,id){
-      if(!Number.isInteger(index)||index<0||index>=9)return false;
+      if(!Number.isInteger(index)||index<0||index>=(playable?10:9))return false;
       const weapon=ids.includes(id)?id:'';
       if((state.equipped[index]||'')===weapon)return true;
       state.equipped[index]=weapon;next.delete(index);
@@ -41,15 +42,16 @@
       state.shots=state.shots.filter(s=>s.slot!==index&&!s.preview);
       return true;
     }
-    function step(dt,hero,targets=[],damage=null,slow=null){
+    function step(dt,hero,targets=[],damage=null,slow=null,companions=[]){
       if(!(dt>0))return;
       state.elapsed+=dt;
+      if(playable){const owners=new Set(companions.map(a=>a.index));state.shots=state.shots.filter(s=>s.owner===0||owners.has(s.owner));for(const key of next.keys())if(key<=-100&&!owners.has(-100-key))next.delete(key);}
       const live=targets.filter(e=>e.x>=0&&e.x<=spec.width&&e.y>=spec.top&&e.y<=spec.height-spec.bottom);
       const dead=new Set();
       for(const s of state.shots){
         const previous=s.previous||pose(s,hero);
         s.age=Math.min(tuning[s.kind].life,s.age+dt);
-        if(s.kind==='paper-plane'&&s.targetId!==null){
+        if((s.kind==='paper-plane'||playable&&s.kind==='rock')&&s.targetId!==null){
           const target=live.find(e=>e.id===s.targetId);
           if(target){s.tx=target.x;s.ty=target.y;}
         }
@@ -69,7 +71,7 @@
           }else{
             const single=['rock','paper-plane','bouncy-ball'].includes(s.kind);
             for(const e of single?hits.slice(0,1):hits){
-              const result=damage(e.id,1);
+              const result=damage(e.id,playable?2:1);
               if(!result)continue;
               s.hit.add(e.id);state.hits++;
               if(result.killed)dead.add(e.id);
@@ -86,20 +88,22 @@
       }
       state.shots=state.shots.filter(s=>!s.done&&s.age<tuning[s.kind].life);
       if(!hero||hero.index!==0||hero.type!=='garden'||!outward[hero.direction])return;
-      const slots=state.equipped.flatMap((id,index)=>id?[{id,index,preview:false}]:[]);
-      if(!slots.length&&state.selected)slots.push({id:state.selected,index:-1,preview:true});
+      const slots=state.equipped.flatMap((id,index)=>id?[{id,index,preview:false,actor:hero}]:[]);
+      if(playable){for(const actor of companions)slots.push({id:'rock',index:-100-actor.index,preview:false,actor});}
+      if(!slots.length&&state.selected)slots.push({id:state.selected,index:-1,preview:true,actor:hero});
       for(const slot of slots){
         if(state.elapsed<(next.get(slot.index)||0))continue;
-        const x=hero.center.x,y=hero.center.y;
-        let [dx,dy]=outward[hero.direction];
-        const target=!slot.preview&&damage?live.filter(e=>!dead.has(e.id)&&distance(hero.center,e)<=range)
-          .sort((a,b)=>distance(hero.center,a)-distance(hero.center,b))[0]:null;
+        const shooter=slot.actor;
+        const x=shooter.center.x,y=shooter.center.y;
+        let [dx,dy]=outward[shooter.direction];
+        const target=!slot.preview&&damage?live.filter(e=>!dead.has(e.id)&&distance(shooter.center,e)<=range)
+          .sort((a,b)=>distance(shooter.center,a)-distance(shooter.center,b))[0]:null;
         if(!slot.preview&&damage&&!target)continue;
         const left=24,right=spec.width-24,top=spec.top+24,bottom=spec.height-spec.bottom-24;
         const tx=target?target.x:clamp(x+dx*150,left,right),ty=target?target.y:clamp(y+dy*150,top,bottom);
         if(target){const d=Math.hypot(tx-x,ty-y)||1;dx=(tx-x)/d;dy=(ty-y)/d;}
-        state.shots.push({id:serial++,owner:0,slot:slot.index,preview:slot.preview,kind:slot.id,x,y,tx,ty,dx,dy,age:0,targetId:target?.id??null,hit:new Set()});
-        state.fired++;next.set(slot.index,state.elapsed+interval);
+        state.shots.push({id:serial++,owner:shooter.index,slot:slot.index,preview:slot.preview,kind:slot.id,x,y,tx,ty,dx,dy,age:0,targetId:target?.id??null,hit:new Set()});
+        state.fired++;next.set(slot.index,state.elapsed+(playable&&slot.index<0?1.2:interval));
       }
     }
     return {state,select,equip,step};
@@ -126,6 +130,7 @@
       }
       case 'paper-plane':x+=px*Math.sin(Math.PI*t)*20;y+=py*Math.sin(Math.PI*t)*20;angle=a+Math.PI/4;break;
       case 'bouncy-ball':{
+        if(s.bounce){const b=s.bounce,u=clamp((s.age-b.age)/Math.max(.1,tuning[kind].life-b.age),0,1);x=mix(b.x,b.tx,u);y=mix(b.y,b.ty,u);break;}
         const u=t<.55?t/.55:(t-.55)/.45;
         x=t<.55?mix(s.x,s.tx,u):s.tx-s.dx*45*u+px*85*u;
         y=t<.55?mix(s.y,s.ty,u):s.ty-s.dy*45*u+py*85*u;
@@ -157,7 +162,7 @@
     Object.assign(select.style,{position:'absolute',zIndex:'2',right:'1.05%',top:'9.6%',width:'17%',height:'4.8%',
       color:P.hex.paper,background:P.hex.graphite,border:'1px solid '+P.hex.slate,fontFamily:'Garden Fusion, sans-serif',padding:'0 4px'});
     function resize(){select.style.fontSize=Math.max(8,parent.clientWidth/spec.width*12)+'px';}
-    parent.appendChild(select);resize();
+    if(!playable){parent.appendChild(select);resize();}
     function clear(){for(const obj of images.values())I.destroyRelic(obj.image);images.clear();fx.clear();}
     function choose(id){if(!model.select(id))return false;select.value=id;render();return true;}
     function equip(index,id){if(!model.equip(index,id))return false;select.disabled=model.state.equipped.some(Boolean);select.value=model.state.selected;render();return true;}
@@ -186,13 +191,13 @@
       for(const [id,obj] of images)if(!live.has(id)){I.destroyRelic(obj.image);images.delete(id);}
     }
     // Only this actor is ever passed to the preview model. No enemy or damage state exists.
-    function update(_time,delta){if(patrol.finished)return;model.step(Math.min(.1,Math.max(0,delta/1000)),patrol.actors[0]);render();}
+    function update(_time,delta){if(patrol.finished)return;const enemy=scene.enemyPreview?.model;const dt=Math.min(.1,Math.max(0,delta/1000));if(playable&&enemy)model.step(dt,patrol.actors[0],enemy.actors.map(window.GardenFairyAttack.target),enemy.damage,enemy.slow,patrol.actors.slice(1));else model.step(dt,patrol.actors[0]);render();}
     scene.events.on('update',update);scene.events.on('pause',pause);scene.events.on('resume',resume);scene.scale.on('resize',resize);
     scene.events.once('shutdown',()=>{
       scene.events.off('update',update);scene.events.off('pause',pause);scene.events.off('resume',resume);scene.scale.off('resize',resize);
       select.remove();images.clear();mask.destroy();clip.destroy();delete scene.heroWeaponPreview;
     });
-    scene.heroWeaponPreview={model,select:choose,equip,render,control:select};
+    scene.heroWeaponPreview={model,select:choose,equip,render,control:playable?null:select};
     return scene.heroWeaponPreview;
   }
   window.GardenHeroWeaponPreview=Object.freeze({enabled,combat,ids,tuning,interval,range,create,pose,attach});

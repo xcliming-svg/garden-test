@@ -32,7 +32,7 @@
       U.background(this, 'MAIN MENU');
       centered(this, 480, 124, 'GARDEN', U.fontSize.menuTitle, U.C.text, { inkBackground: U.C.bg });
       centered(this, 480, 172, 'TEST', U.fontSize.menuTitle, U.C.text, { inkBackground: U.C.bg });
-      centered(this, 480, 216, 'ROGUELIKE / SCENE STRUCTURE', U.fontSize.menuBase, U.C.muted, { inkBackground: U.C.bg });
+      centered(this, 480, 216, window.GardenRunRules?.active?'ROGUELIKE':'ROGUELIKE / SCENE STRUCTURE', U.fontSize.menuBase, U.C.muted, { inkBackground: U.C.bg });
 
       const x = U.W / 2;
       const w = 200;
@@ -81,7 +81,8 @@
       const step = menu.navHeight + menu.navGap;
       const nav = { height: menu.navHeight };
       U.button(this, 480, first, 200, '계속하기', () => this.resumeGame(), { ...nav, primary: true });
-      U.button(this, 480, first + step, 200, '재시작 · 미구현', null, { ...nav, disabled: true });
+      if(window.GardenRunRules?.active)U.button(this,480,first+step,200,'재시작',()=>{this.scene.stop('Game');this.scene.start('Game');},nav);
+      else U.button(this, 480, first + step, 200, '재시작 · 미구현', null, { ...nav, disabled: true });
       U.button(this, 480, first + step * 2, 200, '설정', () => U.openSubscene(this, 'Settings'), nav);
       U.button(this, 480, first + step * 3, 200, '도감', () => U.openSubscene(this, 'Codex'), nav);
       U.button(this, 480, first + step * 4, 200, '메인 메뉴로', () => {
@@ -202,23 +203,26 @@
 
   class ResultScene extends Phaser.Scene {
     constructor(key, victory) { super(key); this.victory = victory; }
+    init(data){this.runResult=data?.elapsed!==undefined?data:null;}
     create() {
       U.background(this, this.victory ? 'RESULT / VICTORY' : 'RESULT / DEFEAT');
       U.panel(this, 480, 270, 480, 280, { fill: U.C.panel, stroke: this.victory ? U.C.green : U.C.red });
       U.panelHeader(this, 480, 130, 480);
       centered(this, 480, headerCenter(130), this.victory ? '성공' : '실패', U.fontSize.menuHeading,
         U.C.text, { inkBackground: U.C.header });
-      centered(this, 480, 176, '런 결과 화면 · UI 미리보기', U.fontSize.menuBase, U.C.muted);
+      centered(this, 480, 176, this.runResult?'런 결과':'런 결과 화면 · UI 미리보기', U.fontSize.menuBase, U.C.muted);
       U.rule(this, innerLeft(480), 190, innerRight(480), 190, U.C.border, 1);
 
-      const labels = ['진행 구역', '플레이 시간', '기록', '획득 항목'];
+      const r=this.runResult;
+      const labels = r?['정원 완성도','플레이 시간','처치 수','남은 보석']:['진행 구역', '플레이 시간', '기록', '획득 항목'];
+      const seconds=Math.floor(r?.elapsed||0),values=r?[r.progress+'%',window.GardenGameLayout.formatHudTime(Math.floor(seconds/3600),Math.floor(seconds/60)%60,seconds%60),String(r.kills),String(r.gems)]:[];
       labels.forEach((name, index) => {
         const x = index % 2 === 0 ? innerLeft(480) : 480 + pad;
         const y = 210 + Math.floor(index / 2) * 48;
         aligned(this, x, y, name, U.fontSize.menuBase, U.C.muted);
-        aligned(this, x, y + sectionGap, '—', U.fontSize.menuBase, U.C.text);
+        aligned(this, x, y + sectionGap, values[index]??'—', U.fontSize.menuBase, U.C.text);
       });
-      centered(this, 480, 350, '결과 데이터 계산·저장은 미구현 상태입니다.', U.fontSize.menuBase, U.C.muted);
+      centered(this, 480, 350, r?'결과는 저장되지 않습니다.':'결과 데이터 계산·저장은 미구현 상태입니다.', U.fontSize.menuBase, U.C.muted);
       U.button(this, 480 - pairOffset(200), footerCenter(410), 200, '새 게임', () => this.scene.start('Game'), { primary: true, height: menu.buttonHeight });
       U.button(this, 480 + pairOffset(200), footerCenter(410), 200, '메인 메뉴', () => this.scene.start('MainMenu'), { height: menu.buttonHeight, fontSize: U.fontSize.menuBase });
     }

@@ -14,6 +14,7 @@
     return {expression:state==='hit'?'dizzy':null,dx:0,lift:0};
   }
   const count=11,speed=40,maxSpeed=80;
+  const playable=!!window.GardenRunRules?.active;
   const ranks=Object.freeze([0,5]);
   const validRank=rank=>ranks.includes(rank);
   const speedAt=(base,rank,max=base*1.5)=>rank===5?max:base;
@@ -137,12 +138,13 @@
   function attach(scene,spec,occupied,geometry,patrolPosition,updateHud,heroHeight){
     const m=install(scene),B=window.GardenPebbleBoundary,border=B.attach(scene);
     const depthBase=window.GardenEnemyOcclusion.config.fairyFront&&window.GardenEnemyPreview.enabled?4:2;
-    const compute=()=>B.layout(spec,geometry(occupied,0,0).garden,heroHeight,gait,count);
-    let info=compute(),b=info.patrol,length=info.length,spacing=length/count;
+    let activeCount=playable?1:count;
+    const compute=()=>B.layout(spec,geometry(occupied,0,0).garden,heroHeight,gait,activeCount);
+    let info=compute(),b=info.patrol,length=info.length,spacing=length/activeCount;
     let scale=info.height/m.characters.garden.visibleHeight;
     let signature=[...occupied].sort((a,b)=>a-b).join(',');
     border.render(info);
-    const actors=Array.from({length:count},(_,index)=>{
+    const allActors=Array.from({length:count},(_,index)=>{
       const type=index===0?'garden':'water';
       const visibleHeight=m.characters[type].visibleHeight*scale;
       const outline=outlineConfig.enabled?scene.add.image(0,0,outlineKey(scene,type,scale)).setName('fairy-outline:'+index):null;
@@ -158,6 +160,8 @@
       }
       return {index,type,image,outline,tears,visibleHeight,blink:blinkSchedule(index),expression:'normal',direction:'right',center:{x:0,y:0},phase:index*1.83};
     });
+    let actors=allActors.slice(0,activeCount);
+    for(const a of allActors.slice(activeCount)){a.image.setVisible(false);a.outline?.setVisible(false);}
     const density=createDensity();
     function updateDensity(near,dt){
       const value=density.update(near,dt);
@@ -181,16 +185,23 @@
     }
     function refreshBoundary(){
       const next=[...occupied].sort((a,b)=>a-b).join(',');
-      if(next===signature)return;
+      if(!occupied.size||next===signature)return;
       signature=next;
       const progress=((distance%length)+length)%length/length;
-      info=compute();b=info.patrol;length=info.length;spacing=length/count;
+      info=compute();b=info.patrol;length=info.length;spacing=length/activeCount;
       distance=progress*length;
       scale=info.height/m.characters.garden.visibleHeight;
       for(const a of actors){a.visibleHeight=m.characters[a.type].visibleHeight*scale;a.image.setDisplaySize(m.canvas.width*scale,m.canvas.height*scale);if(a.outline)a.outline.setTexture(outlineKey(scene,a.type,scale));}
       border.render(info);
     }
-    function refreshHud(){updateHud(elapsed,scene.enemyPreview?.model.kills||0,scene.relicCollection?.state.gems||0,occupied.size);}
+    function setCount(n){
+      n=Math.max(1,Math.min(count,n));if(n===activeCount)return;
+      activeCount=n;actors=allActors.slice(0,n);
+      for(const a of allActors){const show=a.index<n;a.image.setVisible(show);a.outline?.setVisible(show);if(!show)for(const t of a.tears)t.sprite.setVisible(false);}
+      signature='';render();updateDensity(density.snapshot().near,0);
+    }
+    function setSpeed(value){currentSpeed=Math.max(speed,Math.min(maxSpeed,value));}
+    function refreshHud(){updateHud(scene.run?.state.elapsed??elapsed,scene.enemyPreview?.model.kills||0,scene.run?.state.displayGems??scene.relicCollection?.state.gems??0,occupied.size);}
     function render(){
       refreshBoundary();
       for(const a of actors){
@@ -225,7 +236,7 @@
       refreshHud();
     }
     function advance(seconds){const dt=Math.max(0,seconds);emotionTime+=dt;if(!isResult(state)){elapsed+=dt;distance=(distance+dt*currentSpeed)%length;}render();return elapsed;}
-    const controller={actors,border,advance,refreshHud,setSpeedRank,setState,updateDensity,density,get state(){return state;},get finished(){return isResult(state);},get emotionTime(){return emotionTime;},get speed(){return currentSpeed;},get speedRank(){return rank;},get distance(){return distance;},get bounds(){return b;},get length(){return length;},get spacing(){return spacing;},get boundary(){return info;},get occupied(){return [...occupied];},get elapsed(){return elapsed;}};
+    const controller={get actors(){return actors;},border,advance,refreshHud,setCount,setSpeed,setSpeedRank,setState,updateDensity,density,get state(){return state;},get finished(){return isResult(state);},get emotionTime(){return emotionTime;},get speed(){return currentSpeed;},get speedRank(){return rank;},get distance(){return distance;},get bounds(){return b;},get length(){return length;},get spacing(){return spacing;},get boundary(){return info;},get occupied(){return [...occupied];},get elapsed(){return elapsed;}};
     scene.fairyPatrol=controller;
     const update=(_time,delta)=>advance(Math.min(.1,Math.max(0,delta/1000)));
     scene.events.on('update',update);

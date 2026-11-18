@@ -32,7 +32,7 @@ const server=createServer((req,res)=>{
  try{
   const path=new URL(req.url,'http://localhost').pathname.slice(1)||'index.html';
   if(path.includes('..'))return res.writeHead(404).end();
-  let body=readFileSync(path==='phaser.js'?phaser:join(root,path));
+  let body=readFileSync(path==='phaser.js'?phaser:join(root,path==='index.html'?'lab.html':path));
   if(path==='index.html')body=body.toString().replace('https://cdn.jsdelivr.net/npm/phaser@3.90.0/dist/phaser.min.js','./phaser.js');
   if(path==='src/main.js')body=body.toString().replace("  window.addEventListener('resize',","  window.__previewGame = game;\n  window.addEventListener('resize',");
   res.writeHead(200,{'content-type':mime[extname(path)]||'application/octet-stream'}).end(body);

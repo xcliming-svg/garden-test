@@ -3,7 +3,8 @@
   // Inspect all supplied items independently of combat, using their vector artwork.
   const G=window.GardenFlowerGrowth,U=window.GardenUI,P=window.GardenPalette;
   const params=new URLSearchParams(window.location.search);
-  const weaponCombat=window.GardenEnemyPreview.enabled&&params.get('weapons')==='1'&&params.get('attack')!=='0';
+  const playable=!!window.GardenRunRules?.active;
+  const weaponCombat=playable||window.GardenEnemyPreview.enabled&&params.get('weapons')==='1'&&params.get('attack')!=='0';
   const enabled=window.GardenFairyPatrol.enabled&&(!window.GardenEnemyPreview.enabled||weaponCombat)&&G.enabled&&params.get('cards')!=='0'&&params.get('cards')!=='legacy';
   // UI-only specimen values. These never feed patrol, projectile or enemy state.
   const minLevel=1,maxLevel=3;
@@ -25,6 +26,7 @@
   // define its longitudinal axis. Rotate that axis to -45° before cropping,
   // so the diagonal can occupy the card without enlarging the card itself.
   const broomRotation=-Math.PI/4-Math.atan2(380-572,1183-1097);
+  const water=Object.freeze({id:'water-fairy',name:'물방울 요정',desc:'장착하면 돌멩이만 사용하는 물방울 요정이 순찰에 합류합니다.',level:1,stats:Object.freeze({dps:1.67})});
   const relics=Object.freeze([
     Object.freeze({id:'gem',name:'보석',file:'gem_1000.svg',span:12}),
     Object.freeze({id:'heart',name:'하트',file:'heart_1000.svg',span:12})
@@ -202,6 +204,22 @@
   function destroyRelic(image){
     displayState.get(image.scene)?.images.delete(image);image.destroy();
   }
+  function runItem(scene,id){
+    const item=id===water.id?water:entries.find(e=>e.id===id);
+    if(!item)throw Error('Unknown item: '+id);
+    const texture=id===water.id?trim(scene,id,'fairy:water:normal'):trim(scene,id,raw(id));
+    const stats=Object.freeze({...item.stats,...(item.stats.dps&&id!==water.id?{dps:1.25}:{})});
+    return Object.freeze({...item,texture,stats});
+  }
+  function createDrop(scene,spec,assets,kind,id,x,y,serial){
+    const isFlower=kind==='flower';
+    const item=isFlower?null:runItem(scene,id);
+    const texture=isFlower?trim(scene,flowerId(id),G.key(id,G.maxStage,100)):item.texture;
+    const marker=card(scene,x,y,isFlower?assets.flower.dropSize:assets.item.dropSize,texture,kind,id).setName('run-drop:'+kind+':'+serial);
+    if(!isFlower)setLevelLabel(marker,1);
+    return {marker,x,y,idleDepth:marker.depth,...(isFlower?{spriteName:id}:{item})};
+  }
+  function disposeCard(marker){const image=marker.list[2];if(image)displayState.get(marker.scene)?.images.delete(image);marker.destroy();}
   function draw(scene,spec,assets,showGround=true){
     const cards=[],flowers=[],ground=[];
     for(let i=0;i<G.names.length;i++){
@@ -228,5 +246,5 @@
     scene.events.once('shutdown',()=>delete scene.itemCardPreview);
     return {cards,flowers};
   }
-  window.GardenItemCards=Object.freeze({enabled,entries,relics,preload,draw,setIcon,key,broomRotation,itemSpan,minLevel,maxLevel,setLevelLabel,gemIcon,gemInk,relicImage,destroyRelic,weaponImage});
+  window.GardenItemCards=Object.freeze({enabled,entries,water,relics,preload,draw,runItem,createDrop,disposeCard,setIcon,key,broomRotation,itemSpan,minLevel,maxLevel,setLevelLabel,gemIcon,gemInk,relicImage,destroyRelic,weaponImage});
 }());

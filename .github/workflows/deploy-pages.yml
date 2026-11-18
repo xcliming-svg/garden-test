@@ -37,6 +37,7 @@ jobs:
             target="_site"
             if [[ "$branch" == "devel" ]]; then target="_site/devel"; fi
             cp "$source/index.html" "$source/card-compare.html" "$target/"
+            if [[ -f "$source/lab.html" ]]; then cp "$source/lab.html" "$target/"; fi
             cp -R "$source/src" "$source/assets" "$target/"
             for entry in index.html card-compare.html assets/fonts/fusion.css assets/fonts/Fusion-Pixel-OFL.txt; do
               test -s "$target/$entry"
@@ -46,6 +47,7 @@ jobs:
             # main/devel 모두 배포 커밋별 스크립트 캐시 갱신.
             revision=$(cat "$target/version.txt")
             sed -E -i "s|(src=\"\\./src/[^\"]+\\.js)\"|\\1?v=${revision}\"|g" "$target/index.html" "$target/card-compare.html"
+            if [[ -f "$target/lab.html" ]]; then sed -E -i "s|(src=\"\\./src/[^\"]+\\.js)\"|\\1?v=${revision}\"|g" "$target/lab.html"; fi
             grep -Fq "./src/game-layout.js?v=${revision}" "$target/index.html"
           done
           touch _site/.nojekyll
