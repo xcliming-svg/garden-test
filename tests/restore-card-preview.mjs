@@ -60,7 +60,7 @@ try{
    assert.equal(new Set(initial.flowers.map(o=>o.texture)).size,6);
    assert.equal(new Set(initial.items.map(o=>o.texture)).size,12);
    assert.ok(initial.flowers.every(o=>o.texture.startsWith('item-svg:trim:flower-')&&Math.abs(o.span-18)<.01));
-   assert.ok(initial.items.every(o=>o.texture.startsWith('item-svg:trim:')&&Math.abs(o.span-(o.texture.includes(':broom:')?29:24))<.01));
+   assert.ok(initial.items.every(o=>o.texture.startsWith('item-svg:trim:')&&Math.abs(o.span-24)<.01));
    assert.ok(initial.items.every(o=>!o.texture.includes('water-splash')));
    assert.ok([...initial.items,...initial.flowers].every(o=>Math.abs(Math.max(o.textureWidth,o.textureHeight)-o.span*w/960)<=1),'native output-sized textures');
    assert.ok(initial.ground.every(o=>o.visible&&!o.interactive&&/^item-svg:trim:(gem|heart):display:/.test(o.texture)));
@@ -87,7 +87,7 @@ try{
     return {angle:Math.atan2(380-572,1183-1097)+W.broomRotation,w:t.width,h:t.height};
    });
    assert.ok(Math.abs(diagonal.angle+Math.PI/4)<1e-10);
-   assert.ok(Math.min(diagonal.w,diagonal.h)/Math.max(diagonal.w,diagonal.h)>.75,'diagonal broom fills both card dimensions');
+   assert.ok(Math.min(diagonal.w,diagonal.h)/Math.max(diagonal.w,diagonal.h)>.75,'diagonal broom retains near-square bounds');
    const art=await page.evaluate(()=>{
     const scene=window.__previewGame.scene.getScene('Game'),wheel=scene.textures.get('item-svg:trim:wheel').getSourceImage(),ctx=wheel.getContext('2d');
     const {data}=ctx.getImageData(0,0,wheel.width,wheel.height);
@@ -135,3 +135,4 @@ try{
   }finally{await page.close();}
  }
 }finally{await browser.close();server.close();}
+

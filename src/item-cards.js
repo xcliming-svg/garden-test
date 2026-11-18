@@ -118,12 +118,12 @@
     if(image.texture.key!==k)image.setTexture(k);
     return image.setDisplaySize(logicalW,logicalH);
   }
-  const itemSpan=(size,id)=>size-(id==='broom'?3:8);
+  const itemSpan=size=>Math.min(24,size-8);
   function card(scene,x,y,size,texture,kind,id){
     const R=P.reference.n;
     const border=U.pixelBox(scene,0,0,size,size,R.tabBorder);
     const face=U.pixelBox(scene,0,0,size-2,size-2,R.tab,{cut:false});
-    const image=fit(scene.add.image(0,0,texture),texture,kind==='item'?itemSpan(size,id):size-6);
+    const image=fit(scene.add.image(0,0,texture),texture,kind==='item'?itemSpan(size):size-6);
     const group=scene.add.container(x,y,[border,face,image]).setSize(size,size).setDepth(5);
     group.setStrokeStyle=(_width,_color,alpha)=>{
       border.setFillStyle(alpha?(kind==='flower'?R.flowerBorder:R.itemBorder):R.tabBorder,1);return group;
@@ -131,7 +131,7 @@
     return group;
   }
   function setIcon(group,item){
-    if(item?.texture)fit(group.list[2],item.texture,itemSpan(group.width,item.id));
+    if(item?.texture)fit(group.list[2],item.texture,itemSpan(group.width));
   }
   function draw(scene,spec,assets){
     const cards=[],flowers=[],ground=[];
@@ -159,3 +159,4 @@
   }
   window.GardenItemCards=Object.freeze({enabled,entries,relics,preload,draw,setIcon,key,broomRotation,itemSpan});
 }());
+

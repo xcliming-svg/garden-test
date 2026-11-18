@@ -1,7 +1,7 @@
 name: Restored card preview verification
 on:
   push:
-    branches: [feature/restore-card-preview, feature/svg-item-cards, feature/item-art-refinement, feature/item-tooltip-preview, devel]
+    branches: [feature/restore-card-preview, feature/svg-item-cards, feature/item-art-refinement, feature/item-tooltip-preview, feature/item-span-uniform, devel]
   pull_request:
     branches: [devel]
 permissions:
@@ -27,3 +27,4 @@ jobs:
         with:
           name: restored-card-preview
           path: benchmark-results
+
