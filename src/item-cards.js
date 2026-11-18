@@ -7,6 +7,7 @@
   const enabled=window.GardenFairyPatrol.enabled&&(!window.GardenEnemyPreview.enabled||weaponCombat)&&G.enabled&&params.get('cards')!=='0'&&params.get('cards')!=='legacy';
   // UI-only specimen values. These never feed patrol, projectile or enemy state.
   const minLevel=1,maxLevel=3;
+  const balance=window.GardenWeaponBalance;
   const entries=Object.freeze([
     ['shoe','신발','01_shoe.svg','이동 속도가 증가합니다.','moveSpeed',10],
     ['balloon','물풍선','05_balloon.svg','떨어진 지점에서 터지며 주변 적들에게 피해를 줍니다.','dps',24],
@@ -242,7 +243,14 @@
       flowers.push({marker,x,y,spriteName:name,idleDepth:marker.depth});
     }
     for(let i=0;i<entries.length;i++){
-      const item=entries[i],texture=trim(scene,item.id,raw(item.id));
+      const original=entries[i],st=weaponCombat?balance.stats(original.id,balance.level):null;
+      let item=original;
+      if(weaponCombat){
+        const desc=st?original.desc:'전투 효과 미구현 (비교용 카드)';
+        const detail=st?(original.id==='yellow-floor'?'감속 '+Math.round(st.slow*100)+'%':'피해 '+(Array.isArray(st.damage)?st.damage.join('/'):st.damage))+' · '+st.cooldown+'초 · '+st.range+'px':'';
+        item={...original,desc,level:balance.level,stats:st?{dps:balance.nominalDps(original.id,balance.level)}:{},tooltipEffect:detail};
+      }
+      const texture=trim(scene,item.id,raw(item.id));
       const x=682+(i%4)*56,y=126+Math.floor(i/4)*56;
       const marker=card(scene,x,y,assets.item.dropSize,texture,'item',item.id).setName('placeholder:item:'+String(i).padStart(2,'0'));
       setLevelLabel(marker,item.level);
