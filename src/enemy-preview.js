@@ -160,7 +160,7 @@
     for(let i=1;i<points.length;i++){const [end,n]=points[i],[start,m]=points[i-1];if(t<end)return Math.floor(m+(n-m)*Math.max(0,t-start)/(end-start));}
     return 0;
   }
-  function createPopulation(spec,patrol,entries,random=Math.random,target=targetCount){
+  function createPopulation(spec,patrol,entries,random=Math.random,target=targetCount,onDeath=null){
     const M=window.GardenEnemyMotion,F=window.GardenFairyPatrol;
     const actors=[];let bag=[],directionBag=[],serial=0,elapsed=0,spawned=0,completed=0,kills=0;
     function nextEntry(){
@@ -208,7 +208,7 @@
     function damage(id,amount){
       const i=actors.findIndex(a=>a.id===id);if(i<0||!Number.isFinite(amount)||amount<=0)return null;
       const a=actors[i];a.hp=Math.max(0,a.hp-amount);
-      if(a.hp===0){actors.splice(i,1);kills++;return {killed:true,hp:0};}
+      if(a.hp===0){actors.splice(i,1);kills++;onDeath?.(a.pose.x,a.pose.ground);return {killed:true,hp:0};}
       a.hitUntil=elapsed+window.GardenFairyAttack.tuning.hitSeconds;updateActor(a);return {killed:false,hp:a.hp};
     }
     return {actors,advance,setExpression,damage,get elapsed(){return elapsed;},get spawned(){return spawned;},get completed(){return completed;},get kills(){return kills;}};
@@ -220,13 +220,15 @@
       return {...e,scale,width:e.bounds.width*scale,height:e.bounds.height*scale};
     });
     const target=simulation?simulationTarget:targetCount;
-    const model=createPopulation(spec,patrol,entries,Math.random,target),sprites=new Map();
+    const A=window.GardenFairyAttack;
+    const relics=A.enabled?window.GardenRelicCollection.attach(scene,spec,patrol):null;
+    const model=createPopulation(spec,patrol,entries,Math.random,target,relics?.model.death),sprites=new Map();
     const occlusion=window.GardenEnemyOcclusion.attach(scene,spec,patrol);
     // The playable field clips partial entry/exit sprites; HUD is never covered.
     const clip=scene.make.graphics({x:0,y:0,add:false});
     clip.fillStyle(0xffffff,1).fillRect(0,spec.top,spec.width,spec.height-spec.top-spec.bottom);
     const fieldMask=clip.createGeometryMask();
-    const A=window.GardenFairyAttack,attack=A.enabled?A.attach(scene,spec,patrol,model,fieldMask):null;
+    const attack=A.enabled?A.attach(scene,spec,patrol,model,fieldMask):null;
     function render(){
       const alive=new Set(model.actors.map(a=>a.id));
       for(const [id,sprite] of sprites)if(!alive.has(id)){sprite.image.destroy();sprite.shadow.destroy();sprites.delete(id);}
@@ -255,11 +257,17 @@
         while(left>1e-8){
           const step=Math.min(left,A.tuning.step);left-=step;
           const previous=new Map(attack.positions().map(e=>[e.id,e]));
-          model.advance(step);attack.step(step,previous);
+          model.advance(step);
+          // A completed strike damages its designated flower exactly once.
+          relics.model.syncFlowers(patrol.occupied);
+          for(const e of model.actors)if(!e.flowerHit&&(e.pose.phase==='recover'||e.pose.phase==='return')){
+            e.flowerHit=true;relics.model.damageFlower(e.path.flower);
+          }
+          attack.step(step,previous);relics.step(step);
         }
       }
       render();
-      if(attack){attack.render();patrol.refreshHud();}
+      if(attack){attack.render();relics.render();patrol.refreshHud();}
       occlusion.update(Array.from(sprites.values(),s=>s.image),dt);
       return model.elapsed;
     }

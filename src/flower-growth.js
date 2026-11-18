@@ -57,8 +57,11 @@
       return image;
     }
     function render(elapsed){
-      for(const entry of entries.values()){
-        const {stage,hp}=stateAt(elapsed-entry.born),state=stage+':'+hp;
+      for(const [index,entry] of entries){
+        const sample=stateAt(elapsed-entry.born),stage=sample.stage;
+        const energy=scene.relicCollection?.state.flowers.get(index)?.energy;
+        const hp=energy===undefined?sample.hp:energy>=100?100:energy>33?66:33;
+        const state=stage+':'+hp;
         if(state===entry.last)continue;
         entry.last=state;
         const size=displaySize(g.cell);

@@ -32,7 +32,7 @@
   const flowerId=name=>'flower-'+name;
   function preload(scene){
     // HUD gem is shared by every game mode, even when SVG drop cards are disabled.
-    for(const item of enabled?[...entries,...relics]:[relics[0]]){
+    for(const item of enabled?[...entries,...relics]:relics){
       const k=raw(item.id);
       if(!scene.textures.exists(k))scene.load.svg(k,window.GardenSvgPalette.path('items/'+item.file),{width:512,height:512});
     }
@@ -189,6 +189,13 @@
     if(item?.texture)fit(group.list[2],item.texture,itemSpan(group.width));
     setLevelLabel(group,item?.texture?item.level:undefined);
   }
+  function relicImage(scene,kind,x,y){
+    const item=relics.find(r=>r.id===kind),texture=trim(scene,kind,raw(kind));
+    return fit(scene.add.image(x,y,texture),texture,item.span).setDepth(4);
+  }
+  function destroyRelic(image){
+    displayState.get(image.scene)?.images.delete(image);image.destroy();
+  }
   function draw(scene,spec,assets){
     const cards=[],flowers=[],ground=[];
     for(let i=0;i<G.names.length;i++){
@@ -215,5 +222,5 @@
     scene.events.once('shutdown',()=>delete scene.itemCardPreview);
     return {cards,flowers};
   }
-  window.GardenItemCards=Object.freeze({enabled,entries,relics,preload,draw,setIcon,key,broomRotation,itemSpan,minLevel,maxLevel,setLevelLabel,gemIcon,gemInk});
+  window.GardenItemCards=Object.freeze({enabled,entries,relics,preload,draw,setIcon,key,broomRotation,itemSpan,minLevel,maxLevel,setLevelLabel,gemIcon,gemInk,relicImage,destroyRelic});
 }());

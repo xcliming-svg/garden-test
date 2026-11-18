@@ -190,7 +190,7 @@
       for(const a of actors){a.visibleHeight=m.characters[a.type].visibleHeight*scale;a.image.setDisplaySize(m.canvas.width*scale,m.canvas.height*scale);if(a.outline)a.outline.setTexture(outlineKey(scene,a.type,scale));}
       border.render(info);
     }
-    function refreshHud(){updateHud(elapsed,scene.enemyPreview?.model.kills||0,0,occupied.size);}
+    function refreshHud(){updateHud(elapsed,scene.enemyPreview?.model.kills||0,scene.relicCollection?.state.gems||0,occupied.size);}
     function render(){
       refreshBoundary();
       for(const a of actors){
