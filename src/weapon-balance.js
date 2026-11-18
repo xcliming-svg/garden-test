@@ -8,6 +8,7 @@
   const level=integer(params.get('weaponLevel'),1,3,1);
   const slots=integer(params.get('weaponSlots'),4,10,10);
   const enemyCount=integer(params.get('enemyCount'),1,200,null);
+  const balanceWave=integer(params.get('balanceWave'),1,200,null);
   const data=Object.freeze({
     rock:{range:280,damage:[10,13,16],cooldown:[.8,.75,.7]},
     'paper-plane':{range:420,damage:[12,15,18],cooldown:[1.4,1.35,1.3]},
@@ -134,5 +135,5 @@
     options.sort((a,b)=>b.score-a.score||a.target.id-b.target.id);
     return options[0]||null;
   }
-  window.GardenWeaponBalance=Object.freeze({data,stats,hp,level,slots,enemyCount,groundContact,eligibleHeight,ground,target,amount,nominalDps,choose});
+  window.GardenWeaponBalance=Object.freeze({data,stats,hp,level,slots,enemyCount,balanceWave,groundContact,eligibleHeight,ground,target,amount,nominalDps,choose});
 }());
