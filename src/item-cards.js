@@ -189,6 +189,11 @@
     if(item?.texture)fit(group.list[2],item.texture,itemSpan(group.width));
     setLevelLabel(group,item?.texture?item.level:undefined);
   }
+  function weaponImage(scene,id,x,y,span){
+    if(!entries.some(item=>item.id===id))throw Error('Unknown weapon: '+id);
+    const texture=trim(scene,id,raw(id));
+    return fit(scene.add.image(x,y,texture),texture,span);
+  }
   function relicImage(scene,kind,x,y){
     const item=relics.find(r=>r.id===kind),texture=trim(scene,kind,raw(kind));
     return fit(scene.add.image(x,y,texture),texture,item.span).setDepth(4);
@@ -222,5 +227,5 @@
     scene.events.once('shutdown',()=>delete scene.itemCardPreview);
     return {cards,flowers};
   }
-  window.GardenItemCards=Object.freeze({enabled,entries,relics,preload,draw,setIcon,key,broomRotation,itemSpan,minLevel,maxLevel,setLevelLabel,gemIcon,gemInk,relicImage,destroyRelic});
+  window.GardenItemCards=Object.freeze({enabled,entries,relics,preload,draw,setIcon,key,broomRotation,itemSpan,minLevel,maxLevel,setLevelLabel,gemIcon,gemInk,relicImage,destroyRelic,weaponImage});
 }());
