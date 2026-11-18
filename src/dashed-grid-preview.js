@@ -17,8 +17,8 @@
       top:garden.top-gap-guardianHeight/2,bottom:garden.bottom+gap+guardianHeight/2};
     return {garden,patrol,gap};
   }
-  // Solid shared 1px borders, including intersections. Active edges take
-  // precedence at junctions; draw every logical border pixel only once.
+  // Shared 1px corner brackets, 5px arms including each junction.
+  // Active edges take precedence; interiors and edge middles stay transparent.
   function rectangles(g,occupied,candidates,hover=null){
     const rects=[],p=g.pitch,shown=visible(occupied,candidates);
     const get=(x,y)=>x>=0&&x<g.columns&&y>=0&&y<g.rows?y*g.columns+x:-1;
@@ -30,7 +30,8 @@
     }
     function edge(x,y,horizontal,c){
       if(c===null)return;
-      rects.push(horizontal?{x:x+1,y,w:p-1,h:1,color:c}:{x,y:y+1,w:1,h:p-1,color:c});
+      for(const [t,len] of window.GardenUI.cornerSegments(p))
+        rects.push(horizontal?{x:x+t,y,w:len,h:1,color:c}:{x,y:y+t,w:1,h:len,color:c});
     }
     for(let y=0;y<=g.rows;y++)for(let x=0;x<g.columns;x++)
       edge(x*p,y*p,true,color(get(x,y-1),get(x,y)));

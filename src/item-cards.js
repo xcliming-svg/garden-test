@@ -144,8 +144,9 @@
   const itemSpan=size=>Math.min(24,size-8);
   function card(scene,x,y,size,texture,kind,id){
     const R=P.reference.n;
-    const border=U.pixelBox(scene,0,0,size,size,R.tabBorder);
-    const face=U.pixelBox(scene,0,0,size-2,size-2,R.tab,{cut:false});
+    const flower=kind==='flower'&&window.GardenPalette.uiType!==1;
+    const border=flower?U.cornerFrame(scene,0,0,size,R.tabBorder):U.pixelBox(scene,0,0,size,size,R.tabBorder);
+    const face=U.pixelBox(scene,0,0,size-2,size-2,R.tab,{cut:false,alpha:flower?0:1});
     const image=fit(scene.add.image(0,0,texture),texture,kind==='item'?itemSpan(size):size-6);
     const group=scene.add.container(x,y,[border,face,image]).setSize(size,size).setDepth(5);
     group.setStrokeStyle=(_width,_color,alpha)=>{

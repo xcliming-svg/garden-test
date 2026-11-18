@@ -18,8 +18,9 @@
   function card(scene,x,y,size,iconSize,kind='card',name,flowerSize=22){
     installBall(scene);
     const R=window.GardenPalette.reference.n;
-    const border=U.pixelBox(scene,0,0,size,size,R.tabBorder);
-    const face=U.pixelBox(scene,0,0,size-2,size-2,R.tab,{cut:false});
+    const flower=kind==='flower'&&window.GardenPalette.uiType!==1;
+    const border=flower?U.cornerFrame(scene,0,0,size,R.tabBorder):U.pixelBox(scene,0,0,size,size,R.tabBorder);
+    const face=U.pixelBox(scene,0,0,size-2,size-2,R.tab,{cut:false,alpha:flower?0:1});
     const tex=kind==='flower'?flowerKey(name,flowerSize):'combat:ball';
     const image=scene.add.image(0,0,tex).setDisplaySize(iconSize,iconSize);
     const group=scene.add.container(x,y,[border,face,image]).setSize(size,size);

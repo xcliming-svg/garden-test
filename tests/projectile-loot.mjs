@@ -212,7 +212,7 @@ try{
       return {dash,gap,wrong,background,decorPixels};
     },{b64:png.toString('base64'),info:border.info});
     if(light)assert.ok(pixels.grassPixels>100000&&pixels.dirtPixels>10000&&pixels.hudPixels>50000&&pixels.grassColors===2,JSON.stringify(pixels));
-    else assert.ok(pixels.dash>50&&pixels.gap===0&&pixels.wrong===0&&pixels.background>10000&&pixels.decorPixels===0,JSON.stringify(pixels));
+    else assert.ok(pixels.dash>50&&pixels.gap>50&&pixels.wrong===0&&pixels.background>10000&&pixels.decorPixels===0,JSON.stringify(pixels));
     full.pixels=pixels;
     const combat=await page.evaluate(()=>{
       const scene=window.__previewGame.scene.getScene('Game'),c=scene.combatPreview;c.advance(25);

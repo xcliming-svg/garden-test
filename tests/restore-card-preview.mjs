@@ -74,18 +74,19 @@ try{
     const data=ctx.getImageData(0,0,texture.width,texture.height).data;
     const raster=L.gardenRaster(shown,g,z),at=(x,y)=>{const i=((Math.round((g.y+y)*z)-raster.y)*texture.width+Math.round((g.x+x)*z)-raster.x)*4;return data[i+3]===255?(data[i]<<16)|(data[i+1]<<8)|data[i+2]:null;};
     const has=(x,y)=>x>=0&&x<g.columns&&y>=0&&y<g.rows&&shown.has(y*g.columns+x);
+    const arm=t=>t<=4||t>=g.pitch-4;
     let edges=true,centers=true,junctions=true;
-    for(let y=0;y<=g.rows;y++)for(let x=0;x<g.columns;x++)for(let t=1;t<g.pitch;t++)if((at(x*g.pitch+t,y*g.pitch)!==null)!==(has(x,y)||has(x,y-1)))edges=false;
-    for(let y=0;y<g.rows;y++)for(let x=0;x<=g.columns;x++)for(let t=1;t<g.pitch;t++)if((at(x*g.pitch,y*g.pitch+t)!==null)!==(has(x,y)||has(x-1,y)))edges=false;
+    for(let y=0;y<=g.rows;y++)for(let x=0;x<g.columns;x++)for(let t=1;t<g.pitch;t++)if((at(x*g.pitch+t,y*g.pitch)!==null)!==((has(x,y)||has(x,y-1))&&arm(t)))edges=false;
+    for(let y=0;y<g.rows;y++)for(let x=0;x<=g.columns;x++)for(let t=1;t<g.pitch;t++)if((at(x*g.pitch,y*g.pitch+t)!==null)!==((has(x,y)||has(x-1,y))&&arm(t)))edges=false;
     for(let y=0;y<=g.rows;y++)for(let x=0;x<=g.columns;x++)if((at(x*g.pitch,y*g.pitch)!==null)!==(has(x,y)||has(x-1,y)||has(x,y-1)||has(x-1,y-1)))junctions=false;
     for(let y=0;y<g.rows;y++)for(let x=0;x<g.columns;x++)if(at(x*g.pitch+g.cell/2,y*g.pitch+g.cell/2)!==null)centers=false;
     const used=new Set();for(let i=0;i<data.length;i+=4)if(data[i+3])used.add((data[i]<<16)|(data[i+1]<<8)|data[i+2]);
     const target=[at(3*g.pitch+2,4*g.pitch),at(3*g.pitch,4*g.pitch+2),at(4*g.pitch,4*g.pitch+2),at(3*g.pitch+2,5*g.pitch)];
-    return {edges,junctions,centers,used:[...used].sort((a,b)=>a-b),target,base:G.colors.base,active:G.colors.active,flower:s.children.getByName('placeholder:flower:0').list[0].fillColor,flowerFace:s.children.getByName('placeholder:flower:0').list[1].fillColor,card:s.children.getByName('placeholder:item:00').list[0].fillColor,slot:s.children.getByName('slot-frame:0').strokeColor,tip:L.itemTooltip.accent};
+    return {edges,junctions,centers,used:[...used].sort((a,b)=>a-b),target,base:G.colors.base,active:G.colors.active,flower:s.children.getByName('placeholder:flower:0').list[0].fillColor,flowerFace:s.children.getByName('placeholder:flower:0').list[1].fillAlpha,cornerCards:s.itemCardPreview.flowers.every(({marker:m})=>m.list[0].cornerFrame&&m.list[1].fillAlpha===0),card:s.children.getByName('placeholder:item:00').list[0].fillColor,slot:s.children.getByName('slot-frame:0').strokeColor,tip:L.itemTooltip.accent};
    });
    const idleGrid=await gridState();assert.ok(idleGrid.edges&&idleGrid.junctions&&idleGrid.centers,JSON.stringify(idleGrid));
    assert.deepEqual(idleGrid.used,[0x535361]);assert.equal(idleGrid.base,0x535361);assert.equal(idleGrid.active,0x84A83E);
-   assert.equal(idleGrid.flowerFace,0x3B3A44);assert.equal(idleGrid.flower,0x535361);assert.equal(idleGrid.tip,0x535361);
+   assert.equal(idleGrid.flowerFace,0);assert.ok(idleGrid.cornerCards);assert.equal(idleGrid.flower,0x535361);assert.equal(idleGrid.tip,0x535361);
    const bottom=await page.evaluate(()=>{
     const s=window.__previewGame.scene.getScene('Game'),L=window.GardenGameLayout,b=L.bottomLayout();
     const statObjects=s.children.list.filter(o=>o.name?.startsWith('stat-'));

@@ -135,6 +135,26 @@
     g.fillStyle(fill,1).fillRect(x+1,y+1,w-2,h-2);
     return g;
   }
+  // 1px L-shaped brackets with 5px arms, including their corner pixel.
+  function cornerSegments(pitch){
+    const arm=Math.min(4,Math.floor((pitch-1)/2));
+    return [[1,arm],[pitch-arm,arm]];
+  }
+  function cornerFrame(scene,x,y,size,color){
+    const g=pixelGraphics(scene).setPosition(x,y);
+    g.width=size;g.height=size;g.fillColor=color;g.cornerFrame=true;
+    g.setFillStyle=(c,alpha=1)=>{
+      g.fillColor=c;g.fillAlpha=alpha;g.clear().fillStyle(c,alpha);
+      const left=-size/2,top=-size/2,p=size-1;
+      for(const [t,len] of cornerSegments(p)){
+        g.fillRect(left+t,top,len,1);g.fillRect(left+t,top+p,len,1);
+        g.fillRect(left,top+t,1,len);g.fillRect(left+p,top+t,1,len);
+      }
+      for(const dx of [0,p])for(const dy of [0,p])g.fillRect(left+dx,top+dy,1,1);
+      return g;
+    };
+    return g.setFillStyle(color);
+  }
   function pixelBox(scene, x, y, w, h, fill, options = {}) {
     const g = pixelGraphics(scene).setPosition(x,y);
     g.width = w; g.height = h; g.pixelBox = true;
@@ -362,7 +382,7 @@
   }
 
   window.GardenUI = Object.freeze({
-    W: W, H: H, C: C, unit, tile, spacing, inkBounds, pixelGraphics, cutFill, pixelFrame, pixelBox, fontFamily, fontSize, menuStyle, hudLabels, hudLanguage, loadFonts, text: text, panel: panel, panelHeader, rule: rule,
+    W: W, H: H, C: C, unit, tile, spacing, inkBounds, pixelGraphics, cutFill, pixelFrame, pixelBox, cornerSegments, cornerFrame, fontFamily, fontSize, menuStyle, hudLabels, hudLanguage, loadFonts, text: text, panel: panel, panelHeader, rule: rule,
     background: background, button: button, overlay: overlay, fitCamera: fitCamera,
     bindEscape: bindEscape, openSubscene: openSubscene,
     closeSubscene: closeSubscene
