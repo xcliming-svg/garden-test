@@ -88,8 +88,20 @@
     const options=[];
     for(const e of targets){
       if(e.phase==='return'||e.phase==='recover')continue;
-      const {aim,predicted,delay}=aimPoint(id,e,origin,tuning,balloonFlight);
-      if(!eligibleHeight(id,predicted)||!valid(aim)||distance(aim,origin)>s.range)continue;
+      const {aim:point,predicted,delay}=aimPoint(id,e,origin,tuning,balloonFlight);
+      if(!eligibleHeight(id,predicted))continue;
+      let aim=point;
+      const legal=p=>valid(p)&&distance(p,origin)<=s.range;
+      if(id==='sprinkler'||id==='broom'||id==='yellow-floor'){
+        // Place the spray/sweep ring beside the predicted target, not directly
+        // on the hub. Ground traps can also cover a near-garden target from
+        // an adjacent legal outside position.
+        const r=id==='sprinkler'?24:id==='broom'?26:17;
+        const angle=Math.atan2(origin.y-point.y,origin.x-point.x);
+        const choices=Array.from({length:8},(_,i)=>({x:point.x+Math.cos(angle+i*Math.PI/4)*r,y:point.y+Math.sin(angle+i*Math.PI/4)*r}));
+        if(id==='yellow-floor')choices.unshift(point);else choices.push(point);
+        aim=choices.find(legal);if(!aim)continue;
+      }else if(!legal(aim))continue;
       let score=threat(e);
       const remain=Math.max(0,(e.hp??10)-(reserved.get(e.id)||0));
       if(single&&remain===0&&e.attackIn>delay+.15)continue;
