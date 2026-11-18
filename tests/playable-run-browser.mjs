@@ -59,6 +59,12 @@ try{
       return true;
     });
     assert.equal(layers,true);
+    const rulesCheck=await read(()=>{
+      const s=window.__previewGame.scene.getScene('Game'),R=window.GardenRunRules;
+      const run=R.create();
+      return !s.children.getByName('run-growth-hud')&&!('xp' in s.run.state)&&!('level' in s.run.state)&&run.rewardDrop(()=>.99)==='item'&&run.rewardDrop(()=>.99)==='gem';
+    });
+    assert.equal(rulesCheck,true);
     // Exercise actual scene's relic collection/render path with deterministic drops.
     const heartCheck=await read(()=>{
       const s=window.__previewGame.scene.getScene('Game'),r=s.relicCollection,m=r.model,T=window.GardenRelicCollection.tuning;
@@ -98,13 +104,8 @@ try{
       },{kind,id,index});
       await page.mouse.move(...xy(points.from));await page.mouse.down();await page.mouse.move(...xy(points.to),{steps:12});await page.mouse.up();
     }
-    assert.ok(await read(()=>window.__previewGame.scene.getScene('Game').children.getByName('run-growth-hud')?.text.includes('XP')));
     await drag('item','rock',0);
-    assert.equal(await read(()=>window.__previewGame.scene.getScene('Game').runEquipment.equipped[0].level),2);
-    assert.equal(await read(()=>window.__previewGame.scene.getScene('Game').heroWeaponPreview.model.state.levels[0]),2);
-    await drag('item','rock',0);
-    assert.equal(await read(()=>window.__previewGame.scene.getScene('Game').runEquipment.equipped[0].level),3);
-    assert.equal(await read(()=>window.__previewGame.scene.getScene('Game').heroWeaponPreview.model.state.levels[0]),3);
+    assert.equal(await read(()=>window.__previewGame.scene.getScene('Game').runEquipment.equipped[0].level),1);
     await drag('item','water-fairy',1);
     assert.equal(await read(()=>window.__previewGame.scene.getScene('Game').fairyPatrol.actors.length),2);
     await drag('flower','daisy',34);
@@ -114,8 +115,7 @@ try{
     assert.equal(await read(()=>window.__previewGame.scene.getScene('Game').flowerGrowth.entries.get(34)?.stage),3);
     await read(()=>window.__previewGame.scene.getScene('Game').relicCollection.model.damageFlower(34,1000));
     await page.waitForFunction(()=>!window.__previewGame.scene.getScene('Game').flowerGrowth.entries.has(34));
-    const xpBefore=await read(()=>{const s=window.__previewGame.scene.getScene('Game');s.run.credit(500);return s.run.state.totalXp;});
-    assert.ok(xpBefore>=500);
+    await read(()=>window.__previewGame.scene.getScene('Game').run.credit(500));
     for(let n=4;n<10;n++){
       const p=await read(()=>{const z=window.__previewGame.scene.getScene('Game').children.getByName('run-slot-purchase');return {x:z.x,y:z.y};});
       await page.mouse.click(...xy(p));
@@ -123,7 +123,6 @@ try{
     }
     await page.waitForFunction(()=>{const r=window.__previewGame.scene.getScene('Game').run.state;return r.gems===r.displayGems;});
     assert.equal(await read(()=>window.__previewGame.scene.getScene('Game').children.getByName('run-slot-purchase').visible),false);
-    assert.ok(await page.evaluate(xp=>{const s=window.__previewGame.scene.getScene('Game');return s.run.state.totalXp>=xp&&s.run.state.totalXp>s.run.state.gems;},xpBefore));
     await drag('item','wheel',9);
     assert.equal(await read(()=>window.__previewGame.scene.getScene('Game').heroWeaponPreview.model.state.equipped[9]),'wheel');
     await read(()=>{const s=window.__previewGame.scene.getScene('Game');for(const id of s.runGarden.occupied)s.relicCollection.model.damageFlower(id,1000);});

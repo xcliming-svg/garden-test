@@ -607,15 +607,10 @@
     const tooltip = scene.add.container(0, 0).setDepth(playable?D.tooltip:40).setName('item-preview-tooltip').setVisible(false);
     let tooltipKey = null, tooltipSize = { width: itemTooltip.width, height: 0 };
 
-    function resolved(index,item){
-      if(!playable)return item;
-      const level=window.GardenRunRules.equipmentLevel(equipped[index],item);
-      return level===null?null:level===item.level?item:window.GardenItemCards.runItem(scene,item.id,level);
-    }
     function signed(n) { return (n > 0 ? '+' : '') + String(n); }
     function renderStats() {
       const current = sumPreviewStats(equipped);
-      const next = dragging && target >= 0 ? getPreviewStats(equipped, target, resolved(target,dragging.item)) : current;
+      const next = dragging && target >= 0 ? getPreviewStats(equipped, target, dragging.item) : current;
       if(combatSpeed!==undefined){current.moveSpeed=combatSpeed;next.moveSpeed=combatSpeed;}
       const rows = layout.alignCost();
       stats.forEach(row => {
@@ -709,18 +704,16 @@
       if (!focus) { tooltip.setVisible(false); return; }
       const card = focus.card;
       const index = dragging && target >= 0 ? target : focus.slot;
-      const item = card ? (dragging&&target>=0?resolved(target,card.item):card.item) : equipped[index];
+      const item = card ? card.item : equipped[index];
       if (!item || (card && card.consumed)) { tooltip.setVisible(false); return; }
       const previous = dragging && target >= 0 ? equipped[target] : null;
       const anchor = Number.isInteger(index) && index >= 0 ? slotAnchor(index) :
         { x: card.marker.x, y: card.marker.y, size: assets.item.dropSize };
       let rows;
       if (previous) {
-        const upgrade=playable&&previous.id===item.id&&item.level>previous.level;
-        const names=upgrade?[previous.name+' Lv.'+previous.level,item.name+' Lv.'+item.level]:[previous.name,item.name];
-        rows = [{ value: names.join(' → '), replacement: names, color: itemTooltip.title },
+        rows = [{ value: previous.name + ' → ' + item.name, replacement: [previous.name, item.name], color: itemTooltip.title },
           { value: item.desc, color: itemTooltip.description }, ...effectRows(item, false),
-          ...effectRows(previous, true), { value: upgrade?'놓으면 무기 강화':'놓으면 기존 아이템 교체', color: itemTooltip.hint }];
+          ...effectRows(previous, true), { value: '놓으면 기존 아이템 교체', color: itemTooltip.hint }];
       } else {
         rows = [{ value: item.name, color: itemTooltip.title },
           { value: item.desc, color: itemTooltip.description }, ...effectRows(item, false)];
@@ -751,7 +744,7 @@
       ghost.setVisible(false);
       if (dragging && target >= 0) {
         const anchor = slotAnchor(target);
-        window.GardenItemCards.setIcon(ghost,resolved(target,dragging.item));
+        window.GardenItemCards.setIcon(ghost,dragging.item);
         ghost.setPosition(anchor.x, anchor.y).setVisible(true);
       }
       renderStats();
@@ -782,8 +775,7 @@
     }
     function canEquip(index,item){
       if(!playable)return true;
-      const result=resolved(index,item);if(!result)return false;
-      const next=equipped.slice();next[index]=result;
+      const next=equipped.slice();next[index]=item;
       return next.some(i=>i?.stats.dps>0);
     }
     function finishDrag(pointer, accept) {
@@ -794,7 +786,7 @@
       card.marker.setDepth(card.idleDepth??(ballMode?5:0)).setPosition(card.x, card.y).setAlpha(1);
       if(card.drop)card.drop.dragging=false;
       if (index >= 0&&canEquip(index,card.item)&&(!ballMode||(!equipped[index]&&scene.combatPreview.model.equip(card.id,index)))) {
-        equipItem(index,resolved(index,card.item));
+        equipItem(index,card.item);
         if(playable||!balancedCombat){card.consumed = true;card.marker.disableInteractive().setVisible(false);}
         if(playable)scene.runDrops?.consume(card);
       }

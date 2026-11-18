@@ -15,7 +15,7 @@
         const needed=R.blueprint.filter(([cell,name])=>scene.flowerGrowth.entries.get(cell)?.name!==name).map(([,name])=>name);
         id=choose(needed.length&&Math.random()<.75?needed:G.names);
       }
-      if(kind==='item'&&!id)id=R.pickItem(scene.run.state.elapsed,equipment.equipped);
+      if(kind==='item'&&!id)id=R.pickItem(scene.run.state.elapsed);
       const card=I.createDrop(scene,spec,assets,kind,id,x,y,serial++);
       card.age=0;card.kind=kind;card.id=id;
       card.float=L.floatingDrop(card.marker,serial);
@@ -36,8 +36,7 @@
       scene.scene.pause('Game');
       scene.scene.launch(outcome,{elapsed:state.elapsed,kills:scene.enemyPreview.model.kills,gems:state.gems,progress:R.completion(scene.flowerGrowth.entries)});
     }
-    let lastGems=-1,lastGrowth='';
-    const growth=window.GardenUI.text(scene,10,layout.centerY,'',12,window.GardenGameLayout.colors.value,{originY:.5}).setName('run-growth-hud').setDepth(R.depth.hudContent);
+    let lastGems=-1;
     function update(_time,delta){
       if(scene.run.state.result)return;
       const dt=Math.max(0,delta/1000);
@@ -50,8 +49,6 @@
         card.float(scene.run.state.elapsed*1000);
       }
       if(lastGems!==scene.run.state.gems){lastGems=scene.run.state.gems;layout.updateCost();}
-      const state=scene.run.state,progress='Lv.'+state.level+'  XP '+state.xp+'/'+R.xpNeeded(state.level)+(state.pendingGrowth?'  +'+state.pendingGrowth:'');
-      if(progress!==lastGrowth){growth.setText(progress);lastGrowth=progress;}
       scene.fairyPatrol.refreshHud();
       if(!scene.runGarden.occupied.size)result('Defeat');
       else if(R.completion(scene.flowerGrowth.entries)===100)result('Victory');

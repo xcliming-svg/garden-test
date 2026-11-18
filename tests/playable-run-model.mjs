@@ -57,30 +57,25 @@ function runAudit(sources){
     }
     for(const a of [...opening.actors]){
       check(R.waveAt(a.spawnTime).pool.some(([id])=>id===a.entry.id)&&R.eligibleEnemies(t+1e-6).includes(a.entry.id),'active wave species only');
-      check(a.hp===Math.round(V.hp(a.entry)*R.waveAt(a.spawnTime).hp)&&a.damageScale===R.waveAt(a.spawnTime).damage,'wave-specific stats');
+      check(a.hp===V.hp(a.entry),'existing enemy HP unchanged');
       check(M.speed(a.entry,0)===M.profiles[a.entry.id].baseSpeed,'minimum enemy speed');
       seen.add(a.entry.id);opening.damage(a.id,999);
     }
   }
   check(seen.size===12,'all species eventually introduced');
   check(w.GardenFairyPatrol.speed===40&&w.GardenFairyPatrol.speedAt(40,0,80)===40&&w.GardenFairyPatrol.speedAt(40,5,80)===80,'minimum fairy speed');
-  // Spendable gems and XP remain separate, and rewards share one kill drop.
-  const progress=R.create();
-  progress.credit(6);check(progress.state.level===2&&progress.state.xp===0&&progress.state.pendingGrowth===1,'first XP level');
-  check(progress.rewardDrop(()=>.99)==='gem','no item before 30s');
-  progress.tick(30);check(progress.rewardDrop(()=>.85)==='flower'&&progress.rewardDrop(()=>.70)==='heart','protect flower and heart supply');
-  check(progress.rewardDrop(()=>.1)==='item'&&progress.state.pendingGrowth===0,'XP earns next item');
-  progress.credit(10);check(progress.state.level===3&&progress.state.totalXp===16&&progress.state.pendingGrowth===1,'second XP level');
-  const xp=progress.state.totalXp;check(progress.buy()&&progress.state.totalXp===xp&&progress.state.pendingGrowth===1,'spending does not reduce XP');
-  check(progress.rewardDrop(()=>.99)==='gem','cooldown even on rare roll');
-  progress.tick(29.99);check(progress.rewardDrop(()=>.1)==='gem','no early payout');progress.tick(.01);
-  check(progress.rewardDrop(()=>.1)==='item'&&progress.state.itemDrops===2,'second paced reward');
-  const unlucky=R.create();unlucky.tick(60);check(unlucky.rewardDrop(()=>.1)==='item','first reward guaranteed at eligible kill after 60s');
-  const rock={id:'rock',level:1},rock2={id:'rock',level:2},rock3={id:'rock',level:3};
+  // Preserve the original equipment and economy. Only pace random item drops.
+  const drops=R.create();
+  check(drops.rewardDrop(()=>.99)==='item','first random item permitted');
+  check(drops.rewardDrop(()=>.99)==='gem','same instant item converted to gem');
+  check(drops.rewardDrop(()=>.85)==='flower'&&drops.rewardDrop(()=>.70)==='heart','protect flower and heart supply');
+  drops.credit(500);check(drops.buy()&&drops.state.gems===485,'unchanged slot purchase');
+  check(!('xp' in drops.state)&&!('level' in drops.state)&&!('pendingGrowth' in drops.state),'no additional growth system');
+  drops.tick(29.99);check(drops.rewardDrop(()=>.99)==='gem','no early payout');drops.tick(.01);
+  check(drops.rewardDrop(()=>.1)==='gem'&&drops.rewardDrop(()=>.99)==='item','only random item at cooldown boundary');
+  const unlucky=R.create();unlucky.tick(120);check(unlucky.rewardDrop(()=>.1)==='gem','no forced rewards');
   check(R.itemPool(0).join(',')==='rock,boomerang,shoe,shield'&&R.itemPool(540).length===13,'item unlocks');
-  check(R.pickItem(0,[rock],()=>.1)==='rock'&&R.pickItem(0,[rock],()=>.9)!=='rock','owned upgrade favored');
-  check(R.pickItem(0,[rock3],()=>.1)!=='rock','max level excluded when alternatives exist');
-  check(R.equipmentLevel(rock,rock)===2&&R.equipmentLevel(rock2,rock)===3&&R.equipmentLevel(rock3,rock)===null&&R.equipmentLevel(null,rock)===1,'same slot upgrade');
+  for(const at of [0,90,180,300,420,540])for(let n=0;n<100;n++)check(R.itemPool(at).includes(R.pickItem(at,()=>n/100)),'random item only from active pool');
   // A lowering cap cannot destroy already living enemies.
   const retained=E.createPopulation(spec,patrol,E.roster,()=>.37,R.population,null,true);
   retained.advance(179);const oldIds=retained.actors.map(a=>a.id);

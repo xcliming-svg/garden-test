@@ -205,8 +205,7 @@
       const entry=nextEntry(),side=directionBag.pop();
       const initialPath=route(spec,patrol.boundary,entry,patrol.occupied,{side,random});
       const path=playable?runPath(initialPath):initialPath;
-      const wave=schedule?window.GardenRunRules.waveAt(elapsed):null;
-      const actor={id:serial++,entry,path,age:0,spawnTime:elapsed,damageScale:wave?.damage??1,blink:F.blinkSchedule(serial+11),expressionState:'auto',expression:'normal',pose:null,hp:balanced?Math.round(window.GardenWeaponBalance.hp(entry)*(wave?.hp??1)):entry.level,hitUntil:0,populationTime:elapsed,motionAge:0,strikes:0,pendingHits:0,persistent:playable};
+      const actor={id:serial++,entry,path,age:0,spawnTime:elapsed,blink:F.blinkSchedule(serial+11),expressionState:'auto',expression:'normal',pose:null,hp:balanced?window.GardenWeaponBalance.hp(entry):entry.level,hitUntil:0,populationTime:elapsed,motionAge:0,strikes:0,pendingHits:0,persistent:playable};
       actor.duration=M.duration(entry,'auto',path,spawning.rank);actors.push(actor);spawned++;
       updateActor(actor);return actor;
     }
@@ -332,7 +331,7 @@
           model.advance(step);
           relics.model.syncFlowers(patrol.occupied);
           for(const e of model.actors){
-            if(playable){if(e.pendingHits){const damage=Math.max(1,Math.round((window.GardenRunRules.tuning.enemyDamage+(e.entry.level-1)*window.GardenRunRules.tuning.enemyDamagePerLevel)*e.damageScale)-(scene.runEquipment?.defense()||0));relics.model.damageFlower(e.path.flower,damage*e.pendingHits);e.pendingHits=0;}}
+            if(playable){if(e.pendingHits){const damage=Math.max(1,(window.GardenRunRules.tuning.enemyDamage+(e.entry.level-1)*window.GardenRunRules.tuning.enemyDamagePerLevel)-(scene.runEquipment?.defense()||0));relics.model.damageFlower(e.path.flower,damage*e.pendingHits);e.pendingHits=0;}}
             else if(!e.flowerHit&&(e.pose.phase==='recover'||e.pose.phase==='return')){e.flowerHit=true;relics.model.damageFlower(e.path.flower);}
           }
           if(playable){for(const [id,f] of relics.state.flowers)if(f.energy<=0)scene.runGarden?.remove(id);if(!patrol.occupied.length)break;}
