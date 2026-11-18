@@ -19,7 +19,7 @@
     ['yellow-floor','끈끈이','3_노랑장판_단일파츠(1).svg','영역에 들어온 적의 이동 속도를 감소시킵니다.',null,0,'적 이동 속도 -30%'],
     ['sprinkler','스프링클러','3_스프링쿨러_단일파츠(4).svg','원형으로 물을 뿌려 주변 적들을 공격합니다.','dps',18],
     ['rock','돌멩이','4_돌_단일파츠(1).svg','적을 향해 돌멩이를 던져 기본 공격을 합니다.','dps',12],
-    ['broom','빗자루','4_빗자루_단일파츠(1).svg','빗자루를 휘둘러 범위 내의 적들을 공격합니다.','dps',20]
+    ['broom','빗자루','4_빗자루_단일파츠(1).svg','설치 지점 주변을 돌며 적들을 쓸어 공격합니다.','dps',20]
   ].map(([id,name,file,desc,stat,value,tooltipEffect])=>Object.freeze({id,name,file,desc,level:minLevel,stats:Object.freeze(stat?{[stat]:value}:{}),tooltipEffect})));
   // The source's bristle centre (1097,572) and handle tip (1183,380)
   // define its longitudinal axis. Rotate that axis to -45° before cropping,
@@ -192,16 +192,18 @@
     if(item?.texture)fit(group.list[2],item.texture,itemSpan(group.width));
     setLevelLabel(group,item?.texture?item.level:undefined);
   }
-  function weaponImage(scene,id,x,y,span){
-    if(!entries.some(item=>item.id===id))throw Error('Unknown weapon: '+id);
-    const texture=trim(scene,id,raw(id));
-    return fit(scene.add.image(x,y,texture),texture,span);
+  // Combat art uses visible HEIGHT; cards and relics keep the original longest-side fit.
+  function attackSize(scene,id,height){
+    if(!entries.some(item=>item.id===id)&&!effects.some(effect=>effect.id===id))throw Error('Unknown attack art: '+id);
+    const texture=trim(scene,id,raw(id)),source=scene.textures.get(texture).getSourceImage();
+    return {width:height*source.width/source.height,height};
   }
-  function effectImage(scene,id,x,y,span){
-    if(!effects.some(effect=>effect.id===id))throw Error('Unknown weapon effect: '+id);
-    const texture=trim(scene,id,raw(id));
-    return fit(scene.add.image(x,y,texture),texture,span);
+  function attackImage(scene,id,x,y,height){
+    const size=attackSize(scene,id,height),texture=key(id);
+    return fit(scene.add.image(x,y,texture),texture,Math.max(size.width,size.height));
   }
+  function weaponImage(scene,id,x,y,height){return attackImage(scene,id,x,y,height);}
+  function effectImage(scene,id,x,y,height){return attackImage(scene,id,x,y,height);}
   function relicImage(scene,kind,x,y){
     const item=relics.find(r=>r.id===kind),texture=trim(scene,kind,raw(kind));
     return fit(scene.add.image(x,y,texture),texture,item.span).setDepth(4);
@@ -235,5 +237,5 @@
     scene.events.once('shutdown',()=>delete scene.itemCardPreview);
     return {cards,flowers};
   }
-  window.GardenItemCards=Object.freeze({enabled,entries,relics,preload,draw,setIcon,key,broomRotation,itemSpan,minLevel,maxLevel,setLevelLabel,gemIcon,gemInk,relicImage,destroyRelic,weaponImage,effectImage});
+  window.GardenItemCards=Object.freeze({enabled,entries,relics,preload,draw,setIcon,key,broomRotation,itemSpan,minLevel,maxLevel,setLevelLabel,gemIcon,gemInk,relicImage,destroyRelic,weaponImage,effectImage,attackSize});
 }());
