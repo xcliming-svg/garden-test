@@ -133,7 +133,9 @@
         if(slot.id==='wheel'){
           const span=hero.visibleHeight||tuning.wheel.span,r=span/2;
           const room=rayRoom(spec,x,y,dx,dy,r);
-          const offset=Math.min(span+4,room);
+          // Never spawn inside the fairy or roll in place against the HUD.
+          if(room<span+5)continue;
+          const offset=span+4;
           shot.x=x+dx*offset;shot.y=y+dy*offset;shot.span=span;
           shot.travel=Math.max(0,Math.min(room-offset,Math.max(210,Math.hypot(tx-shot.x,ty-shot.y)+45)));
           shot.tx=shot.x+dx*shot.travel;shot.ty=shot.y+dy*shot.travel;
