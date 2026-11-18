@@ -6,7 +6,8 @@ const window={location:{search:''},GardenFairyPatrol:{enabled:true},GardenEnemyP
 for(const file of ['src/fairy-attack.js','src/relic-collection.js','src/hero-weapon-preview.js'])vm.runInNewContext(readFileSync(file,'utf8'),{window,URLSearchParams});
 const A=window.GardenHeroWeaponPreview,spec={width:960,height:540,top:32,bottom:38};
 const hero={index:0,type:'garden',direction:'right',visibleHeight:40,center:{x:480,y:200}};
-const R=window.GardenRelicCollection,patrol={bounds:{left:380,right:580,top:200,bottom:340}};
+const R=window.GardenRelicCollection,patrol={bounds:{left:380,right:580,top:200,bottom:340},boundary:{garden:{left:410,right:550,top:225,bottom:315}}};
+const garden=patrol.boundary.garden;
 function seeded(seed){return ()=>{seed=(Math.imul(1664525,seed)+1013904223)>>>0;return seed/4294967296;};}
 const rng=seeded(123);
 const advance=(m,dt,h=hero,targets=[],damage=null,slow=null,p=patrol)=>m.step(dt,h,targets,damage,slow,p);
@@ -22,7 +23,7 @@ for(const id of A.ids){
     for(const shot of m.state.shots){
       ok(Object.values(A.pose(shot,hero)).every(Number.isFinite),'finite pose');
       ok(shot.owner===0,'hero owner');
-      ok(R.eligible({x:shot.tx,y:shot.ty},shot.origin,{bounds:shot.bounds}),'aim within shared pickup range');
+      ok(A.inAttackRange({x:shot.tx,y:shot.ty},shot.origin),'aim within independent 550px range');
     }
     advance(m,.05,hero);
   }
@@ -30,7 +31,7 @@ for(const id of A.ids){
   const f=m.state.fired;advance(m,3,hero);ok(m.state.fired===f,'shield never fires');
   const c=A.create(spec,rng);c.equip(0,id);
   let hits=0,slows=0;
-  const target={id:1,x:480,y:id==='broom'?174:110,radius:8};
+  const target={id:1,x:480,y:110,radius:8};
   for(let t=0;t<3;t+=.02)advance(c,.02,hero,[target],()=>{hits++;return {killed:false};},()=>{slows++;});
   ok(id==='yellow-floor'?slows>0&&hits===0:hits>0,'combat '+id);
 }
@@ -39,8 +40,8 @@ m.select('balloon');advance(m,.05,hero,[{id:1,x:480,y:110,radius:8}],()=>{throw 
 m.equip(0,'rock');m.equip(2,'wheel');advance(m,.05,hero);
 ok(m.state.shots.length===2&&m.state.shots.every(s=>!s.preview),'multiple equipped weapons');
 m.equip(0,'shoe');ok(m.state.shots.length===1&&m.state.shots[0].kind==='wheel','replacement only');
-ok(A.range===window.GardenFairyAttack.range&&A.range===550,'shared range');
-// Every weapon, all four sides and corners: random points satisfy the exact pickup predicate.
+ok(A.range===window.GardenFairyAttack.range&&A.range===550,'same nominal radius, independent aim');
+// Every weapon, all four sides and corners: random points satisfy its own placement/aim rule.
 for(const center of [{x:480,y:200},{x:580,y:270},{x:480,y:340},{x:380,y:270},{x:380,y:200},{x:580,y:200},{x:580,y:340},{x:380,y:340}]){
   const h={...hero,center};
   for(const id of A.ids){
@@ -48,7 +49,7 @@ for(const center of [{x:480,y:200},{x:580,y:270},{x:480,y:340},{x:380,y:270},{x:
     for(let i=0;i<40;i++){
       const m=A.create(spec,rng);m.select(id);advance(m,.01,h);
       const q=m.state.shots[0];ok(!!q,'shot at every patrol point');
-      ok(R.eligible({x:q.tx,y:q.ty},center,patrol),'exact collection predicate');
+      ok(A.validAim(spec,id,{x:q.tx,y:q.ty},center,garden,q.size,h.visibleHeight,false),'independent safe aim');
       ok(q.tx>=0&&q.tx<=spec.width&&q.ty>=spec.top&&q.ty<=spec.height-spec.bottom,'aim inside field');
       unique.add(q.tx.toFixed(3)+','+q.ty.toFixed(3));
     }
@@ -62,7 +63,8 @@ for(const [cx,cy,dx,dy] of [[480,200,0,-1],[580,270,1,0],[480,340,0,1],[380,270,
   const target={id:1,x:cx+dx*80,y:cy+dy*80,radius:5};
   advance(m,.01,h,[target],()=>({killed:false}));
   const q=m.state.shots[0];ok(q.span===28,'wheel height');
-  ok(Math.abs(q.x-cx-dx*38)<1e-6&&Math.abs(q.y-cy-dy*38)<1e-6,'ahead of body');
+  const offset=h.visibleHeight/2+Math.max(q.size.width,q.size.height)/2+4;
+  ok(Math.abs(q.x-cx-dx*offset)<1e-6&&Math.abs(q.y-cy-dy*offset)<1e-6,'ahead of body');
   let last=0,delta=Infinity;const distances=[];
   for(let i=1;i<=8;i++){
     q.age=i*.04;const p=A.pose(q,h),d=A.wheelTravel(q);
@@ -92,7 +94,7 @@ for(const [cx,cy,dx,dy] of [[480,200,0,-1],[580,270,1,0],[480,340,0,1],[380,270,
     const m=A.create(spec,rng);m.equip(0,'rock');advance(m,.01,hero,[near,far,bad],()=>({killed:false}));
     chosen.add(m.state.shots[0].targetId);
   }
-  ok(chosen.has(1)&&chosen.has(2)&&!chosen.has(3),'random eligible enemies');
+  ok(chosen.has(1)&&chosen.has(2)&&chosen.has(3),'random eligible enemies in every direction');
 }
 {
   const m=A.create(spec,rng);m.select('flowerpot');advance(m,.01,hero);const q=m.state.shots[0];
@@ -124,7 +126,7 @@ for(const [cx,cy,dx,dy] of [[480,200,0,-1],[580,270,1,0],[480,340,0,1],[380,270,
   advance(m,.01,hero,[target],damage);
   const q=m.state.shots[0];
   ok(q.tx===target.x&&q.ty===target.ground,'ground target chosen');
-  ok(R.eligible({x:q.tx,y:q.ty},q.origin,patrol),'balloon uses relic range');
+  ok(A.inAttackRange({x:q.tx,y:q.ty},q.origin),'balloon uses independent radial range');
   ok(q.flight>=cfg.minFlight&&q.flight<=cfg.maxFlight,'bounded flight time');
   const samples=[0,.2,.4,.6,.8,1].map(u=>{
     const a=A.pose({...q,age:q.flight*u},hero);
@@ -232,5 +234,65 @@ for(const [cx,cy,dx,dy] of [[480,200,0,-1],[580,270,1,0],[480,340,0,1],[380,270,
  const p=A.pose(q,hero);ok(Math.hypot(p.x-q.leg.x,p.y-q.leg.y)<1e-8,'continuous bounce origin');
  for(let i=0;i<80&&!q.hit.has(2);i++)advance(m,.01,hero,[e,f],()=>({killed:false}));
  ok(q.hit.has(2),'second target actually hit');
+}
+
+// The pickup rule stays asymmetric to permit collecting internal drops; aim
+// does not inherit that fan. All safe placements use the actual garden bounds.
+{
+ const left={x:380,y:270},right={x:580,y:270},top={x:480,y:200},bottom={x:480,y:340};
+ const outsideLeft={x:100,y:270},outsideRight={x:850,y:270},inside={x:480,y:270};
+ ok(R.eligible(inside,left,patrol)&&!R.eligible(outsideRight,left,patrol),'pickup inward exception unchanged');
+ ok(A.inAttackRange(outsideRight,left)&&A.inAttackRange(outsideLeft,right),'360 degree aim crosses to other side');
+ for(const kind of ['rock','boomerang','paper-plane','bouncy-ball','balloon','flowerpot']){
+   const size=A.defaultSize(kind,A.tuning[kind].span);
+   for(const [o,p] of [[left,outsideRight],[right,outsideLeft],[top,{x:480,y:440}],[bottom,{x:480,y:80}]]){
+     ok(A.validAim(spec,kind,p,o,garden,size,40,true),'opposite-side target '+kind);
+   }
+   ok(A.validAim(spec,kind,inside,left,garden,size,40,true),'intruding enemy can be targeted '+kind);
+   ok(A.validAim(spec,kind,inside,left,garden,size,40,false)===!['balloon','flowerpot'].includes(kind),'empty garden policy '+kind);
+ }
+ const size=A.defaultSize('wheel',28);
+ for(const [o,bad,good,side] of [[left,inside,outsideLeft,{x:380,y:80}],[right,inside,outsideRight,{x:580,y:440}],[top,inside,{x:480,y:80},{x:100,y:200}],[bottom,inside,{x:480,y:440},{x:850,y:340}]]){
+   ok(!A.wheelPath(spec,o,bad,garden,size),'reject inward wheel');
+   ok(A.wheelPath(spec,o,good,garden,size),'outward wheel');
+   ok(A.wheelPath(spec,o,side,garden,size),'tangential wheel');
+ }
+ // Even if an aim point itself lies outside, the whole ray must not cross.
+ ok(!A.wheelPath(spec,left,outsideRight,garden,size),'reject cross-garden ray');
+ ok(!A.wheelPath(spec,right,outsideLeft,garden,size),'reject reverse cross-garden ray');
+ const angleSet=new Set();
+ for(let i=0;i<1000;i++){
+   const m=A.create(spec,rng);m.select('wheel');advance(m,.01,{...hero,center:left});const q=m.state.shots[0];
+   ok(!!q,'wheel samples safe angle');
+   const path=A.wheelPath(spec,left,{x:q.tx,y:q.ty},garden,q.size);
+   ok(!!path,'entire wheel ray clears garden');
+   const r=Math.max(q.size.width,q.size.height)/2+1,g={left:garden.left-r,right:garden.right+r,top:garden.top-r,bottom:garden.bottom+r};
+   for(const age of [0,.1,.2,.4,.8,1.6,3,6]){
+     const p=A.pose({...q,age},hero);
+     ok(!(p.x>=g.left&&p.x<=g.right&&p.y>=g.top&&p.y<=g.bottom),'wheel body outside');
+   }
+   angleSet.add(Math.floor((Math.atan2(q.dy,q.dx)+Math.PI)*8/Math.PI));
+ }
+ ok(angleSet.size>=8,'wide angular coverage not restricted to 100 degrees');
+ for(const kind of ['yellow-floor','sprinkler','broom']){
+   const size=A.defaultSize(kind,A.tuning[kind].span),e=A.placementExtent(kind,size);
+   ok(!A.installationSafe(spec,kind,inside,garden,size),'no installation inside '+kind);
+   ok(!A.installationSafe(spec,kind,{x:garden.left-e.x/2,y:270},garden,size),'reject overlapping footprint '+kind);
+   ok(A.validAim(spec,kind,outsideRight,left,garden,size,40,true),'opposite-side installation '+kind);
+   ok(A.validAim(spec,kind,outsideLeft,right,garden,size,40,true),'reverse opposite installation '+kind);
+   const m=A.create(spec,()=>.5);m.equip(0,kind);
+   const enemy={id:99,x:480,y:180,ground:270,radius:10};
+   advance(m,.01,{...hero,center:left},[enemy],()=>({killed:false}));
+   const q=m.state.shots[0];
+   ok(q.targetId===null&&A.installationSafe(spec,kind,{x:q.tx,y:q.ty},garden,q.size),'no fallback to airborne sprite when ground is inside');
+   const grown={...patrol,boundary:{garden:{left:q.tx-1,right:q.tx+1,top:q.ty-1,bottom:q.ty+1}}};
+   advance(m,.02,{...hero,center:left},[],null,null,grown);
+   ok(!m.state.shots.includes(q),'remove installation when new garden overlaps');
+ }
+ for(const kind of ['balloon','flowerpot']){
+   const m=A.create(spec,()=>.5);m.equip(0,kind);
+   advance(m,.01,{...hero,center:left},[{id:7,x:480,y:250,ground:270,radius:5}],()=>({killed:false}));
+   ok(m.state.shots[0].targetId===7&&m.state.shots[0].ty===270,'real enemy inside garden allowed');
+ }
 }
 console.log('PASS equipped weapon model:',checks,'checks');
