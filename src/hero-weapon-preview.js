@@ -8,9 +8,9 @@
   const items=window.GardenItemCards.entries.filter(i=>i.id!=='shoe'&&i.id!=='shield');
   const ids=Object.freeze(items.map(i=>i.id));
   const tuning=Object.freeze({
-    balloon:{life:1.5,span:16},boomerang:{life:1.7,span:18},wheel:{life:1.4,span:20},
-    flowerpot:{life:1.15,span:20},'paper-plane':{life:1.55,span:18},
-    'bouncy-ball':{life:1.7,span:14},'yellow-floor':{life:2.6,span:24},
+    balloon:{life:1.5,span:16},boomerang:{life:1.7,span:18},wheel:{life:1.6,span:40},
+    flowerpot:{life:1.15,span:20,fall:.52,height:120},'paper-plane':{life:1.55,span:18},
+    'bouncy-ball':{life:1.7,span:14},'yellow-floor':{life:2.6,span:72,spread:.32},
     sprinkler:{life:1.9,span:20},rock:{life:1.1,span:12},broom:{life:.7,span:28}
   });
   const outward={right:[0,-1],down:[1,0],left:[0,1],up:[-1,0]};
@@ -22,6 +22,36 @@
     const dx=b.x-a.x,dy=b.y-a.y,den=dx*dx+dy*dy;
     const t=den?clamp(((p.x-a.x)*dx+(p.y-a.y)*dy)/den,0,1):0;
     return Math.hypot(a.x+t*dx-p.x,a.y+t*dy-p.y);
+  }
+  // Wheel displacement and angular displacement share a single physical distance.
+  // Right/down are clockwise, left/up counter-clockwise in screen coordinates.
+  const wheelSign=(dx,dy)=>Math.abs(dx)>1e-5?Math.sign(dx):Math.sign(dy)||1;
+  function wheelTravel(s){
+    const t=clamp(s.age/tuning.wheel.life,0,1);
+    return (s.travel??Math.hypot(s.tx-s.x,s.ty-s.y))*(1-(1-t)**2);
+  }
+  function rayRoom(spec,x,y,dx,dy,r){
+    const bounds={left:r,right:spec.width-r,top:spec.top+r,bottom:spec.height-spec.bottom-r};
+    const times=[];
+    if(dx>1e-6)times.push((bounds.right-x)/dx);
+    if(dx<-1e-6)times.push((bounds.left-x)/dx);
+    if(dy>1e-6)times.push((bounds.bottom-y)/dy);
+    if(dy<-1e-6)times.push((bounds.top-y)/dy);
+    return Math.max(0,Math.min(...times));
+  }
+  function potFragments(s){
+    const age=s.age-tuning.flowerpot.fall;
+    if(age<0)return [];
+    const life=tuning.flowerpot.life-tuning.flowerpot.fall,t=clamp(age/life,0,1);
+    // Deterministic shards, with ground-plane travel and a ballistic vertical bounce.
+    return Array.from({length:12},(_,i)=>{
+      const a=i*Math.PI*2/12+(i%3)*.13,velocity=45+(i*37%67),lift=45+(i*19%47);
+      const landing=2*lift/340,air=Math.min(age,landing);
+      const z=Math.max(0,lift*air-170*air*air);
+      const d=velocity*Math.min(age,.24)+velocity*.22*Math.max(0,age-.24);
+      return {x:s.tx+Math.cos(a)*d,y:s.ty+Math.sin(a)*d*.45-z,
+        angle:a+age*(i%2?8:-9),size:3+i%4,alpha:Math.min(1,(1-t)*3),dark:i%3===0};
+    });
   }
   function create(spec){
     const state={selected:'',equipped:[],shots:[],fired:0,hits:0,elapsed:0};
@@ -60,7 +90,8 @@
           const hits=candidates.filter(e=>{
             const r=e.radius||0;
             if(area)return p.ring>0&&distance(p,e)<=p.ring+r;
-            if(s.kind==='yellow-floor')return p.t>=.22&&distance(p,e)<=tuning[s.kind].span*.9+r;
+            if(s.kind==='yellow-floor')return distance(p,e)<=tuning[s.kind].span*p.scale/2+r;
+            if(s.kind==='wheel')return segmentDistance(previous,p,e)<=(s.span??tuning.wheel.span)/2+r;
             if(s.kind==='sprinkler')return p.t>.25&&distance(p,e)<=44+r;
             return segmentDistance(previous,p,e)<=tuning[s.kind].span*.4+r;
           }).sort((a,b)=>distance(previous,a)-distance(previous,b));
@@ -98,7 +129,17 @@
         const left=24,right=spec.width-24,top=spec.top+24,bottom=spec.height-spec.bottom-24;
         const tx=target?target.x:clamp(x+dx*150,left,right),ty=target?target.y:clamp(y+dy*150,top,bottom);
         if(target){const d=Math.hypot(tx-x,ty-y)||1;dx=(tx-x)/d;dy=(ty-y)/d;}
-        state.shots.push({id:serial++,owner:0,slot:slot.index,preview:slot.preview,kind:slot.id,x,y,tx,ty,dx,dy,age:0,targetId:target?.id??null,hit:new Set()});
+        const shot={id:serial++,owner:0,slot:slot.index,preview:slot.preview,kind:slot.id,x,y,tx,ty,dx,dy,age:0,targetId:target?.id??null,hit:new Set()};
+        if(slot.id==='wheel'){
+          const span=hero.visibleHeight||tuning.wheel.span,r=span/2;
+          const room=rayRoom(spec,x,y,dx,dy,r);
+          const offset=Math.min(span+4,room);
+          shot.x=x+dx*offset;shot.y=y+dy*offset;shot.span=span;
+          shot.travel=Math.max(0,Math.min(room-offset,Math.max(210,Math.hypot(tx-shot.x,ty-shot.y)+45)));
+          shot.tx=shot.x+dx*shot.travel;shot.ty=shot.y+dy*shot.travel;
+        }
+        if(slot.id==='flowerpot'&&target&&Number.isFinite(target.ground))shot.ty=target.ground;
+        state.shots.push(shot);
         state.fired++;next.set(slot.index,state.elapsed+interval);
       }
     }
@@ -119,10 +160,16 @@
         x=mix(t<.5?s.x:end.x,s.tx,u)+px*Math.sin(Math.PI*u)*24;
         y=mix(t<.5?s.y:end.y,s.ty,u)+py*Math.sin(Math.PI*u)*24;angle=t*12;break;
       }
-      case 'wheel':angle=t*14;break;
+      case 'wheel':{
+        const d=wheelTravel(s),r=(s.span??tuning.wheel.span)/2;
+        x=s.x+s.dx*d;y=s.y+s.dy*d;angle=wheelSign(s.dx,s.dy)*d/r;
+        break;
+      }
       case 'flowerpot':{
-        x=s.tx;y=s.ty-75*(1-Math.min(1,t/.7));
-        if(t>.7){alpha=0;ring=5+33*(t-.7)/.3;}break;
+        const cfg=tuning.flowerpot,u=clamp(s.age/cfg.fall,0,1);
+        x=s.tx;y=s.ty-cfg.span/2-cfg.height*(1-u*u);
+        if(u>=1){y=s.ty;alpha=0;ring=38;}
+        break;
       }
       case 'paper-plane':x+=px*Math.sin(Math.PI*t)*20;y+=py*Math.sin(Math.PI*t)*20;angle=a+Math.PI/4;break;
       case 'bouncy-ball':{
@@ -131,7 +178,11 @@
         y=t<.55?mix(s.y,s.ty,u):s.ty-s.dy*45*u+py*85*u;
         y-=Math.abs(Math.sin(t*3*Math.PI))*18;break;
       }
-      case 'yellow-floor':x=mix(s.x,s.tx,Math.min(1,t/.22));y=mix(s.y,s.ty,Math.min(1,t/.22));scale=t<.22?1:1.8;alpha=t>.8?(1-t)/.2:1;break;
+      case 'yellow-floor':{
+        const u=clamp(s.age/tuning['yellow-floor'].spread,0,1);
+        x=s.tx;y=s.ty;scale=.08+.92*(1-(1-u)**3);alpha=t>.85?(1-t)/.15:1;
+        break;
+      }
       case 'sprinkler':x=mix(s.x,s.tx,Math.min(1,t/.25));y=mix(s.y,s.ty,Math.min(1,t/.25));if(t>.25)ring=12+32*((t-.25)*4%1);break;
       case 'rock':angle=t*5;break;
       case 'broom':{
@@ -158,7 +209,6 @@
       color:P.hex.paper,background:P.hex.graphite,border:'1px solid '+P.hex.slate,fontFamily:'Garden Fusion, sans-serif',padding:'0 4px'});
     function resize(){select.style.fontSize=Math.max(8,parent.clientWidth/spec.width*12)+'px';}
     parent.appendChild(select);resize();
-    function clear(){for(const obj of images.values())I.destroyRelic(obj.image);images.clear();fx.clear();}
     function choose(id){if(!model.select(id))return false;select.value=id;render();return true;}
     function equip(index,id){if(!model.equip(index,id))return false;select.disabled=model.state.equipped.some(Boolean);select.value=model.state.selected;render();return true;}
     select.addEventListener('change',()=>{choose(select.value);select.blur();});
@@ -171,13 +221,25 @@
       for(const s of model.state.shots){
         live.add(s.id);
         if(!images.has(s.id)){
-          const image=I.weaponImage(scene,s.kind,s.x,s.y,tuning[s.kind].span).setDepth(6).setMask(mask).setName('hero-weapon:'+s.kind+':'+s.id);
+          const image=I.weaponImage(scene,s.kind,s.x,s.y,s.span??tuning[s.kind].span).setDepth(s.kind==='yellow-floor'?.8:6).setMask(mask).setName('hero-weapon:'+s.kind+':'+s.id);
           images.set(s.id,{image,width:image.displayWidth,height:image.displayHeight});
         }
         const p=pose(s,hero),obj=images.get(s.id);
         obj.image.setPosition(p.x,p.y).setRotation(p.angle).setAlpha(p.alpha)
           .setDisplaySize(obj.width*p.scale,obj.height*p.scale);
-        if(p.ring){
+        if(s.kind==='flowerpot'){
+          if(s.age<tuning.flowerpot.fall){
+            const u=clamp(s.age/tuning.flowerpot.fall,0,1);
+            fx.fillStyle(P.n.ink,.15+.25*u).fillEllipse(s.tx,s.ty,13+6*u,4+2*u);
+          }else{
+            for(const part of potFragments(s)){
+              const c=Math.cos(part.angle),n=Math.sin(part.angle),r=part.size;
+              fx.fillStyle(part.dark?P.n.bark:P.n.clay,part.alpha).fillTriangle(
+                part.x+c*r,part.y+n*r,part.x-c*r*.8-n*r*.6,part.y-n*r*.8+c*r*.6,
+                part.x-c*r*.6+n*r*.7,part.y-n*r*.6-c*r*.7);
+            }
+          }
+        }else if(p.ring){
           const c=s.kind==='flowerpot'?P.n.clay:P.n.skyLight;
           fx.lineStyle(1.5,c,Math.max(.15,1-p.t)).strokeCircle(p.x,p.y,p.ring);
           if(s.kind==='sprinkler')for(let i=0;i<8;i++){const a=i*Math.PI/4+p.t*5;fx.fillStyle(c,.85).fillCircle(p.x+Math.cos(a)*p.ring,p.y+Math.sin(a)*p.ring,2);}
@@ -185,8 +247,14 @@
       }
       for(const [id,obj] of images)if(!live.has(id)){I.destroyRelic(obj.image);images.delete(id);}
     }
-    // Only this actor is ever passed to the preview model. No enemy or damage state exists.
-    function update(_time,delta){if(patrol.finished)return;model.step(Math.min(.1,Math.max(0,delta/1000)),patrol.actors[0]);render();}
+    // Equipped attacks use the live enemy population only in the explicit combat mode.
+    function update(_time,delta){
+      if(patrol.finished)return;
+      const population=combat?scene.enemyPreview?.model:null;
+      const targets=population?population.actors.map(a=>({...window.GardenFairyAttack.target(a),ground:a.pose.ground})):[];
+      model.step(Math.min(.1,Math.max(0,delta/1000)),patrol.actors[0],targets,population?.damage,population?.slow);
+      render();
+    }
     scene.events.on('update',update);scene.events.on('pause',pause);scene.events.on('resume',resume);scene.scale.on('resize',resize);
     scene.events.once('shutdown',()=>{
       scene.events.off('update',update);scene.events.off('pause',pause);scene.events.off('resume',resume);scene.scale.off('resize',resize);
@@ -195,5 +263,5 @@
     scene.heroWeaponPreview={model,select:choose,equip,render,control:select};
     return scene.heroWeaponPreview;
   }
-  window.GardenHeroWeaponPreview=Object.freeze({enabled,combat,ids,tuning,interval,range,create,pose,attach});
+  window.GardenHeroWeaponPreview=Object.freeze({enabled,combat,ids,tuning,interval,range,create,pose,wheelTravel,potFragments,attach});
 }());
