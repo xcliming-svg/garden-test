@@ -1,6 +1,6 @@
 # garden-test
 
-> **devel 외곽선 비교:** 돌담 없음·요정 전면 기본, `outlineColor=stone` (16색 키), `outlineWidth=1` (0.5~1.5 논리 px), `outline=0` 끄기. `full=1` 100칸 유지.
+> **devel 외곽선 비교:** 돌담 없음·요정 전면, 요정 전체 stone↔paper 1px 밀집 디졸브, 적 외곽선 없음. `densitySim=1` 밀집→해소, `full=1` 100칸. 명시 `outlineColor`는 정적 비교, `outlineWidth`, `outline=0` 유지.
 
 > **devel 자동 공격 비교:** 기본 실행에 새싹 요정 5발 빨강·물 요정 2발 노랑 자동 발사 및 적 피격/처치가 추가됐다. `?attack=0`은 이전 비전투 군집 비교, 요정 전면 기본, `?full=1`은 100칸으로 조합 가능하다. [공격 규격](./docs/enemy-preview.md). 꽃 피해·실제 웨이브·보상 미구현.
 

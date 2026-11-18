@@ -26,9 +26,38 @@
   const requestedWidth=rawWidth===null?1:Number(rawWidth);
   const outlineWidth=Number.isFinite(requestedWidth)&&requestedWidth>=.5&&requestedWidth<=1.5?requestedWidth:1;
   const outlineConfig=Object.freeze({enabled:params.get('outline')!=='0',color:outlineColor,width:outlineWidth,hex:palette[outlineColor]});
+  // Explicit color comparisons stay static unless adaptive is requested.
+  const adaptive=params.get('outlineMode')==='adaptive'||(params.get('outlineMode')!=='static'&&rawColor===null);
+  const densityTuning=Object.freeze({radius:32,enter:20,exit:9,enterHold:.8,exitHold:2.5,fadeIn:.65,fadeOut:1.1});
+  function createDensity(){
+    let dense=false,held=0,progress=0,transitions=0,near=0;
+    function update(count,seconds){
+      near=count;
+      let dt=Math.max(0,Number.isFinite(seconds)?seconds:0);
+      // Finish an in-progress dissolve before accepting an opposite request.
+      if(progress===(dense?1:0)){
+        const condition=dense?near<=densityTuning.exit:near>=densityTuning.enter;
+        if(condition){
+          const hold=dense?densityTuning.exitHold:densityTuning.enterHold;
+          const used=Math.min(dt,Math.max(0,hold-held));held+=used;dt-=used;
+          if(held>=hold-1e-9){dense=!dense;held=0;transitions++;}
+        }else{held=0;dt=0;}
+      }
+      progress=Math.max(0,Math.min(1,progress+(dense?dt/densityTuning.fadeIn:-dt/densityTuning.fadeOut)));
+      if(progress<1e-9)progress=0;if(progress>1-1e-9)progress=1;
+      return snapshot();
+    }
+    function snapshot(){return {dense,near,progress,mix:progress*progress*(3-2*progress),transitions};}
+    return {update,snapshot};
+  }
+  function mixColor(t){
+    const from=parseInt(palette.stone.slice(1),16),to=parseInt(palette.paper.slice(1),16);
+    let result=0;for(const shift of [16,8,0])result|=Math.round(((from>>shift)&255)*(1-t)+((to>>shift)&255)*t)<<shift;
+    return result;
+  }
   // Shared cached silhouette ring. The body/occlusion/attack textures stay intact.
-  function ringKey(scene,sourceKey,prefix,scale,pad=0){
-    const radius=outlineWidth/scale,k=prefix+':'+outlineColor+':'+radius.toFixed(3)+':'+pad;
+  function ringKey(scene,sourceKey,prefix,scale,pad=0,mask=false){
+    const radius=outlineWidth/scale,k=prefix+':'+(mask?'mask':outlineColor)+':'+radius.toFixed(3)+':'+pad;
     if(scene.textures.exists(k))return k;
     const source=scene.textures.get(sourceKey).getSourceImage(),w=source.width,h=source.height;
     const texture=scene.textures.createCanvas(k,w+2*pad,h+2*pad),ctx=texture.getContext();
@@ -37,14 +66,14 @@
       ctx.drawImage(source,pad+Math.cos(angle)*radius,pad+Math.sin(angle)*radius,w,h);
     }
     ctx.globalCompositeOperation='source-in';
-    ctx.fillStyle=outlineConfig.hex;ctx.fillRect(0,0,texture.width,texture.height);
+    ctx.fillStyle=mask?'#FFFFFF':outlineConfig.hex;ctx.fillRect(0,0,texture.width,texture.height);
     ctx.globalCompositeOperation='destination-out';ctx.drawImage(source,pad,pad,w,h);
     ctx.globalCompositeOperation='source-over';
     texture.refresh();texture.setFilter(Phaser.Textures.FilterMode.LINEAR);
     return k;
   }
   function outlineKey(scene,type,scale){
-    return ringKey(scene,baseKey(type),'fairy-outline:'+type,1000*scale/size);
+    return ringKey(scene,baseKey(type),'fairy-outline:'+type,1000*scale/size,0,adaptive);
   }
   function syncOutline(actor,pad=0){
     const {image,outline}=actor;
@@ -121,6 +150,16 @@
       }
       return {index,type,image,outline,tears,visibleHeight,blink:blinkSchedule(index),expression:'normal',direction:'right',center:{x:0,y:0},phase:index*1.83};
     });
+    const density=createDensity();
+    function updateDensity(near,dt){
+      const value=density.update(near,dt);
+      if(adaptive&&outlineConfig.enabled){
+        const tint=mixColor(value.mix);
+        for(const a of actors)if(a.outline&&a.outline.tintTopLeft!==tint)a.outline.setTint(tint);
+      }
+      return value;
+    }
+    updateDensity(0,0);
     let elapsed=0,rank=0,currentSpeed=speed,state='normal',emotionTime=0;
     let distance=(b.right-b.left)/2;
     // Retained for future upgrades and combat/result events; no preview UI.
@@ -178,12 +217,12 @@
       refreshHud();
     }
     function advance(seconds){const dt=Math.max(0,seconds);emotionTime+=dt;if(!isResult(state)){elapsed+=dt;distance=(distance+dt*currentSpeed)%length;}render();return elapsed;}
-    const controller={actors,border,advance,refreshHud,setSpeedRank,setState,get state(){return state;},get finished(){return isResult(state);},get emotionTime(){return emotionTime;},get speed(){return currentSpeed;},get speedRank(){return rank;},get distance(){return distance;},get bounds(){return b;},get length(){return length;},get spacing(){return spacing;},get boundary(){return info;},get occupied(){return [...occupied];},get elapsed(){return elapsed;}};
+    const controller={actors,border,advance,refreshHud,setSpeedRank,setState,updateDensity,density,get state(){return state;},get finished(){return isResult(state);},get emotionTime(){return emotionTime;},get speed(){return currentSpeed;},get speedRank(){return rank;},get distance(){return distance;},get bounds(){return b;},get length(){return length;},get spacing(){return spacing;},get boundary(){return info;},get occupied(){return [...occupied];},get elapsed(){return elapsed;}};
     scene.fairyPatrol=controller;
     const update=(_time,delta)=>advance(Math.min(.1,Math.max(0,delta/1000)));
     scene.events.on('update',update);
     scene.events.once('shutdown',()=>{scene.events.off('update',update);delete scene.fairyPatrol;});
     render();return controller;
   }
-  window.GardenFairyPatrol=Object.freeze({enabled,preload,install,attach,key,count,speed,maxSpeed,ranks,validRank,speedAt,blinkSchedule,fairyStates,isResult,emotionPose,outlineConfig,ringKey,syncOutline});
+  window.GardenFairyPatrol=Object.freeze({enabled,preload,install,attach,key,count,speed,maxSpeed,ranks,validRank,speedAt,blinkSchedule,fairyStates,isResult,emotionPose,outlineConfig,adaptive,densityTuning,createDensity,mixColor,ringKey,syncOutline});
 }());

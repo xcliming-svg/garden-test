@@ -50,7 +50,7 @@ UI는 기존 어두운 보라회색 화면과 명도 관계를 유지한다. `sh
 ## devel 외곽선 비교 및 지형 확정 (2026-11-18)
 
 - 돌담 표시 없음, 요정 전면, 어두운 잔디(bgtype=6), 투명 점선 꽃밭을 기본으로 고정한다. 직전 `pebbles`, `gardenfill`, `bgtype=7`, `occlusion` 비교는 제거했다. 기존 승인된 0~6 배경 및 uitype=1과 이전 기능 검사 옵션은 보존한다.
-- 요정과 적 공통 외곽선 기본 stone #706975, 1 논리 px(기본 자세). `outlineColor`는 위 표의 16색 역할명만, `outlineWidth`는 0.5~1.5 논리 px 실수만 허용한다. 잘못된 값은 각각 stone/1로 복귀. `outline=0`은 외곽선 객체 미생성. 몸체와 전투 판정은 불변.
+- 요정만 기본 stone #706975, 1 논리 px, 군집 시 paper #F4F1E9로 전역 디졸브. 적 외곽선 없음. 중간색은 두 승인 색의 렌더링 보간이며 새 팔레트 색이 아니다. 명시 outlineColor의 16색 정적 비교 및 outlineWidth, outline=0 유지. [규격](./fairy-patrol.md).
 
 ## 적용 및 검증
 
