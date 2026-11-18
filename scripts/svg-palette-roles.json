@@ -1700,11 +1700,11 @@
   "items/01_shoe.svg": [
     [
       "#68B13E",
-      "growthLight"
+      "red"
     ],
     [
       "#3A8031",
-      "growth"
+      "redDark"
     ],
     [
       "#FDF7E6",
@@ -1758,7 +1758,7 @@
   "items/05_wheel.svg": [
     [
       "#5C5B75",
-      "stone"
+      "bark"
     ],
     [
       "#88889E",
