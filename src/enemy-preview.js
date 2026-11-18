@@ -1,7 +1,10 @@
 (function(){
   'use strict';
   // Random incoming enemy population. Original SVGs keep their embedded eyes hidden.
-  const enabled=window.GardenFairyPatrol.enabled&&new URLSearchParams(window.location.search).get('enemies')!=='0';
+  const params=new URLSearchParams(window.location.search);
+  // Card inspection is the default; retain explicit swarm/attack comparisons.
+  const enabled=window.GardenFairyPatrol.enabled&&params.get('enemies')!=='0'&&
+    (params.get('enemies')==='1'||params.get('attack')!==null||params.get('densitySim')==='1');
   const size=512,root='assets/enemies/',anchorKey='enemy-preview:anchors';
   const enemyStates=Object.freeze(['auto','normal','attack','hit']);
   function expressionFor(state,phase,blink){

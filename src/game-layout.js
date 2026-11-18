@@ -442,9 +442,9 @@
     return update;
   }
 
-  function drawMarkers(scene) {
+  function drawMarkers(scene, types=Object.keys(samples)) {
     const cards = [], flowers = [], animations = [];
-    Object.entries(samples).forEach(([type, positions]) => {
+    Object.entries(samples).filter(([type])=>types.includes(type)).forEach(([type, positions]) => {
       const asset = assets[type];
       positions.forEach(([baseX, baseY], i) => {
         const x = Math.round(baseX * 1.5), y = Math.round(baseY * 1.5);
@@ -455,9 +455,12 @@
           type === 'flower' ? testSprites.flowerCard(scene, x, y, spriteName, asset.dropSize, asset.size) :
           spriteName ? testSprites.marker(scene, x, y, spriteName, asset.size) : scene.add.rectangle(x, y, asset.size, asset.size, asset.color))
           .setName('placeholder:' + asset.assetKey + ':' + i);
-        if (type === 'item' || type === 'flower') animations.push(floatingDrop(scene, marker, animations.length));
-        if (type === 'item') cards.push({ item: previewItems[i], marker, x, y });
-        if (type === 'flower') flowers.push({ marker, x, y, spriteName });
+        if (type === 'item' || type === 'flower') {
+          marker.setDepth(5);
+          animations.push(floatingDrop(scene, marker, animations.length));
+        }
+        if (type === 'item') cards.push({ item: previewItems[i], marker, x, y, idleDepth:marker.depth });
+        if (type === 'flower') flowers.push({ marker, x, y, spriteName, idleDepth:marker.depth });
       });
     });
     // Scene update는 일시정지 중 멈추고 shutdown에서 정리된다.
@@ -765,7 +768,7 @@
       const card = dragging;
       const index = accept && pointer ? hitSlot(point(pointer)) : -1;
       dragging = null; target = -1; hovered = null; pinned = null;
-      card.marker.setDepth(ballMode?5:0).setPosition(card.x, card.y).setAlpha(1);
+      card.marker.setDepth(card.idleDepth??(ballMode?5:0)).setPosition(card.x, card.y).setAlpha(1);
       if(card.drop)card.drop.dragging=false;
       if (index >= 0&&(!ballMode||(!equipped[index]&&scene.combatPreview.model.equip(card.id,index)))) {
         equipped[index] = card.item; // 테스트 장착 상태.
@@ -1102,8 +1105,10 @@
     const updateHud=drawHud(scene);
     const layout=drawSlots(scene);
     drawBlueprint(scene);
-    const itemPreview=drawItemPreview(scene,layout,[],window.GardenCombatPreview.tuning.walkSpeed,true);
     const fairy=window.GardenFairyPatrol.enabled;
+    const cardMode=fairy&&!window.GardenEnemyPreview.enabled&&params.get('cards')!=='0';
+    const markers=cardMode?drawMarkers(scene,['flower','item']):{cards:[],flowers:[]};
+    const itemPreview=drawItemPreview(scene,layout,markers.cards,cardMode?undefined:window.GardenCombatPreview.tuning.walkSpeed,!cardMode);
     const status=text(scene,spec.width-10,spec.top+spacing.base,fairy?(window.GardenEnemyPreview.enabled&&window.GardenFairyAttack.enabled?'자동 공격 · 요정 11명':'정원 순찰 · 요정 11명'):'테스트 전투 · 공 1개',bottomStats.fontSize,colors.label,'right').setDepth(16).setName(fairy?'fairy-patrol-status':'combat-ball-count');
     window.GardenFlowerHeadPreview.draw(scene,spec,colors,gardenRaster,patrolBounds,patrolPosition,(elapsed,kills,gems,occupied)=>{
       if(scene.flowerGrowth)scene.flowerGrowth.render(elapsed);
@@ -1112,7 +1117,7 @@
       const count=scene.combatPreview.state.ballCount;
       const label='테스트 전투 · 공 '+count+'개';
       if(status.text!==label)status.setText(label);
-    },itemPreview);
+    },itemPreview,markers.flowers);
   }
 
   window.GardenGameLayout = Object.freeze({ spec, assets, colors, spacing, hud, slotCost, formatHudTime, formatHudCount, hudColumns, bottomStats, itemTooltip, replacementTitle, bottomLayout, sumPreviewStats, getPreviewStats, tooltipPosition, gardenCandidates, gardenGridRects, gardenRaster, gardenHit, patrolBounds, patrolPosition, nearestPatrolDistance, draw });

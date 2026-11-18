@@ -1,0 +1,28 @@
+name: Restored card preview verification
+on:
+  push:
+    branches: [feature/restore-card-preview]
+  pull_request:
+    branches: [devel]
+permissions:
+  contents: read
+jobs:
+  browser:
+    runs-on: ubuntu-latest
+    timeout-minutes: 8
+    steps:
+      - uses: actions/checkout@v6
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - run: npm install --no-save --package-lock=false playwright@1.51.1 phaser@3.90.0
+        env:
+          PLAYWRIGHT_SKIP_BROWSER_DOWNLOAD: '1'
+      - run: for file in src/*.js tests/restore-card-preview.mjs; do node --check "$file"; done
+      - run: node tests/restore-card-preview.mjs
+      - run: node tests/garden16-v9.mjs
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: restored-card-preview
+          path: benchmark-results
