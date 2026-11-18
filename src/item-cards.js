@@ -31,8 +31,8 @@
   const raw=id=>'item-svg:source:'+id, key=id=>'item-svg:trim:'+id;
   const flowerId=name=>'flower-'+name;
   function preload(scene){
-    if(!enabled)return;
-    for(const item of [...entries,...relics]){
+    // HUD gem is shared by every game mode, even when SVG drop cards are disabled.
+    for(const item of enabled?[...entries,...relics]:[relics[0]]){
       const k=raw(item.id);
       if(!scene.textures.exists(k))scene.load.svg(k,window.GardenSvgPalette.path('items/'+item.file),{width:512,height:512});
     }
@@ -119,6 +119,28 @@
     if(image.texture.key!==k)image.setTexture(k);
     return image.setDisplaySize(logicalW,logicalH);
   }
+  // HUD icons reuse the same cropped SVG and output-size texture as ground drops.
+  function gemIcon(scene,span){
+    const texture=trim(scene,'gem',raw('gem'));
+    return fit(scene.add.image(0,0,texture).setOrigin(0,0),texture,span);
+  }
+  const gemBounds=new WeakMap();
+  function gemInk(image){
+    const texture=image.texture,source=texture.getSourceImage();
+    if(!gemBounds.has(texture)){
+      const {width,height}=source,data=source.getContext('2d').getImageData(0,0,width,height).data;
+      let left=width,top=height,right=0,bottom=0;
+      for(let y=0;y<height;y++)for(let x=0;x<width;x++){
+        if(data[(y*width+x)*4+3]<64)continue;
+        left=Math.min(left,x);top=Math.min(top,y);right=Math.max(right,x+1);bottom=Math.max(bottom,y+1);
+      }
+      gemBounds.set(texture,right>left?{left,top,right,bottom}:{left:0,top:0,right:width,bottom:height});
+    }
+    // Align to the physical pixel grid at exactly the prefiltered texture size.
+    const z=image.scene.cameras.main.zoom;
+    image.setDisplaySize(source.width/z,source.height/z);
+    return gemBounds.get(texture);
+  }
   const itemSpan=size=>Math.min(24,size-8);
   function card(scene,x,y,size,texture,kind,id){
     const R=P.reference.n;
@@ -191,5 +213,5 @@
     scene.events.once('shutdown',()=>delete scene.itemCardPreview);
     return {cards,flowers};
   }
-  window.GardenItemCards=Object.freeze({enabled,entries,relics,preload,draw,setIcon,key,broomRotation,itemSpan,minLevel,maxLevel,setLevelLabel});
+  window.GardenItemCards=Object.freeze({enabled,entries,relics,preload,draw,setIcon,key,broomRotation,itemSpan,minLevel,maxLevel,setLevelLabel,gemIcon,gemInk});
 }());

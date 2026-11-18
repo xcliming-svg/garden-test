@@ -241,8 +241,8 @@
     const pairs = [metric(columns.time, labels.time, time, hud.timeSize), metric(columns.kills, labels.kills, count)];
     pairs[0].number.setName('hud-time-value');pairs[1].number.setName('hud-kills-value');
 
-    const gem = columns.gems, iconX = gem.x + hud.padding, iconY = hud.centerY - hud.iconSize / 2;
-    const icon = U.pixelGraphics(scene).setName('hud-gem-icon');
+    const gem = columns.gems, iconX = gem.x + hud.padding;
+    const icon = window.GardenItemCards.gemIcon(scene,hud.iconSize).setName('hud-gem-icon');
     const gemNumber = text(scene, iconX + hud.iconSize + hud.gap, hud.centerY, count, hud.valueSize, colors.value, 'left').setName('hud-gems-value');
 
     const c = columns.progress;
@@ -267,24 +267,11 @@
       const left = o => Math.round((o.x - o.displayOriginX) * z);
       const placeLeft = (o, x) => o.setX((x - ink(o).left) / z + o.displayOriginX);
       pairs.forEach(({caption, number}) => placeLeft(number, left(caption) + ink(caption).right + gap));
-      // Rasterize dots with a minimum one physical pixel so the icon's edge is present at sub-1x.
-      const x0 = Math.round(iconX * z), y0 = Math.round(iconY * z);
-      const w = Math.max(1, Math.round((iconX + hud.iconSize) * z) - x0);
-      const h = Math.max(1, Math.round((iconY + hud.iconSize) * z) - y0);
-      icon.clear().setPosition(x0 / z, y0 / z).fillStyle(colors.reservedIcon, 1);
-      const range = (i, n) => {
-        const start = Math.min(n - 1, Math.round(i * n / hud.iconSize));
-        return [start, Math.min(n, Math.max(start + 1, Math.round((i + 1) * n / hud.iconSize)))];
-      };
-      const dot = (ix, iy) => {
-        const [a,b] = range(ix,w), [c,d] = range(iy,h);
-        icon.fillRect(a/z,c/z,(b-a)/z,(d-c)/z);
-      };
-      for (let i=0;i<hud.iconSize;i++) {
-        if (Math.min(i,hud.iconSize-1-i)%2) continue;
-        dot(i,0); dot(i,hud.iconSize-1); dot(0,i); dot(hud.iconSize-1,i);
-      }
-      placeLeft(gemNumber, x0 + w + gap);
+      const bounds=window.GardenItemCards.gemInk(icon);
+      const x0=Math.round(iconX*z),width=bounds.right-bounds.left,height=bounds.bottom-bounds.top;
+      const y0=Math.round(hud.centerY*z-height/2);
+      icon.setPosition((x0-bounds.left)/z,(y0-bounds.top)/z);
+      placeLeft(gemNumber,x0+width+gap);
       progressLabel.setX((Math.round(barX*z)-gap-ink(progressLabel).right)/z + progressLabel.displayOriginX);
     };
     align();
@@ -308,33 +295,18 @@
   function drawSlotCost(scene, x, y, size, value) {
     const c = slotCost, centerY = y + size / 2;
     const cost = text(scene, x + size / 2, 0, String(value), c.fontSize, colors.disabledText, 'center').setName('slot-cost-value');
-    const icon = U.pixelGraphics(scene).setName('slot-cost-icon');
-    // The dotted icon uses the same logical 8px dimensions. Rasterize the edge dots
-    // on the actual output grid so a sub-1x scale cannot erase its outermost row.
+    const icon = window.GardenItemCards.gemIcon(scene,c.iconSize).setName('slot-cost-icon');
     // 숫자 및 보석의 실제 픽셀 외접 범위가 HUD 중심에 오도록 배치한다.
     function alignCost() {
       const zoom = scene.cameras.main.zoom;
       const ink = bottomInk(cost, colors.disabledFill);
-      const iconHeight = Math.max(1, Math.round(c.iconSize * zoom)), gap = Math.round(c.gap * zoom);
+      const bounds=window.GardenItemCards.gemInk(icon);
+      const iconHeight=bounds.bottom-bounds.top,iconWidth=bounds.right-bounds.left,gap=Math.round(c.gap*zoom);
       const numberHeight = ink.bottom - ink.top;
       const iconTop = Math.round(centerY * zoom - (iconHeight + gap + numberHeight) / 2);
       const upperBottom = iconTop + iconHeight, numberTop = upperBottom + gap;
-      const iconLeft = Math.round((x + (size - c.iconSize) / 2) * zoom);
-      icon.setPosition(iconLeft / zoom, iconTop / zoom).clear();
-      icon.fillStyle(R.n.disabled, 1);
-      const pixelRange = i => {
-        const start = Math.min(iconHeight - 1, Math.round(i * zoom));
-        const end = Math.min(iconHeight, Math.max(start + 1, Math.round((i + 1) * zoom)));
-        return [start / zoom, (end - start) / zoom];
-      };
-      const dot = (ix, iy) => {
-        const [dx, dw] = pixelRange(ix), [dy, dh] = pixelRange(iy);
-        icon.fillRect(dx, dy, dw, dh);
-      };
-      for (let i = 0; i < c.iconSize; i++) {
-        if (Math.min(i, c.iconSize - 1 - i) % 2 !== 0) continue;
-        dot(i, 0); dot(i, c.iconSize - 1); dot(0, i); dot(c.iconSize - 1, i);
-      }
+      const iconLeft=Math.round((x+size/2)*zoom-iconWidth/2);
+      icon.setPosition((iconLeft-bounds.left)/zoom,(iconTop-bounds.top)/zoom);
       cost.setY((numberTop - ink.top) / zoom + cost.displayOriginY);
       return { zoom, upperBottom, numberTop, numberBottom: numberTop + numberHeight };
     }

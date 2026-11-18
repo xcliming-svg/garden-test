@@ -96,6 +96,22 @@ try{
    assert.ok(initial.ground.every(o=>o.visible&&!o.interactive&&/^item-svg:trim:(gem|heart):display:/.test(o.texture)));
    assert.equal(initial.ground.find(o=>o.name==='ground-relic:gem').span,12);
    assert.equal(initial.ground.find(o=>o.name==='ground-relic:heart').span,12);
+   const checkHudGems=async()=>{
+    const result=await page.evaluate(()=>{
+     const s=window.__previewGame.scene.getScene('Game'),L=window.GardenGameLayout,U=window.GardenUI,A=window.GardenItemCards,z=s.cameras.main.zoom;
+     const obj=n=>s.children.getByName(n);
+     const top=obj('hud-gem-icon'),bottom=obj('slot-cost-icon'),number=obj('hud-gems-value'),cost=obj('slot-cost-value');
+     const bounds=o=>{const b=A.gemInk(o);return {left:Math.round(o.x*z)+b.left,right:Math.round(o.x*z)+b.right,top:Math.round(o.y*z)+b.top,bottom:Math.round(o.y*z)+b.bottom}};
+     const a=bounds(top),b=bounds(bottom);
+     const numberInk=U.inkBounds(number,L.colors.hud),costInk=U.inkBounds(cost,L.colors.disabledFill);
+     return {z,keys:[top.texture.key,bottom.texture.key],widths:[top.frame.width,bottom.frame.width],gaps:[Math.round((number.x-number.displayOriginX)*z)+numberInk.left-a.right,Math.round((cost.y-cost.displayOriginY)*z)+costInk.top-b.bottom],center:[(a.top+a.bottom)/2/z,(b.left+b.right)/2/z],slotCenter:cost.x};
+    });
+    assert.ok(result.keys.every(k=>k.startsWith('item-svg:trim:gem:display:')));
+    assert.ok(result.widths.every((v,i)=>Math.abs(v-Math.round([14,8][i]*result.z))<=1));
+    assert.deepEqual(result.gaps,[Math.round(5*result.z),Math.round(3*result.z)]);
+    assert.ok(Math.abs(result.center[0]-15)<=1/result.z&&Math.abs(result.center[1]-result.slotCenter)<=1/result.z);
+   };
+   await checkHudGems();
    const relicColors=await page.evaluate(()=>{
     const s=window.__previewGame.scene.getScene('Game');
     return ['gem','heart'].map(id=>{
@@ -144,6 +160,7 @@ try{
    // Resizing must rebuild output-sized textures without changing logical bounds.
    await page.setViewportSize({width:1920,height:1080});
    await page.waitForFunction(()=>window.__previewGame.scene.getScene('Game').children.getByName('placeholder:item:00').list[2].frame.width===48||window.__previewGame.scene.getScene('Game').children.getByName('placeholder:item:00').list[2].frame.height===48);
+   await checkHudGems();
    const enlarged=await snapshot();assert.ok(enlarged.items.every(o=>Math.abs(Math.max(o.textureWidth,o.textureHeight)-2*o.span)<=1));
    await page.setViewportSize({width:w,height:h});
    await page.waitForFunction(expected=>{const o=window.__previewGame.scene.getScene('Game').children.getByName('placeholder:item:00').list[2];return Math.max(o.frame.width,o.frame.height)===expected;},Math.round(24*w/960));

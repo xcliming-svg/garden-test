@@ -355,7 +355,7 @@ for(const c of configs){
       const box=o=>{const f=parseInt(o.color.slice(1),16),fg=Math.max((f>>16)&255,(f>>8)&255,f&255),threshold=Math.ceil(25+(fg-25)*.25),x=R(o.x*z),y=R(o.y*z);return scan(x,y,x+Math.ceil(o.w*z),y+Math.ceil(o.h*z),(r,g,b)=>Math.max(r,g,b)>=threshold);};
       const get=t=>all.find(o=>o.text===t),clock=get(labels.time),kills=get(labels.kills),progress=get(labels.progress),time=all.find(o=>o.text.includes(':'));
       const values=all.filter(o=>/^\d[\d,]*$/.test(o.text)).sort((a,b)=>a.x-b.x);
-      const gem=scan(R((kills.x-clock.x)*2*z),0,R(((kills.x-clock.x)*2+7.5+14+1)*z),R(30*z),(r,g,b)=>r===176&&g===172&&b===189);
+      const gem=scan(R((kills.x-clock.x)*2*z),0,R(((kills.x-clock.x)*2+7.5+14+1)*z),R(30*z),(r,g,b)=>b-r>=25&&b>=73);
       const edges={clock:box(clock),time:box(time),kills:box(kills),count:box(values[0]),gem,gems:box(values[1]),progress:box(progress)};
       return {edges,gaps:[edges.time.left-edges.clock.right-1,edges.count.left-edges.kills.right-1,edges.gems.left-edges.gem.right-1,R(794.5*z)-edges.progress.right-1]};
     },{data:png.toString('base64'),all,z,labels});
@@ -385,7 +385,7 @@ for(const c of configs){
       const box=(o,upper,bg=25)=>scan(o.x*z,upper?o.y*z:Math.max(split,o.y*z),(o.x+o.w)*z,upper?Math.min(split,(o.y+o.h)*z):(o.y+o.h)*z,inkFor(o,bg));
       const number=box(cost,false,25);
       const gemLeft=Math.round((slot.x+(slot.size-8)/2)*z),gemRight=gemLeft+Math.max(1,Math.round(8*z));
-      const gem=scan(gemLeft,Math.round((slot.y+1)*z),gemRight,split,(r,g,b)=>r===176&&g===172&&b===189);
+      const gem=scan(gemLeft,Math.round((slot.y+1)*z),gemRight,split,(r,g,b)=>b-r>=25&&b>=73);
       return {number,gem,labels:stats.filter(t=>t.name.startsWith('stat-label:')).map(t=>box(t,true)),values:stats.filter(t=>t.name.startsWith('stat-value:')).map(t=>box(t,false))};
     },{data:bottomPng.toString('base64'),stats:m.stats,cost:m.cost,slot:m.slots[9],z:m.zoom});
     const expectedGap=Math.round(3*m.zoom);
@@ -442,7 +442,7 @@ for(const c of configs){
           const time=box(hud.find(o=>o.text==='9999:59:59'));
           const killsLabel=box(hud.find(o=>o.text==='처치 수'));
           const counters=hud.filter(o=>o.text==='999,999,999,999').sort((a,b)=>a.x-b.x).map(box);
-          const gem=bounds(648,0,701,60,v=>v.join(',')==='176,172,189');
+          const gem=bounds(648,0,701,60,v=>v[2]-v[0]>=25&&v[2]>=73);
           const progressLabel=box(hud.find(o=>o.text==='정원 완성도'));
           const title=bounds(bp.x*2+2,Math.floor(bp.y*2)+2,Math.ceil((bp.x+40)*2),Math.ceil((bp.y+bp.header)*2)-2,ink);
           const header=bounds(bp.x*2,64,(bp.x+bp.width)*2,Math.ceil((bp.y+bp.header)*2),exact(59,59,78));
@@ -453,7 +453,7 @@ for(const c of configs){
           const statBox=(o,upper,bg=25)=>{const f=parseInt(o.color.slice(1),16),fg=Math.max((f>>16)&255,(f>>8)&255,f&255),threshold=Math.ceil(bg+(fg-bg)*0.25);return bounds(Math.floor(o.x*2),upper?Math.floor(o.y*2):Math.max(split,Math.floor(o.y*2)),Math.ceil((o.x+o.w)*2),upper?Math.min(split,Math.ceil((o.y+o.h)*2)):Math.ceil((o.y+o.h)*2),v=>Math.max(...v)>=threshold);};
           const costInk=statBox(cost,false,25), numberInk=stats.filter(t=>t.name.startsWith('stat-value:')).map(t=>({text:t.text,...statBox(t,false)}));
           const labelInk=stats.filter(t=>t.name.startsWith('stat-label:')).map(t=>({text:t.text,...statBox(t,true)}));
-          const gemInk=bounds(slot.x*2+2,slot.y*2+2,(slot.x+slot.size)*2-2,split,exact(176,172,189));
+          const gemInk=bounds(slot.x*2+2,slot.y*2+2,(slot.x+slot.size)*2-2,split,v=>v[2]-v[0]>=25&&v[2]>=73);
           const bar=bounds(1500,10,1920,54,exact(103,103,119));
           const blueprintCorners=[header,grid].flatMap(o=>[rgb(o.left,o.top),rgb(o.right,o.top),rgb(o.left,o.bottom),rgb(o.right,o.bottom)]);
           const blueprintBorders=[bp.y,bp.gridY].map(y=>Array.from({length:4},(_,i)=>rgb(bp.x*2+20,y*2+i).join(',')));
@@ -766,7 +766,7 @@ for(const c of configs){
       const scan=(x0,y0,x1,y1,pred)=>{let top=Infinity,bottom=-1,left=Infinity,right=-1,n=0;for(let y=y0;y<y1;y++)for(let x=x0;x<x1;x++)if(pred(rgb(x,y))){top=Math.min(top,y);bottom=Math.max(bottom,y);left=Math.min(left,x);right=Math.max(right,x);n++;}return {top,bottom,left,right,n};};
       const split=Math.round((last.y+last.size/2+1.5)*2);
       const number=scan(Math.floor(cost.x*2),Math.max(split,Math.floor(cost.y*2)),Math.ceil((cost.x+cost.w)*2),Math.ceil((cost.y+cost.h)*2),v=>Math.max(...v)>=66);
-      const gem=scan(last.x*2+2,last.y*2+2,(last.x+last.size)*2-2,split,v=>v.join(',')==='176,172,189');
+      const gem=scan(last.x*2+2,last.y*2+2,(last.x+last.size)*2-2,split,v=>v[2]-v[0]>=25&&v[2]>=73);
       const digitRows=stats.filter(t=>t.name.startsWith('stat-value:')).map(t=>scan(Math.floor(t.x*2),Math.max(split,Math.floor(t.y*2)),Math.ceil((t.x+t.w)*2),Math.ceil((t.y+t.h)*2),v=>Math.max(...v)>=83));
       const frame=Array.from({length:last.size*2},(_,i)=>rgb(last.x*2+i,(last.y+last.size)*2-1).join(',')).every((v,i)=>v===(i<2||i>=last.size*2-2?'22,22,25':'81,81,107'));
       return {number,gem,digitRows,frame};
