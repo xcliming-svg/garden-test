@@ -42,12 +42,31 @@ try{
         const s=window.__previewGame.scene.getScene('Game'),m=s.heroWeaponPreview.model;
         return m.state.shots.some(q=>q.kind===id)&&s.children.list.some(q=>q.name?.startsWith('hero-weapon:'+id+':'));
       },id);
+      // Cropped source art retains its ratio, with exact logical vertical height.
+      await page.waitForFunction(id=>{
+        const s=window.__previewGame.scene.getScene('Game'),A=window.GardenHeroWeaponPreview;
+        return s.heroWeaponPreview.model.state.shots.some(q=>{
+          const p=s.children.getByName('hero-weapon:'+id+':'+q.id);
+          return q.kind===id&&p&&Math.abs(p.displayHeight-A.tuning[id].span)<.001;
+        });
+      },id);
       const actual=await page.evaluate(()=>{
         const s=window.__previewGame.scene.getScene('Game'),m=s.heroWeaponPreview.model;
         return {selected:m.state.selected,owners:m.state.shots.map(q=>q.owner),enemy:!!s.enemyPreview};
       });
       assert.equal(actual.selected,id);assert.ok(actual.owners.length&&actual.owners.every(x=>x===0));assert.equal(actual.enemy,false);
     }
+    // Independent broom orbit is centered at the deployed point, not the moving fairy.
+    await select.selectOption('broom');
+    await page.waitForFunction(()=>{
+      const s=window.__previewGame.scene.getScene('Game'),A=window.GardenHeroWeaponPreview;
+      return s.heroWeaponPreview.model.state.shots.some(q=>{
+        const p=s.children.getByName('hero-weapon:broom:'+q.id);
+        return q.kind==='broom'&&q.age>.5&&p&&Math.abs(p.displayHeight-44)<.001&&
+          Math.abs(Math.hypot(p.x-q.tx,p.y-q.ty)-A.tuning.broom.orbit)<.001&&
+          Math.hypot(q.tx-s.fairyPatrol.actors[0].center.x,q.ty-s.fairyPatrol.actors[0].center.y)>40;
+      });
+    });
     // Real loaded water-splash SVG replaces the intact balloon at landing.
     await select.selectOption('balloon');
     await page.waitForFunction(()=>{
@@ -62,7 +81,7 @@ try{
       return s.heroWeaponPreview.model.state.shots.some(q=>{
         const p=s.children.getByName('hero-weapon:balloon:splash:'+q.id);
         return q.kind==='balloon'&&q.age>=q.flight+.14&&p?.texture.key.startsWith('item-svg:trim:water-splash:display:')&&
-          Math.abs(Math.max(p.displayWidth,p.displayHeight)-106)<.001&&Math.abs(p.x-q.tx)<.001&&Math.abs(p.y-q.ty)<.001&&
+          Math.abs(p.displayHeight-44)<.001&&p.displayWidth>100&&Math.abs(p.x-q.tx)<.001&&Math.abs(p.y-q.ty)<.001&&
           !s.children.getByName('hero-weapon:balloon:'+q.id)&&p.depth<2;
       });
     });
