@@ -41,6 +41,7 @@
     }
     // Growth already preloads healthy full-bloom SVGs at native source resolution.
   }
+  const cropGeometry=new WeakMap();
   function trim(scene,id,sourceKey){
     const k=key(id);
     if(scene.textures.exists(k))return k;
@@ -67,6 +68,7 @@
     const tex=scene.textures.createCanvas(k,w,h);
     tex.getContext().drawImage(c,left,top,w,h,0,0,w,h);
     tex.refresh();tex.setFilter(Phaser.Textures.FilterMode.LINEAR);
+    cropGeometry.set(tex,{left,top,width:w,height:h,sourceWidth:source.width,sourceHeight:source.height});
     return k;
   }
   // A 512px texture sampled directly at 24px in WebGL loses thin strokes.
@@ -192,18 +194,38 @@
     if(item?.texture)fit(group.list[2],item.texture,itemSpan(group.width));
     setLevelLabel(group,item?.texture?item.level:undefined);
   }
-  // Combat art uses visible HEIGHT; cards and relics keep the original longest-side fit.
-  function attackSize(scene,id,height){
+  // Combat art uses visible height, except the approved longest-side boomerang.
+  // Card/relic sizing stays independent. The sprinkler's original hub is not
+  // the center of its asymmetric alpha bounds: map source points through crop.
+  function attackSize(scene,id,span){
     if(!entries.some(item=>item.id===id)&&!effects.some(effect=>effect.id===id))throw Error('Unknown attack art: '+id);
-    const texture=trim(scene,id,raw(id)),source=scene.textures.get(texture).getSourceImage();
-    return {width:height*source.width/source.height,height};
+    const texture=trim(scene,id,raw(id)),tex=scene.textures.get(texture),source=tex.getSourceImage();
+    const scale=span/(id==='boomerang'?Math.max(source.width,source.height):source.height);
+    const result={width:source.width*scale,height:source.height*scale};
+    if(id==='sprinkler'){
+      const crop=cropGeometry.get(tex);
+      // Source path coordinate system (the same transform in original/palette SVG).
+      const point=(x,y)=>{
+        const sx=1.024174965995*(500+3.2710280374*(x-157.75))-11.965094088847;
+        const sy=1.024174965995*(500+3.2710280374*(y-547.25))-11.923102915242;
+        return {x:(sx/1000*crop.sourceWidth-crop.left)/crop.width,y:(sy/1000*crop.sourceHeight-crop.top)/crop.height};
+      };
+      result.pivot=point(157,525);
+      result.nozzles=[[254,476],[61,476],[157,628]].map(([x,y])=>{
+        const q=point(x,y);
+        return {x:(q.x-result.pivot.x)*result.width,y:(q.y-result.pivot.y)*result.height};
+      });
+    }
+    return result;
   }
-  function attackImage(scene,id,x,y,height){
-    const size=attackSize(scene,id,height),texture=key(id);
-    return fit(scene.add.image(x,y,texture),texture,Math.max(size.width,size.height));
+  function attackImage(scene,id,x,y,span){
+    const size=attackSize(scene,id,span),texture=key(id);
+    const image=fit(scene.add.image(x,y,texture),texture,Math.max(size.width,size.height));
+    if(size.pivot)image.setOrigin(size.pivot.x,size.pivot.y);
+    return image;
   }
-  function weaponImage(scene,id,x,y,height){return attackImage(scene,id,x,y,height);}
-  function effectImage(scene,id,x,y,height){return attackImage(scene,id,x,y,height);}
+  function weaponImage(scene,id,x,y,span){return attackImage(scene,id,x,y,span);}
+  function effectImage(scene,id,x,y,span){return attackImage(scene,id,x,y,span);}
   function relicImage(scene,kind,x,y){
     const item=relics.find(r=>r.id===kind),texture=trim(scene,kind,raw(kind));
     return fit(scene.add.image(x,y,texture),texture,item.span).setDepth(4);
