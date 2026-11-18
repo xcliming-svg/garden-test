@@ -2,7 +2,7 @@ import assert from 'node:assert/strict';
 import {readFileSync} from 'node:fs';
 import vm from 'node:vm';
 const window={location:{search:''},GardenFairyPatrol:{enabled:true},GardenEnemyPreview:{enabled:false},
-  GardenFlowerGrowth:{enabled:true},GardenItemCards:{entries:['shoe','shield','balloon','boomerang','wheel','flowerpot','paper-plane','bouncy-ball','yellow-floor','sprinkler','rock','broom'].map(id=>({id}))}};
+  GardenFlowerGrowth:{enabled:true},GardenItemCards:{entries:['shoe','shield','balloon','boomerang','wheel','flowerpot','paper-plane','bouncy-ball','yellow-floor','sprinkler','rock','broom','water-fairy'].map(id=>({id}))}};
 for(const file of ['src/fairy-attack.js','src/relic-collection.js','src/hero-weapon-preview.js'])vm.runInNewContext(readFileSync(file,'utf8'),{window,URLSearchParams});
 const A=window.GardenHeroWeaponPreview,spec={width:960,height:540,top:32,bottom:38};
 const hero={index:0,type:'garden',direction:'right',visibleHeight:40,center:{x:480,y:200}};
@@ -13,6 +13,8 @@ const rng=seeded(123);
 const advance=(m,dt,h=hero,targets=[],damage=null,slow=null,p=patrol)=>m.step(dt,h,targets,damage,slow,p);
 let checks=0;
 const ok=(v,m)=>{assert.ok(v,m);checks++;};
+ok(A.ids.length===10&&!A.ids.includes('water-fairy'),'water fairy is an item, not an attack');
+{const m=A.create(spec,rng);ok(m.equip(0,'water-fairy')&&!m.select('water-fairy'),'non-weapon equip only');advance(m,.05);ok(m.state.fired===0,'no fairy card attack');}
 for(const id of A.ids){
   const m=A.create(spec,rng);
   m.equip(0,id);advance(m,.05,{...hero,index:1,type:'water'});
