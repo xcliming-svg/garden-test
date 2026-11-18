@@ -50,9 +50,9 @@ try{
     const slot=L.bottomLayout().slots[0];
     const ground=s.children.list.filter(o=>o.name?.startsWith('ground-relic:')).map(o=>({name:o.name,texture:o.texture.key,visible:o.visible,span:Math.max(o.displayWidth,o.displayHeight),interactive:!!o.input}));
     return {flowers,items,ground,gearTexture:obj('preview-equipped:0').list[2].texture.key,ghostTexture:obj('item-preview-ghost').list[2].texture.key,occupied:s.fairyPatrol.occupied,enemy:!!s.enemyPreview,combat:!!s.combatPreview,
-     fairy:s.fairyPatrol.actors.length,stage:s.flowerGrowth.entries.size,slot:{x:slot.x+slot.size/2,y:slot.y+slot.size/2},candidate:cell(43),invalid:cell(44),
+     fairy:s.fairyPatrol.actors.length,stage:s.flowerGrowth.entries.size,slot:{x:slot.x+slot.size/2,y:slot.y+slot.size/2},slot2:{x:L.bottomLayout().slots[1].x+slot.size/2,y:slot.y+slot.size/2},candidate:cell(43),invalid:cell(44),
      ghost:obj('garden-preview-ghost').visible,gear:obj('preview-equipped:0').visible,tip:obj('item-preview-tooltip').visible,
-     speed:obj('stat-value:moveSpeed').text,defense:obj('stat-value:defense').text,dps:obj('stat-value:dps').text,patrolSpeed:s.fairyPatrol.speed,tipRows:obj('item-preview-tooltip').list.filter(o=>typeof o.text==='string').map(o=>o.text),progress:obj('hud-progress-value').text};
+     speed:obj('stat-value:moveSpeed').text,defense:obj('stat-value:defense').text,dps:obj('stat-value:dps').text,patrolSpeed:s.fairyPatrol.speed,hudStats:Object.fromEntries(s.children.list.filter(o=>o.name?.startsWith('stat-value:')).map(o=>[o.name,o.text])),hudDeltas:s.children.list.filter(o=>o.name?.startsWith('stat-delta:')&&o.visible).map(o=>[o.name,o.text]),tipRows:obj('item-preview-tooltip').list.filter(o=>typeof o.text==='string').map(o=>o.text),progress:obj('hud-progress-value').text};
    });
    const start=async()=>{await click(480,252);await page.waitForFunction(()=>window.__previewGame.scene.getScene('Game').fairyPatrol?.actors.length===11);};
    await start();
@@ -78,7 +78,7 @@ try{
    const expected=[
     ['신발','이동 속도 +10'],['물풍선','초당 피해량 +24'],['부메랑','초당 피해량 +18'],
     ['방패','방어력 +6'],['바퀴','초당 피해량 +22'],['화분','초당 피해량 +26'],
-    ['종이비행기','초당 피해량 +20'],['탱탱볼','초당 피해량 +16'],['끈끈이','초당 피해량 +8'],
+    ['종이비행기','초당 피해량 +20'],['탱탱볼','초당 피해량 +16'],['끈끈이','적 이동 속도 -30%'],
     ['스프링클러','초당 피해량 +18'],['돌멩이','초당 피해량 +12'],['빗자루','초당 피해량 +20']
    ];
    for(let i=0;i<expected.length;i++){
@@ -129,6 +129,22 @@ try{
    await drag(initial.items[1],initial.slot);state=await snapshot();
    assert.equal(state.items[1].visible,false);assert.equal(state.gear,true);assert.equal(state.gearTexture,initial.items[1].texture);assert.equal(state.speed,'100');assert.equal(state.dps,'44');assert.equal(state.patrolSpeed,initial.patrolSpeed);
    await drag(initial.items[3],initial.slot);state=await snapshot();assert.equal(state.defense,'18');assert.equal(state.dps,'20');assert.equal(state.patrolSpeed,initial.patrolSpeed);
+   // Slow is a tooltip-only enemy modifier. Equipping in an empty slot
+   // must not change any HUD value or produce a delta.
+   const beforeSticky=state;
+   await drag(initial.items[8],initial.slot2,false);state=await snapshot();
+   assert.deepEqual(state.hudStats,beforeSticky.hudStats);assert.deepEqual(state.hudDeltas,[]);
+   await page.mouse.up();state=await snapshot();
+   assert.deepEqual(state.hudStats,beforeSticky.hudStats);assert.deepEqual(state.hudDeltas,[]);
+   await page.mouse.move(...coords(initial.slot2.x,initial.slot2.y));state=await snapshot();
+   assert.ok(state.tipRows.includes('적 이동 속도 -30%'));
+   // Replacing slow with a damage item adds only the incoming DPS.
+   await drag(initial.items[2],initial.slot2,false);state=await snapshot();
+   assert.equal(state.dps,'38');assert.deepEqual(state.hudDeltas,[['stat-delta:dps','+18']]);
+   assert.ok(state.tipRows.includes('적 이동 속도 -30% 효과 제거'));
+   await page.mouse.up();state=await snapshot();
+   assert.equal(state.dps,'38');assert.equal(state.defense,'18');assert.equal(state.speed,'100');assert.deepEqual(state.hudDeltas,[]);
+   assert.equal(state.patrolSpeed,initial.patrolSpeed);
    await page.screenshot({path:join(out,'cards-'+w+'-equipped.png')});
    // Pause cancels in-progress drag, then returning to menu resets the preview.
    await drag(initial.flowers[1],initial.candidate,false);

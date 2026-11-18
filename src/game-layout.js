@@ -642,10 +642,16 @@
       return { x: slot.x + slot.size / 2, y: slot.y + slot.size / 2, size: slot.size };
     }
     function effectRows(item, removed) {
-      return statKeys.filter(key => item.stats[key]).map(key => ({
+      const rows = statKeys.filter(key => item.stats[key]).map(key => ({
         value: statLabels[key] + ' ' + signed((removed ? -1 : 1) * item.stats[key]),
         color: removed ? R.hex.redText : R.hex.green
       }));
+      // Tooltip-only enemy effects are not player stats and never enter HUD sums.
+      if (item.tooltipEffect) rows.push({
+        value: item.tooltipEffect + (removed ? ' 효과 제거' : ''),
+        color: removed ? R.hex.redText : R.hex.green
+      });
+      return rows;
     }
     function rebuildTooltip(key, rows) {
       if (tooltipKey === key) return;

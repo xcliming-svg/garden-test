@@ -14,11 +14,11 @@
     ['flowerpot','화분','06_flowerpot.svg','적의 머리 위로 떨어져 피해를 줍니다.','dps',26],
     ['paper-plane','종이비행기','1_종이비행기_단일파츠(1).svg','적을 추적해 명중할 때까지 날아갑니다.','dps',20],
     ['bouncy-ball','탱탱볼','2_탱탱볼_단일파츠(3).svg','적에게 부딪히면 튕겨 나가 다른 적을 공격합니다.','dps',16],
-    ['yellow-floor','끈끈이','3_노랑장판_단일파츠(1).svg','영역에 들어온 적의 이동 속도를 감소시킵니다.','dps',8],
+    ['yellow-floor','끈끈이','3_노랑장판_단일파츠(1).svg','영역에 들어온 적의 이동 속도를 감소시킵니다.',null,0,'적 이동 속도 -30%'],
     ['sprinkler','스프링클러','3_스프링쿨러_단일파츠(4).svg','원형으로 물을 뿌려 주변 적들을 공격합니다.','dps',18],
     ['rock','돌멩이','4_돌_단일파츠(1).svg','적을 향해 돌멩이를 던져 기본 공격을 합니다.','dps',12],
     ['broom','빗자루','4_빗자루_단일파츠(1).svg','빗자루를 휘둘러 범위 내의 적들을 공격합니다.','dps',20]
-  ].map(([id,name,file,desc,stat,value])=>Object.freeze({id,name,file,desc,stats:Object.freeze({[stat]:value})})));
+  ].map(([id,name,file,desc,stat,value,tooltipEffect])=>Object.freeze({id,name,file,desc,stats:Object.freeze(stat?{[stat]:value}:{}),tooltipEffect})));
   // The source's bristle centre (1097,572) and handle tip (1183,380)
   // define its longitudinal axis. Rotate that axis to -45° before cropping,
   // so the diagonal can occupy the card without enlarging the card itself.
@@ -145,7 +145,7 @@
       const item=entries[i],texture=trim(scene,item.id,raw(item.id));
       const x=682+(i%4)*56,y=126+Math.floor(i/4)*56;
       const marker=card(scene,x,y,assets.item.dropSize,texture,'item',item.id).setName('placeholder:item:'+String(i).padStart(2,'0'));
-      cards.push({marker,x,y,idleDepth:marker.depth,item:Object.freeze({id:item.id,name:item.name,texture,desc:item.desc,stats:item.stats})});
+      cards.push({marker,x,y,idleDepth:marker.depth,item:Object.freeze({id:item.id,name:item.name,texture,desc:item.desc,stats:item.stats,tooltipEffect:item.tooltipEffect})});
     }
     for(let i=0;i<relics.length;i++){
       const item=relics[i],texture=trim(scene,item.id,raw(item.id));
@@ -159,4 +159,3 @@
   }
   window.GardenItemCards=Object.freeze({enabled,entries,relics,preload,draw,setIcon,key,broomRotation,itemSpan});
 }());
-
