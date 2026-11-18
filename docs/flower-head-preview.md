@@ -1,6 +1,6 @@
 # 꽃 머리 크기 비교 — feature/flower-head-preview
 
-> **devel 꽃밭 URL 비교:** `gridColor=slate|graphite|charcoal` (#535361/#3B3A44/#16161A), `gridStyle=solid|dashed` (기본 solid, 점선 3px/2px 간격) 독립 조합. 생략·잘못된 값은 slate/solid. 기본 어두운 테마의 꽃밭에만 적용하고 카드/슬롯/정보창 및 growth 강조 유지. `full=1`과 조합 가능. `uitype=1` 밝은 흙 테마 제외. 예: `?gridColor=graphite&gridStyle=dashed`.
+> **devel 꽃밭 URL 비교:** `gridColor=slate|graphite|charcoal` (#535361/#3B3A44/#16161A), `gridStyle=solid|dashed|drag` (기본 solid, 점선 3px/2px 간격) 독립 조합. `drag`는 평소 무격자, 꽃 드래그 중 후보만 growth(#84A83E) 1px 실선, 유효 대상 위에서는 대상만 표시하며 종료/취소 시 숨김. `drag`에서는 gridColor 무관. 생략·잘못된 값은 slate/solid. 기본 어두운 테마의 꽃밭에만 적용하고 카드/슬롯/정보창 및 growth 강조 유지. `full=1`과 조합 가능. `uitype=1` 밝은 흙 테마 제외. 예: `?gridColor=graphite&gridStyle=dashed`.
 
 > **devel 현행 꽃밭 실선/공통 테두리:** 기본 어두운 테마에서 점유/인접 후보 합집합을 1 논리 px slate(#535361) 실선으로 표시한다. 공유선 및 교차점을 한 번만 그리고 칸 내부는 투명하게 유지한다. 꽃 드래그 후보/대상 및 카드 강조 growth(#84A83E), 일반 아이템 카드/장착/교체 강조 sky(#6794D8). 카드·슬롯·정보창 외곽선과 꽃밭 기본색 동일, 카드/정보창 내부 graphite(#3B3A44) 유지. 기존 점선 설명은 역사적 규격. 순찰 경계, 크기, 배치 판정 및 밝은 비교 테마 유지.
 

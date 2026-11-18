@@ -4,7 +4,8 @@
   const params=new URLSearchParams(window.location.search);
   const requested=params.get('gridColor');
   const colorName=['slate','graphite','charcoal'].includes(requested)?requested:'slate';
-  const lineStyle=params.get('gridStyle')==='dashed'?'dashed':'solid';
+  const requestedStyle=params.get('gridStyle');
+  const lineStyle=['dashed','drag'].includes(requestedStyle)?requestedStyle:'solid';
   const colors=Object.freeze({base:P.uiType===1?R.gardenBorder:P.n[colorName],active:R.flowerBorder});
 
   const all=g=>new Set(Array.from({length:g.columns*g.rows},(_,i)=>i));
@@ -25,12 +26,13 @@
   // dash / 2px gap pattern with transparent junctions. Geometry is unchanged.
   function rectangles(g,occupied,candidates,hover=null){
     const rects=[],p=g.pitch,shown=visible(occupied,candidates);
+    if(lineStyle==='drag'&&hover===null)return rects;
     const get=(x,y)=>x>=0&&x<g.columns&&y>=0&&y<g.rows?y*g.columns+x:-1;
     function color(a,b){
       if(hover!==null&&(candidates.has(a)||candidates.has(b))){
         if(!candidates.has(hover)||a===hover||b===hover)return colors.active;
       }
-      return shown.has(a)||shown.has(b)?colors.base:null;
+      return lineStyle!=='drag'&&(shown.has(a)||shown.has(b))?colors.base:null;
     }
     function edge(x,y,horizontal,c){
       if(c===null)return;
@@ -45,7 +47,7 @@
       edge(x*p,y*p,true,color(get(x,y-1),get(x,y)));
     for(let x=0;x<=g.columns;x++)for(let y=0;y<g.rows;y++)
       edge(x*p,y*p,false,color(get(x-1,y),get(x,y)));
-    if(lineStyle==='solid')for(let y=0;y<=g.rows;y++)for(let x=0;x<=g.columns;x++){
+    if(lineStyle!=='dashed')for(let y=0;y<=g.rows;y++)for(let x=0;x<=g.columns;x++){
       const cells=[get(x-1,y-1),get(x,y-1),get(x-1,y),get(x,y)];
       const incident=[color(cells[0],cells[1]),color(cells[2],cells[3]),color(cells[0],cells[2]),color(cells[1],cells[3])];
       const c=incident.includes(colors.active)?colors.active:incident.includes(colors.base)?colors.base:null;

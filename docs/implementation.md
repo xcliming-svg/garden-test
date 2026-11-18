@@ -1,6 +1,6 @@
 # 현재 설계 및 구현 정리
 
-> **devel 꽃밭 URL 비교:** `gridColor=slate|graphite|charcoal` (#535361/#3B3A44/#16161A), `gridStyle=solid|dashed` (기본 solid, 점선 3px/2px 간격) 독립 조합. 생략·잘못된 값은 slate/solid. 기본 어두운 테마의 꽃밭에만 적용하고 카드/슬롯/정보창 및 growth 강조 유지. `full=1`과 조합 가능. `uitype=1` 밝은 흙 테마 제외. 예: `?gridColor=graphite&gridStyle=dashed`.
+> **devel 꽃밭 URL 비교:** `gridColor=slate|graphite|charcoal` (#535361/#3B3A44/#16161A), `gridStyle=solid|dashed|drag` (기본 solid, 점선 3px/2px 간격) 독립 조합. `drag`는 평소 무격자, 꽃 드래그 중 후보만 growth(#84A83E) 1px 실선, 유효 대상 위에서는 대상만 표시하며 종료/취소 시 숨김. `drag`에서는 gridColor 무관. 생략·잘못된 값은 slate/solid. 기본 어두운 테마의 꽃밭에만 적용하고 카드/슬롯/정보창 및 growth 강조 유지. `full=1`과 조합 가능. `uitype=1` 밝은 흙 테마 제외. 예: `?gridColor=graphite&gridStyle=dashed`.
 
 > **하단 HUD 현행(2026-11-18):** 좌하단에는 능력치를 표시하지 않는다. 우하단은 초당 피해량·방어력·이동 속도 순서로 3열만 표시한다. 최대 체력·행운·획득 범위의 임시 합산 및 증감 표시를 제거한다. 이전 6종 및 640×360 기록은 역사적 기준이며 현재 960×540 규격은 [현행 UI 문서](./resolution-960x540.md), 아이템별 효과는 [아이템 카드](./item-cards.md)를 따른다.
 

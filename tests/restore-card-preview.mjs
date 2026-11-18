@@ -304,4 +304,53 @@ try{
    assert.deepEqual(errors,[]);console.log('PASS grid '+style+'/'+name+' '+w+'px');
   }finally{await page.close();}
  }
+ // Drag-only grid: no idle lines, green candidate boundaries only during flower drag.
+ for(const w of [960,1280]){
+  const page=await browser.newPage({viewport:{width:w,height:w*9/16}});
+  const errors=[];page.on('pageerror',e=>errors.push(String(e)));
+  try{
+   await page.goto(url+'/index.html?gridStyle=drag&gridColor=charcoal');
+   await page.waitForFunction(()=>window.__previewGame?.scene.isActive('MainMenu'));
+   const box=await page.locator('canvas').boundingBox();
+   const coords=(x,y)=>[box.x+x*box.width/960,box.y+y*box.height/540];
+   await page.mouse.click(...coords(480,252));
+   await page.waitForFunction(()=>window.__previewGame.scene.getScene('Game').fairyPatrol?.actors.length===11);
+   const inspect=expected=>page.evaluate(expected=>{
+    const s=window.__previewGame.scene.getScene('Game'),G=window.GardenDashedGridPreview,L=window.GardenGameLayout,g=L.spec.garden,z=s.cameras.main.zoom;
+    const occ=new Set(s.fairyPatrol.occupied),candidates=L.gardenCandidates(occ),r=L.gardenRaster(G.all(g),g,z);
+    const t=s.children.getByName('garden-preview-soil').texture.getSourceImage(),data=t.getContext('2d').getImageData(0,0,t.width,t.height).data;
+    const at=(x,y)=>{const i=((Math.round((g.y+y)*z)-r.y)*t.width+Math.round((g.x+x)*z)-r.x)*4;return data[i+3]===255?(data[i]<<16)|(data[i+1]<<8)|data[i+2]:null;};
+    const active=expected===null?new Set():candidates.has(expected)?new Set([expected]):candidates;
+    const has=(x,y)=>x>=0&&x<g.columns&&y>=0&&y<g.rows&&active.has(y*g.columns+x);
+    let correct=true;
+    for(let y=0;y<=g.rows;y++)for(let x=0;x<g.columns;x++)for(let k=1;k<g.pitch;k++)if(at(x*g.pitch+k,y*g.pitch)!==((has(x,y)||has(x,y-1))?0x84A83E:null))correct=false;
+    for(let y=0;y<g.rows;y++)for(let x=0;x<=g.columns;x++)for(let k=1;k<g.pitch;k++)if(at(x*g.pitch,y*g.pitch+k)!==((has(x,y)||has(x-1,y))?0x84A83E:null))correct=false;
+    for(let y=0;y<=g.rows;y++)for(let x=0;x<=g.columns;x++)if(at(x*g.pitch,y*g.pitch)!==((has(x,y)||has(x-1,y)||has(x,y-1)||has(x-1,y-1))?0x84A83E:null))correct=false;
+    for(let y=0;y<g.rows;y++)for(let x=0;x<g.columns;x++)if(at(x*g.pitch+g.cell/2,y*g.pitch+g.cell/2)!==null)correct=false;
+    const used=new Set();let pixels=0;
+    for(let i=0;i<data.length;i+=4)if(data[i+3]){used.add((data[i]<<16)|(data[i+1]<<8)|data[i+2]);pixels++;}
+    const card=n=>s.children.getByName(n),f=card('placeholder:flower:0'),f2=card('placeholder:flower:1'),item=card('placeholder:item:00');
+    const center=i=>[g.x+(i%g.columns)*g.pitch+1+g.cell/2,g.y+Math.floor(i/g.columns)*g.pitch+1+g.cell/2];
+    const slot=card('slot-frame:0');
+    return {correct,used:[...used],pixels,style:G.lineStyle,stage:s.flowerGrowth.entries.size,flower:[f.x,f.y],flower2:[f2.x,f2.y],item:[item.x,item.y],target:center(43),invalid:center(44),slot:[slot.x,slot.y],itemBorder:item.list[0].fillColor,slotBorder:slot.strokeColor,tip:L.itemTooltip.accent,fullEmpty:G.rectangles(g,G.all(g),new Set(),-1).length===0};
+   },expected);
+   const check=async(expected)=>{const state=await inspect(expected);assert.ok(state.correct,JSON.stringify(state));assert.deepEqual(state.used,expected===null?[]:[0x84A83E]);assert.equal(state.style,'drag');return state;};
+   const idle=await check(null);assert.equal(idle.pixels,0);assert.ok(idle.fullEmpty);
+   assert.deepEqual([idle.itemBorder,idle.slotBorder,idle.tip],Array(3).fill(0x535361));
+   await page.screenshot({path:join(out,'grid-drag-'+w+'-idle.png')});
+   await page.mouse.move(...coords(...idle.flower));await check(null);
+   await page.mouse.down();await page.mouse.move(...coords(...idle.invalid),{steps:12});
+   const candidates=await check(-1);assert.ok(candidates.pixels>0);
+   await page.screenshot({path:join(out,'grid-drag-'+w+'-candidates.png')});
+   await page.mouse.move(...coords(...idle.target),{steps:12});
+   const hot=await check(43);assert.ok(hot.pixels<candidates.pixels);
+   await page.screenshot({path:join(out,'grid-drag-'+w+'-target.png')});
+   await page.mouse.up();await page.waitForFunction(()=>window.__previewGame.scene.getScene('Game').flowerGrowth.entries.size===5);await check(null);
+   // Item drag must never reveal the flower grid.
+   await page.mouse.move(...coords(...idle.item));await page.mouse.down();await page.mouse.move(...coords(...idle.slot),{steps:12});await check(null);await page.mouse.up();await check(null);
+   // Rejected flower drop also hides every line.
+   const next=await check(null);await page.mouse.move(...coords(...next.flower2));await page.mouse.down();await page.mouse.move(...coords(...next.invalid),{steps:12});await check(-1);await page.mouse.up();assert.equal((await check(null)).stage,5);
+   assert.deepEqual(errors,[]);console.log('PASS drag-only grid '+w+'px');
+  }finally{await page.close();}
+ }
 }finally{await browser.close();server.close();}
