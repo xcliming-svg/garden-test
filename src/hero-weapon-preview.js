@@ -2,6 +2,13 @@
   'use strict';
   // Equipped weapons and isolated selector comparison share one attack model.
   const params=new URLSearchParams(window.location.search);
+  // Preview-only logical height override. Invalid or missing values use the default.
+  const rockSizeLimits=Object.freeze({min:4,max:40,default:10});
+  function resolveRockSize(value){
+    if(typeof value!=='string'||value.trim()==='')return rockSizeLimits.default;
+    const n=Number(value);
+    return Number.isFinite(n)&&n>=rockSizeLimits.min&&n<=rockSizeLimits.max?n:rockSizeLimits.default;
+  }
   const combat=window.GardenEnemyPreview.enabled&&params.get('weapons')==='1'&&params.get('attack')!=='0';
   const enabled=window.GardenFairyPatrol.enabled&&(!window.GardenEnemyPreview.enabled||combat)&&
     window.GardenFlowerGrowth.enabled&&params.get('cards')!=='0'&&params.get('cards')!=='legacy';
@@ -12,7 +19,7 @@
     boomerang:{life:3.8,span:28,speed:380,minFlight:.46,maxFlight:1.6,curve:65,minCurve:30},wheel:{life:6,span:28,initialSpeed:420,minSpeed:180,drag:1.6},
     flowerpot:{life:1.15,span:22,fall:.52,height:120},'paper-plane':{life:3.2,span:22,speed:310,turn:4.2,minFlight:.55,bank:22},
     'bouncy-ball':{life:3.2,span:22,speed:340,hop:.34,lift:18,chainRange:120},'yellow-floor':{life:2.6,span:44,spread:.32},
-    sprinkler:{life:1.9,span:24,radius:44,turn:4,emitInterval:.045,dropLife:.32,start:.12},rock:{life:1.5,span:16,speed:520,gravity:180},broom:{life:2.4,span:44,orbit:26,period:1.2}
+    sprinkler:{life:1.9,span:24,radius:44,turn:4,emitInterval:.045,dropLife:.32,start:.12},rock:{life:1.5,span:resolveRockSize(params.get('rockSize')),speed:520,gravity:180},broom:{life:2.4,span:44,orbit:26,period:1.2}
   });
   // Model fallback ratios from the cropped approved SVGs. The scene uses the actual
   // measured raster bounds, including the existing diagonal broom normalization.
@@ -539,5 +546,5 @@
     scene.heroWeaponPreview={model,select:choose,equip,render,control:select};
     return scene.heroWeaponPreview;
   }
-  window.GardenHeroWeaponPreview=Object.freeze({enabled,combat,ids,tuning,interval,range,create,pose,defaultSize,wheelTravel,wheelExit,wheelPath,placementExtent,installationSafe,segmentIntersects,validAim,randomPoint,inAttackRange,potFragments,balloonFlight,balloonHeight,balloonSplash,balloonDroplets,boomerangPath,planeFlight,planePath,sprinklerDrops,attach});
+  window.GardenHeroWeaponPreview=Object.freeze({enabled,combat,ids,tuning,rockSizeLimits,resolveRockSize,interval,range,create,pose,defaultSize,wheelTravel,wheelExit,wheelPath,placementExtent,installationSafe,segmentIntersects,validAim,randomPoint,inAttackRange,potFragments,balloonFlight,balloonHeight,balloonSplash,balloonDroplets,boomerangPath,planeFlight,planePath,sprinklerDrops,attach});
 }());
