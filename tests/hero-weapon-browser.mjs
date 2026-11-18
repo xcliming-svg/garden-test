@@ -112,7 +112,7 @@ try{
     });
     assert.equal(await page.evaluate(()=>{
       const s=window.__previewGame.scene.getScene('Game');
-      return s.textures.exists('item-svg:source:water-splash')&&s.itemCardPreview.cards.length===12;
+      return s.textures.exists('item-svg:source:water-splash')&&s.itemCardPreview.cards.length===13;
     }),true);
     await select.selectOption('rock');await page.waitForTimeout(100);
     assert.equal(await page.evaluate(()=>window.__previewGame.scene.getScene('Game').children.list.some(o=>o.name?.startsWith('hero-weapon:balloon:'))),false);
@@ -143,7 +143,13 @@ try{
     await page.waitForFunction(()=>window.__previewGame.scene.getScene('Game').heroWeaponPreview.model.state.shots.some(s=>s.kind==='wheel'&&s.slot===1));
     await dragItem('shield',0);
     assert.deepEqual(await page.evaluate(()=>{const m=window.__previewGame.scene.getScene('Game').heroWeaponPreview.model;return {gear:m.state.equipped,old:m.state.shots.some(s=>s.slot===0)};}),{gear:['','wheel'],old:false});
-    await dragItem('shoe',1);assert.equal(await select.isDisabled(),false);
+    await dragItem('water-fairy',1);assert.equal(await select.isDisabled(),false);
+    const fairyCard=await page.evaluate(()=>{
+      const s=window.__previewGame.scene.getScene('Game'),c=s.itemCardPreview.cards.find(c=>c.item.id==='water-fairy'),slot=s.children.getByName('preview-equipped:1');
+      const t=s.textures.get(c.item.texture).getSourceImage();
+      return {count:s.itemCardPreview.cards.length,name:c.item.name,level:c.item.level,hidden:!c.marker.visible,slot:slot.visible,label:slot.levelLabel.text,height:slot.list[2].displayHeight,ratio:t.width/t.height,shots:s.heroWeaponPreview.model.state.shots.length};
+    });
+    assert.equal(fairyCard.count,13);assert.equal(fairyCard.name,'물방울 요정');assert.equal(fairyCard.level,1);assert.equal(fairyCard.hidden,true);assert.equal(fairyCard.slot,true);assert.equal(fairyCard.label,'Lv.1');assert.ok(Math.abs(fairyCard.height-24)<.01&&fairyCard.ratio>.6&&fairyCard.ratio<.75);assert.equal(fairyCard.shots,0);
     assert.equal(await page.evaluate(()=>window.__previewGame.scene.getScene('Game').heroWeaponPreview.model.state.shots.length),0);
     await page.evaluate(()=>window.__previewGame.scene.getScene('Game').scene.stop());
     await select.waitFor({state:'detached'});
@@ -159,6 +165,8 @@ try{
     assert.equal(await page.evaluate(()=>window.__previewGame.scene.getScene('Game').enemyPreview.attack),null);
     await dragItem('rock',0);
     await dragItem('rock',9);
+    await dragItem('water-fairy',8);
+    assert.equal(await page.evaluate(()=>{const s=window.__previewGame.scene.getScene('Game');return s.children.getByName('preview-equipped:8').visible&&s.itemCardPreview.cards.find(c=>c.item.id==='water-fairy').marker.visible&&!s.heroWeaponPreview.model.state.equipped[8];}),true);
     assert.equal(await page.evaluate(()=>{const s=window.__previewGame.scene.getScene('Game');return s.heroWeaponPreview.model.state.equipped[9]==='rock'&&s.itemCardPreview.cards.find(c=>c.item.id==='rock').marker.visible;}),true);
     await page.waitForFunction(()=>window.__previewGame.scene.getScene('Game').heroWeaponPreview.model.state.hits>0,{},{timeout:60000});
     assert.equal(await page.evaluate(()=>window.__previewGame.scene.getScene('Game').heroWeaponPreview.model.state.shots.every(s=>s.owner===0)),true);
