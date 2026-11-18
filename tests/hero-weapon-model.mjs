@@ -130,7 +130,7 @@ for(const [cx,cy,dx,dy] of [[480,200,0,-1],[580,270,1,0],[480,340,0,1],[380,270,
   ok(q.flight>=cfg.minFlight&&q.flight<=cfg.maxFlight,'bounded flight time');
   const samples=[0,.2,.4,.6,.8,1].map(u=>{
     const a=A.pose({...q,age:q.flight*u},hero);
-    return {u,x:a.x,y:a.y,z:(q.y+(q.ty-q.y)*u)-a.y-cfg.span/2};
+    return {u,x:a.x,y:a.y,z:(q.launchY+(q.ty-q.launchY)*u)-a.y-cfg.span/2};
   });
   for(let i=0;i<samples.length-1;i++){
     const p=samples[i];
@@ -172,10 +172,10 @@ for(const [cx,cy,dx,dy] of [[480,200,0,-1],[580,270,1,0],[480,340,0,1],[380,270,
  const heights={balloon:22,boomerang:20,wheel:28,flowerpot:22,'paper-plane':22,'bouncy-ball':22,'yellow-floor':44,sprinkler:22,rock:20,broom:44};
  for(const id of A.ids){
    const m=A.create(spec,rng);m.select(id);advance(m,.01);const q=m.state.shots[0];
-   ok(q.size.height===heights[id]&&q.span===heights[id],'agreed visible height '+id);
+   ok(Math.abs((id==='boomerang'?Math.max(q.size.width,q.size.height):q.size.height)-heights[id])<1e-8&&q.span===heights[id],'agreed visible height '+id);
    ok(q.size.width>0,'preserved aspect '+id);
  }
- ok(A.defaultSize('boomerang',20).width>40,'wide boomerang');
+ ok(Math.abs(A.defaultSize('boomerang',20).width-20)<1e-8&&A.defaultSize('boomerang',20).height<10,'longest-side boomerang');
  ok(A.defaultSize('water-splash',44).width>100,'wide puddle');
 }
 // Broom deploys at the random ground point, independently of subsequent hero movement.
@@ -294,5 +294,65 @@ for(const [cx,cy,dx,dy] of [[480,200,0,-1],[580,270,1,0],[480,340,0,1],[380,270,
    advance(m,.01,{...hero,center:left},[{id:7,x:480,y:250,ground:270,radius:5}],()=>({killed:false}));
    ok(m.state.shots[0].targetId===7&&m.state.shots[0].ty===270,'real enemy inside garden allowed');
  }
+}
+
+// Short/mid/long throws: exact target, stable timing, no discontinuities.
+{
+ const h={...hero,center:{x:300,y:180}};
+ const cfg=A.tuning.balloon;
+ let prev=0;
+ for(const d of [8,24,48,80,160,320,550]){
+   const m=A.create(spec,()=>.5);m.equip(0,'balloon');
+   const e={id:91,x:h.center.x+d,y:h.center.y,ground:h.center.y,radius:2};
+   advance(m,.01,h,[e],()=>({killed:false}));const q=m.state.shots[0];
+   ok(q.flight>=prev&&q.flight>=cfg.minFlight&&q.flight<=cfg.maxFlight,'balloon bounded monotone time');prev=q.flight;
+   const p=A.pose(q,h);ok(Math.abs(p.y-h.center.y)<10,'balloon launches from hand level');
+   let apex=0;
+   for(let i=0;i<=100;i++){const u=i/100;apex=Math.max(apex,A.balloonHeight(q,u));}
+   ok(apex>=24&&apex<=55,'stable physical apex');
+   const landing=A.pose({...q,age:q.flight},h);
+   ok(landing.x===e.x&&landing.y===e.ground&&landing.alpha===0,'exact balloon landing');
+ }
+ for(const d of [8,24,48,80,160,320,550]){
+   const m=A.create(spec,()=>.5);m.equip(0,'boomerang');
+   const e={id:92,x:h.center.x+d,y:h.center.y,radius:2};
+   advance(m,.01,h,[e],()=>({killed:false}));const q=m.state.shots[0];
+   ok(q.flight>=A.tuning.boomerang.minFlight,'minimum boomerang outbound time');
+   const target=A.boomerangPath({...q,age:q.flight},h);
+   ok(Math.hypot(target.x-e.x,target.y-e.y)<1e-8,'actual target on boomerang path');
+   const dt=1e-5,before=A.boomerangPath({...q,age:q.flight-dt},h),after=A.boomerangPath({...q,age:q.flight+dt},h);
+   ok(Math.hypot((target.x-before.x)-(after.x-target.x),(target.y-before.y)-(after.y-target.y))/dt<.1,'continuous turn tangent');
+   const mid=A.boomerangPath({...q,age:q.flight*.5},h);
+   ok(Math.abs(mid.y-h.center.y)>10,'minimum visible bow');
+   const end=A.boomerangPath({...q,age:q.life},h);
+   ok(Math.hypot(end.x-h.center.x,end.y-h.center.y)<1e-8,'returns exactly');
+ }
+ for(const d of [8,24,48,80,160,320,550]){
+   const q={kind:'paper-plane',x:h.center.x,y:h.center.y,tx:h.center.x+d,ty:h.center.y,dx:1,dy:0,flight:A.planeFlight(d)};
+   const a=A.planePath(q,0),b=A.planePath(q,q.flight*.5),c=A.planePath(q,q.flight);
+   ok(q.flight>=A.tuning['paper-plane'].minFlight&&q.flight<=2.4,'bounded glide time');
+   ok(a.x===q.x&&a.y===q.y&&c.x===q.tx&&c.y===q.ty,'glide actual endpoints');
+   ok(Math.abs(b.y-q.y)>1,'visible glide bow');
+   ok(Math.abs(a.heading)<1e-8&&Math.abs(c.heading)<1e-8,'tangent matches nose at start and end');
+ }
+}
+// Sprinkler drops originate at the actual rotating nozzles and move away
+// without changing emission direction as the head continues to rotate.
+{
+ const m=A.create(spec,()=>.4);m.select('sprinkler');advance(m,.01);const q=m.state.shots[0],cfg=A.tuning.sprinkler;
+ ok(q.size.pivot.y<.45&&q.size.nozzles.length===3,'asymmetric hub and three arms');
+ const emit=cfg.start+4*cfg.emitInterval;
+ const first=A.sprinklerDrops({...q,age:emit}).filter(p=>Math.abs(p.emitted-emit)<1e-8);
+ ok(first.length===3,'three new droplets');
+ for(const p of first)ok(Math.hypot(p.x-p.nx,p.y-p.ny)<1e-8,'starts at nozzle');
+ const later=A.sprinklerDrops({...q,age:emit+.16}).filter(p=>Math.abs(p.emitted-emit)<1e-8);
+ for(const p of later){const a=first.find(f=>f.arm===p.arm);
+   ok(Math.hypot(p.nx-a.nx,p.ny-a.ny)<1e-8,'emitted nozzle fixed in time');
+   ok(Math.hypot(p.x-q.tx,p.y-q.ty)>Math.hypot(a.x-q.tx,a.y-q.ty),'water moves outwards');
+ }
+ for(let i=0;i<200;i++){const age=i*.009;for(const p of A.sprinklerDrops({...q,age})){
+   ok(Object.values(p).every(Number.isFinite),'finite drop geometry');
+   ok(Math.hypot(p.x-q.tx,p.y-q.ty)<=cfg.radius+.001,'water within radius');
+ }}
 }
 console.log('PASS equipped weapon model:',checks,'checks');
