@@ -318,11 +318,11 @@
             let hit=false,direct=false;
             if(kind==='flowerpot'){
               // Descending pot can physically contact an airborne body directly.
-              if(s.age<tuning.flowerpot.fall){
+              if(s.age<tuning.flowerpot.fall&&!s.directDone){
                 const height=tuning.flowerpot.height*(1-(s.age/tuning.flowerpot.fall)**2);
                 hit=distance(q,{x:s.tx,y:s.ty})<=st.direct+r&&height<=(e.lift??0)+(e.height??24)&&height+tuning.flowerpot.span>=(e.lift??0);
                 direct=hit;
-              }else if(!s.burstDone&&B.groundContact(e)){
+              }else if(s.age>=tuning.flowerpot.fall&&!s.burstDone&&B.groundContact(e)){
                 const d=distance(q,p);hit=d<=st.radius+r;direct=d<=st.direct+r;
               }
             }else if(B.eligibleHeight(kind,e)){
@@ -353,7 +353,10 @@
           }else{
             const single=['rock','paper-plane','bouncy-ball'].includes(kind);
             for(const {e,direct,record} of single?hits.slice(0,1):hits){
-              const amount=B.amount(kind,st,s.hit.size,direct),result=damage(e.id,amount);
+              if(kind==='flowerpot'&&s.age<tuning.flowerpot.fall&&s.directDone)continue;
+              const primary=direct&&!s.directDone;
+              const amount=B.amount(kind,st,s.hit.size,primary),result=damage(e.id,amount);
+              if(kind==='flowerpot'&&result&&primary)s.directDone=true;
               if(!result)continue;
               state.damage+=Math.min(remaining.get(e.id)??amount,amount);remaining.set(e.id,result.hp??0);
               s.hit.add(e.id);record.count++;record.last=s.age;record.phases.add(phase);s.hitRecords.set(e.id,record);state.hits++;
