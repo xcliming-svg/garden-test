@@ -118,7 +118,7 @@ try{
      const check=(v,m)=>{if(!v)throw Error(m);};
      const step=(n,seconds)=>{let v;for(let t=0;t<seconds-1e-9;t+=.05)v=d.update(n,Math.min(.05,seconds-t));return v;};
      check(step(T.enter-1,5).mix===0,'higher entry threshold');
-     check(step(T.enter,.5).mix===0,'brief density spike ignored');
+     check(step(T.enter,2).mix===0,'two-second density spike ignored');
      step(T.enter-1,.1);
      check(step(T.enter,T.enterHold).mix===0,'entry hold');
      const rising=step(T.enter,1);
@@ -128,7 +128,7 @@ try{
      const turn=step(T.exit,.05);
      check(!turn.dense&&turn.mix>0&&turn.mix<1&&turn.transitions===2,'reverse before reaching paper');
      check(turn.mix-before.mix<.03,'no brightness jump on reversal');
-     const down=step(T.exit,1);
+     const down=step(T.exit,.25);
      check(down.mix<turn.mix&&down.mix>0,'smooth partial return');
      const beforeRise=step(T.enter,T.enterHold-.05);
      const turnUp=step(T.enter,.05);

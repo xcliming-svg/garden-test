@@ -28,7 +28,7 @@
   const outlineConfig=Object.freeze({enabled:params.get('outline')!=='0',color:outlineColor,width:outlineWidth,hex:palette[outlineColor]});
   // Explicit color comparisons stay static unless adaptive is requested.
   const adaptive=params.get('outlineMode')==='adaptive'||(params.get('outlineMode')!=='static'&&rawColor===null);
-  const densityTuning=Object.freeze({radius:32,enter:32,exit:18,enterHold:1,exitHold:1.5,fadeIn:4,fadeOut:3});
+  const densityTuning=Object.freeze({radius:32,enter:40,exit:22,enterHold:2.5,exitHold:1.5,fadeIn:4,fadeOut:3});
   function createDensity(){
     let dense=false,held=0,mix=0,from=0,elapsed=0,transitions=0,near=0;
     function advance(dt){
