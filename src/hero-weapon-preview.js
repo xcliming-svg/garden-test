@@ -303,7 +303,7 @@
         const p=pose(s,hero);
         if(!s.preview&&battle){
           const st=B.stats(s.kind,s.level),kind=s.kind,phase=s.age<=s.flight?'out':'back';
-          const repeat=kind==='sprinkler'||kind==='broom';
+          const repeat=kind==='sprinkler'||kind==='broom',drops=kind==='sprinkler'?sprinklerDrops(s):null;
           const groundHit=e=>B.ground(e);
           const relDistance=e=>{
             const old=previousTargets.get(e.id)||e;
@@ -335,7 +335,7 @@
                 const old=previousTargets.get(e.id)||e,o=groundHit(old);
                 hit=segmentDistance({x:previous.x-o.x,y:previous.y-o.y},{x:p.x-q.x,y:p.y-q.y},{x:0,y:0})<=sizeOf(s).height/2+r;
               }else if(kind==='sprinkler'){
-                hit=sprinklerDrops(s).some(drop=>{
+                hit=drops.some(drop=>{
                   const dx=Math.cos(drop.angle)*drop.length/2,dy=Math.sin(drop.angle)*drop.length/2;
                   return segmentDistance({x:drop.x-dx,y:drop.y-dy},{x:drop.x+dx,y:drop.y+dy},q)<=r+drop.size;
                 });
