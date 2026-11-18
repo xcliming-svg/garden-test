@@ -160,7 +160,8 @@
             if(s.kind==='broom'){
               const reach=Math.hypot(sizeOf(s).width,sizeOf(s).height)*.4;
               const tip=q=>({x:q.x+Math.cos(q.angle+3*Math.PI/4)*reach,y:q.y+Math.sin(q.angle+3*Math.PI/4)*reach});
-              return Math.min(segmentDistance(previous,p,e),segmentDistance(tip(previous),tip(p),e),segmentDistance(p,tip(p),e))<=sizeOf(s).height*.22+r;
+              const handle=q=>({x:q.x-Math.cos(q.angle+3*Math.PI/4)*reach,y:q.y-Math.sin(q.angle+3*Math.PI/4)*reach});
+              return Math.min(segmentDistance(previous,p,e),segmentDistance(tip(previous),tip(p),e),segmentDistance(handle(p),tip(p),e),segmentDistance(handle(previous),tip(previous),e))<=sizeOf(s).height*.18+r;
             }
             return segmentDistance(previous,p,e)<=Math.min(sizeOf(s).width,sizeOf(s).height)*.4+r;
           }).sort((a,b)=>distance(previous,a)-distance(previous,b));
