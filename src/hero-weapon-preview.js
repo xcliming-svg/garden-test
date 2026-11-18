@@ -8,7 +8,7 @@
   const items=window.GardenItemCards.entries.filter(i=>i.id!=='shoe'&&i.id!=='shield');
   const ids=Object.freeze(items.map(i=>i.id));
   const tuning=Object.freeze({
-    balloon:{life:1.5,span:16},boomerang:{life:1.7,span:18},wheel:{life:6,span:40,initialSpeed:420,minSpeed:180,drag:1.6},
+    balloon:{life:1.55,span:16,minFlight:.45,maxFlight:.97,gravity:920,launchHeight:6,splashLife:.58,splashSpan:106,spread:.14},boomerang:{life:1.7,span:18},wheel:{life:6,span:40,initialSpeed:420,minSpeed:180,drag:1.6},
     flowerpot:{life:1.15,span:20,fall:.52,height:120},'paper-plane':{life:1.55,span:18},
     'bouncy-ball':{life:1.7,span:14},'yellow-floor':{life:2.6,span:72,spread:.32},
     sprinkler:{life:1.9,span:20},rock:{life:1.1,span:12},broom:{life:.7,span:28}
@@ -55,6 +55,27 @@
         angle:a+age*(i%2?8:-9),size:3+i%4,alpha:Math.min(1,(1-t)*3),dark:i%3===0};
     });
   }
+  function balloonFlight(distance){
+    return clamp(.42+distance*.001,tuning.balloon.minFlight,tuning.balloon.maxFlight);
+  }
+  function balloonSplash(s){
+    const cfg=tuning.balloon,age=s.age-s.flight;
+    if(age<0)return null;
+    const u=clamp(age/cfg.spread,0,1),fade=clamp((cfg.splashLife-age)/.2,0,1);
+    return {x:s.tx,y:s.ty,scale:.42+.58*(1-(1-u)**3),alpha:fade};
+  }
+  function balloonDroplets(s){
+    const age=s.age-s.flight;
+    if(age<0||age>=.38)return [];
+    return Array.from({length:12},(_,i)=>{
+      const a=i*Math.PI/6+(i%3)*.12,v=65+(i*29%80),lift=55+(i*17%55);
+      const air=Math.min(age,2*lift/580),z=Math.max(0,lift*air-290*air*air);
+      const d=v*Math.min(age,.23)+v*.22*Math.max(0,age-.23);
+      return {x:s.tx+Math.cos(a)*d,y:s.ty+Math.sin(a)*d*.48-z,
+        size:1.4+(i%4)*.5,alpha:clamp((.38-age)/.13,0,1)};
+    });
+  }
+  const shotLife=s=>s.life??tuning[s.kind].life;
   // Use the collection predicate itself, including its rotating 100-degree fan,
   // inward mirror for points inside the patrol, and 12px near exception.
   const inAttackRange=(point,origin,bounds)=>window.GardenRelicCollection.eligible(point,origin,{bounds});
@@ -99,7 +120,7 @@
       const dead=new Set();
       for(const s of state.shots){
         const previous=s.previous||pose(s,hero);
-        s.age=Math.min(tuning[s.kind].life,s.age+dt);
+        s.age=Math.min(shotLife(s),s.age+dt);
         if(s.kind==='paper-plane'&&s.targetId!==null){
           const target=live.find(e=>e.id===s.targetId);
           if(target&&inAttackRange(target,s.origin,s.bounds)){s.tx=target.x;s.ty=target.y;}
@@ -110,6 +131,7 @@
           const area=s.kind==='balloon'||s.kind==='flowerpot';
           const hits=candidates.filter(e=>{
             const r=e.radius||0;
+            if(s.kind==='balloon')return !s.burstDone&&s.age>=s.flight&&distance(p,{x:e.x,y:e.ground??e.y})<=tuning.balloon.splashSpan/2+r;
             if(area)return p.ring>0&&distance(p,e)<=p.ring+r;
             if(s.kind==='yellow-floor')return distance(p,e)<=tuning[s.kind].span*p.scale/2+r;
             if(s.kind==='wheel')return segmentDistance(previous,p,e)<=(s.span??tuning.wheel.span)/2+r;
@@ -135,9 +157,10 @@
             }
           }
         }
+        if(s.kind==='balloon'&&s.age>=s.flight)s.burstDone=true;
         s.previous=p;
       }
-      state.shots=state.shots.filter(s=>!s.done&&s.age<tuning[s.kind].life&&
+      state.shots=state.shots.filter(s=>!s.done&&s.age<shotLife(s)&&
         (s.kind!=='wheel'||wheelTravel(s)<s.exitDistance));
       if(!hero||hero.index!==0||hero.type!=='garden'||!patrol?.bounds)return;
       const slots=state.equipped.flatMap((id,index)=>id?[{id,index,preview:false}]:[]);
@@ -152,12 +175,15 @@
         const aim=target||randomPoint(spec,origin,bounds,random);
         if(!aim)continue;
         let tx=aim.x,ty=aim.y;
-        if(slot.id==='flowerpot'&&target&&Number.isFinite(target.ground)){
+        if((slot.id==='flowerpot'||slot.id==='balloon')&&target&&Number.isFinite(target.ground)){
           const ground={x:tx,y:target.ground};
           if(ground.y>=spec.top&&ground.y<=spec.height-spec.bottom&&inAttackRange(ground,origin,bounds))ty=ground.y;
         }
         const d=Math.hypot(tx-x,ty-y)||1,dx=(tx-x)/d,dy=(ty-y)/d;
         const shot={id:serial++,owner:0,slot:slot.index,preview:slot.preview,kind:slot.id,x,y,tx,ty,dx,dy,origin,bounds,age:0,targetId:target?.id??null,hit:new Set()};
+        if(slot.id==='balloon'){
+          shot.flight=balloonFlight(d);shot.life=shot.flight+tuning.balloon.splashLife;
+        }
         if(slot.id==='wheel'){
           const span=hero.visibleHeight||tuning.wheel.span,r=span/2,offset=span+4;
           shot.x=x+dx*offset;shot.y=y+dy*offset;shot.span=span;
@@ -172,12 +198,18 @@
   }
   // In the hidden-enemy mode the target is an invisible preview point.
   function pose(s,hero){
-    const t=clamp(s.age/tuning[s.kind].life,0,1),a=Math.atan2(s.dy,s.dx);
+    const t=clamp(s.age/shotLife(s),0,1),a=Math.atan2(s.dy,s.dx);
     const px=-s.dy,py=s.dx;let x=mix(s.x,s.tx,t),y=mix(s.y,s.ty,t),angle=0,alpha=1,scale=1,ring=0,kind=s.kind;
     switch(kind){
       case 'balloon':{
-        const u=Math.min(1,t/.7);x=mix(s.x,s.tx,u);y=mix(s.y,s.ty,u)-Math.sin(Math.PI*u)*36;
-        if(t>.7){alpha=0;ring=8+45*(t-.7)/.3;}break;
+        const cfg=tuning.balloon,flight=s.flight??balloonFlight(distance(s,{x:s.tx,y:s.ty}));
+        const u=clamp(s.age/flight,0,1);
+        x=mix(s.x,s.tx,u);
+        // Constant horizontal velocity on the ground plane and constant gravity in height.
+        const height=cfg.launchHeight*(1-u)+.5*cfg.gravity*flight*flight*u*(1-u);
+        y=mix(s.y,s.ty,u)-height-cfg.span/2;
+        if(u>=1){x=s.tx;y=s.ty;alpha=0;ring=cfg.splashSpan/2;}
+        break;
       }
       case 'boomerang':{
         const u=t<.5?t*2:(1-t)*2;
@@ -224,6 +256,7 @@
     clip.fillStyle(0xffffff,1).fillRect(0,spec.top,spec.width,spec.height-spec.top-spec.bottom);
     const mask=clip.createGeometryMask();
     const fx=scene.add.graphics().setDepth(6).setMask(mask).setName('hero-weapon:effects');
+    const groundFx=scene.add.graphics().setDepth(.8).setMask(mask).setName('hero-weapon:ground-effects');
     const select=document.createElement('select');select.id='hero-weapon-select';
     select.setAttribute('aria-label','나뭇잎 요정 무기');
     for(const item of [{id:'',name:'무기 선택 (없음)'},...items]){
@@ -242,17 +275,34 @@
     // The native control must not swallow the game's Escape pause action.
     select.addEventListener('keydown',e=>{if(e.key==='Escape')select.blur();});
     function render(){
-      fx.clear();const live=new Set(),hero=patrol.actors[0];
+      fx.clear();groundFx.clear();const live=new Set(),hero=patrol.actors[0];
       for(const s of model.state.shots){
         live.add(s.id);
-        if(!images.has(s.id)){
-          const image=I.weaponImage(scene,s.kind,s.x,s.y,s.span??tuning[s.kind].span).setDepth(s.kind==='yellow-floor'?.8:6).setMask(mask).setName('hero-weapon:'+s.kind+':'+s.id);
-          images.set(s.id,{image,width:image.displayWidth,height:image.displayHeight});
+        const splash=s.kind==='balloon'?balloonSplash(s):null;
+        let obj=images.get(s.id);
+        const phase=splash?'splash':'flight';
+        if(!obj||obj.phase!==phase){
+          if(obj)I.destroyRelic(obj.image);
+          const image=(splash?I.effectImage(scene,'water-splash',s.tx,s.ty,tuning.balloon.splashSpan):
+            I.weaponImage(scene,s.kind,s.x,s.y,s.span??tuning[s.kind].span))
+            .setDepth(splash?.82:s.kind==='yellow-floor'?.8:6).setMask(mask)
+            .setName('hero-weapon:'+s.kind+':'+(splash?'splash:':'')+s.id);
+          obj={image,phase,width:image.displayWidth,height:image.displayHeight};images.set(s.id,obj);
         }
-        const p=pose(s,hero),obj=images.get(s.id);
-        obj.image.setPosition(p.x,p.y).setRotation(p.angle).setAlpha(p.alpha)
-          .setDisplaySize(obj.width*p.scale,obj.height*p.scale);
-        if(s.kind==='flowerpot'){
+        const p=pose(s,hero),visible=splash||p;
+        obj.image.setPosition(visible.x,visible.y).setRotation(splash?0:p.angle).setAlpha(visible.alpha)
+          .setDisplaySize(obj.width*visible.scale,obj.height*visible.scale);
+        if(s.kind==='balloon'){
+          if(!splash){
+            const u=clamp(s.age/s.flight,0,1);
+            groundFx.fillStyle(P.n.ink,.20+.20*u).fillEllipse(mix(s.x,s.tx,u),mix(s.y,s.ty,u),10+5*u,4+2*u);
+          }else{
+            for(const part of balloonDroplets(s)){
+              fx.fillStyle(P.n.sky,part.alpha).fillEllipse(part.x,part.y,part.size*1.6,part.size*2.2);
+              fx.fillStyle(P.n.skyLight,part.alpha*.85).fillCircle(part.x-.4,part.y-.5,part.size*.45);
+            }
+          }
+        }else if(s.kind==='flowerpot'){
           if(s.age<tuning.flowerpot.fall){
             const u=clamp(s.age/tuning.flowerpot.fall,0,1);
             fx.fillStyle(P.n.ink,.15+.25*u).fillEllipse(s.tx,s.ty,13+6*u,4+2*u);
@@ -288,5 +338,5 @@
     scene.heroWeaponPreview={model,select:choose,equip,render,control:select};
     return scene.heroWeaponPreview;
   }
-  window.GardenHeroWeaponPreview=Object.freeze({enabled,combat,ids,tuning,interval,range,create,pose,wheelTravel,wheelExit,randomPoint,inAttackRange,potFragments,attach});
+  window.GardenHeroWeaponPreview=Object.freeze({enabled,combat,ids,tuning,interval,range,create,pose,wheelTravel,wheelExit,randomPoint,inAttackRange,potFragments,balloonFlight,balloonSplash,balloonDroplets,attach});
 }());
