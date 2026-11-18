@@ -57,6 +57,18 @@ try{
    const start=async()=>{await click(480,252);await page.waitForFunction(()=>window.__previewGame.scene.getScene('Game').fairyPatrol?.actors.length===11);};
    await start();
    const initial=await snapshot();
+   const bottom=await page.evaluate(()=>{
+    const s=window.__previewGame.scene.getScene('Game'),L=window.GardenGameLayout,b=L.bottomLayout();
+    const statObjects=s.children.list.filter(o=>o.name?.startsWith('stat-'));
+    return {labels:statObjects.filter(o=>o.name.startsWith('stat-label:')).map(o=>({key:o.name.slice(11),text:o.text,x:o.x})).sort((a,b)=>a.x-b.x),names:statObjects.map(o=>o.name).sort(),right:b.right,column:L.bottomStats.columnWidth,slotLeft:b.slotLeft,slotWidth:b.totalWidth,base:L.sumPreviewStats([]),filtered:L.sumPreviewStats([{stats:{hp:100,luck:5,pickupRange:20,dps:4}}])};
+   });
+   assert.deepEqual(bottom.labels.map(o=>[o.key,o.text]),[['dps','초당 피해량'],['defense','방어력'],['moveSpeed','이동 속도']]);
+   assert.ok(bottom.labels.every((o,i)=>o.x===bottom.right+(i+.5)*bottom.column));
+   assert.deepEqual(bottom.names,['dps','defense','moveSpeed'].flatMap(k=>['label','value','delta'].map(t=>'stat-'+t+':'+k)).sort());
+   assert.deepEqual(bottom.base,{dps:20,defense:12,moveSpeed:100});
+   assert.deepEqual(bottom.filtered,{dps:24,defense:12,moveSpeed:100});
+   assert.deepEqual(initial.hudStats,{'stat-value:dps':'20','stat-value:defense':'12','stat-value:moveSpeed':'100'});
+   assert.ok(bottom.right>bottom.slotLeft+bottom.slotWidth,'right-only stats keep center slots unchanged');
    for(const file of ['01_shoe.svg','05_wheel.svg','gem_1000.svg','heart_1000.svg'])assert.ok(svgRequests.some(u=>u.pathname.endsWith('/assets/palette16/items/'+file)&&u.searchParams.get('v')===revision),'versioned SVG request '+file);
    const colors=await page.evaluate(()=>{
     const scene=window.__previewGame.scene.getScene('Game');

@@ -323,25 +323,24 @@
   }
 
   // 9개 일반 + 마지막 확장 슬롯을 최대 폭에서 검토한다. 실제 초기 슬롯 정책은 4개로 유지.
-  const statKeys = Object.freeze(['defense', 'hp', 'luck', 'moveSpeed', 'pickupRange', 'dps']);
+  const statKeys = Object.freeze(['dps', 'defense', 'moveSpeed']);
   const statLabels = Object.freeze({
-    defense: '방어력', hp: '최대 체력', luck: '행운',
-    moveSpeed: '이동 속도', pickupRange: '획득 범위', dps: '초당 피해량'
+    dps: '초당 피해량', defense: '방어력', moveSpeed: '이동 속도'
   });
   // 모든 수치는 UI 비교용 임시 값. 실제 게임 계산식/단위/확률과 무관하다.
-  const baseStats = Object.freeze({ defense: 12, hp: 100, luck: 0, moveSpeed: 100, pickupRange: 48, dps: 20 });
+  const baseStats = Object.freeze({ dps: 20, defense: 12, moveSpeed: 100 });
   const previewItems = Object.freeze([
     { name: '신발', desc: '이동 속도가 증가합니다.', stats: { moveSpeed: 10 } },
     { name: '스프링클러', desc: '회전형 공격을 추가합니다.', stats: { dps: 18 } },
-    { name: '네잎클로버', desc: '도안에 필요한 꽃의 등장 확률이 증가합니다.', stats: { luck: 8 } },
-    { name: '보호 비료', desc: '꽃의 생존 능력이 증가합니다.', stats: { defense: 6, hp: 24 } },
-    { name: '자석', desc: '획득 범위가 증가합니다.', stats: { pickupRange: 12 } }
+    { name: '네잎클로버', desc: '도안에 필요한 꽃의 등장 확률이 증가합니다.', stats: {} },
+    { name: '보호 비료', desc: '꽃의 생존 능력이 증가합니다.', stats: { defense: 6 } },
+    { name: '자석', desc: '획득 범위가 증가합니다.', stats: {} }
   ].map(item => Object.freeze({ ...item, stats: Object.freeze(item.stats) })));
 
   function sumPreviewStats(equipped) {
     const result = { ...baseStats };
     equipped.forEach(item => {
-      if (item) Object.entries(item.stats).forEach(([key, value]) => { result[key] += value; });
+      if (item) statKeys.forEach(key => { result[key] += item.stats[key] || 0; });
     });
     return result;
   }
@@ -563,10 +562,9 @@
     ghost.list[0].setVisible(false);
     ghost.list[1].setVisible(false);
 
-    // 양쪽 바깥 여백에서 동일 폭 열 3개. 각 텍스트 묶음의 실제 크기로 중앙 정렬.
+    // 우하단에만 동일 폭 열 3개. 좌하단은 비워 두고 슬롯은 기존 위치를 유지한다.
     const stats = statKeys.map((key, index) => {
-      const left = index < bottomStats.columns ? layout.left : layout.right;
-      const x = left + bottomStats.columnWidth * ((index % bottomStats.columns) + 0.5);
+      const x = layout.right + bottomStats.columnWidth * (index + 0.5);
       const size = bottomStats.fontSize;
       return {
         key, x,
