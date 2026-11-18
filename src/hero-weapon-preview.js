@@ -8,16 +8,24 @@
   const items=window.GardenItemCards.entries.filter(i=>i.id!=='shoe'&&i.id!=='shield');
   const ids=Object.freeze(items.map(i=>i.id));
   const tuning=Object.freeze({
-    balloon:{life:1.55,span:22,minFlight:.45,maxFlight:.97,gravity:920,launchHeight:6,splashLife:.58,splashSpan:44,spread:.14},
-    boomerang:{life:3.8,span:20,speed:380,curve:65},wheel:{life:6,span:28,initialSpeed:420,minSpeed:180,drag:1.6},
-    flowerpot:{life:1.15,span:22,fall:.52,height:120},'paper-plane':{life:3.2,span:22,speed:310,turn:5.5},
+    balloon:{life:1.55,span:22,minFlight:.64,maxFlight:.94,gravity:440,launchHeight:8,splashLife:.58,splashSpan:44,spread:.14},
+    boomerang:{life:3.8,span:20,speed:380,minFlight:.46,maxFlight:1.6,curve:65,minCurve:30},wheel:{life:6,span:28,initialSpeed:420,minSpeed:180,drag:1.6},
+    flowerpot:{life:1.15,span:22,fall:.52,height:120},'paper-plane':{life:3.2,span:22,speed:310,turn:4.2,minFlight:.55,bank:22},
     'bouncy-ball':{life:3.2,span:22,speed:340,hop:.34,lift:18,chainRange:120},'yellow-floor':{life:2.6,span:44,spread:.32},
-    sprinkler:{life:1.9,span:22,radius:44},rock:{life:1.5,span:20,speed:520,gravity:180},broom:{life:2.4,span:44,orbit:26,period:1.2}
+    sprinkler:{life:1.9,span:22,radius:44,turn:4,emitInterval:.045,dropLife:.32,start:.12},rock:{life:1.5,span:20,speed:520,gravity:180},broom:{life:2.4,span:44,orbit:26,period:1.2}
   });
   // Model fallback ratios from the cropped approved SVGs. The scene uses the actual
   // measured raster bounds, including the existing diagonal broom normalization.
   const ratios={balloon:.853,boomerang:100/47.6,wheel:100/99.5,flowerpot:100/89.1,'paper-plane':.951,'bouncy-ball':.966,'yellow-floor':100/99.5,sprinkler:100/85.3,rock:100/78,broom:.972,'water-splash':100/41.1};
-  const defaultSize=(id,height)=>({width:height*ratios[id],height});
+  function defaultSize(id,span){
+    const height=id==='boomerang'?span/Math.max(1,ratios[id]):span;
+    const size={width:height*ratios[id],height};
+    if(id==='sprinkler'){
+      size.pivot={x:.495,y:.379};
+      size.nozzles=[{x:97*height/182,y:-49*height/182},{x:-96*height/182,y:-49*height/182},{x:0,y:103*height/182}];
+    }
+    return size;
+  }
   const sizeOf=s=>s.size||defaultSize(s.kind,tuning[s.kind].span);
   const wrapAngle=a=>Math.atan2(Math.sin(a),Math.cos(a));
   const clamp=(v,a,b)=>Math.max(a,Math.min(b,v));
@@ -63,7 +71,57 @@
     });
   }
   function balloonFlight(distance){
-    return clamp(.42+distance*.001,tuning.balloon.minFlight,tuning.balloon.maxFlight);
+    const c=tuning.balloon;
+    return mix(c.minFlight,c.maxFlight,clamp(distance/range,0,1));
+  }
+  // One continuous arc for short and long throws. Never shift the landing point.
+  function balloonHeight(s,u){
+    const c=tuning.balloon,flight=s.flight??balloonFlight(distance(s,{x:s.tx,y:s.ty}));
+    return c.launchHeight*(1-u)+.5*c.gravity*flight*flight*u*(1-u);
+  }
+  const bezier=(a,b,c,d,u)=>{const v=1-u;return v*v*v*a+3*v*v*u*b+3*v*u*u*c+u*u*u*d;};
+  function boomerangPath(s,hero){
+    const cfg=tuning.boomerang,d=distance(s,{x:s.tx,y:s.ty}),flight=s.flight||.85;
+    const out=s.age<=flight,u=clamp(out?s.age/flight:(s.age-flight)/(shotLife(s)-flight),0,1);
+    const curve=clamp(d*.32,cfg.minCurve,cfg.curve),lead=Math.max(32,d*.42),over=Math.max(18,d*.15);
+    const origin={x:s.x,y:s.y},target={x:s.tx,y:s.ty},end=hero?.center||origin;
+    const shift=(p,f,n)=>({x:p.x+s.dx*f-s.dy*n,y:p.y+s.dy*f+s.dx*n});
+    // Paired cubic tangents agree at the exact target; the minimum bow keeps
+    // near throws legible, rather than compressing them into a jittering line.
+    const a=out?origin:target,b=out?shift(origin,lead,curve*.42):shift(target,-over,-curve),
+      c=out?shift(target,over,curve):shift(end,lead,-curve*.42),z=out?target:end;
+    return {x:bezier(a.x,b.x,c.x,z.x,u),y:bezier(a.y,b.y,c.y,z.y,u)};
+  }
+  function planeFlight(d){return clamp(.42+d/285,tuning['paper-plane'].minFlight,2.4);}
+  function planePath(s,age){
+    const d=distance(s,{x:s.tx,y:s.ty}),flight=s.flight??planeFlight(d),u=clamp(age/flight,0,1);
+    const bend=clamp(d*.12,10,34),lift=clamp(d*.05,6,16);
+    const bow=Math.sin(Math.PI*u)**2,derivative=Math.PI*Math.sin(2*Math.PI*u);
+    const x=mix(s.x,s.tx,u)-s.dy*bend*bow,y=mix(s.y,s.ty,u)+(s.dx*bend-lift)*bow;
+    const vx=s.tx-s.x-s.dy*bend*derivative,vy=s.ty-s.y+(s.dx*bend-lift)*derivative;
+    return {x,y,heading:Math.atan2(vy,vx)};
+  }
+  // Rotating three-arm head, fixed at the hub. A drop retains the angle at
+  // emission and moves out from the physical nozzle, not around the hub.
+  function sprinklerDrops(s){
+    const cfg=tuning.sprinkler,size=sizeOf(s),nozzles=size.nozzles||defaultSize('sprinkler',cfg.span).nozzles;
+    const drops=[],last=Math.floor((s.age-cfg.start)/cfg.emitInterval+1e-8);
+    if(last<0)return drops;
+    const first=Math.max(0,last-Math.ceil(cfg.dropLife/cfg.emitInterval));
+    for(let i=first;i<=last;i++){
+      const emitted=cfg.start+i*cfg.emitInterval,age=s.age-emitted;
+      if(age<0||age>=cfg.dropLife)continue;
+      const u=age/cfg.dropLife,rotation=emitted*cfg.turn,c=Math.cos(rotation),n=Math.sin(rotation);
+      for(let j=0;j<nozzles.length;j++){
+        const q=nozzles[j],nx=q.x*c-q.y*n,ny=q.x*n+q.y*c,r=Math.hypot(nx,ny);
+        const a=Math.atan2(ny,nx)+((i+j)%5-2)*.035*u;
+        const travel=(cfg.radius-r)*(1-(1-u)**1.25);
+        const x=s.tx+nx+Math.cos(a)*travel,y=s.ty+ny+Math.sin(a)*travel;
+        drops.push({x,y,angle:a,alpha:Math.min(1,(1-u)*3),size:1.25+u*.65,length:2.6+u*1.4,
+          nx:s.tx+nx,ny:s.ty+ny,emitted,arm:j});
+      }
+    }
+    return drops;
   }
   function balloonSplash(s){
     const cfg=tuning.balloon,age=s.age-s.flight;
@@ -107,7 +165,11 @@
   }
   function placementExtent(kind,size){
     if(kind==='yellow-floor')return {x:Math.max(size.width,size.height)/2+1,y:size.height/2+1};
-    if(kind==='sprinkler'){const r=Math.max(tuning.sprinkler.radius+2,Math.hypot(size.width,size.height)/2)+1;return {x:r,y:r};}
+    if(kind==='sprinkler'){
+      const p=size.pivot||{x:.5,y:.5};
+      const r=Math.max(tuning.sprinkler.radius+3,Math.hypot(size.width*Math.max(p.x,1-p.x),size.height*Math.max(p.y,1-p.y)))+1;
+      return {x:r,y:r};
+    }
     if(kind==='broom'){
       const diagonal=Math.hypot(size.width,size.height);
       const r=tuning.broom.orbit+Math.max(diagonal/2,diagonal*.4+size.height*.18)+1;
@@ -209,12 +271,22 @@
           const target=live.find(e=>e.id===s.targetId&&!dead.has(e.id));
           if(target&&inAttackRange(target,s.origin)){s.tx=target.x;s.ty=target.y;}
           const cfg=tuning[s.kind],q=s.glide;
-          const desired=Math.atan2(s.ty-q.y,s.tx-q.x);
-          q.heading+=clamp(wrapAngle(desired-q.heading),-cfg.turn*delta,cfg.turn*delta);
-          const travel=cfg.speed*(.65+.35*Math.min(1,s.age/.22))*delta;
-          const d=Math.hypot(s.tx-q.x,s.ty-q.y);
-          if(d<=travel&&Math.abs(wrapAngle(desired-q.heading))<.5){q.x=s.tx;q.y=s.ty;if(!target)s.done=true;}
-          else{q.x+=Math.cos(q.heading)*travel;q.y+=Math.sin(q.heading)*travel;}
+          if(s.targetId===null){
+            // Empty-field preview is a stable glide with a gentle bow, ending
+            // exactly at its randomly selected point.
+            Object.assign(q,planePath(s,s.age));
+            if(s.age>=s.flight)s.done=true;
+          }else{
+            const d=Math.hypot(s.tx-q.x,s.ty-q.y);
+            const direct=Math.atan2(s.ty-q.y,s.tx-q.x);
+            const launch=Math.sin(Math.PI*clamp(s.age/.65,0,1))*.20*Math.min(1,d/80);
+            const desired=direct+launch;
+            q.heading+=clamp(wrapAngle(desired-q.heading),-cfg.turn*delta,cfg.turn*delta);
+            const speed=Math.min(cfg.speed,Math.max(65,d/.42))*(.65+.35*Math.min(1,s.age/.24));
+            const travel=speed*delta;
+            if(d<=travel&&Math.abs(wrapAngle(direct-q.heading))<.5){q.x=s.tx;q.y=s.ty;if(!target)s.done=true;}
+            else{q.x+=Math.cos(q.heading)*travel;q.y+=Math.sin(q.heading)*travel;}
+          }
         }
         const p=pose(s,hero);
         if(!s.preview&&damage){
@@ -281,13 +353,18 @@
         const tx=aim.x,ty=aim.y,d=Math.hypot(tx-x,ty-y)||1,dx=(tx-x)/d,dy=(ty-y)/d;
         const shot={id:serial++,owner:0,slot:slot.index,preview:slot.preview,kind:slot.id,x,y,tx,ty,dx,dy,origin,bounds,age:0,targetId:target?.id??null,hit:new Set(),size,span:cfg.span};
         if(slot.id==='balloon'){
+          shot.launchY=y+heroHeight*.30;
           shot.flight=balloonFlight(d);shot.life=shot.flight+tuning.balloon.splashLife;
           shot.splashSize=measure('water-splash',cfg.splashSpan);
         }
         if(slot.id==='boomerang'){
-          shot.flight=clamp(d/cfg.speed,.22,1.6);shot.life=shot.flight*2+.08;
+          shot.flight=clamp(.12+d/cfg.speed,cfg.minFlight,cfg.maxFlight);shot.life=shot.flight*2;
         }
-        if(slot.id==='paper-plane')shot.glide={x,y,heading:Math.atan2(dy,dx)};
+        if(slot.id==='paper-plane'){
+          shot.flight=planeFlight(d);
+          if(shot.targetId===null)shot.life=shot.flight;
+          shot.glide={x,y,heading:Math.atan2(dy,dx)};
+        }
         if(slot.id==='bouncy-ball')startLeg(shot,x,y,tx,ty,0,cfg.speed);
         if(slot.id==='rock')shot.life=Math.max(.06,d/cfg.speed);
         if(slot.id==='wheel'){
@@ -311,18 +388,13 @@
         const u=clamp(s.age/flight,0,1);
         x=mix(s.x,s.tx,u);
         // Constant horizontal velocity on the ground plane and constant gravity in height.
-        const height=cfg.launchHeight*(1-u)+.5*cfg.gravity*flight*flight*u*(1-u);
-        y=mix(s.y,s.ty,u)-height-cfg.span/2;
+        const height=balloonHeight(s,u);
+        y=mix(s.launchY??s.y,s.ty,u)-height-cfg.span/2;angle=s.dx*.16*Math.sin(Math.PI*u);
         if(u>=1){x=s.tx;y=s.ty;alpha=0;ring=(s.splashSize||defaultSize('water-splash',cfg.splashSpan)).width/2;}
         break;
       }
       case 'boomerang':{
-        const flight=s.flight||.85,out=s.age<=flight,u=clamp(out?s.age/flight:(s.age-flight)/(shotLife(s)-flight),0,1);
-        const end=hero?.center||{x:s.x,y:s.y},curve=Math.min(tuning.boomerang.curve,distance(s,{x:s.tx,y:s.ty})*.32);
-        const bend=Math.sin(Math.PI*u)*curve*(out?1:-1);
-        x=(out?mix(s.x,s.tx,u):mix(s.tx,end.x,u))+px*bend;
-        y=(out?mix(s.y,s.ty,u):mix(s.ty,end.y,u))+py*bend;
-        angle=s.age*18;break;
+        const q=boomerangPath(s,hero);x=q.x;y=q.y;angle=s.age*18;break;
       }
       case 'wheel':{
         const d=Math.min(wheelTravel(s),s.exitDistance??Infinity),r=(s.span??tuning.wheel.span)/2;
@@ -352,8 +424,7 @@
         break;
       }
       case 'sprinkler':{
-        x=s.tx;y=s.ty;scale=.8+.2*clamp(s.age/.12,0,1);angle=s.age*4;
-        if(s.age>=.15)ring=12+32*((s.age-.15)*2.4%1);break;
+        x=s.tx;y=s.ty;angle=s.age*tuning.sprinkler.turn;break;
       }
       case 'rock':{
         // Short ballistic bow with constant ground-plane speed and modest spin.
@@ -413,7 +484,7 @@
         if(s.kind==='balloon'){
           if(!splash){
             const u=clamp(s.age/s.flight,0,1);
-            groundFx.fillStyle(P.n.ink,.20+.20*u).fillEllipse(mix(s.x,s.tx,u),mix(s.y,s.ty,u),10+5*u,4+2*u);
+            groundFx.fillStyle(P.n.ink,.20+.20*u).fillEllipse(mix(s.x,s.tx,u),mix(s.launchY??s.y,s.ty,u),10+5*u,4+2*u);
           }else{
             for(const part of balloonDroplets(s)){
               fx.fillStyle(P.n.sky,part.alpha).fillEllipse(part.x,part.y,part.size*1.6,part.size*2.2);
@@ -432,6 +503,14 @@
                 part.x-c*r*.6+n*r*.7,part.y-n*r*.6-c*r*.7);
             }
           }
+        }else if(s.kind==='sprinkler'){
+          // A fixed ground hub; the SVG head spins about its true central cap.
+          groundFx.fillStyle(P.n.ink,.3).fillEllipse(s.tx,s.ty,18,10);
+          for(const part of sprinklerDrops(s)){
+            const dx=Math.cos(part.angle)*part.length/2,dy=Math.sin(part.angle)*part.length/2;
+            fx.lineStyle(part.size,P.n.sky,part.alpha).lineBetween(part.x-dx,part.y-dy,part.x+dx,part.y+dy);
+            fx.fillStyle(P.n.skyLight,part.alpha*.88).fillCircle(part.x+dx*.45,part.y+dy*.45,part.size*.45);
+          }
         }else if(s.kind==='broom'){
           // The deployment point is stationary even while the fairy patrols.
           groundFx.fillStyle(P.n.stone,.28).fillCircle(s.tx,s.ty,3);
@@ -439,7 +518,7 @@
         }else if(p.ring){
           const c=s.kind==='flowerpot'?P.n.clay:P.n.skyLight;
           fx.lineStyle(1.5,c,Math.max(.15,1-p.t)).strokeCircle(p.x,p.y,p.ring);
-          if(s.kind==='sprinkler')for(let i=0;i<8;i++){const a=i*Math.PI/4+p.angle;fx.fillStyle(c,.85).fillCircle(p.x+Math.cos(a)*p.ring,p.y+Math.sin(a)*p.ring,2);}
+
         }
       }
       for(const [id,obj] of images)if(!live.has(id)){I.destroyRelic(obj.image);images.delete(id);}
@@ -460,5 +539,5 @@
     scene.heroWeaponPreview={model,select:choose,equip,render,control:select};
     return scene.heroWeaponPreview;
   }
-  window.GardenHeroWeaponPreview=Object.freeze({enabled,combat,ids,tuning,interval,range,create,pose,defaultSize,wheelTravel,wheelExit,wheelPath,placementExtent,installationSafe,segmentIntersects,validAim,randomPoint,inAttackRange,potFragments,balloonFlight,balloonSplash,balloonDroplets,attach});
+  window.GardenHeroWeaponPreview=Object.freeze({enabled,combat,ids,tuning,interval,range,create,pose,defaultSize,wheelTravel,wheelExit,wheelPath,placementExtent,installationSafe,segmentIntersects,validAim,randomPoint,inAttackRange,potFragments,balloonFlight,balloonHeight,balloonSplash,balloonDroplets,boomerangPath,planeFlight,planePath,sprinklerDrops,attach});
 }());
