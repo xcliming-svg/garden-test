@@ -75,8 +75,14 @@ try{
       return held&&r.state.hearts===before+1&&r.state.flowers.get(id).energy===100&&!s.children.getByName('ground-relic:heart:'+d.id);
     });
     assert.equal(heartCheck,true);
-    await page.waitForFunction(()=>{const s=window.__previewGame.scene.getScene('Game');return s.enemyPreview.model.spawned>=3;},null,{timeout:30000});
-    assert.ok(await read(()=>{const s=window.__previewGame.scene.getScene('Game');return s.enemyPreview.model.elapsed<15&&s.enemyPreview.actors.every(a=>a.entry.id==='3_caterpillar');}),'three early arrivals within 15 simulated seconds');
+    // Advance the scene controller by simulated seconds; headless render speed
+    // varies across resolutions. Actual automatic fire/kill below remains live.
+    const openingCheck=await read(()=>{
+      const s=window.__previewGame.scene.getScene('Game'),e=s.enemyPreview;
+      e.advance(Math.max(0,6.1-e.model.elapsed));
+      return {spawned:e.model.spawned,elapsed:e.model.elapsed,caterpillars:e.actors.every(a=>a.entry.id==='3_caterpillar'),sprites:e.sprites.size,actors:e.actors.length};
+    });
+    assert.ok(openingCheck.spawned>=3&&openingCheck.elapsed<15&&openingCheck.caterpillars&&openingCheck.sprites===openingCheck.actors,JSON.stringify(openingCheck));
     await page.waitForFunction(()=>window.__previewGame.scene.getScene('Game').heroWeaponPreview.model.state.fired>0);
     await page.waitForFunction(()=>window.__previewGame.scene.getScene('Game').enemyPreview.model.kills>0,null,{timeout:60000});
     await page.keyboard.press('Escape');await page.waitForFunction(()=>window.__previewGame.scene.isActive('Pause'));
