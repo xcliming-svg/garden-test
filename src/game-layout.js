@@ -821,7 +821,15 @@
       scene.scale.off('resize', resizePreview);
     });
     refresh();
-    return {register,unregister};
+    function applyLoadout(){
+      if(!balancedCombat||!scene.heroWeaponPreview)return;
+      window.GardenWeaponBalance.loadout.forEach((id,index)=>{
+        const card=cards.find(c=>c.item.id===id);
+        if(card&&index<equipped.length&&scene.heroWeaponPreview.equip(index,id,card.item.level))equipped[index]=card.item;
+      });
+      refresh();
+    }
+    return {register,unregister,applyLoadout};
   }
 
   // 정원 UI 검토 전용: 중앙 2×2에서 시작하고 테스트 꽃 이미지만 배치한다.
