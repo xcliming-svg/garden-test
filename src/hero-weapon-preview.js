@@ -8,11 +8,18 @@
   const items=window.GardenItemCards.entries.filter(i=>i.id!=='shoe'&&i.id!=='shield');
   const ids=Object.freeze(items.map(i=>i.id));
   const tuning=Object.freeze({
-    balloon:{life:1.55,span:16,minFlight:.45,maxFlight:.97,gravity:920,launchHeight:6,splashLife:.58,splashSpan:106,spread:.14},boomerang:{life:1.7,span:18},wheel:{life:6,span:40,initialSpeed:420,minSpeed:180,drag:1.6},
-    flowerpot:{life:1.15,span:20,fall:.52,height:120},'paper-plane':{life:1.55,span:18},
-    'bouncy-ball':{life:1.7,span:14},'yellow-floor':{life:2.6,span:72,spread:.32},
-    sprinkler:{life:1.9,span:20},rock:{life:1.1,span:12},broom:{life:.7,span:28}
+    balloon:{life:1.55,span:22,minFlight:.45,maxFlight:.97,gravity:920,launchHeight:6,splashLife:.58,splashSpan:44,spread:.14},
+    boomerang:{life:3.8,span:20,speed:380,curve:65},wheel:{life:6,span:28,initialSpeed:420,minSpeed:180,drag:1.6},
+    flowerpot:{life:1.15,span:22,fall:.52,height:120},'paper-plane':{life:3.2,span:22,speed:310,turn:5.5},
+    'bouncy-ball':{life:3.2,span:22,speed:340,hop:.34,lift:18,chainRange:120},'yellow-floor':{life:2.6,span:44,spread:.32},
+    sprinkler:{life:1.9,span:22,radius:44},rock:{life:1.5,span:20,speed:520,gravity:180},broom:{life:2.4,span:44,orbit:26,period:1.2}
   });
+  // Model fallback ratios from the cropped approved SVGs. The scene uses the actual
+  // measured raster bounds, including the existing diagonal broom normalization.
+  const ratios={balloon:.853,boomerang:100/47.6,wheel:100/99.5,flowerpot:100/89.1,'paper-plane':.951,'bouncy-ball':.966,'yellow-floor':100/99.5,sprinkler:100/85.3,rock:100/78,broom:.972,'water-splash':100/41.1};
+  const defaultSize=(id,height)=>({width:height*ratios[id],height});
+  const sizeOf=s=>s.size||defaultSize(s.kind,tuning[s.kind].span);
+  const wrapAngle=a=>Math.atan2(Math.sin(a),Math.cos(a));
   const clamp=(v,a,b)=>Math.max(a,Math.min(b,v));
   const mix=(a,b,t)=>a+(b-a)*t;
   const interval=1.6,range=window.GardenFairyAttack.range;
@@ -95,7 +102,7 @@
     }
     return null;
   }
-  function create(spec,random=Math.random){
+  function create(spec,random=Math.random,measure=defaultSize){
     const state={selected:'',equipped:[],shots:[],fired:0,hits:0,elapsed:0};
     let serial=0;
     const next=new Map();
@@ -113,17 +120,28 @@
       state.shots=state.shots.filter(s=>s.slot!==index&&!s.preview);
       return true;
     }
+    function startLeg(s,x,y,tx,ty,age,speed){
+      s.leg={x,y,tx,ty,age,speed,duration:Math.max(.04,Math.hypot(tx-x,ty-y)/speed)};
+    }
     function step(dt,hero,targets=[],damage=null,slow=null,patrol=null){
       if(!(dt>0))return;
       state.elapsed+=dt;
       const live=targets.filter(e=>e.x>=0&&e.x<=spec.width&&e.y>=spec.top&&e.y<=spec.height-spec.bottom);
       const dead=new Set();
       for(const s of state.shots){
-        const previous=s.previous||pose(s,hero);
+        const previous=s.previous||pose(s,hero),oldAge=s.age;
         s.age=Math.min(shotLife(s),s.age+dt);
-        if(s.kind==='paper-plane'&&s.targetId!==null){
-          const target=live.find(e=>e.id===s.targetId);
+        const delta=s.age-oldAge;
+        if(s.kind==='paper-plane'){
+          const target=live.find(e=>e.id===s.targetId&&!dead.has(e.id));
           if(target&&inAttackRange(target,s.origin,s.bounds)){s.tx=target.x;s.ty=target.y;}
+          const cfg=tuning[s.kind],q=s.glide;
+          const desired=Math.atan2(s.ty-q.y,s.tx-q.x);
+          q.heading+=clamp(wrapAngle(desired-q.heading),-cfg.turn*delta,cfg.turn*delta);
+          const travel=cfg.speed*(.65+.35*Math.min(1,s.age/.22))*delta;
+          const d=Math.hypot(s.tx-q.x,s.ty-q.y);
+          if(d<=travel&&Math.abs(wrapAngle(desired-q.heading))<.5){q.x=s.tx;q.y=s.ty;if(!target)s.done=true;}
+          else{q.x+=Math.cos(q.heading)*travel;q.y+=Math.sin(q.heading)*travel;}
         }
         const p=pose(s,hero);
         if(!s.preview&&damage){
@@ -131,12 +149,20 @@
           const area=s.kind==='balloon'||s.kind==='flowerpot';
           const hits=candidates.filter(e=>{
             const r=e.radius||0;
-            if(s.kind==='balloon')return !s.burstDone&&s.age>=s.flight&&distance(p,{x:e.x,y:e.ground??e.y})<=tuning.balloon.splashSpan/2+r;
+            if(s.kind==='balloon'){
+              const q=s.splashSize||defaultSize('water-splash',tuning.balloon.splashSpan);
+              return !s.burstDone&&s.age>=s.flight&&Math.hypot((e.x-p.x)/(q.width/2+r),((e.ground??e.y)-p.y)/(q.height/2+r))<=1;
+            }
             if(area)return p.ring>0&&distance(p,e)<=p.ring+r;
-            if(s.kind==='yellow-floor')return distance(p,e)<=tuning[s.kind].span*p.scale/2+r;
-            if(s.kind==='wheel')return segmentDistance(previous,p,e)<=(s.span??tuning.wheel.span)/2+r;
-            if(s.kind==='sprinkler')return p.t>.25&&distance(p,e)<=44+r;
-            return segmentDistance(previous,p,e)<=tuning[s.kind].span*.4+r;
+            if(s.kind==='yellow-floor')return distance(p,e)<=sizeOf(s).height*p.scale/2+r;
+            if(s.kind==='wheel')return segmentDistance(previous,p,e)<=sizeOf(s).height/2+r;
+            if(s.kind==='sprinkler')return s.age>=.15&&distance(p,e)<=tuning.sprinkler.radius+r;
+            if(s.kind==='broom'){
+              const reach=Math.hypot(sizeOf(s).width,sizeOf(s).height)*.4;
+              const tip=q=>({x:q.x+Math.cos(q.angle+3*Math.PI/4)*reach,y:q.y+Math.sin(q.angle+3*Math.PI/4)*reach});
+              return Math.min(segmentDistance(previous,p,e),segmentDistance(tip(previous),tip(p),e),segmentDistance(p,tip(p),e))<=sizeOf(s).height*.22+r;
+            }
+            return segmentDistance(previous,p,e)<=Math.min(sizeOf(s).width,sizeOf(s).height)*.4+r;
           }).sort((a,b)=>distance(previous,a)-distance(previous,b));
           if(s.kind==='yellow-floor'){
             for(const e of hits)slow?.(e.id,.3,.25);
@@ -148,16 +174,18 @@
               s.hit.add(e.id);state.hits++;
               if(result.killed)dead.add(e.id);
               if(s.kind==='bouncy-ball'){
-                const options=live.filter(q=>q.id!==e.id&&!dead.has(q.id)&&!s.hit.has(q.id)&&inAttackRange(q,s.origin,s.bounds));
+                const options=live.filter(q=>q.id!==e.id&&!dead.has(q.id)&&!s.hit.has(q.id)&&distance(p,q)<=tuning['bouncy-ball'].chainRange&&inAttackRange(q,s.origin,s.bounds));
                 const other=options[Math.floor(random()*options.length)];
                 if(other&&s.hit.size<3){
-                  s.bounce={x:p.x,y:p.y,tx:other.x,ty:other.y,age:s.age};s.targetId=other.id;
+                  const speed=Math.max(180,s.leg.speed*.82);
+                  startLeg(s,p.x,p.y,other.x,other.y,s.age,speed);s.targetId=other.id;
                 }else s.done=true;
               }else if(single)s.done=true;
             }
           }
         }
         if(s.kind==='balloon'&&s.age>=s.flight)s.burstDone=true;
+        if(s.kind==='bouncy-ball'&&s.age>=s.leg.age+s.leg.duration+.08)s.done=true;
         s.previous=p;
       }
       state.shots=state.shots.filter(s=>!s.done&&s.age<shotLife(s)&&
@@ -175,18 +203,26 @@
         const aim=target||randomPoint(spec,origin,bounds,random);
         if(!aim)continue;
         let tx=aim.x,ty=aim.y;
-        if((slot.id==='flowerpot'||slot.id==='balloon')&&target&&Number.isFinite(target.ground)){
+        if(['flowerpot','balloon','yellow-floor','sprinkler','broom'].includes(slot.id)&&target&&Number.isFinite(target.ground)){
           const ground={x:tx,y:target.ground};
           if(ground.y>=spec.top&&ground.y<=spec.height-spec.bottom&&inAttackRange(ground,origin,bounds))ty=ground.y;
         }
         const d=Math.hypot(tx-x,ty-y)||1,dx=(tx-x)/d,dy=(ty-y)/d;
-        const shot={id:serial++,owner:0,slot:slot.index,preview:slot.preview,kind:slot.id,x,y,tx,ty,dx,dy,origin,bounds,age:0,targetId:target?.id??null,hit:new Set()};
+        const cfg=tuning[slot.id],size=measure(slot.id,cfg.span);
+        const shot={id:serial++,owner:0,slot:slot.index,preview:slot.preview,kind:slot.id,x,y,tx,ty,dx,dy,origin,bounds,age:0,targetId:target?.id??null,hit:new Set(),size,span:cfg.span};
         if(slot.id==='balloon'){
           shot.flight=balloonFlight(d);shot.life=shot.flight+tuning.balloon.splashLife;
+          shot.splashSize=measure('water-splash',cfg.splashSpan);
         }
+        if(slot.id==='boomerang'){
+          shot.flight=clamp(d/cfg.speed,.22,1.6);shot.life=shot.flight*2+.08;
+        }
+        if(slot.id==='paper-plane')shot.glide={x,y,heading:Math.atan2(dy,dx)};
+        if(slot.id==='bouncy-ball')startLeg(shot,x,y,tx,ty,0,cfg.speed);
+        if(slot.id==='rock')shot.life=Math.max(.06,d/cfg.speed);
         if(slot.id==='wheel'){
-          const span=hero.visibleHeight||tuning.wheel.span,r=span/2,offset=span+4;
-          shot.x=x+dx*offset;shot.y=y+dy*offset;shot.span=span;
+          const span=cfg.span,r=span/2,offset=(hero.visibleHeight||40)/2+r+4;
+          shot.x=x+dx*offset;shot.y=y+dy*offset;
           // Keep the randomly chosen aim, but roll along that ray past the screen edge.
           shot.exitDistance=wheelExit(spec,shot.x,shot.y,dx,dy,r);
         }
@@ -208,14 +244,16 @@
         // Constant horizontal velocity on the ground plane and constant gravity in height.
         const height=cfg.launchHeight*(1-u)+.5*cfg.gravity*flight*flight*u*(1-u);
         y=mix(s.y,s.ty,u)-height-cfg.span/2;
-        if(u>=1){x=s.tx;y=s.ty;alpha=0;ring=cfg.splashSpan/2;}
+        if(u>=1){x=s.tx;y=s.ty;alpha=0;ring=(s.splashSize||defaultSize('water-splash',cfg.splashSpan)).width/2;}
         break;
       }
       case 'boomerang':{
-        const u=t<.5?t*2:(1-t)*2;
-        const end=hero?.center||{x:s.x,y:s.y};
-        x=mix(t<.5?s.x:end.x,s.tx,u)+px*Math.sin(Math.PI*u)*24;
-        y=mix(t<.5?s.y:end.y,s.ty,u)+py*Math.sin(Math.PI*u)*24;angle=t*12;break;
+        const flight=s.flight||.85,out=s.age<=flight,u=clamp(out?s.age/flight:(s.age-flight)/(shotLife(s)-flight),0,1);
+        const end=hero?.center||{x:s.x,y:s.y},curve=Math.min(tuning.boomerang.curve,distance(s,{x:s.tx,y:s.ty})*.32);
+        const bend=Math.sin(Math.PI*u)*curve*(out?1:-1);
+        x=(out?mix(s.x,s.tx,u):mix(s.tx,end.x,u))+px*bend;
+        y=(out?mix(s.y,s.ty,u):mix(s.ty,end.y,u))+py*bend;
+        angle=s.age*18;break;
       }
       case 'wheel':{
         const d=Math.min(wheelTravel(s),s.exitDistance??Infinity),r=(s.span??tuning.wheel.span)/2;
@@ -228,30 +266,41 @@
         if(u>=1){y=s.ty;alpha=0;ring=38;}
         break;
       }
-      case 'paper-plane':x+=px*Math.sin(Math.PI*t)*20;y+=py*Math.sin(Math.PI*t)*20;angle=a+Math.PI/4;break;
+      case 'paper-plane':{
+        const q=s.glide||{x:s.x,y:s.y,heading:a};
+        x=q.x;y=q.y;angle=q.heading+Math.PI/2;break;
+      }
       case 'bouncy-ball':{
-        const u=t<.55?t/.55:(t-.55)/.45;
-        x=t<.55?mix(s.x,s.tx,u):s.tx-s.dx*45*u+px*85*u;
-        y=t<.55?mix(s.y,s.ty,u):s.ty-s.dy*45*u+py*85*u;
-        y-=Math.abs(Math.sin(t*3*Math.PI))*18;break;
+        const leg=s.leg||{x:s.x,y:s.y,tx:s.tx,ty:s.ty,age:0,duration:1};
+        const u=clamp((s.age-leg.age)/leg.duration,0,1);
+        const hops=Math.max(1,Math.round(leg.duration/tuning['bouncy-ball'].hop));
+        x=mix(leg.x,leg.tx,u);y=mix(leg.y,leg.ty,u)-Math.abs(Math.sin(Math.PI*u*hops))*tuning['bouncy-ball'].lift;
+        angle=(s.age-leg.age)*7;break;
       }
       case 'yellow-floor':{
         const u=clamp(s.age/tuning['yellow-floor'].spread,0,1);
         x=s.tx;y=s.ty;scale=.08+.92*(1-(1-u)**3);alpha=t>.85?(1-t)/.15:1;
         break;
       }
-      case 'sprinkler':x=mix(s.x,s.tx,Math.min(1,t/.25));y=mix(s.y,s.ty,Math.min(1,t/.25));if(t>.25)ring=12+32*((t-.25)*4%1);break;
-      case 'rock':angle=t*5;break;
+      case 'sprinkler':{
+        x=s.tx;y=s.ty;scale=.8+.2*clamp(s.age/.12,0,1);angle=s.age*4;
+        if(s.age>=.15)ring=12+32*((s.age-.15)*2.4%1);break;
+      }
+      case 'rock':{
+        // Short ballistic bow with constant ground-plane speed and modest spin.
+        y-=.5*tuning.rock.gravity*shotLife(s)**2*t*(1-t);angle=s.age*4;break;
+      }
       case 'broom':{
-        const p=hero?.center||{x:s.x,y:s.y},sweep=a-1.15+2.3*t;
-        x=p.x+Math.cos(sweep)*27;y=p.y+Math.sin(sweep)*27;angle=sweep+Math.PI/4;break;
+        const cfg=tuning.broom,sweep=a+s.age*2*Math.PI/cfg.period;
+        x=s.tx+Math.cos(sweep)*cfg.orbit;y=s.ty+Math.sin(sweep)*cfg.orbit;
+        angle=sweep-3*Math.PI/4;break;
       }
     }
     return {x,y,angle,alpha,scale,ring,t};
   }
   function attach(scene,spec,patrol){
     if(!enabled)return null;
-    const I=window.GardenItemCards,P=window.GardenPalette,model=create(spec),images=new Map();
+    const I=window.GardenItemCards,P=window.GardenPalette,model=create(spec,Math.random,(id,height)=>I.attackSize(scene,id,height)),images=new Map();
     const clip=scene.make.graphics({x:0,y:0,add:false});
     clip.fillStyle(0xffffff,1).fillRect(0,spec.top,spec.width,spec.height-spec.top-spec.bottom);
     const mask=clip.createGeometryMask();
@@ -285,7 +334,7 @@
           if(obj)I.destroyRelic(obj.image);
           const image=(splash?I.effectImage(scene,'water-splash',s.tx,s.ty,tuning.balloon.splashSpan):
             I.weaponImage(scene,s.kind,s.x,s.y,s.span??tuning[s.kind].span))
-            .setDepth(splash?.82:s.kind==='yellow-floor'?.8:6).setMask(mask)
+            .setDepth(splash?.82:s.kind==='yellow-floor'?.8:['broom','sprinkler'].includes(s.kind)?1.8:6).setMask(mask)
             .setName('hero-weapon:'+s.kind+':'+(splash?'splash:':'')+s.id);
           obj={image,phase,width:image.displayWidth,height:image.displayHeight};images.set(s.id,obj);
         }
@@ -314,10 +363,14 @@
                 part.x-c*r*.6+n*r*.7,part.y-n*r*.6-c*r*.7);
             }
           }
+        }else if(s.kind==='broom'){
+          // The deployment point is stationary even while the fairy patrols.
+          groundFx.fillStyle(P.n.stone,.28).fillCircle(s.tx,s.ty,3);
+          groundFx.fillStyle(P.n.ink,.2).fillEllipse(p.x,p.y+8,20,5);
         }else if(p.ring){
           const c=s.kind==='flowerpot'?P.n.clay:P.n.skyLight;
           fx.lineStyle(1.5,c,Math.max(.15,1-p.t)).strokeCircle(p.x,p.y,p.ring);
-          if(s.kind==='sprinkler')for(let i=0;i<8;i++){const a=i*Math.PI/4+p.t*5;fx.fillStyle(c,.85).fillCircle(p.x+Math.cos(a)*p.ring,p.y+Math.sin(a)*p.ring,2);}
+          if(s.kind==='sprinkler')for(let i=0;i<8;i++){const a=i*Math.PI/4+p.angle;fx.fillStyle(c,.85).fillCircle(p.x+Math.cos(a)*p.ring,p.y+Math.sin(a)*p.ring,2);}
         }
       }
       for(const [id,obj] of images)if(!live.has(id)){I.destroyRelic(obj.image);images.delete(id);}
@@ -338,5 +391,5 @@
     scene.heroWeaponPreview={model,select:choose,equip,render,control:select};
     return scene.heroWeaponPreview;
   }
-  window.GardenHeroWeaponPreview=Object.freeze({enabled,combat,ids,tuning,interval,range,create,pose,wheelTravel,wheelExit,randomPoint,inAttackRange,potFragments,balloonFlight,balloonSplash,balloonDroplets,attach});
+  window.GardenHeroWeaponPreview=Object.freeze({enabled,combat,ids,tuning,interval,range,create,pose,defaultSize,wheelTravel,wheelExit,randomPoint,inAttackRange,potFragments,balloonFlight,balloonSplash,balloonDroplets,attach});
 }());
