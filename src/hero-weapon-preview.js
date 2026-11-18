@@ -12,8 +12,6 @@
   const combat=window.GardenEnemyPreview.enabled&&params.get('weapons')==='1'&&params.get('attack')!=='0';
   const enabled=window.GardenFairyPatrol.enabled&&(!window.GardenEnemyPreview.enabled||combat)&&
     window.GardenFlowerGrowth.enabled&&params.get('cards')!=='0'&&params.get('cards')!=='legacy';
-  const items=window.GardenItemCards.entries.filter(i=>i.id!=='shoe'&&i.id!=='shield');
-  const ids=Object.freeze(items.map(i=>i.id));
   const tuning=Object.freeze({
     balloon:{life:1.55,span:22,minFlight:.64,maxFlight:.94,gravity:440,launchHeight:8,splashLife:.58,splashSpan:44,spread:.14},
     boomerang:{life:3.8,span:28,speed:380,minFlight:.46,maxFlight:1.6,curve:65,minCurve:30},wheel:{life:6,span:28,initialSpeed:420,minSpeed:180,drag:1.6},
@@ -21,6 +19,9 @@
     'bouncy-ball':{life:3.2,span:22,speed:340,hop:.34,lift:18,chainRange:120},'yellow-floor':{life:2.6,span:44,spread:.32},
     sprinkler:{life:1.9,span:24,radius:44,turn:4,emitInterval:.045,dropLife:.32,start:.12},rock:{life:1.5,span:resolveRockSize(params.get('rockSize')),speed:520,gravity:180},broom:{life:2.4,span:44,orbit:26,period:1.2}
   });
+  // Only explicitly implemented attacks belong in the weapon selector.
+  const items=window.GardenItemCards.entries.filter(i=>Object.prototype.hasOwnProperty.call(tuning,i.id));
+  const ids=Object.freeze(items.map(i=>i.id));
   // Model fallback ratios from the cropped approved SVGs. The scene uses the actual
   // measured raster bounds, including the existing diagonal broom normalization.
   const ratios={balloon:.853,boomerang:100/47.6,wheel:100/99.5,flowerpot:100/89.1,'paper-plane':.951,'bouncy-ball':.966,'yellow-floor':100/99.5,sprinkler:100/85.3,rock:100/78,broom:.972,'water-splash':100/41.1};
