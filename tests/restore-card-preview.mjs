@@ -202,13 +202,21 @@ try{
    const hudPng=await page.screenshot({path:join(out,'cards-'+w+'-initial.png')});
    const divider=await page.evaluate(async b64=>{
      const s=window.__previewGame.scene.getScene('Game'),L=window.GardenGameLayout,A=window.GardenItemCards,z=s.cameras.main.zoom,icon=s.children.getByName('hud-gem-icon'),b=A.gemInk(icon);
-     const column2=(Math.round(icon.x*z)+b.left)/z-L.hud.padding;
+     const column2=Math.round((Math.round(icon.x*z)+b.left)/z-L.hud.padding);
      const im=await createImageBitmap(await(await fetch('data:image/png;base64,'+b64)).blob()),cv=document.createElement('canvas');
      cv.width=im.width;cv.height=im.height;const ctx=cv.getContext('2d');ctx.drawImage(im,0,0);
-     const at=(x,y)=>{const d=ctx.getImageData(Math.floor(x*z),Math.floor(y*z),1,1).data;return (d[0]<<16)|(d[1]<<8)|d[2];};
-     return {role:L.colors.hudDivider,lines:[at(column2/2+1,7),at(column2+1,7)],background:at(column2+4,7)};
+     const at=(x,y)=>{const d=ctx.getImageData(x,y,1,1).data;return (d[0]<<16)|(d[1]<<8)|d[2];};
+     const lines=[column2/2,column2].map(x=>{
+       const left=Math.round(x*z),right=Math.round((x+1)*z),top=Math.round(5*z),bottom=Math.round(25*z);
+       const expected=right-left;let valid=true;
+       for(let y=top;y<bottom;y++)for(let xx=left;xx<right;xx++)if(at(xx,y)!==0x3B3A44)valid=false;
+       for(const y of [top-1,bottom])for(let xx=left;xx<right;xx++)if(at(xx,y)!==0x16161A)valid=false;
+       for(const xx of [left-1,right])if(at(xx,Math.round(7*z))!==0x16161A)valid=false;
+       return {expected,valid};
+     });
+     return {role:L.colors.hudDivider,lines};
    },hudPng.toString('base64'));
-   assert.deepEqual(divider,{role:0x3B3A44,lines:[0x3B3A44,0x3B3A44],background:0x16161A});
+   assert.equal(divider.role,0x3B3A44);assert.ok(divider.lines.every(l=>l.valid&&l.expected>=1&&l.expected<=Math.ceil(w/960)),JSON.stringify(divider));
    // Resizing must rebuild output-sized textures without changing logical bounds.
    await page.setViewportSize({width:1920,height:1080});
    await page.waitForFunction(()=>window.__previewGame.scene.getScene('Game').children.getByName('placeholder:item:00').list[2].frame.width===48||window.__previewGame.scene.getScene('Game').children.getByName('placeholder:item:00').list[2].frame.height===48);

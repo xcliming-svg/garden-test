@@ -230,7 +230,7 @@
 
     // 좌측 수치 세 그룹 사이에만 구분선. 우측 완성도는 독립 우정렬.
     g.fillStyle(colors.hudDivider, 1);
-    [columns.kills.x, columns.gems.x].forEach(x => g.fillRect(x, 5, 2, 20));
+    [columns.kills.x, columns.gems.x].forEach(x => g.fillRect(x, 5, 1, 20));
 
     // 참조처럼 시간·수치·레이블을 같은 12px 크기로 표시.
     function metric(column, label, value, valueSize = hud.valueSize) {
