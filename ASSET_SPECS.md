@@ -1,5 +1,7 @@
 # 전장 UI 및 에셋 규격
 
+> **devel 꽃밭 URL 비교:** `gridColor=slate|graphite|charcoal` (#535361/#3B3A44/#16161A), `gridStyle=solid|dashed` (기본 solid, 점선 3px/2px 간격) 독립 조합. 생략·잘못된 값은 slate/solid. 기본 어두운 테마의 꽃밭에만 적용하고 카드/슬롯/정보창 및 growth 강조 유지. `full=1`과 조합 가능. `uitype=1` 밝은 흙 테마 제외. 예: `?gridColor=graphite&gridStyle=dashed`.
+
 > **devel 현행:** 꽃밭은 1px 공유 실선 slate #535361(교차점 포함, 내부 투명). 카드·장착 슬롯·정보창 외곽선과 동일. 꽃 강조 growth #84A83E, 아이템 강조 sky #6794D8, 카드·정보창 본문 graphite #3B3A44 유지. 아래 점선·이전 강조색 규격은 역사적 기록.
 
 > **하단 HUD 최신 규격:** 좌하단 비움, 우하단 초당 피해량·방어력·이동 속도 순 3열. 중앙 장착 슬롯 및 에셋 크기 유지. 이전 6종 능력치 표는 역사적 기준이며 [960×540 현행 규격](./docs/resolution-960x540.md)을 따른다.

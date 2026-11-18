@@ -259,4 +259,49 @@ try{
    console.log('PASS '+w+'x'+h+': all 20 SVG assets, pointer drag, tooltip, equip/replace, pause, restart, no enemy requests');
   }finally{await page.close();}
  }
+ // All six URL combinations plus invalid-input fallback: actual texture and drag checks.
+ for(const [style,name,base,w] of [
+   ['solid','slate',0x535361,960],['solid','graphite',0x3B3A44,960],['solid','charcoal',0x16161A,960],
+   ['dashed','slate',0x535361,960],['dashed','graphite',0x3B3A44,1280],['dashed','charcoal',0x16161A,960],
+   ['invalid','constructor',0x535361,960]
+ ]){
+  const page=await browser.newPage({viewport:{width:w,height:w*9/16}});
+  const errors=[];page.on('pageerror',e=>errors.push(String(e)));
+  try{
+   await page.goto(url+'/index.html?gridStyle='+style+'&gridColor='+name);
+   await page.waitForFunction(()=>window.__previewGame?.scene.isActive('MainMenu'));
+   const box=await page.locator('canvas').boundingBox();
+   const coords=(x,y)=>[box.x+x*box.width/960,box.y+y*box.height/540];
+   await page.mouse.click(...coords(480,252));
+   await page.waitForFunction(()=>window.__previewGame.scene.getScene('Game').fairyPatrol?.actors.length===11);
+   const inspect=()=>page.evaluate(()=>{
+    const s=window.__previewGame.scene.getScene('Game'),G=window.GardenDashedGridPreview,L=window.GardenGameLayout,g=L.spec.garden,z=s.cameras.main.zoom;
+    const occ=new Set(s.fairyPatrol.occupied),shown=new Set([...occ,...L.gardenCandidates(occ)]),r=L.gardenRaster(shown,g,z);
+    const t=s.children.getByName('garden-preview-soil').texture.getSourceImage(),data=t.getContext('2d').getImageData(0,0,t.width,t.height).data;
+    const at=(x,y)=>{const i=((Math.round((g.y+y)*z)-r.y)*t.width+Math.round((g.x+x)*z)-r.x)*4;return data[i+3]===255?(data[i]<<16)|(data[i+1]<<8)|data[i+2]:null;};
+    const has=(x,y)=>x>=0&&x<g.columns&&y>=0&&y<g.rows&&shown.has(y*g.columns+x);
+    const segment=k=>G.lineStyle==='solid'||(k>=2&&k<g.pitch-1&&(k-2)%5<3);
+    let correct=true;
+    for(let y=0;y<=g.rows;y++)for(let x=0;x<g.columns;x++)for(let k=1;k<g.pitch;k++)if((at(x*g.pitch+k,y*g.pitch)!==null)!==((has(x,y)||has(x,y-1))&&segment(k)))correct=false;
+    for(let y=0;y<g.rows;y++)for(let x=0;x<=g.columns;x++)for(let k=1;k<g.pitch;k++)if((at(x*g.pitch,y*g.pitch+k)!==null)!==((has(x,y)||has(x-1,y))&&segment(k)))correct=false;
+    for(let y=0;y<=g.rows;y++)for(let x=0;x<=g.columns;x++)if((at(x*g.pitch,y*g.pitch)!==null)!==(G.lineStyle==='solid'&&(has(x,y)||has(x-1,y)||has(x,y-1)||has(x-1,y-1))))correct=false;
+    for(let y=0;y<g.rows;y++)for(let x=0;x<g.columns;x++)if(at(x*g.pitch+g.cell/2,y*g.pitch+g.cell/2)!==null)correct=false;
+    const used=new Set();for(let i=0;i<data.length;i+=4)if(data[i+3])used.add((data[i]<<16)|(data[i+1]<<8)|data[i+2]);
+    const f=s.children.getByName('placeholder:flower:0'),item=s.children.getByName('placeholder:item:00');
+    return {correct,style:G.lineStyle,name:G.colorName,base:G.colors.base,used:[...used].sort((a,b)=>a-b),target:at(3*g.pitch+2,4*g.pitch),flower:[f.x,f.y],flowerBorder:f.list[0].fillColor,itemBorder:item.list[0].fillColor,slot:s.children.getByName('slot-frame:0').strokeColor,tip:L.itemTooltip.accent,drop:[g.x+3*g.pitch+1+g.cell/2,g.y+4*g.pitch+1+g.cell/2],stage:s.flowerGrowth.entries.size};
+   });
+   const idle=await inspect();
+   assert.equal(idle.style,style==='dashed'?'dashed':'solid');assert.equal(idle.name,name==='constructor'?'slate':name);
+   assert.equal(idle.base,base);assert.ok(idle.correct,JSON.stringify(idle));assert.deepEqual(idle.used,[base]);
+   assert.deepEqual([idle.flowerBorder,idle.itemBorder,idle.slot,idle.tip],Array(4).fill(0x535361));
+   if(style!=='invalid')await page.screenshot({path:join(out,'grid-'+style+'-'+name+'.png')});
+   await page.mouse.move(...coords(...idle.flower));await page.mouse.down();await page.mouse.move(...coords(...idle.drop),{steps:12});
+   const hot=await inspect();assert.ok(hot.correct,JSON.stringify(hot));assert.deepEqual(hot.used,[base,0x84A83E]);
+   assert.equal(hot.target,0x84A83E);assert.equal(hot.flowerBorder,0x84A83E);
+   if(style!=='invalid')await page.screenshot({path:join(out,'grid-'+style+'-'+name+'-highlight.png')});
+   await page.mouse.up();await page.waitForFunction(()=>window.__previewGame.scene.getScene('Game').flowerGrowth.entries.size===5);
+   const planted=await inspect();assert.ok(planted.correct);assert.deepEqual(planted.used,[base]);assert.equal(planted.stage,5);
+   assert.deepEqual(errors,[]);console.log('PASS grid '+style+'/'+name+' '+w+'px');
+  }finally{await page.close();}
+ }
 }finally{await browser.close();server.close();}

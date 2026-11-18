@@ -1,7 +1,11 @@
 (function(){
   'use strict';
-  const R=window.GardenPalette.reference.n;
-  const colors=Object.freeze({base:R.gardenBorder,active:R.flowerBorder});
+  const P=window.GardenPalette,R=P.reference.n;
+  const params=new URLSearchParams(window.location.search);
+  const requested=params.get('gridColor');
+  const colorName=['slate','graphite','charcoal'].includes(requested)?requested:'slate';
+  const lineStyle=params.get('gridStyle')==='dashed'?'dashed':'solid';
+  const colors=Object.freeze({base:P.uiType===1?R.gardenBorder:P.n[colorName],active:R.flowerBorder});
 
   const all=g=>new Set(Array.from({length:g.columns*g.rows},(_,i)=>i));
   const visible=(occupied,candidates)=>new Set([...occupied,...candidates]);
@@ -17,8 +21,8 @@
       top:garden.top-gap-guardianHeight/2,bottom:garden.bottom+gap+guardianHeight/2};
     return {garden,patrol,gap};
   }
-  // Solid shared 1px borders, including intersections. Active edges take
-  // precedence at junctions; draw every logical border pixel only once.
+  // Shared 1px borders: solid junctions by default or the previous 3px
+  // dash / 2px gap pattern with transparent junctions. Geometry is unchanged.
   function rectangles(g,occupied,candidates,hover=null){
     const rects=[],p=g.pitch,shown=visible(occupied,candidates);
     const get=(x,y)=>x>=0&&x<g.columns&&y>=0&&y<g.rows?y*g.columns+x:-1;
@@ -30,13 +34,18 @@
     }
     function edge(x,y,horizontal,c){
       if(c===null)return;
-      rects.push(horizontal?{x:x+1,y,w:p-1,h:1,color:c}:{x,y:y+1,w:1,h:p-1,color:c});
+      if(lineStyle==='dashed'){
+        for(let t=2;t<p-1;t+=5){
+          const length=Math.min(3,p-1-t);
+          rects.push(horizontal?{x:x+t,y,w:length,h:1,color:c}:{x,y:y+t,w:1,h:length,color:c});
+        }
+      }else rects.push(horizontal?{x:x+1,y,w:p-1,h:1,color:c}:{x,y:y+1,w:1,h:p-1,color:c});
     }
     for(let y=0;y<=g.rows;y++)for(let x=0;x<g.columns;x++)
       edge(x*p,y*p,true,color(get(x,y-1),get(x,y)));
     for(let x=0;x<=g.columns;x++)for(let y=0;y<g.rows;y++)
       edge(x*p,y*p,false,color(get(x-1,y),get(x,y)));
-    for(let y=0;y<=g.rows;y++)for(let x=0;x<=g.columns;x++){
+    if(lineStyle==='solid')for(let y=0;y<=g.rows;y++)for(let x=0;x<=g.columns;x++){
       const cells=[get(x-1,y-1),get(x,y-1),get(x-1,y),get(x,y)];
       const incident=[color(cells[0],cells[1]),color(cells[2],cells[3]),color(cells[0],cells[2]),color(cells[1],cells[3])];
       const c=incident.includes(colors.active)?colors.active:incident.includes(colors.base)?colors.base:null;
@@ -61,5 +70,5 @@
       ctx.fillStyle='#'+r.color.toString(16).padStart(6,'0');ctx.fillRect(x,y,w,h);
     }
   }
-  window.GardenDashedGridPreview=Object.freeze({colors,all,visible,geometry,rectangles,draw});
+  window.GardenDashedGridPreview=Object.freeze({colors,colorName,lineStyle,all,visible,geometry,rectangles,draw});
 }());

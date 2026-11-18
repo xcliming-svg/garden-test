@@ -1,5 +1,7 @@
 # Garden 20 v10 — devel 공통 팔레트
 
+> **devel 꽃밭 URL 비교:** `gridColor=slate|graphite|charcoal` (#535361/#3B3A44/#16161A), `gridStyle=solid|dashed` (기본 solid, 점선 3px/2px 간격) 독립 조합. 생략·잘못된 값은 slate/solid. 기본 어두운 테마의 꽃밭에만 적용하고 카드/슬롯/정보창 및 growth 강조 유지. `full=1`과 조합 가능. `uitype=1` 밝은 흙 테마 제외. 예: `?gridColor=graphite&gridStyle=dashed`.
+
 > devel: 기존 Garden 16 v9 재질색 16개를 변경하지 않고 기존 UI 어두운 색 4개를 정식 편입한다. main은 별도 승인 전까지 v9. 모든 고정 UI 색은 20색 중 하나이며, SVG 원본과 assets/palette16/ 복사본은 그대로 보존한다.
 
 ## 기본색

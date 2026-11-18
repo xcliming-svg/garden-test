@@ -1,5 +1,7 @@
 # garden-test
 
+> **devel 꽃밭 URL 비교:** `gridColor=slate|graphite|charcoal` (#535361/#3B3A44/#16161A), `gridStyle=solid|dashed` (기본 solid, 점선 3px/2px 간격) 독립 조합. 생략·잘못된 값은 slate/solid. 기본 어두운 테마의 꽃밭에만 적용하고 카드/슬롯/정보창 및 growth 강조 유지. `full=1`과 조합 가능. `uitype=1` 밝은 흙 테마 제외. 예: `?gridColor=graphite&gridStyle=dashed`.
+
 > **하단 HUD 현행:** 좌하단은 비워 두며 우하단은 초당 피해량 | 방어력 | 이동 속도 순으로 표시한다. 최대 체력·행운·획득 범위는 하단 UI 스탯 및 임시 합산에서 제거했다. 중앙 슬롯과 기존 간격·글꼴은 유지한다. [현행 규격](./docs/resolution-960x540.md).
 
 > **SVG 아이템 전체 미리보기:** 기본 새 게임에서 꽃 만개 카드 6종·일반 SVG 카드 12종·바닥 보석/하트 2종을 표시한다. 적/자동 공격은 기본 숨김. 카드 툴팁 및 장착 능력치는 UI 표시용 임시 데이터이며 실제 효과 및 유산 획득 미구현. `?cards=legacy`는 이전 3/5 카드 비교. [규격](./docs/item-cards.md)
