@@ -83,7 +83,7 @@ try{
     });
     return {labels,lifts:[...items,...flowers].map(({marker})=>marker.floatLift),synchronized:[...items,...flowers].every(({marker})=>marker.list.slice(0,3).every(o=>o.y===-marker.floatLift)&&(!marker.levelLabel||Math.abs(marker.levelLabel.y-marker.levelLabel.levelBaseY+marker.floatLift)<.001))};
    });
-   assert.ok(floatCheck.labels.every(l=>Math.abs(l.right-15)<.01&&Math.abs(l.bottom-15)<.01&&l.white>0&&l.dark>0&&l.offsetX===1&&l.offsetY===1&&l.blur===0),'white text and shadow remain inside card');
+   assert.ok(floatCheck.labels.every(l=>Math.abs(l.right-14)<.01&&Math.abs(l.bottom-14)<.01&&l.white>0&&l.dark>0&&l.offsetX===1&&l.offsetY===1&&l.blur===0),'white text and shadow have 2px outer inset on right and bottom');
    assert.ok(floatCheck.synchronized);assert.ok(floatCheck.lifts.every(v=>v>=0&&v<=4));
    assert.ok(new Set(floatCheck.lifts).size>1,'staggered floating phases');
    await page.waitForFunction(old=>{const s=window.__previewGame.scene.getScene('Game');return s.itemCardPreview.cards.some(({marker},i)=>marker.floatLift!==old[i]);},floatCheck.lifts);

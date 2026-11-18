@@ -151,7 +151,7 @@
           if(!data[(y*c.width+x)*4+3])continue;
           right=Math.max(right,x+1);bottom=Math.max(bottom,y+1);
         }
-        const edge=group.width/2-1;
+        const edge=group.width/2-2;
         label.levelBaseY=edge-bottom/z;
         label.setPosition(edge-right/z,label.levelBaseY-(group.floatLift||0));
       };
