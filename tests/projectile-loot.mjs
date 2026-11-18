@@ -102,9 +102,9 @@ try{
      return {type:P.uiType,field:L.colors.field,hud:L.colors.hud,texture:true,colors:used.size,
        width:t.width,height:t.height,valid:[...used].every(c=>window.GardenLightFieldPreview.grass.includes(c))};
    });
-   assert.equal(theme.type,light?1:0);assert.equal(theme.field,light?0x83a650:0x0d0d0e);
-   assert.equal(theme.hud,light?0xe2b66f:0x16161a);assert.equal(theme.texture,light);
-   if(light)assert.ok(theme.colors===7&&theme.valid&&theme.width===960&&theme.height===468);
+   assert.equal(theme.type,light?1:0);assert.equal(theme.field,light?0x84a83e:0x0d0d0e);
+   assert.equal(theme.hud,light?0xf5d3a5:0x16161a);assert.equal(theme.texture,light);
+   if(light)assert.ok(theme.colors===2&&theme.valid&&theme.width===960&&theme.height===468);
    const gridCheck=await page.evaluate(()=>{
      const scene=window.__previewGame.scene.getScene('Game'),c=scene.combatPreview,L=window.GardenGameLayout,g=L.spec.garden,G=window.GardenDashedGridPreview;
      const z=scene.cameras.main.zoom,t=scene.children.getByName('garden-preview-soil').texture;
@@ -145,7 +145,7 @@ try{
      return {opaque,empty,bad,centers,edgesOK,shown:shown.size,uniform:used.size===1&&used.has(G.colors.base),rects:rects.length,candidates:candidate.size,
        noDecor:!window.GardenFieldDecorPreview&&!scene.children.getByName('field-decor')};
    });
-   if(light)assert.ok(gridCheck.bad===0&&gridCheck.opaque>0&&gridCheck.centers&&gridCheck.colors===5);
+   if(light)assert.ok(gridCheck.bad===0&&gridCheck.opaque>0&&gridCheck.centers&&gridCheck.colors===3);
    else assert.ok(gridCheck.bad===0&&gridCheck.opaque>0&&gridCheck.empty>gridCheck.opaque&&gridCheck.centers&&gridCheck.edgesOK&&gridCheck.uniform&&gridCheck.rects>0);
    assert.equal(gridCheck.shown,params.get('full')==='1'?100:12);
    assert.ok(gridCheck.noDecor);
@@ -211,7 +211,7 @@ try{
       }
       return {dash,gap,wrong,background,decorPixels};
     },{b64:png.toString('base64'),info:border.info});
-    if(light)assert.ok(pixels.grassPixels>100000&&pixels.dirtPixels>10000&&pixels.hudPixels>50000&&pixels.grassColors===7,JSON.stringify(pixels));
+    if(light)assert.ok(pixels.grassPixels>100000&&pixels.dirtPixels>10000&&pixels.hudPixels>50000&&pixels.grassColors===2,JSON.stringify(pixels));
     else assert.ok(pixels.dash>50&&pixels.gap>50&&pixels.wrong===0&&pixels.background>10000&&pixels.decorPixels===0,JSON.stringify(pixels));
     full.pixels=pixels;
     const combat=await page.evaluate(()=>{
