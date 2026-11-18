@@ -8,15 +8,14 @@
   const items=window.GardenItemCards.entries.filter(i=>i.id!=='shoe'&&i.id!=='shield');
   const ids=Object.freeze(items.map(i=>i.id));
   const tuning=Object.freeze({
-    balloon:{life:1.5,span:16},boomerang:{life:1.7,span:18},wheel:{life:1.6,span:40},
+    balloon:{life:1.5,span:16},boomerang:{life:1.7,span:18},wheel:{life:6,span:40,initialSpeed:420,minSpeed:180,drag:1.6},
     flowerpot:{life:1.15,span:20,fall:.52,height:120},'paper-plane':{life:1.55,span:18},
     'bouncy-ball':{life:1.7,span:14},'yellow-floor':{life:2.6,span:72,spread:.32},
     sprinkler:{life:1.9,span:20},rock:{life:1.1,span:12},broom:{life:.7,span:28}
   });
-  const outward={right:[0,-1],down:[1,0],left:[0,1],up:[-1,0]};
   const clamp=(v,a,b)=>Math.max(a,Math.min(b,v));
   const mix=(a,b,t)=>a+(b-a)*t;
-  const interval=1.6,range=550;
+  const interval=1.6,range=window.GardenFairyAttack.range;
   const distance=(a,b)=>Math.hypot(a.x-b.x,a.y-b.y);
   function segmentDistance(a,b,p){
     const dx=b.x-a.x,dy=b.y-a.y,den=dx*dx+dy*dy;
@@ -25,13 +24,16 @@
   }
   // Wheel displacement and angular displacement share a single physical distance.
   // Right/down are clockwise, left/up counter-clockwise in screen coordinates.
-  const wheelSign=(dx,dy)=>Math.abs(dx)>1e-5?Math.sign(dx):Math.sign(dy)||1;
+  const wheelSign=(dx,dy)=>Math.abs(dx)>=Math.abs(dy)?Math.sign(dx)||1:Math.sign(dy)||1;
   function wheelTravel(s){
-    const t=clamp(s.age/tuning.wheel.life,0,1);
-    return (s.travel??Math.hypot(s.tx-s.x,s.ty-s.y))*(1-(1-t)**2);
+    const t=Math.max(0,s.age),w=tuning.wheel;
+    // Integral of v(t)=min+(initial-min)*exp(-drag*t). Independent of direction,
+    // aim distance and distance to the boundary; residual rolling speed stays positive.
+    return w.minSpeed*t+(w.initialSpeed-w.minSpeed)*(1-Math.exp(-w.drag*t))/w.drag;
   }
-  function rayRoom(spec,x,y,dx,dy,r){
-    const bounds={left:r,right:spec.width-r,top:spec.top+r,bottom:spec.height-spec.bottom-r};
+  function wheelExit(spec,x,y,dx,dy,r){
+    const bounds={left:-r-1,right:spec.width+r+1,top:spec.top-r-1,bottom:spec.height-spec.bottom+r+1};
+    if(x<bounds.left||x>bounds.right||y<bounds.top||y>bounds.bottom)return 0;
     const times=[];
     if(dx>1e-6)times.push((bounds.right-x)/dx);
     if(dx<-1e-6)times.push((bounds.left-x)/dx);
@@ -53,7 +55,26 @@
         angle:a+age*(i%2?8:-9),size:3+i%4,alpha:Math.min(1,(1-t)*3),dark:i%3===0};
     });
   }
-  function create(spec){
+  // Use the collection predicate itself, including its rotating 100-degree fan,
+  // inward mirror for points inside the patrol, and 12px near exception.
+  const inAttackRange=(point,origin,bounds)=>window.GardenRelicCollection.eligible(point,origin,{bounds});
+  function randomPoint(spec,origin,bounds,random){
+    const left=Math.max(0,origin.x-range),right=Math.min(spec.width,origin.x+range);
+    const top=Math.max(spec.top,origin.y-range),bottom=Math.min(spec.height-spec.bottom,origin.y+range);
+    if(!(right>left&&bottom>top))return null;
+    // Uniform area sampling over the intersection with the playable field.
+    for(let i=0;i<160;i++){
+      const p={x:mix(left,right,random()),y:mix(top,bottom,random())};
+      if(distance(p,origin)>1e-6&&inAttackRange(p,origin,bounds))return p;
+    }
+    // Defensive fallback for a pathological injected RNG or a tiny intersection.
+    for(let i=1;i<=12;i++)for(let j=0;j<32;j++){
+      const a=j*Math.PI/16,p={x:origin.x+i*Math.cos(a),y:origin.y+i*Math.sin(a)};
+      if(p.x>=left&&p.x<=right&&p.y>=top&&p.y<=bottom&&inAttackRange(p,origin,bounds))return p;
+    }
+    return null;
+  }
+  function create(spec,random=Math.random){
     const state={selected:'',equipped:[],shots:[],fired:0,hits:0,elapsed:0};
     let serial=0;
     const next=new Map();
@@ -71,7 +92,7 @@
       state.shots=state.shots.filter(s=>s.slot!==index&&!s.preview);
       return true;
     }
-    function step(dt,hero,targets=[],damage=null,slow=null){
+    function step(dt,hero,targets=[],damage=null,slow=null,patrol=null){
       if(!(dt>0))return;
       state.elapsed+=dt;
       const live=targets.filter(e=>e.x>=0&&e.x<=spec.width&&e.y>=spec.top&&e.y<=spec.height-spec.bottom);
@@ -81,7 +102,7 @@
         s.age=Math.min(tuning[s.kind].life,s.age+dt);
         if(s.kind==='paper-plane'&&s.targetId!==null){
           const target=live.find(e=>e.id===s.targetId);
-          if(target){s.tx=target.x;s.ty=target.y;}
+          if(target&&inAttackRange(target,s.origin,s.bounds)){s.tx=target.x;s.ty=target.y;}
         }
         const p=pose(s,hero);
         if(!s.preview&&damage){
@@ -105,7 +126,8 @@
               s.hit.add(e.id);state.hits++;
               if(result.killed)dead.add(e.id);
               if(s.kind==='bouncy-ball'){
-                const other=live.filter(q=>q.id!==e.id&&!dead.has(q.id)&&!s.hit.has(q.id)).sort((a,b)=>distance(p,a)-distance(p,b))[0];
+                const options=live.filter(q=>q.id!==e.id&&!dead.has(q.id)&&!s.hit.has(q.id)&&inAttackRange(q,s.origin,s.bounds));
+                const other=options[Math.floor(random()*options.length)];
                 if(other&&s.hit.size<3){
                   s.bounce={x:p.x,y:p.y,tx:other.x,ty:other.y,age:s.age};s.targetId=other.id;
                 }else s.done=true;
@@ -115,32 +137,33 @@
         }
         s.previous=p;
       }
-      state.shots=state.shots.filter(s=>!s.done&&s.age<tuning[s.kind].life);
-      if(!hero||hero.index!==0||hero.type!=='garden'||!outward[hero.direction])return;
+      state.shots=state.shots.filter(s=>!s.done&&s.age<tuning[s.kind].life&&
+        (s.kind!=='wheel'||wheelTravel(s)<s.exitDistance));
+      if(!hero||hero.index!==0||hero.type!=='garden'||!patrol?.bounds)return;
       const slots=state.equipped.flatMap((id,index)=>id?[{id,index,preview:false}]:[]);
       if(!slots.length&&state.selected)slots.push({id:state.selected,index:-1,preview:true});
       for(const slot of slots){
         if(state.elapsed<(next.get(slot.index)||0))continue;
-        const x=hero.center.x,y=hero.center.y;
-        let [dx,dy]=outward[hero.direction];
-        const target=!slot.preview&&damage?live.filter(e=>!dead.has(e.id)&&distance(hero.center,e)<=range)
-          .sort((a,b)=>distance(hero.center,a)-distance(hero.center,b))[0]:null;
-        if(!slot.preview&&damage&&!target)continue;
-        const left=24,right=spec.width-24,top=spec.top+24,bottom=spec.height-spec.bottom-24;
-        const tx=target?target.x:clamp(x+dx*150,left,right),ty=target?target.y:clamp(y+dy*150,top,bottom);
-        if(target){const d=Math.hypot(tx-x,ty-y)||1;dx=(tx-x)/d;dy=(ty-y)/d;}
-        const shot={id:serial++,owner:0,slot:slot.index,preview:slot.preview,kind:slot.id,x,y,tx,ty,dx,dy,age:0,targetId:target?.id??null,hit:new Set()};
-        if(slot.id==='wheel'){
-          const span=hero.visibleHeight||tuning.wheel.span,r=span/2;
-          const room=rayRoom(spec,x,y,dx,dy,r);
-          // Never spawn inside the fairy or roll in place against the HUD.
-          if(room<span+5)continue;
-          const offset=span+4;
-          shot.x=x+dx*offset;shot.y=y+dy*offset;shot.span=span;
-          shot.travel=Math.max(0,Math.min(room-offset,Math.max(210,Math.hypot(tx-shot.x,ty-shot.y)+45)));
-          shot.tx=shot.x+dx*shot.travel;shot.ty=shot.y+dy*shot.travel;
+        const x=hero.center.x,y=hero.center.y,origin={x,y},bounds={...patrol.bounds};
+        // In live combat choose a random eligible enemy, never the nearest.
+        // Empty fan and selector shots choose a random eligible ground point.
+        const options=!slot.preview&&damage?live.filter(e=>!dead.has(e.id)&&distance(origin,e)>1e-6&&inAttackRange(e,origin,bounds)):[];
+        const target=options[Math.floor(random()*options.length)]||null;
+        const aim=target||randomPoint(spec,origin,bounds,random);
+        if(!aim)continue;
+        let tx=aim.x,ty=aim.y;
+        if(slot.id==='flowerpot'&&target&&Number.isFinite(target.ground)){
+          const ground={x:tx,y:target.ground};
+          if(ground.y>=spec.top&&ground.y<=spec.height-spec.bottom&&inAttackRange(ground,origin,bounds))ty=ground.y;
         }
-        if(slot.id==='flowerpot'&&target&&Number.isFinite(target.ground))shot.ty=target.ground;
+        const d=Math.hypot(tx-x,ty-y)||1,dx=(tx-x)/d,dy=(ty-y)/d;
+        const shot={id:serial++,owner:0,slot:slot.index,preview:slot.preview,kind:slot.id,x,y,tx,ty,dx,dy,origin,bounds,age:0,targetId:target?.id??null,hit:new Set()};
+        if(slot.id==='wheel'){
+          const span=hero.visibleHeight||tuning.wheel.span,r=span/2,offset=span+4;
+          shot.x=x+dx*offset;shot.y=y+dy*offset;shot.span=span;
+          // Keep the randomly chosen aim, but roll along that ray past the screen edge.
+          shot.exitDistance=wheelExit(spec,shot.x,shot.y,dx,dy,r);
+        }
         state.shots.push(shot);
         state.fired++;next.set(slot.index,state.elapsed+interval);
       }
@@ -163,7 +186,7 @@
         y=mix(t<.5?s.y:end.y,s.ty,u)+py*Math.sin(Math.PI*u)*24;angle=t*12;break;
       }
       case 'wheel':{
-        const d=wheelTravel(s),r=(s.span??tuning.wheel.span)/2;
+        const d=Math.min(wheelTravel(s),s.exitDistance??Infinity),r=(s.span??tuning.wheel.span)/2;
         x=s.x+s.dx*d;y=s.y+s.dy*d;angle=wheelSign(s.dx,s.dy)*d/r;
         break;
       }
@@ -254,7 +277,7 @@
       if(patrol.finished)return;
       const population=combat?scene.enemyPreview?.model:null;
       const targets=population?population.actors.map(a=>({...window.GardenFairyAttack.target(a),ground:a.pose.ground})):[];
-      model.step(Math.min(.1,Math.max(0,delta/1000)),patrol.actors[0],targets,population?.damage,population?.slow);
+      model.step(Math.min(.1,Math.max(0,delta/1000)),patrol.actors[0],targets,population?.damage,population?.slow,patrol);
       render();
     }
     scene.events.on('update',update);scene.events.on('pause',pause);scene.events.on('resume',resume);scene.scale.on('resize',resize);
@@ -265,5 +288,5 @@
     scene.heroWeaponPreview={model,select:choose,equip,render,control:select};
     return scene.heroWeaponPreview;
   }
-  window.GardenHeroWeaponPreview=Object.freeze({enabled,combat,ids,tuning,interval,range,create,pose,wheelTravel,potFragments,attach});
+  window.GardenHeroWeaponPreview=Object.freeze({enabled,combat,ids,tuning,interval,range,create,pose,wheelTravel,wheelExit,randomPoint,inAttackRange,potFragments,attach});
 }());
