@@ -153,7 +153,7 @@
   // leave or are killed normally. Default population curve is unchanged.
   const simulation=new URLSearchParams(window.location.search).get('densitySim')==='1';
   function simulationTarget(t){
-    const points=[[0,1],[8,4],[28,160],[48,160],[65,0],[85,0]];
+    const points=[[0,1],[8,4],[32,200],[55,200],[75,0],[95,0]];
     for(let i=1;i<points.length;i++){const [end,n]=points[i],[start,m]=points[i-1];if(t<end)return Math.floor(m+(n-m)*Math.max(0,t-start)/(end-start));}
     return 0;
   }

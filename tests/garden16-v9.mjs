@@ -112,9 +112,45 @@ try{
    if(name!=='light'){assert.equal(state.reference.background,'#0D0D0E');assert.equal(state.reference.panel,'#3B3A44');assert.equal(state.reference.redText,'#F89596');}
    assert.deepEqual(errors,[]);assert.deepEqual(failures,[]);
    await page.screenshot({path:join(out,'garden16-v9-'+name+'.png')});
+   if(name==='default'){
+    const reversal=await page.evaluate(()=>{
+     const s=window.__previewGame.scene.getScene('Game'),F=s.fairyPatrol,A=window.GardenFairyPatrol,T=A.densityTuning,d=A.createDensity();
+     const check=(v,m)=>{if(!v)throw Error(m);};
+     const step=(n,seconds)=>{let v;for(let t=0;t<seconds-1e-9;t+=.05)v=d.update(n,Math.min(.05,seconds-t));return v;};
+     check(step(T.enter-1,5).mix===0,'higher entry threshold');
+     check(step(T.enter,.5).mix===0,'brief density spike ignored');
+     step(T.enter-1,.1);
+     check(step(T.enter,T.enterHold).mix===0,'entry hold');
+     const rising=step(T.enter,1);
+     check(rising.mix>0&&rising.mix<.25,'slow rise after one second');
+     const before=step(T.exit,T.exitHold-.05);
+     check(before.dense&&before.mix<1,'release hold while rising');
+     const turn=step(T.exit,.05);
+     check(!turn.dense&&turn.mix>0&&turn.mix<1&&turn.transitions===2,'reverse before reaching paper');
+     check(turn.mix-before.mix<.03,'no brightness jump on reversal');
+     const down=step(T.exit,1);
+     check(down.mix<turn.mix&&down.mix>0,'smooth partial return');
+     const beforeRise=step(T.enter,T.enterHold-.05);
+     const turnUp=step(T.enter,.05);
+     check(turnUp.dense&&turnUp.mix>0&&Math.abs(turnUp.mix-beforeRise.mix)<.03,'reverse again before stone');
+     check(step(T.enter,4).mix===1,'complete full-duration rise');
+     check(step(T.exit+1,5).mix===1,'hysteresis dead band');
+     check(step(T.exit,T.exitHold+3).mix===0,'complete return');
+     // Also exercise actual group tint through the controller, not only the state model.
+     F.updateDensity(T.enter,T.enterHold);F.updateDensity(T.enter,1);
+     const visible=F.density.snapshot(),tint=A.mixColor(visible.mix);
+     check(visible.mix>0&&visible.mix<1&&F.actors.every(a=>a.outline.tintTopLeft===tint&&a.outline.alpha===1),'group partially bright');
+     F.updateDensity(T.exit,T.exitHold);const actualTurn=F.density.snapshot();
+     F.updateDensity(T.exit,1);const actualDown=F.density.snapshot();
+     check(actualDown.mix<actualTurn.mix&&actualDown.mix>0&&F.actors.every(a=>a.outline.tintTopLeft===A.mixColor(actualDown.mix)),'group reverses together');
+     F.updateDensity(T.exit,3);
+     return {rising:rising.mix,before:before.mix,reversal:turn.mix,down:down.mix,reverseAgain:turnUp.mix,actualTurn:actualTurn.mix,actualDown:actualDown.mix,final:F.density.snapshot().mix};
+    });
+    assert.equal(reversal.final,0);console.log('PASS partial reversal',JSON.stringify(reversal));
+   }
    if(name.startsWith('density-sim')){
     const timeline=[];
-    for(const end of [8,20,30,42,55,65,75,85,95]){
+    for(const end of [8,20,32,42,55,65,75,85,95,105]){
      const sample=await page.evaluate(end=>{
       const s=window.__previewGame.scene.getScene('Game'),c=s.enemyPreview,F=s.fairyPatrol,P=window.GardenPalette.n;
       const series=[];
@@ -128,11 +164,11 @@ try{
       return {series,at:c.elapsed,count:c.actors.length,...F.density.snapshot(),tint:F.actors[0].outline.tintTopLeft};
      },end);
      timeline.push(...sample.series);console.log('DENSITY',name,end,JSON.stringify({...sample,series:undefined}));
-     if([8,30,42,65,85].includes(end))await page.screenshot({path:join(out,name+'-'+end+'.png')});
+     if([8,32,42,55,75,95].includes(end))await page.screenshot({path:join(out,name+'-'+end+'.png')});
     }
     const bright=timeline.find(d=>d.mix===1),partial=timeline.filter(d=>d.mix>0&&d.mix<1),last=timeline.at(-1);
     assert.ok(bright,JSON.stringify({max:Math.max(...timeline.map(d=>d.near))}));
-    assert.ok(partial.length>=8);assert.equal(last.mix,0);assert.equal(last.count,0);assert.equal(last.transitions,2);
+    assert.ok(partial.length>=40);assert.equal(last.mix,0);assert.equal(last.count,0);assert.equal(last.transitions,2);
     assert.ok(timeline.filter(d=>d.t<=8).every(d=>d.mix===0));
     writeFileSync(join(out,name+'.json'),JSON.stringify(timeline,null,2));
    }

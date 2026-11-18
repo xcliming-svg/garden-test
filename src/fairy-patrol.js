@@ -28,26 +28,34 @@
   const outlineConfig=Object.freeze({enabled:params.get('outline')!=='0',color:outlineColor,width:outlineWidth,hex:palette[outlineColor]});
   // Explicit color comparisons stay static unless adaptive is requested.
   const adaptive=params.get('outlineMode')==='adaptive'||(params.get('outlineMode')!=='static'&&rawColor===null);
-  const densityTuning=Object.freeze({radius:32,enter:20,exit:9,enterHold:.8,exitHold:2.5,fadeIn:.65,fadeOut:1.1});
+  const densityTuning=Object.freeze({radius:32,enter:32,exit:18,enterHold:1,exitHold:1.5,fadeIn:4,fadeOut:3});
   function createDensity(){
-    let dense=false,held=0,progress=0,transitions=0,near=0;
+    let dense=false,held=0,mix=0,from=0,elapsed=0,transitions=0,near=0;
+    function advance(dt){
+      const duration=dense?densityTuning.fadeIn:densityTuning.fadeOut;
+      elapsed=Math.min(duration,elapsed+dt);
+      const t=elapsed/duration,ease=t*t*(3-2*t);
+      mix=from+((dense?1:0)-from)*ease;
+      if(elapsed>=duration-1e-9)mix=dense?1:0;
+    }
     function update(count,seconds){
       near=count;
       let dt=Math.max(0,Number.isFinite(seconds)?seconds:0);
-      // Finish an in-progress dissolve before accepting an opposite request.
-      if(progress===(dense?1:0)){
-        const condition=dense?near<=densityTuning.exit:near>=densityTuning.enter;
-        if(condition){
-          const hold=dense?densityTuning.exitHold:densityTuning.enterHold;
-          const used=Math.min(dt,Math.max(0,hold-held));held+=used;dt-=used;
-          if(held>=hold-1e-9){dense=!dense;held=0;transitions++;}
-        }else{held=0;dt=0;}
-      }
-      progress=Math.max(0,Math.min(1,progress+(dense?dt/densityTuning.fadeIn:-dt/densityTuning.fadeOut)));
-      if(progress<1e-9)progress=0;if(progress>1-1e-9)progress=1;
+      // Evaluate both thresholds even during a dissolve. Reversal starts
+      // from the current rendered color, never from an endpoint.
+      const condition=dense?near<=densityTuning.exit:near>=densityTuning.enter;
+      if(condition){
+        const hold=dense?densityTuning.exitHold:densityTuning.enterHold;
+        const used=Math.min(dt,Math.max(0,hold-held));
+        advance(used);held+=used;dt-=used;
+        if(held>=hold-1e-9){
+          dense=!dense;held=0;transitions++;from=mix;elapsed=0;
+        }
+      }else held=0;
+      advance(dt);
       return snapshot();
     }
-    function snapshot(){return {dense,near,progress,mix:progress*progress*(3-2*progress),transitions};}
+    function snapshot(){return {dense,near,progress:mix,mix,transitions};}
     return {update,snapshot};
   }
   function mixColor(t){
