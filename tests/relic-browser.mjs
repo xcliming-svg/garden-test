@@ -33,9 +33,13 @@ try{
       const m=R.model,T=window.GardenRelicCollection.tuning;
       let checks=0;const check=(v,msg)=>{checks++;if(!v)throw Error(msg);};
       check(R.state.spawnedGems===E.model.kills,'one gem per actual kill');
-      const hero=F.actors[0].center;
+      const hero=F.actors[0],b=F.bounds,mx=(b.left+b.right)/2,my=(b.top+b.bottom)/2;
+      const points={right:{x:mx,y:b.top-10},down:{x:b.right+10,y:my},
+        left:{x:mx,y:b.bottom+10},up:{x:b.left-10,y:my}};
+      const opposite={right:'left',left:'right',down:'up',up:'down'};
+      const point=points[hero.direction],other=points[opposite[hero.direction]];
       const prior=R.state.gems;
-      m.death(hero.x,hero.y);for(let i=0;i<20;i++)R.step(.05);
+      m.death(point.x,point.y);for(let i=0;i<60;i++)R.step(.05);
       R.render();F.refreshHud();
       check(R.state.gems>prior,'gem magnet collection');
       check(s.children.getByName('hud-gems-value').text===L.formatHudCount(R.state.gems),'HUD gems');
@@ -45,20 +49,36 @@ try{
       check(s.flowerGrowth.entries.get(44).last.endsWith(':33'),'actual energy reflected in flower art');
       // Force deterministic heart for render and recovery without changing live RNG.
       const flower=R.state.flowers.get(44);
-      R.state.drops.push({id:-1,kind:'heart',x:flower.x+50,y:flower.y,age:0,speed:0,attracted:false});
+      R.state.drops.push({id:-1,kind:'heart',x:point.x,y:point.y,age:0,speed:0,attracted:false});
       R.render();
       const heart=s.children.getByName('ground-relic:heart:-1');
       check(heart&&Math.abs(Math.max(heart.displayWidth,heart.displayHeight)-12)<.001&&!heart.input,'12px SVG heart');
-      for(let i=0;i<30;i++)R.step(.05);R.render();F.refreshHud();
+      for(let i=0;i<60;i++)R.step(.05);R.render();F.refreshHud();
       check(flower.energy>=50,'weakest flower recovers');
       check(!s.children.getByName('ground-relic:heart:-1'),'collected sprite removed');
       check(s.flowerGrowth.entries.get(44).last.endsWith(':66'),'recovery reflected in flower art');
-      R.state.drops.push({id:-2,kind:'gem',x:50,y:450,age:T.lifetime-.01,speed:0,attracted:false});
+      R.state.drops.push({id:-2,kind:'gem',x:other.x,y:other.y,age:Math.max(T.lifetime,F.length/F.speed+T.settleSeconds+1)-.01,speed:0,attracted:false});
       R.render();check(s.children.getByName('ground-relic:gem:-2'),'expiry test sprite exists');
       R.step(.05);R.render();check(!s.children.getByName('ground-relic:gem:-2'),'expired sprite removed');
+      // Test a real moving hero, drops born on all four sides and at the
+      // field corners. Isolate the sample from asynchronous enemy spawning.
+      R.state.drops=[];
+      const field=L.spec,positions=[...Object.values(points),{x:6,y:field.top+6},
+        {x:field.width-6,y:field.top+6},{x:6,y:field.height-field.bottom-6},
+        {x:field.width-6,y:field.height-field.bottom-6}];
+      let id=-100;
+      for(const pos of positions)for(const kind of ['gem','heart'])
+        R.state.drops.push({id:id--,kind,...pos,age:0,speed:0,attracted:false});
+      const gems=R.state.gems,hearts=R.state.hearts,expired=R.state.expired;
+      const steps=Math.ceil((F.length/F.speed+T.settleSeconds+3)/.05);
+      for(let i=0;i<steps;i++){F.advance(.05);R.step(.05);}
+      R.render();F.refreshHud();
+      check(R.state.gems===gems+positions.length,'all sides collected by hero lap');
+      check(R.state.hearts===hearts+positions.length,'all hearts collected by hero lap');
+      check(R.state.expired===expired&&!R.state.drops.length,'no drops lost on lap');
       return checks;
     });
-    assert.equal(result,10);assert.deepEqual(errors,[]);
+    assert.equal(result,13);assert.deepEqual(errors,[]);
     console.log('PASS relic browser',width,height,result);
     await page.close();
   }

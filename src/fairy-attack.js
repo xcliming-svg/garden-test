@@ -5,6 +5,9 @@
   const enabled=new URLSearchParams(window.location.search).get('attack')!=='0';
   const tuning=Object.freeze({interval:1,firstShot:.2,stagger:.08,speed:220,radius:3,life:2.5,damage:1,hitSeconds:.12,deathSeconds:.14,depth:6,step:.05,
     counts:Object.freeze({garden:5,water:2}),colors:Object.freeze({garden:'red',water:'gold'})});
+  // Nominal maximum projectile travel; shared with relic collection.
+  const range=tuning.speed*tuning.life;
+  const inRange=(a,b)=>Math.hypot(a.x-b.x,a.y-b.y)<=range;
   const target=actor=>{
     const p=actor.pose,e=actor.entry;
     return {id:actor.id,x:p.x,y:p.ground-e.height*p.sy/2-p.lift,
@@ -20,7 +23,7 @@
       if(!inside(shooter))return;
       let nearest=null,dist=Infinity;
       for(const e of targets){
-        if(!inside(e))continue;
+        if(!inside(e)||!inRange(shooter,e))continue;
         const d=(e.x-shooter.x)**2+(e.y-shooter.y)**2;
         if(d<dist){nearest=e;dist=d;}
       }
@@ -96,5 +99,5 @@
     }
     return {model,state:model.state,gfx,positions,step,render};
   }
-  window.GardenFairyAttack=Object.freeze({enabled,tuning,target,create,attach});
+  window.GardenFairyAttack=Object.freeze({enabled,tuning,range,inRange,target,create,attach});
 }());
