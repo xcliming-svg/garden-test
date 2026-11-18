@@ -158,7 +158,7 @@
     const border=flower?U.cornerFrame(scene,0,0,size,baseBorder):U.pixelBox(scene,0,0,size,size,baseBorder);
     const face=U.pixelBox(scene,0,0,size-2,size-2,R.tab,{cut:false,alpha:flower?0:1});
     const image=fit(scene.add.image(0,0,texture),texture,kind==='item'?itemSpan(size):size-6);
-    const group=scene.add.container(x,y,[border,face,image]).setSize(size,size).setDepth(5);
+    const group=scene.add.container(x,y,[border,face,image]).setSize(size,size).setDepth(playable?window.GardenRunRules.depth.card:5);
     group.setStrokeStyle=(_width,_color,alpha)=>{
       border.setFillStyle(alpha?(kind==='flower'?R.flowerBorder:R.itemBorder):baseBorder,1);return group;
     };
@@ -232,7 +232,7 @@
   function effectImage(scene,id,x,y,span){return attackImage(scene,id,x,y,span);}
   function relicImage(scene,kind,x,y){
     const item=relics.find(r=>r.id===kind),texture=trim(scene,kind,raw(kind));
-    return fit(scene.add.image(x,y,texture),texture,item.span).setDepth(4);
+    return fit(scene.add.image(x,y,texture),texture,item.span).setDepth(playable?window.GardenRunRules.depth.relic:4);
   }
   function destroyRelic(image){
     displayState.get(image.scene)?.images.delete(image);image.destroy();

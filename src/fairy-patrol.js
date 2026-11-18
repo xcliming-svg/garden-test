@@ -91,7 +91,7 @@
       pad?(image.displayOriginX+pad)/outline.width:image.originX,
       pad?(image.displayOriginY+pad)/outline.height:image.originY)
       .setScale(image.scaleX,image.scaleY).setRotation(image.rotation).setFlip(image.flipX,image.flipY)
-      .setDepth(image.depth).setAlpha(image.alpha).setVisible(image.visible);
+      .setDepth(image.depth-(playable?.001:0)).setAlpha(image.alpha).setVisible(image.visible);
   }
   function preload(scene){
     if(!enabled)return;
@@ -137,7 +137,7 @@
   }
   function attach(scene,spec,occupied,geometry,patrolPosition,updateHud,heroHeight){
     const m=install(scene),B=window.GardenPebbleBoundary,border=B.attach(scene);
-    const depthBase=window.GardenEnemyOcclusion.config.fairyFront&&window.GardenEnemyPreview.enabled?4:2;
+    const depthBase=playable?window.GardenRunRules.depth.fairy:window.GardenEnemyOcclusion.config.fairyFront&&window.GardenEnemyPreview.enabled?4:2;
     let activeCount=playable?1:count;
     const compute=()=>B.layout(spec,geometry(occupied,0,0).garden,heroHeight,gait,activeCount);
     let info=compute(),b=info.patrol,length=info.length,spacing=length/activeCount;
@@ -219,7 +219,7 @@
         if(facing)a.image.setFlipX(facing<0);
         a.image.setPosition(p.x,p.y+a.visibleHeight/2-lift)
           .setAngle(tilt+facing*gait.lean)
-          .setDepth(depthBase+p.y/spec.height);
+          .setDepth(depthBase+Math.max(0,Math.min(.98,p.y/spec.height)));
         const emotion=emotionPose(state,emotionTime,a.visibleHeight,a.phase);
         if(isResult(state))a.image.setPosition(p.x+emotion.dx,p.y+a.visibleHeight/2-emotion.lift).setAngle(0);
         for(const tear of a.tears){

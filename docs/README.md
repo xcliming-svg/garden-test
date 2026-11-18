@@ -35,6 +35,7 @@
 
 | 문서 | 역할 |
 | --- | --- |
+| [playable-presentation.md](./playable-presentation.md) | 전장 렌더링 깊이 전체, 저속 도입부/적 해금, 카드 배치와 승패 팝업 |
 | [playable-run.md](./playable-run.md) | 실제 게임 루프·초기 장비·드롭·도안·성장·적 지속 공격·슬롯·승패 및 검증 |
 | [weapon-balance-v1.md](./weapon-balance-v1.md) | 무기/적 스탯, 상성, 10슬롯 조합 및 실제 모델 시험 |
 | [project-foundations.md](./project-foundations.md) | 엔진 버전 선정 근거, 초기 화면 구성의 참고 자료 및 개발 단계 이력 |

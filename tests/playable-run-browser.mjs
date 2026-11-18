@@ -36,8 +36,31 @@ try{
     });
     assert.deepEqual(initial,{slots:4,gear:['rock',...Array(9).fill(null)],fairies:1,flowers:[3,3,3,3],progress:'25%',drop:0,visible:true,attack:'rock'});
     assert.equal(await page.locator('#hero-weapon-select').count(),0);
+    const layers=await read(()=>{
+      const s=window.__previewGame.scene.getScene('Game'),D=window.GardenRunRules.depth;
+      const n=id=>s.children.getByName(id),assert=(v,m)=>{if(!v)throw Error(m);};
+      const enemy=[...s.enemyPreview.sprites.values()][0],hero=s.fairyPatrol.actors[0],flower=[...s.flowerGrowth.entries.values()][0];
+      assert(s.fairyPatrol.speed===40&&s.fairyPatrol.speedRank===0,'minimum fairy speed');
+      assert(s.enemyPreview.actors.every(a=>a.entry.id==='3_caterpillar'),'opening caterpillar only');
+      assert(n('battlefield').depth===D.field&&n('dark-field-pattern').depth===D.pattern&&n('garden-preview-soil').depth===D.soil,'ground');
+      assert(enemy.shadow.depth===D.shadow&&flower.image.depth<enemy.image.depth&&enemy.image.depth<hero.outline.depth&&hero.outline.depth<hero.image.depth,'actors');
+      assert(n('hero-weapon:effects').depth===D.effects&&n('hero-weapon:ground-effects').depth===D.groundEffect,'effects');
+      assert(n('top-hud').depth===D.hud&&n('item-slots').depth===D.hud&&n('hud-time-value').depth===D.hudContent&&n('stat-value:moveSpeed').depth===D.hudContent,'HUD');
+      assert(n('slot-frame:0').depth===D.slotFrame&&n('slot-cost-icon').depth===D.equipped&&n('preview-equipped:0').depth===D.equipped,'slot layers');
+      assert(n('blueprint-body').depth===D.blueprint&&n('blueprint-flower:44').depth===D.blueprintIcon&&n('blueprint-title').depth===D.blueprintText,'blueprint');
+      assert(n('item-preview-tooltip').depth===D.tooltip,'tooltip');
+      const g=window.GardenGameLayout.spec.garden;
+      for(const kind of ['item','flower']){
+        const d=s.runDrops.spawn(kind,g.x+g.size/2,g.y+g.size/2,kind==='item'?'shield':'rose');
+        const half=d.marker.width/2;
+        assert(d.marker.depth===D.card&&d.x-half>=g.x+g.size+5||d.marker.depth===D.card&&(d.x+half<=g.x-5||d.y+half<=g.y-5||d.y-half-4>=g.y+g.size+5),'card outside garden');
+        s.runDrops.consume(d);
+      }
+      return true;
+    });
+    assert.equal(layers,true);
     await page.waitForFunction(()=>window.__previewGame.scene.getScene('Game').heroWeaponPreview.model.state.fired>0);
-    await page.waitForFunction(()=>window.__previewGame.scene.getScene('Game').enemyPreview.model.kills>0,null,{timeout:30000});
+    await page.waitForFunction(()=>window.__previewGame.scene.getScene('Game').enemyPreview.model.kills>0,null,{timeout:60000});
     await page.keyboard.press('Escape');await page.waitForFunction(()=>window.__previewGame.scene.isActive('Pause'));
     const clock=()=>read(()=>window.__previewGame.scene.getScene('Game').run.state.elapsed);
     const paused=await clock();await page.waitForTimeout(200);assert.equal(await clock(),paused);
@@ -72,6 +95,31 @@ try{
     assert.equal(await read(()=>window.__previewGame.scene.getScene('Game').heroWeaponPreview.model.state.equipped[9]),'wheel');
     await read(()=>{const s=window.__previewGame.scene.getScene('Game');for(const id of s.runGarden.occupied)s.relicCollection.model.damageFlower(id,1000);});
     await page.waitForFunction(()=>window.__previewGame.scene.isActive('Defeat'));
+    async function assertResult(key){
+      await page.waitForFunction(k=>window.__previewGame.scene.isActive(k),key);
+      const snapshot=()=>read(()=>{
+        const game=window.__previewGame,s=game.scene.getScene('Game'),r=game.scene.getScene(s.run.state.result);
+        return {paused:game.scene.isPaused('Game'),elapsed:s.run.state.elapsed,enemyElapsed:s.enemyPreview.elapsed,hero:s.fairyPatrol.actors.map(a=>[a.image.x,a.image.y,a.expression]),enemy:s.enemyPreview.actors.map(a=>[a.id,a.pose.x,a.pose.ground]),cards:[...s.runDrops.drops.values()].map(c=>[c.x,c.y,c.age]),children:s.children.list.length,text:r.children.list.filter(o=>o.type==='Text').map(o=>o.text),visible:s.sys.settings.visible};
+      });
+      const before=await snapshot();assert.equal(before.paused,true);assert.equal(before.visible,true);
+      assert.ok(before.text.includes(key==='Defeat'?'실패':'성공'));assert.ok(!before.text.some(t=>/GARDEN TEST|RESULT|런 결과|저장/.test(t)));
+      const clip={x:Math.floor(box.x+10*box.width/960),y:Math.floor(box.y+40*box.height/540),width:Math.floor(180*box.width/960),height:Math.floor(450*box.height/540)};
+      const first=await page.screenshot({clip});await page.waitForTimeout(250);
+      assert.deepEqual(await snapshot(),before,'game remains frozen behind result');assert.deepEqual(await page.screenshot({clip}),first,'outside popup stays unchanged');
+      await page.keyboard.press('Escape');assert.equal(await read(()=>window.__previewGame.scene.isPaused('Game')),true);
+    }
+    await assertResult('Defeat');
+    await page.mouse.click(...xy({x:378,y:380}));
+    await page.waitForFunction(()=>{const g=window.__previewGame;return g.scene.isActive('Game')&&g.scene.getScene('Game').run?.state.result===null;});
+    assert.equal(await read(()=>window.__previewGame.scene.getScene('Game').run.state.slotCount),4);
+    await read(()=>{
+      const s=window.__previewGame.scene.getScene('Game'),g=window.GardenGameLayout.spec.garden;
+      for(const [id,name] of window.GardenRunRules.blueprint){if(s.flowerGrowth.entries.has(id))continue;s.runGarden.occupied.add(id);s.flowerGrowth.plant(id,name,{x:g.x+(id%10)*g.pitch+g.line+g.cell/2,y:g.y+Math.floor(id/10)*g.pitch+g.line+g.cell/2},0,true);}
+      s.fairyPatrol.refreshHud();
+    });
+    await assertResult('Victory');
+    await page.mouse.click(...xy({x:582,y:380}));await page.waitForFunction(()=>window.__previewGame.scene.isActive('MainMenu'));
+    assert.equal(await read(()=>window.__previewGame.scene.isPaused('Game')),false);
     assert.deepEqual(errors,[]);
     console.log('PASS playable browser',width,height);
     await page.close();

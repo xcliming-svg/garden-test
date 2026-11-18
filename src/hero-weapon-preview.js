@@ -537,8 +537,8 @@
     const clip=scene.make.graphics({x:0,y:0,add:false});
     clip.fillStyle(0xffffff,1).fillRect(0,spec.top,spec.width,spec.height-spec.top-spec.bottom);
     const mask=clip.createGeometryMask();
-    const fx=scene.add.graphics().setDepth(6).setMask(mask).setName('hero-weapon:effects');
-    const groundFx=scene.add.graphics().setDepth(.8).setMask(mask).setName('hero-weapon:ground-effects');
+    const fx=scene.add.graphics().setDepth(playable?window.GardenRunRules.depth.effects:6).setMask(mask).setName('hero-weapon:effects');
+    const groundFx=scene.add.graphics().setDepth(playable?window.GardenRunRules.depth.groundEffect:.8).setMask(mask).setName('hero-weapon:ground-effects');
     const select=document.createElement('select');select.id='hero-weapon-select';
     select.setAttribute('aria-label','나뭇잎 요정 무기');
     for(const item of [{id:'',name:'무기 선택 (없음)'},...items]){
@@ -567,7 +567,7 @@
           if(obj)I.destroyRelic(obj.image);
           const image=(splash?I.effectImage(scene,'water-splash',s.tx,s.ty,tuning.balloon.splashSpan):
             I.weaponImage(scene,s.kind,s.x,s.y,s.span??tuning[s.kind].span))
-            .setDepth(splash?.82:s.kind==='yellow-floor'?.8:['broom','sprinkler'].includes(s.kind)?1.8:6).setMask(mask)
+            .setDepth(playable?(splash?window.GardenRunRules.depth.groundEffect+.02:s.kind==='yellow-floor'?window.GardenRunRules.depth.groundEffect:['broom','sprinkler'].includes(s.kind)?window.GardenRunRules.depth.installation:window.GardenRunRules.depth.projectile):(splash?.82:s.kind==='yellow-floor'?.8:['broom','sprinkler'].includes(s.kind)?1.8:6)).setMask(mask)
             .setName('hero-weapon:'+s.kind+':'+(splash?'splash:':'')+s.id);
           obj={image,phase,width:image.displayWidth,height:image.displayHeight};images.set(s.id,obj);
         }

@@ -174,7 +174,14 @@
   function createPopulation(spec,patrol,entries,random=Math.random,target=targetCount,onDeath=null,balanced=false){
     const M=window.GardenEnemyMotion,F=window.GardenFairyPatrol;
     const actors=[];let bag=[],directionBag=[],serial=0,elapsed=0,spawned=0,completed=0,kills=0;
+    const schedule=playable&&target===window.GardenRunRules.population, introduced=new Set();let nextSpawn=0;
     function nextEntry(){
+      if(schedule){
+        const ids=window.GardenRunRules.eligibleEnemies(elapsed+1e-7),pool=entries.filter(e=>ids.includes(e.id));
+        const fresh=ids.map(id=>pool.find(e=>e.id===id)).find(e=>e&&!introduced.has(e.id));
+        if(fresh){introduced.add(fresh.id);return fresh;}
+        if(pool.length){const weighted=pool.flatMap(e=>Array(spawning.levelWeights[e.level-1]).fill(e));return weighted[Math.min(weighted.length-1,Math.floor(random()*weighted.length))];}
+      }
       if(!bag.length){
         // Show all 12 species once; subsequent 40-entry bags preserve every
         // species while favoring small common enemies (60/30/10 by level).
@@ -228,7 +235,8 @@
           else if(a.age>=a.duration){actors.splice(i,1);completed++;}else updateActor(a);
         }
         const wanted=target(elapsed);
-        for(let n=0;n<spawning.maxBatch&&actors.length<wanted;n++)spawn();
+        if(schedule){if(actors.length<wanted&&elapsed+1e-7>=nextSpawn){spawn();nextSpawn=elapsed+window.GardenRunRules.spawnInterval(elapsed);}}
+        else for(let n=0;n<spawning.maxBatch&&actors.length<wanted;n++)spawn();
       } while(left>1e-9);
       return elapsed;
     }
@@ -299,14 +307,14 @@
         const a=actor.entry,r=a.bounds,p=actor.pose;
         let sprite=sprites.get(actor.id);
         if(!sprite){
-          const image=scene.add.image(0,0,key(a.id,actor.expression)).setDepth(3).setMask(fieldMask).setName('enemy:actor:'+actor.id);
-          const shadow=scene.add.ellipse(0,0,1,1,window.GardenPalette.roles.n.ink,.35).setDepth(.75).setMask(fieldMask).setName('enemy:shadow:'+actor.id);
+          const image=scene.add.image(0,0,key(a.id,actor.expression)).setDepth(playable?window.GardenRunRules.depth.enemy:3).setMask(fieldMask).setName('enemy:actor:'+actor.id);
+          const shadow=scene.add.ellipse(0,0,1,1,window.GardenPalette.roles.n.ink,.35).setDepth(playable?window.GardenRunRules.depth.shadow:.75).setMask(fieldMask).setName('enemy:shadow:'+actor.id);
           sprite={image,shadow};sprites.set(actor.id,sprite);
         }
         const {image,shadow}=sprite,{x,ground,lift,angle,sx,sy,flip}=p;
         image.setPosition(x,ground-a.height*sy/2-lift)
           .setOrigin((r.left+r.right)/2/size,(r.top+r.bottom)/2/size)
-          .setScale(a.scale*sx*(flip?-1:1),a.scale*sy).setAngle(angle).setDepth(3+ground/spec.height);
+          .setScale(a.scale*sx*(flip?-1:1),a.scale*sy).setAngle(angle).setDepth((playable?window.GardenRunRules.depth.enemy:3)+Math.max(0,Math.min(.99,ground/spec.height)));
         const texture=key(a.id,actor.expression);if(image.texture.key!==texture)image.setTexture(texture);
         shadow.setPosition(x,ground+1).setDisplaySize(a.width*.72*(1-lift*.009),Math.max(2,a.height*.10)).setAlpha(.36/(1+lift*.055));
       }

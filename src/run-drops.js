@@ -6,11 +6,10 @@
     const drops=new Map();let serial=0;
     const choose=items=>items[Math.floor(Math.random()*items.length)];
     function spawn(kind,x,y,id){
-      const half=kind==='flower'?assets.flower.dropSize/2:assets.item.dropSize/2;
-      x=Math.max(half+2,Math.min(spec.width-half-2,x));
-      y=Math.max(spec.top+half+5,Math.min(spec.height-spec.bottom-half-2,y));
-      const b=spec.blueprint;
-      if(x-half<b.x+b.width&&y-half<b.y+b.height)x=b.x+b.width+half+3;
+      const size=kind==='flower'?assets.flower.dropSize:assets.item.dropSize;
+      const p=R.cardPosition(spec,x,y,size,[...drops.values()].filter(c=>!c.consumed).map(c=>({x:c.x,y:c.y,size:c.marker.width})));
+      if(!p)throw Error('No legal card position');
+      x=p.x;y=p.y;
       if(kind==='flower'&&!id){
         // Bias toward outstanding blueprint flowers; preserve random variety.
         const needed=R.blueprint.filter(([cell,name])=>scene.flowerGrowth.entries.get(cell)?.name!==name).map(([,name])=>name);
@@ -32,12 +31,14 @@
     function result(outcome){
       if(scene.run.state.result)return;
       scene.run.state.result=outcome;
-      scene.fairyPatrol.setState(outcome==='Victory'?'win':'lose');
       const state=scene.run.state;
-      scene.scene.start(outcome,{elapsed:state.elapsed,kills:scene.enemyPreview.model.kills,gems:state.gems,progress:R.completion(scene.flowerGrowth.entries)});
+      // Pause instead of stopping: the exact final game display list remains visible.
+      scene.scene.pause('Game');
+      scene.scene.launch(outcome,{elapsed:state.elapsed,kills:scene.enemyPreview.model.kills,gems:state.gems,progress:R.completion(scene.flowerGrowth.entries)});
     }
     let lastGems=-1;
     function update(_time,delta){
+      if(scene.run.state.result)return;
       const dt=Math.max(0,delta/1000);
       scene.run.tick(dt);
       for(const card of [...drops.values()]){

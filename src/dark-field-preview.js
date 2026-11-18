@@ -90,7 +90,7 @@
       t.refresh();t.setFilter(Phaser.Textures.FilterMode.NEAREST);
     }
     return scene.add.image(spec.width/2,spec.top+spec.fieldHeight/2,key)
-      .setDepth(-1.8).setName('dark-field-pattern');
+      .setDepth(window.GardenRunRules?.active?window.GardenRunRules.depth.pattern:-1.8).setName('dark-field-pattern');
   }
   window.GardenDarkFieldPreview=Object.freeze({type,active,styles,paint,field});
 }());

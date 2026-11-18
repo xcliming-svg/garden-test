@@ -205,26 +205,28 @@
     constructor(key, victory) { super(key); this.victory = victory; }
     init(data){this.runResult=data?.elapsed!==undefined?data:null;}
     create() {
-      U.background(this, this.victory ? 'RESULT / VICTORY' : 'RESULT / DEFEAT');
+      const live=!!(window.GardenRunRules?.active&&this.runResult);
+      if(live){U.fitCamera(this,U.W,U.H);this.scene.bringToTop();}
+      else U.background(this, this.victory ? 'RESULT / VICTORY' : 'RESULT / DEFEAT');
       U.panel(this, 480, 270, 480, 280, { fill: U.C.panel, stroke: this.victory ? U.C.green : U.C.red });
       U.panelHeader(this, 480, 130, 480);
       centered(this, 480, headerCenter(130), this.victory ? '성공' : '실패', U.fontSize.menuHeading,
         U.C.text, { inkBackground: U.C.header });
-      centered(this, 480, 176, this.runResult?'런 결과':'런 결과 화면 · UI 미리보기', U.fontSize.menuBase, U.C.muted);
-      U.rule(this, innerLeft(480), 190, innerRight(480), 190, U.C.border, 1);
+      if(!live){centered(this, 480, 176, '런 결과 화면 · UI 미리보기', U.fontSize.menuBase, U.C.muted);U.rule(this, innerLeft(480), 190, innerRight(480), 190, U.C.border, 1);}
 
       const r=this.runResult;
       const labels = r?['정원 완성도','플레이 시간','처치 수','남은 보석']:['진행 구역', '플레이 시간', '기록', '획득 항목'];
       const seconds=Math.floor(r?.elapsed||0),values=r?[r.progress+'%',window.GardenGameLayout.formatHudTime(Math.floor(seconds/3600),Math.floor(seconds/60)%60,seconds%60),String(r.kills),String(r.gems)]:[];
       labels.forEach((name, index) => {
         const x = index % 2 === 0 ? innerLeft(480) : 480 + pad;
-        const y = 210 + Math.floor(index / 2) * 48;
+        const y = (live?193:210) + Math.floor(index / 2) * (live?64:48);
         aligned(this, x, y, name, U.fontSize.menuBase, U.C.muted);
         aligned(this, x, y + sectionGap, values[index]??'—', U.fontSize.menuBase, U.C.text);
       });
-      centered(this, 480, 350, r?'결과는 저장되지 않습니다.':'결과 데이터 계산·저장은 미구현 상태입니다.', U.fontSize.menuBase, U.C.muted);
-      U.button(this, 480 - pairOffset(200), footerCenter(410), 200, '새 게임', () => this.scene.start('Game'), { primary: true, height: menu.buttonHeight });
-      U.button(this, 480 + pairOffset(200), footerCenter(410), 200, '메인 메뉴', () => this.scene.start('MainMenu'), { height: menu.buttonHeight, fontSize: U.fontSize.menuBase });
+      if(!live)centered(this, 480, 350, '결과 데이터 계산·저장은 미구현 상태입니다.', U.fontSize.menuBase, U.C.muted);
+      const leave=key=>{if(live)this.scene.stop('Game');this.scene.start(key);};
+      U.button(this, 480 - pairOffset(200), footerCenter(410), 200, '새 게임', () => leave('Game'), { primary: true, height: menu.buttonHeight });
+      U.button(this, 480 + pairOffset(200), footerCenter(410), 200, '메인 메뉴', () => leave('MainMenu'), { height: menu.buttonHeight, fontSize: U.fontSize.menuBase });
     }
   }
 

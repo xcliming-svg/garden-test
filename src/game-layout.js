@@ -5,6 +5,7 @@
   // 실제 전투, 획득, 재화 소비, 슬롯 확장 및 저장 로직은 없다.
   // 픽셀 로그라이크의 정보 밀도/여백을 참고. 8px 배수는 강제하지 않는다.
   const playable=!!window.GardenRunRules?.active;
+  const D=window.GardenRunRules?.depth;
   const P = window.GardenPalette;
   const R = P.reference;
   const testSprites = window.GardenTestSprites;
@@ -199,6 +200,7 @@
   }
 
   function drawHud(scene) {
+    const before=new Set(scene.children.list);
     const g = U.pixelGraphics(scene).setName('top-hud');
     g.fillStyle(colors.hud, 1).fillRect(0, 0, spec.width, spec.top);
     hudBoundary(g, spec.top - 2);
@@ -279,6 +281,7 @@
     align();
     scene.scale.on('resize',align);
     scene.events.once('shutdown',()=>scene.scale.off('resize',align));
+    if(playable)for(const obj of scene.children.list)if(!before.has(obj))obj.setDepth(obj===g?D.hud:D.hudContent);
     let lastSecond=-1,lastKills=-1,lastGems=-1,lastOccupied=-1;
     return (elapsed,kills,gems,occupied)=>{
       if(stress)return;
@@ -297,7 +300,9 @@
   function drawSlotCost(scene, x, y, size, value, visible=true) {
     const c = slotCost, centerY = y + size / 2;
     const cost = text(scene, x + size / 2, 0, String(value), c.fontSize, colors.disabledText, 'center').setName('slot-cost-value');
+    if(playable)cost.setDepth(D.equipped);
     const icon = window.GardenItemCards.gemIcon(scene,c.iconSize).setName('slot-cost-icon');
+    if(playable)icon.setDepth(D.equipped);
     // 숫자 및 보석의 실제 픽셀 외접 범위가 HUD 중심에 오도록 배치한다.
     function alignCost() {
       const zoom = scene.cameras.main.zoom;
@@ -377,6 +382,7 @@
   function drawSlots(scene) {
     const s = spec.slots;
     const g = U.pixelGraphics(scene).setName('item-slots');
+    if(playable)g.setDepth(D.hud);
     g.fillStyle(colors.hud, 1).fillRect(0, spec.top + spec.fieldHeight, spec.width, spec.bottom);
     hudBoundary(g, spec.top + spec.fieldHeight);
     const layout = bottomLayout();
@@ -384,11 +390,12 @@
       const disabled=i>=s.preview;
       const frame=U.pixelBox(scene,slot.x+slot.size/2,slot.y+slot.size/2,slot.size,slot.size,disabled?colors.disabledFill:colors.emptySlotFill,{strokeWidth:s.line,border:disabled?colors.disabledBorder:colors.normalBorder}).setName('slot-frame:'+i);
       if(disabled&&i===s.preview||s.preview===s.max&&i===s.max-1)layout.alignCost=drawSlotCost(scene,slot.x+s.line,slot.y+s.line,s.cell,s.exampleCost,disabled);
+      if(playable)frame.setDepth(D.slotFrame);
       return frame;
     });
     if(playable){
       const count=()=>scene.run.state.slotCount;
-      const buyZone=scene.add.zone(0,s.y+s.size/2,s.size,s.size).setDepth(23).setName('run-slot-purchase').setInteractive({useHandCursor:true});
+      const buyZone=scene.add.zone(0,s.y+s.size/2,s.size,s.size).setDepth(D.purchase).setName('run-slot-purchase').setInteractive({useHandCursor:true});
       layout.updateSlots=()=>{
         const n=count(),shown=Math.min(n+1,s.max),left=Math.floor((spec.width-shown*s.size-(shown-1)*s.gap)/2);
         layout.slots.forEach((slot,i)=>{slot.x=left+i*(s.size+s.gap);const f=layout.slotFrames[i],locked=i===n;f.setPosition(slot.x+s.size/2,s.y+s.size/2).setFillStyle(locked?colors.disabledFill:colors.emptySlotFill).setStrokeStyle(s.line,locked?colors.disabledBorder:colors.normalBorder).setVisible(i<shown);});
@@ -460,14 +467,14 @@
   function drawBlueprint(scene) {
     const b = spec.blueprint;
     // 패널 접기는 화면 UI 상태만 변경한다.
-    const body = U.pixelGraphics(scene).setDepth(10).setName('blueprint-body');
+    const body = U.pixelGraphics(scene).setDepth(playable?D.blueprint:10).setName('blueprint-body');
     // 제목 박스와 그리드를 독립 외곽선으로 그리고 사이에 3px 공백을 둔다.
     grid(body, b.gridX, b.gridY, b, colors.gridFill, colors.blueprintLine);
-    const targets=playable?window.GardenRunRules.blueprint.map(([id,name])=>{const x=b.gridX+b.frame+b.line+(id%10)*b.pitch+b.cell/2,y=b.gridY+b.frame+b.line+Math.floor(id/10)*b.pitch+b.cell/2;return scene.add.image(x,y,window.GardenFlowerGrowth.key(name,3)).setDisplaySize(11,11).setDepth(11).setName('blueprint-flower:'+id);}):[];
+    const targets=playable?window.GardenRunRules.blueprint.map(([id,name])=>{const x=b.gridX+b.frame+b.line+(id%10)*b.pitch+b.cell/2,y=b.gridY+b.frame+b.line+Math.floor(id/10)*b.pitch+b.cell/2;return scene.add.image(x,y,window.GardenFlowerGrowth.key(name,3)).setDisplaySize(8,8).setDepth(D.blueprintIcon).setName('blueprint-flower:'+id);}):[];
 
-    const header = U.pixelGraphics(scene).setDepth(11).setName('blueprint-header');
-    text(scene, b.x + b.padding, b.y + b.header / 2 - 0.75, '도안', b.fontSize, colors.hudLabel, 'left').setDepth(12).setName('blueprint-title');
-    const arrow = scene.add.graphics().setDepth(12).setName('blueprint-chevron');
+    const header = U.pixelGraphics(scene).setDepth(playable?D.blueprintIcon:11).setName('blueprint-header');
+    text(scene, b.x + b.padding, b.y + b.header / 2 - 0.75, '도안', b.fontSize, colors.hudLabel, 'left').setDepth(playable?D.blueprintText:12).setName('blueprint-title');
+    const arrow = scene.add.graphics().setDepth(playable?D.blueprintText:12).setName('blueprint-chevron');
     let expanded = true;
     function drawArrow() {
       header.clear();
@@ -483,7 +490,7 @@
     }
     drawArrow();
     scene.add.zone(b.x + b.width / 2, b.y + b.header / 2, b.width, b.header)
-      .setDepth(13).setName('blueprint-toggle').setInteractive({ useHandCursor: true })
+      .setDepth(playable?D.blueprintInput:13).setName('blueprint-toggle').setInteractive({ useHandCursor: true })
       .on('pointerdown', () => {
         expanded = !expanded;
         body.setVisible(expanded);targets.forEach(t=>t.setVisible(expanded));
@@ -581,7 +588,7 @@
     // 꽃과 동일하게 스냅 미리보기는 아이콘만 표시한다. 외곽선과 면은 슬롯이 담당한다.
     const makeCard=(x,y)=>ballMode?window.GardenLootPreview.card(scene,x,y,assets.item.cardSize,assets.item.size):testSprites.itemCard(scene,x,y,'wheelbarrow',assets.item.cardSize,assets.item.size);
     const ghost = makeCard(0,0)
-      .setDepth(22).setAlpha(0.45).setVisible(false).setName('item-preview-ghost');
+      .setDepth(playable?D.slotGhost:22).setAlpha(0.45).setVisible(false).setName('item-preview-ghost');
     ghost.list[0].setVisible(false);
     ghost.list[1].setVisible(false);
 
@@ -596,7 +603,8 @@
         delta: text(scene, x, layout.centerY, '', bottomStats.valueSize, colors.value, 'center').setName('stat-delta:' + key)
       };
     });
-    const tooltip = scene.add.container(0, 0).setDepth(40).setName('item-preview-tooltip').setVisible(false);
+    if(playable)for(const row of stats)for(const key of ['label','value','delta'])row[key].setDepth(D.hudContent);
+    const tooltip = scene.add.container(0, 0).setDepth(playable?D.tooltip:40).setName('item-preview-tooltip').setVisible(false);
     let tooltipKey = null, tooltipSize = { width: itemTooltip.width, height: 0 };
 
     function signed(n) { return (n > 0 ? '+' : '') + String(n); }
@@ -800,8 +808,8 @@
     slots.forEach((slot, index) => {
       const center = slotAnchor(index);
       slotItems.push(makeCard(center.x,center.y)
-        .setDepth(20).setName('preview-equipped:' + index).setVisible(false));
-      const zone = scene.add.zone(center.x, center.y, slot.size, slot.size).setDepth(21)
+        .setDepth(playable?D.equipped:20).setName('preview-equipped:' + index).setVisible(false));
+      const zone = scene.add.zone(center.x, center.y, slot.size, slot.size).setDepth(playable?D.slotInput:21)
         .setName('preview-slot:' + index).setInteractive({ useHandCursor: true });
       slotZones.push(zone);bindFocus(zone, { slot: index });
     });
@@ -814,7 +822,7 @@
         if (card.consumed || dragging) return;
         dragging = card; pinned = null; hovered = null;
         if(card.drop)card.drop.dragging=true;
-        marker.setDepth(30);marker.resetFloat?.();
+        marker.setDepth(playable?D.drag:30);marker.resetFloat?.();
         dragTo(pointer);
       });
       marker.on('drag', pointer => { if (dragging === card) dragTo(pointer); });
@@ -1115,7 +1123,7 @@
     testSprites.install(scene);
     window.GardenUI.fitCamera(scene, spec.width, spec.height);
     scene.cameras.main.setBackgroundColor(P.background.hex);
-    const g = scene.add.graphics().setDepth(-2).setName('battlefield');
+    const g = scene.add.graphics().setDepth(playable?D.field:-2).setName('battlefield');
     g.fillStyle(colors.field, 1).fillRect(0, spec.top, spec.width, spec.fieldHeight);
     if(P.uiType===1)window.GardenLightFieldPreview.field(scene,spec);
     else window.GardenDarkFieldPreview.field(scene,spec);

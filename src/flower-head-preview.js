@@ -155,7 +155,7 @@
     const texture=scene.textures.exists(textureKey)?scene.textures.get(textureKey):
       scene.textures.createCanvas(textureKey,g.size,g.size);
     const soil=scene.add.image(g.x+g.size/2,g.y+g.size/2,textureKey)
-      .setDepth(-1).setName('garden-preview-soil');
+      .setDepth(playable?window.GardenRunRules.depth.soil:-1).setName('garden-preview-soil');
     const grid=window.GardenDashedGridPreview;
     const geometry=(keys,w=guardianWidth,h=guardianSize)=>grid.geometry(spec,keys,w,h);
     const visible=grid.all(g);
@@ -200,7 +200,7 @@
         // Static card inspection: plant into the existing garden, never create combat loot.
         const L=window.GardenGameLayout;
         const ghost=scene.add.image(0,0,growth?G.key(types[0],1):key(types[0],g.cell))
-          .setDepth(15).setAlpha(.45).setVisible(false).setName('garden-preview-ghost');
+          .setDepth(playable?window.GardenRunRules.depth.plantGhost:15).setAlpha(.45).setVisible(false).setName('garden-preview-ghost');
         let dragging=null,target=-1;
         const point=p=>scene.cameras.main.getWorldPoint(p.x,p.y);
         const hit=p=>L.gardenHit(p.x,p.y,g);
@@ -237,7 +237,7 @@
           o.setInteractive({useHandCursor:true,draggable:true});scene.input.setDraggable(o);
           o.on('pointerover',()=>{if(!dragging)o.setStrokeStyle(1,colors.flowerBorder,1);});
           o.on('pointerout',()=>{if(!dragging)o.setStrokeStyle(0,0,0);});
-          o.on('dragstart',p=>{if(dragging||f.consumed)return;dragging=f;target=-1;o.resetFloat?.();o.setDepth(30).setStrokeStyle(1,colors.flowerBorder,1);refreshSoil(-1);move(p);});
+          o.on('dragstart',p=>{if(dragging||f.consumed)return;dragging=f;target=-1;o.resetFloat?.();o.setDepth(playable?window.GardenRunRules.depth.drag:30).setStrokeStyle(1,colors.flowerBorder,1);refreshSoil(-1);move(p);});
           o.on('drag',p=>{if(dragging===f)move(p);});
           o.on('dragend',p=>{if(dragging===f)finish(p,true);});
         }
