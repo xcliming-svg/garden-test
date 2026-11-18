@@ -246,9 +246,13 @@
     const A=window.GardenFairyAttack;
     const weaponCombat=window.GardenHeroWeaponPreview?.combat&&window.GardenHeroWeaponPreview.enabled;
     const fixed=weaponCombat?window.GardenWeaponBalance.enemyCount:null;
-    const target=fixed!==null?()=>fixed:simulation?simulationTarget:targetCount;
+    const finite=weaponCombat?window.GardenWeaponBalance.balanceWave:null;
+    let model;
+    const target=finite!==null?t=>Math.min(200,model.actors.length+Math.max(0,Math.min(finite,Math.floor(t*10)+1)-model.spawned)):
+      fixed!==null?()=>fixed:simulation?simulationTarget:targetCount;
     const relics=(A.enabled||weaponCombat)?window.GardenRelicCollection.attach(scene,spec,patrol):null;
-    const model=createPopulation(spec,patrol,entries,Math.random,target,relics?.death,!!weaponCombat),sprites=new Map();
+    model=createPopulation(spec,patrol,entries,Math.random,target,relics?.death,!!weaponCombat);
+    const sprites=new Map();
     const occlusion=window.GardenEnemyOcclusion.attach(scene,spec,patrol);
     // The playable field clips partial entry/exit sprites; HUD is never covered.
     const clip=scene.make.graphics({x:0,y:0,add:false});
