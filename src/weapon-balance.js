@@ -21,6 +21,7 @@
     sprinkler:{range:330,damage:[3,4,5],cooldown:[4.8,4.6,4.4],duration:3.2,repeat:.45,maxHits:6,radius:44},
     broom:{range:250,damage:[6,8,10],cooldown:[5.2,5,4.8],duration:3.6,repeat:1.2,maxHits:3,push:12}
   });
+  const loadout=Object.freeze((params.get('weaponLoadout')||'').split(',').map(id=>id.trim()).filter(id=>Object.prototype.hasOwnProperty.call(data,id)).slice(0,slots));
   const stats=(id,lvl=1)=>{
     const d=data[id];if(!d)return null;const n=clamp(Math.trunc(lvl)||1,1,3)-1;
     return {...d,level:n+1,damage:d.damage[n],cooldown:d.cooldown[n],slow:d.slow?.[n]};
@@ -135,5 +136,5 @@
     options.sort((a,b)=>b.score-a.score||a.target.id-b.target.id);
     return options[0]||null;
   }
-  window.GardenWeaponBalance=Object.freeze({data,stats,hp,level,slots,enemyCount,balanceWave,groundContact,eligibleHeight,ground,target,amount,nominalDps,choose});
+  window.GardenWeaponBalance=Object.freeze({data,stats,hp,level,slots,enemyCount,balanceWave,loadout,groundContact,eligibleHeight,ground,target,amount,nominalDps,choose});
 }());
