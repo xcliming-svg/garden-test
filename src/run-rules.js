@@ -18,7 +18,8 @@
   let initial=freezeCells(config.initial||catalog[0].initial);
   let blueprint=freezeCells(config.blueprint||catalog[0].blueprint);
   const flowerWeights=Object.freeze({...Object.fromEntries(Object.values(flowerNames).map(name=>[name,1])),...config.flowerWeights});
-  const tuning=Object.freeze({initialSlots:4,maxSlots:10,costs:Object.freeze([40,60,85,115,150,200]),growthSeconds:8,uprootSeconds:3,cardLifetime:45,dropWeights:Object.freeze([.69,.10,.18,.03]),itemInterval:30,starterRock:'rock',enemyDamage:4,enemyDamagePerLevel:2,spawnCap:65,neededFlowerBias:.75,startingGems:0,gemValue:1,...config.run});
+  const baseTuning=Object.freeze({initialSlots:4,maxSlots:10,costs:Object.freeze([40,60,85,115,150,200]),growthSeconds:8,uprootSeconds:3,cardLifetime:45,dropWeights:Object.freeze([.69,.10,.18,.03]),itemInterval:30,starterRock:'rock',enemyDamage:4,enemyDamagePerLevel:2,spawnCap:65,neededFlowerBias:.75,startingGems:0,gemValue:1,...config.run});
+  let tuning=baseTuning;
   const damageToFlower=(entry,defense=0)=>Math.max(1,(config.enemyDamage?.[entry.id]??(tuning.enemyDamage+(entry.level-1)*tuning.enemyDamagePerLevel))-defense);
   const canEquip=(equipped,index,item)=>{const next=equipped.slice();next[index]=item;return next.some(i=>i?.stats.dps>0);};
   function chooseFlower(entries,random=Math.random){
@@ -44,6 +45,7 @@
     const pattern=catalog.find(p=>p.id===id);if(!pattern)return false;
     selectedBlueprintId=id;initial=pattern.initial;blueprint=pattern.blueprint;
     required.clear();for(const [cell,name] of blueprint)required.set(cell,name);
+    applyPaceTrial(id);
     return true;
   }
   function blueprintStatus(entries,id){
@@ -83,7 +85,7 @@
   // Each row is [start, interval, live cap, batch, weighted NEW arrivals].
   // Existing living enemies are never removed at a wave boundary.
   const C='3_caterpillar',B='4_beetle',G='2_grasshopper',P='2_gray_bug',F='1_butterfly',J='2_frog',K='1_cat',S='6_sparrow',M='6_mouse',R='6_rabbit',D='5_bulldog',V='6_pigeon';
-  const waves=Object.freeze((config.waves||[
+  const baseWaves=Object.freeze((config.waves||[
     [0,3,3,1,[[C,1]]],[30,2.5,4,1,[[C,1]]],[90,2,7,1,[[C,1]]],
     [180,3,6,1,[[B,7],[C,3]]],[240,2,9,1,[[C,7],[B,3]]],
     [270,1.2,12,1,[[B,7],[C,3]]],[300,1.1,18,2,[[G,7],[C,3]]],[360,1,24,2,[[G,4],[B,3],[C,3]]],
@@ -98,6 +100,24 @@
     [1380,2.2,28,1,[[V,7],[S,3]]],[1440,1.3,48,2,[[V,3],[R,3],[D,4]]],
     [1560,1.2,65,2,[[M,3],[D,3],[V,4]]]
   ]).map(([start,interval,cap,batch,pool])=>Object.freeze({start,interval,cap,batch,pool:Object.freeze(pool.map(Object.freeze))})));
+  // devel human playtest: profiles selected by the repeated pace study. Explicit
+  // simulation configs (including {}) always bypass the trial to preserve baselines.
+  const paceProfiles=Object.freeze({
+    classic:Object.freeze({interval:1.5,cap:5,batch:1,flower:.10,item:.08,cooldown:25}),
+    cross:Object.freeze({interval:2.5,cap:11,batch:2,flower:.10,item:.08,cooldown:15}),
+    heart:Object.freeze({interval:2,cap:8,batch:2,flower:.09,item:.06,cooldown:30})
+  });
+  let waves=baseWaves;
+  function applyPaceTrial(id){
+    const p=active&&!window.GardenSimulationConfig?paceProfiles[id]:null;
+    tuning=baseTuning;waves=baseWaves;
+    if(!p)return;
+    const round=x=>Math.round(x*10000)/10000;
+    tuning=Object.freeze({...baseTuning,dropWeights:Object.freeze([round(.9-p.flower-p.item),.10,p.flower,p.item]),itemInterval:p.cooldown});
+    const caps=[0,2,4,5,6,7],scales=[1,.9,.8,.8,.75,.7];
+    waves=Object.freeze(baseWaves.map((w,i)=>i>=6?w:Object.freeze({...w,interval:round(Math.min(w.interval,p.interval*scales[i])),cap:Math.max(w.cap,p.cap+caps[i]),batch:Math.max(w.batch,p.batch)})));
+  }
+  applyPaceTrial(selectedBlueprintId);
   function waveAt(seconds){return waves.findLast(w=>seconds+1e-7>=w.start)||waves[0];}
   function population(seconds){return waveAt(seconds).cap;}
   function spawnInterval(seconds){return waveAt(seconds).interval;}
@@ -157,5 +177,5 @@
     }
     return {state,credit,buy,tick,rewardDrop};
   }
-  window.GardenRunRules=Object.freeze({active,catalog,selectBlueprint,get selectedBlueprintId(){return selectedBlueprintId;},get initial(){return initial;},get blueprint(){return blueprint;},flowerWeights,tuning,cost,rollDrop,damageToFlower,canEquip,chooseFlower,itemUnlocks,stageAt,completion,blueprintStatus,plantCandidates,canPlant,uprootOutline,population,enemyUnlocks,eligibleEnemies,spawnInterval,waves,waveAt,itemPool,pickItem,cardPosition,depth,create});
+  window.GardenRunRules=Object.freeze({active,catalog,selectBlueprint,get selectedBlueprintId(){return selectedBlueprintId;},get initial(){return initial;},get blueprint(){return blueprint;},flowerWeights,paceProfiles,get tuning(){return tuning;},cost,rollDrop,damageToFlower,canEquip,chooseFlower,itemUnlocks,stageAt,completion,blueprintStatus,plantCandidates,canPlant,uprootOutline,population,enemyUnlocks,eligibleEnemies,spawnInterval,get waves(){return waves;},waveAt,itemPool,pickItem,cardPosition,depth,create});
 }());

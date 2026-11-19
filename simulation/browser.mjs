@@ -187,3 +187,29 @@ export async function verifyBlueprintSelector(p,opts={}){
     return {heart,menu,butterfly};
   });
 }
+
+export async function verifyPaceTrial(p,opts={}){
+  return withScene(p,{...opts,menuSelection:'classic'},async page=>{
+    const inspect=()=>page.evaluate(()=>{
+      const R=window.GardenRunRules,s=window.__gardenSimScene;
+      window.__gardenSimStep=true;
+      for(let i=0;i<200;i++){
+        const t=s.run.state.elapsed+.05;window.__gardenSimTime=t;s.events.emit('update',t*1000,50);
+      }
+      window.__gardenSimStep=false;
+      return {id:R.selectedBlueprintId,required:R.blueprint.length,drops:R.tuning.dropWeights,cooldown:R.tuning.itemInterval,
+        interval:R.spawnInterval(0),cap:R.population(0),batch:R.waveAt(0).batch,spawned:s.enemyPreview.model.spawned,
+        elapsed:s.run.state.elapsed,slots:s.run.state.slotCount,gear:s.runEquipment.equipped[0]?.id};
+    });
+    const result=[await inspect()];
+    for(const map of ['cross','heart','butterfly','classic']){
+      await page.evaluate(()=>{const g=window.__gardenTestGame;g.scene.stop('Game');g.scene.start('MainMenu');});
+      await page.waitForFunction(()=>window.__gardenTestGame.scene.isActive('MainMenu')&&document.querySelector('#blueprint-select'));
+      await page.locator('#blueprint-select').selectOption(map);
+      await page.evaluate(()=>window.__gardenTestGame.scene.start('Game'));
+      await page.waitForFunction(()=>window.__gardenTestGame.scene.isActive('Game')&&window.__gardenSimScene?.runDrops&&window.__gardenSimScene.run.state.elapsed===0,null,{timeout:60000});
+      result.push(await inspect());
+    }
+    return result;
+  });
+}

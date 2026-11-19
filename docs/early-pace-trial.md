@@ -1,0 +1,16 @@
+# devel 초반 전투 밀도 시험 적용
+
+2026-11-19 · 사용자 요청에 따른 devel 플레이테스트용 적용. main 미변경. [연구 전체 기록](https://github.com/xcliming-svg/garden-test/blob/feature/early-pace-optimization/docs/early-pace-search.md), [선정 manifest](https://github.com/xcliming-svg/garden-test/blob/feature/early-pace-optimization/simulation/experiments/early-pace-selected.json), [측정 모델 및 실제 Phaser 검증](https://github.com/xcliming-svg/garden-test/actions/runs/44462244085).
+
+| 도안 | 시작 간격/상한/묶음 | 보석/하트/꽃/장비 | 장비 최소 간격 |
+| --- | --- | --- | --- |
+| 정사각형 | 1.5초/5/1 | 72/10/10/8% | 25초 |
+| 십자 | 2.5초/11/2 | 72/10/10/8% | 15초 |
+| 하트 | 2초/8/2 | 75/10/9/6% | 30초 |
+
+0/30/90/180/240/270초 웨이브 각각의 cap = max(기존, 시작 상한+[0,2,4,5,6,7]), interval = min(기존, 시작 간격×[1,.9,.8,.8,.75,.7]) (소수 4자리), batch = max(기존, 시작 묶음). 300초 이후 원래 웨이브 유지. 꽃/나비/큰 하트는 이전 설정 복원. 도안 선택/새 게임/재시작 연동. 기본 슬롯 수 및 최대 슬롯 4/10, 비용, 적 종류와 스탯, 꽃 성장, 기존 UI 모두 보존. 실험 JSON이 명시된 시뮬레이션과 lab은 이전 기본값 또는 명시 설정을 사용한다.
+
+## 검증 및 한계
+- 2,702회 fallback 탐색과 독립 검증의 선정값. 실제 Phaser 90초 18회에서 3도안의 초반 동시 적/30초 처치/60초 처치 1.5배 이상 기준 통과. 동시 적 배율 1.90/2.73/3.16, 60초 처치 배율 1.84/2.50/2.68.
+- 측정 geometry 모델 384회에서는 모든 도안의 승률 gate 통과했으나 정사각형 초보 장착 상한(6>5), 십자 일반/숙련 완료 시간 하한 및 일반 정체, 하트 초보 정체(1.157>1.15) 위반. 이 때문에 연구 전체 gate는 실패했다. 추가 재탐색은 완료되지 않았다. 따라서 이번 devel 적용은 최종 적정값의 확정이 아닌 인간 플레이테스트용 trial이다. 실제 브라우저 90초 이후 완주 및 사람 재미 미검증. 
+- 실제 적용 경로의 6도안 규칙 전환, cooldown, 명시적 simulation 설정 격리 및 기존 모델 회귀 검사와 Phaser 실제 메뉴 전환 검사는 `tests/early-pace-trial-*.mjs` 및 CI에서 별도 확인한다.
