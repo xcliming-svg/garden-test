@@ -26,8 +26,9 @@ const baseById={'1_butterfly':40,'2_grasshopper':36,'6_mouse':36,'2_gray_bug':24
 try{
  for(const [name,w,h,query] of [['default',960,540,''],['fhd',1920,1080,''],['small',640,360,''],['full',960,540,'?full=1'],['hidden',960,540,'?enemies=0'],['combat',960,540,'?combat=1']]){
   const page=await browser.newPage({viewport:{width:w,height:h}});
-  const errors=[];page.on('pageerror',e=>errors.push(String(e)));
+  const errors=[];page.on('pageerror',e=>{errors.push(String(e));console.error('PAGE ERROR',e.stack||String(e));});
   try{
+   console.log('Movement speed fixture',name);
    await page.goto(url+'/index.html'+query+(query?'&':'?')+'attack=0');
    await page.waitForFunction(()=>window.__previewGame?.scene.isActive('MainMenu'));
    const canvas=await page.locator('canvas').boundingBox();
