@@ -25,7 +25,6 @@ jobs:
       - uses: actions/setup-node@v4
         with:
           node-version: 22
-      - run: npm install --no-save phaser@3.90.0 playwright
-      - run: npx playwright install --with-deps chrome
+      - run: npm install --no-save --package-lock=false phaser@3.90.0 playwright@1.51.1
       - run: node tests/campaign-v3-browser.mjs
       - run: node tests/playable-run-browser.mjs

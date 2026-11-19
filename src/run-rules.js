@@ -15,7 +15,7 @@
     ...[["cross","십자 · 입문",["..SS..",".SDDS.","SDDDDS",".SDDS.","..SS.."],2,2],["heart","하트 · 초급",[".RR.RR.","RRRRRRR","RRDDDRR",".RTTTR.","..TTT..","...T..."],1,2],["flower","꽃 · 중급",["...SS...","..SSSS..",".SSDDSS.","SSDDDDSS",".SSDDSS.","..SSSS..","...SS..."],1,1],["butterfly","나비 · 중급",["LL...LL","LHL.LHL","LHHSHHL",".HHSHH.","LTTSTTL","LT...TL"],1,2],["large-heart","큰 하트 · 확장 실험",[".RRR..RRR.","RRRRRRRRRR","RRRDDDDRRR","RRRDDDDRRR",".RRTTTTRR.","..RTTTTR..","...TTTT...","....TT...."],0,1]].map(row=>makePattern(...row))
   ]);
   const campaignCatalog=window.GardenCampaignV3?.stages||[];
-  const catalog=Object.freeze([...campaignCatalog,...legacyCatalog]);
+  const catalog=window.GardenSimulationConfig?legacyCatalog:Object.freeze([...campaignCatalog,...legacyCatalog]);
   let campaign=active&&!window.GardenSimulationConfig?campaignCatalog[0]||null:null;
   let selectedBlueprintId=campaign?.id||'classic';
   let initial=freezeCells(config.initial||campaign?.initial||legacyCatalog[0].initial);
@@ -48,7 +48,7 @@
   const required=new Map(blueprint);
   function selectBlueprint(id){
     if(config.blueprint||config.initial)return false; // explicit simulation configuration takes precedence
-    const pattern=catalog.find(p=>p.id===id);if(!pattern)return false;
+    const pattern=campaignCatalog.find(p=>p.id===id)||legacyCatalog.find(p=>p.id===id);if(!pattern)return false;
     campaign=campaignCatalog.includes(pattern)?pattern:null;
     selectedBlueprintId=id;initial=pattern.initial;blueprint=pattern.blueprint;
     required.clear();for(const [cell,name] of blueprint)required.set(cell,name);
