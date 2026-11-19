@@ -12,24 +12,27 @@ try{
  browser=await chromium.launch({channel:'chrome',headless:true,args:['--no-sandbox','--disable-dev-shm-usage','--use-gl=angle','--use-angle=swiftshader','--enable-unsafe-swiftshader']});
  for(const [width,height] of [[960,540],[1280,720]]){
   const page=await browser.newPage({viewport:{width,height}}),errors=[];page.on('pageerror',e=>{errors.push(String(e));console.error('PAGE ERROR',e.stack||String(e));});
+  await page.addInitScript(()=>{window.GardenSimulationRng={drop:()=>0};});
   await page.goto('http://127.0.0.1:'+server.address().port);await page.waitForFunction(()=>window.__previewGame?.scene.isActive('MainMenu'));
   await page.locator('#blueprint-select').selectOption('stage-3');
   const box=await page.locator('canvas').boundingBox(),xy=(x,y)=>[box.x+x*box.width/960,box.y+y*box.height/540];
   await page.mouse.click(...xy(480,252));await page.waitForFunction(()=>window.__previewGame.scene.getScene('Game').flowerCarry);
   const read=(fn,arg)=>page.evaluate(fn,arg),pos=()=>read(()=>({...window.__previewGame.scene.getScene('Game').fairyPatrol.actors[0].center}));
   async function go(x,y){
+    const b=await read(()=>{const s=window.__previewGame.scene.getScene('Game'),g=window.GardenGameLayout.spec,h=s.fairyPatrol.actors[0].visibleHeight/2+2;return {left:h,right:g.width-h,top:g.top+h,bottom:g.height-g.bottom-h};});x=Math.max(b.left,Math.min(b.right,x));y=Math.max(b.top,Math.min(b.bottom,y));
+    console.log('go',width,height,x,y);
     for(const [axis,dest,neg,posKey] of [['x',x,'a','d'],['y',y,'w','s']]){
       for(let attempt=0;attempt<5;attempt++){
         const p=await pos(),delta=dest-p[axis];if(Math.abs(delta)<7)break;
         const key=delta<0?neg:posKey;await page.keyboard.down(key);
-        try{await page.waitForFunction(({axis,dest,sign})=>{const p=window.__previewGame.scene.getScene('Game').fairyPatrol.actors[0].center;return sign*(dest-p[axis])<=5;},{axis,dest,sign:Math.sign(delta)},{timeout:8000});}finally{await page.keyboard.up(key);}
+        try{await page.waitForFunction(({axis,dest,sign})=>{const p=window.__previewGame.scene.getScene('Game').fairyPatrol.actors[0].center;return sign*(dest-p[axis])<=5;},{axis,dest,sign:Math.sign(delta)},{timeout:8000});}catch(e){console.error('go failure',axis,dest,await pos());throw e;}finally{await page.keyboard.up(key);}
       }
     }
     const p=await pos();assert(Math.hypot(p.x-x,p.y-y)<13,'movement destination '+JSON.stringify({p,x,y}));
   }
   const initial=await pos();await page.waitForTimeout(180);assert.deepEqual(await pos(),initial,'idle stays in place');
   assert.equal(await read(()=>window.__previewGame.scene.getScene('Game').fairyPatrol.manualSpeed),120);
-  const fixture=await read(()=>{const R=window.GardenRunRules,s=window.__previewGame.scene.getScene('Game'),g=window.GardenGameLayout.spec.garden;const id=[...R.plantCandidates(s.runGarden.occupied)][0],name=R.blueprint.find(x=>x[0]===id)[1],p=s.fairyPatrol.actors[0].center,c=s.runDrops.spawn('flower',p.x+120,p.y,name);return {id,name,x:c.x,y:c.y,cx:g.x+(id%10)*g.pitch+g.line+g.cell/2,cy:g.y+Math.floor(id/10)*g.pitch+g.line+g.cell/2,card:c.marker.name};});
+  const fixture=await read(()=>{const R=window.GardenRunRules,s=window.__previewGame.scene.getScene('Game'),g=window.GardenGameLayout.spec.garden;const id=[...R.plantCandidates(s.runGarden.occupied)][0],name=R.blueprint.find(x=>x[0]===id)[1],p=s.fairyPatrol.actors[0].center,c=s.runDrops.spawn('flower',700,200,name);return {id,name,x:c.x,y:c.y,cx:g.x+(id%10)*g.pitch+g.line+g.cell/2,cy:g.y+Math.floor(id/10)*g.pitch+g.line+g.cell/2,card:c.marker.name};});
   await page.keyboard.press('Space');assert.equal(await read(()=>window.__previewGame.scene.getScene('Game').flowerCarry.carried),null,'remote pickup denied');
   await go(fixture.x,fixture.y);
   await page.keyboard.press('Space');await page.waitForFunction(()=>!!window.__previewGame.scene.getScene('Game').flowerCarry.carried);
