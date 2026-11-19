@@ -1,0 +1,512 @@
+{
+  "run_id": 44481795791,
+  "rows": [
+    {
+      "stage": 45,
+      "policy": "counter-first",
+      "variant": "gradual",
+      "treatment": "attack-weight",
+      "wins": 1,
+      "runs": 3,
+      "seconds": 488.1,
+      "gap": 91.79999999999693,
+      "peak": 138,
+      "discovery": 1,
+      "formations": 31,
+      "requested": 145,
+      "pass": false,
+      "violations": {
+        "survival": 0.46666666666666673,
+        "gap": 0,
+        "duration": 0,
+        "discovery": 0
+      }
+    },
+    {
+      "stage": 45,
+      "policy": "counter-first",
+      "variant": "gradual",
+      "treatment": "baseline",
+      "wins": 1,
+      "runs": 3,
+      "seconds": 472,
+      "gap": 91.79999999999693,
+      "peak": 135,
+      "discovery": 1,
+      "formations": 29,
+      "requested": 145,
+      "pass": false,
+      "violations": {
+        "survival": 0.46666666666666673,
+        "gap": 0,
+        "duration": 0,
+        "discovery": 0
+      }
+    },
+    {
+      "stage": 45,
+      "policy": "counter-first",
+      "variant": "gradual",
+      "treatment": "both",
+      "wins": 2,
+      "runs": 3,
+      "seconds": 485.1,
+      "gap": 93.9999999999968,
+      "peak": 142,
+      "discovery": 1,
+      "formations": 24,
+      "requested": 145,
+      "pass": false,
+      "violations": {
+        "survival": 0.13333333333333341,
+        "gap": 0,
+        "duration": 0,
+        "discovery": 0
+      }
+    },
+    {
+      "stage": 45,
+      "policy": "counter-first",
+      "variant": "gradual",
+      "treatment": "starter",
+      "wins": 2,
+      "runs": 3,
+      "seconds": 468.05,
+      "gap": 93.9999999999968,
+      "peak": 135,
+      "discovery": 1,
+      "formations": 32,
+      "requested": 145,
+      "pass": false,
+      "violations": {
+        "survival": 0.13333333333333341,
+        "gap": 0,
+        "duration": 0,
+        "discovery": 0
+      }
+    },
+    {
+      "stage": 45,
+      "policy": "upgrade-first",
+      "variant": "gradual",
+      "treatment": "attack-weight",
+      "wins": 1,
+      "runs": 3,
+      "seconds": 720,
+      "gap": 90.29999999999701,
+      "peak": 149,
+      "discovery": 1,
+      "formations": 30,
+      "requested": 145,
+      "pass": false,
+      "violations": {
+        "survival": 0.46666666666666673,
+        "gap": 0,
+        "duration": 0.2,
+        "discovery": 0
+      }
+    },
+    {
+      "stage": 45,
+      "policy": "upgrade-first",
+      "variant": "gradual",
+      "treatment": "baseline",
+      "wins": 1,
+      "runs": 3,
+      "seconds": 479.5,
+      "gap": 93.29999999999684,
+      "peak": 135,
+      "discovery": 1,
+      "formations": 32,
+      "requested": 145,
+      "pass": false,
+      "violations": {
+        "survival": 0.46666666666666673,
+        "gap": 0,
+        "duration": 0,
+        "discovery": 0
+      }
+    },
+    {
+      "stage": 45,
+      "policy": "upgrade-first",
+      "variant": "gradual",
+      "treatment": "both",
+      "wins": 3,
+      "runs": 3,
+      "seconds": 541.95,
+      "gap": 90.29999999999701,
+      "peak": 144,
+      "discovery": 1,
+      "formations": 38,
+      "requested": 145,
+      "pass": true,
+      "violations": {
+        "survival": 0,
+        "gap": 0,
+        "duration": 0,
+        "discovery": 0
+      }
+    },
+    {
+      "stage": 45,
+      "policy": "upgrade-first",
+      "variant": "gradual",
+      "treatment": "starter",
+      "wins": 1,
+      "runs": 3,
+      "seconds": 485.45,
+      "gap": 91.79999999999693,
+      "peak": 143,
+      "discovery": 1,
+      "formations": 27,
+      "requested": 145,
+      "pass": false,
+      "violations": {
+        "survival": 0.46666666666666673,
+        "gap": 0,
+        "duration": 0,
+        "discovery": 0
+      }
+    },
+    {
+      "stage": 45,
+      "policy": "variety-first",
+      "variant": "gradual",
+      "treatment": "attack-weight",
+      "wins": 2,
+      "runs": 3,
+      "seconds": 489.45,
+      "gap": 91.79999999999693,
+      "peak": 135,
+      "discovery": 1,
+      "formations": 27,
+      "requested": 145,
+      "pass": false,
+      "violations": {
+        "survival": 0.13333333333333341,
+        "gap": 0,
+        "duration": 0,
+        "discovery": 0
+      }
+    },
+    {
+      "stage": 45,
+      "policy": "variety-first",
+      "variant": "gradual",
+      "treatment": "baseline",
+      "wins": 2,
+      "runs": 3,
+      "seconds": 501.45,
+      "gap": 90.29999999999701,
+      "peak": 135,
+      "discovery": 1,
+      "formations": 25,
+      "requested": 145,
+      "pass": false,
+      "violations": {
+        "survival": 0.13333333333333341,
+        "gap": 0,
+        "duration": 0,
+        "discovery": 0
+      }
+    },
+    {
+      "stage": 45,
+      "policy": "variety-first",
+      "variant": "gradual",
+      "treatment": "both",
+      "wins": 2,
+      "runs": 3,
+      "seconds": 487.95,
+      "gap": 93.9999999999968,
+      "peak": 135,
+      "discovery": 1,
+      "formations": 34,
+      "requested": 145,
+      "pass": false,
+      "violations": {
+        "survival": 0.13333333333333341,
+        "gap": 0,
+        "duration": 0,
+        "discovery": 0
+      }
+    },
+    {
+      "stage": 45,
+      "policy": "variety-first",
+      "variant": "gradual",
+      "treatment": "starter",
+      "wins": 2,
+      "runs": 3,
+      "seconds": 496.95,
+      "gap": 93.9999999999968,
+      "peak": 143,
+      "discovery": 1,
+      "formations": 29,
+      "requested": 145,
+      "pass": false,
+      "violations": {
+        "survival": 0.13333333333333341,
+        "gap": 0,
+        "duration": 0,
+        "discovery": 0
+      }
+    },
+    {
+      "stage": 50,
+      "policy": "counter-first",
+      "variant": "gradual",
+      "treatment": "attack-weight",
+      "wins": 0,
+      "runs": 3,
+      "seconds": 720,
+      "gap": 96.29999999999667,
+      "peak": 159,
+      "discovery": 1,
+      "formations": 51,
+      "requested": 173,
+      "pass": false,
+      "violations": {
+        "survival": 0.8,
+        "gap": 0,
+        "duration": 0.2,
+        "discovery": 0
+      }
+    },
+    {
+      "stage": 50,
+      "policy": "counter-first",
+      "variant": "gradual",
+      "treatment": "baseline",
+      "wins": 1,
+      "runs": 3,
+      "seconds": 293.85,
+      "gap": 100.79999999999642,
+      "peak": 136,
+      "discovery": 1,
+      "formations": 26,
+      "requested": 69,
+      "pass": false,
+      "violations": {
+        "survival": 0.46666666666666673,
+        "gap": 0.007999999999964258,
+        "duration": 0,
+        "discovery": 0
+      }
+    },
+    {
+      "stage": 50,
+      "policy": "counter-first",
+      "variant": "gradual",
+      "treatment": "both",
+      "wins": 0,
+      "runs": 3,
+      "seconds": 720,
+      "gap": 91.79999999999693,
+      "peak": 160,
+      "discovery": 1,
+      "formations": 42,
+      "requested": 173,
+      "pass": false,
+      "violations": {
+        "survival": 0.8,
+        "gap": 0,
+        "duration": 0.2,
+        "discovery": 0
+      }
+    },
+    {
+      "stage": 50,
+      "policy": "counter-first",
+      "variant": "gradual",
+      "treatment": "starter",
+      "wins": 0,
+      "runs": 3,
+      "seconds": 720,
+      "gap": 94.79999999999676,
+      "peak": 160,
+      "discovery": 1,
+      "formations": 57,
+      "requested": 173,
+      "pass": false,
+      "violations": {
+        "survival": 0.8,
+        "gap": 0,
+        "duration": 0.2,
+        "discovery": 0
+      }
+    },
+    {
+      "stage": 50,
+      "policy": "upgrade-first",
+      "variant": "gradual",
+      "treatment": "attack-weight",
+      "wins": 2,
+      "runs": 3,
+      "seconds": 471.9,
+      "gap": 90.29999999999701,
+      "peak": 160,
+      "discovery": 0,
+      "formations": 69,
+      "requested": 173,
+      "pass": false,
+      "violations": {
+        "survival": 0.13333333333333341,
+        "gap": 0,
+        "duration": 0,
+        "discovery": 0
+      }
+    },
+    {
+      "stage": 50,
+      "policy": "upgrade-first",
+      "variant": "gradual",
+      "treatment": "baseline",
+      "wins": 1,
+      "runs": 3,
+      "seconds": 580.85,
+      "gap": 94.79999999999676,
+      "peak": 160,
+      "discovery": 0,
+      "formations": 45,
+      "requested": 173,
+      "pass": false,
+      "violations": {
+        "survival": 0.46666666666666673,
+        "gap": 0,
+        "duration": 0,
+        "discovery": 0
+      }
+    },
+    {
+      "stage": 50,
+      "policy": "upgrade-first",
+      "variant": "gradual",
+      "treatment": "both",
+      "wins": 2,
+      "runs": 3,
+      "seconds": 561.9,
+      "gap": 89.34999999999707,
+      "peak": 160,
+      "discovery": 0,
+      "formations": 82,
+      "requested": 173,
+      "pass": false,
+      "violations": {
+        "survival": 0.13333333333333341,
+        "gap": 0,
+        "duration": 0,
+        "discovery": 0
+      }
+    },
+    {
+      "stage": 50,
+      "policy": "upgrade-first",
+      "variant": "gradual",
+      "treatment": "starter",
+      "wins": 1,
+      "runs": 3,
+      "seconds": 566.4,
+      "gap": 91.79999999999693,
+      "peak": 159,
+      "discovery": 0,
+      "formations": 25,
+      "requested": 173,
+      "pass": false,
+      "violations": {
+        "survival": 0.46666666666666673,
+        "gap": 0,
+        "duration": 0,
+        "discovery": 0
+      }
+    },
+    {
+      "stage": 50,
+      "policy": "variety-first",
+      "variant": "gradual",
+      "treatment": "attack-weight",
+      "wins": 2,
+      "runs": 3,
+      "seconds": 545,
+      "gap": 96.29999999999667,
+      "peak": 159,
+      "discovery": 1,
+      "formations": 21,
+      "requested": 173,
+      "pass": false,
+      "violations": {
+        "survival": 0.13333333333333341,
+        "gap": 0,
+        "duration": 0,
+        "discovery": 0
+      }
+    },
+    {
+      "stage": 50,
+      "policy": "variety-first",
+      "variant": "gradual",
+      "treatment": "baseline",
+      "wins": 0,
+      "runs": 3,
+      "seconds": 464.15,
+      "gap": 100.79999999999642,
+      "peak": 160,
+      "discovery": 1,
+      "formations": 30,
+      "requested": 173,
+      "pass": false,
+      "violations": {
+        "survival": 0.8,
+        "gap": 0.007999999999964258,
+        "duration": 0,
+        "discovery": 0
+      }
+    },
+    {
+      "stage": 50,
+      "policy": "variety-first",
+      "variant": "gradual",
+      "treatment": "both",
+      "wins": 2,
+      "runs": 3,
+      "seconds": 518.95,
+      "gap": 94.79999999999676,
+      "peak": 160,
+      "discovery": 1,
+      "formations": 21,
+      "requested": 173,
+      "pass": false,
+      "violations": {
+        "survival": 0.13333333333333341,
+        "gap": 0,
+        "duration": 0,
+        "discovery": 0
+      }
+    },
+    {
+      "stage": 50,
+      "policy": "variety-first",
+      "variant": "gradual",
+      "treatment": "starter",
+      "wins": 0,
+      "runs": 3,
+      "seconds": 617.4,
+      "gap": 96.29999999999667,
+      "peak": 159,
+      "discovery": 1,
+      "formations": 25,
+      "requested": 173,
+      "pass": false,
+      "violations": {
+        "survival": 0.8,
+        "gap": 0,
+        "duration": 0.028999999999999963,
+        "discovery": 0
+      }
+    }
+  ],
+  "runs": 72,
+  "wins": 31,
+  "passing": 1
+}
