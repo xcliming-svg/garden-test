@@ -129,7 +129,9 @@
   function applyPaceTrial(id){
     const p=active&&!window.GardenSimulationConfig?paceProfiles[id]:null;
     tuning=baseTuning;waves=baseWaves;itemSupply=p&&id==='classic'?classicSupply:null;
-    if(flowerbeds){tuning=Object.freeze({...baseTuning,dropWeights:Object.freeze([.20,.15,.60,.05])});return;}
+    if(flowerbeds){tuning=Object.freeze({...baseTuning,dropWeights:Object.freeze([.20,.15,.60,.05])});
+      if(FB.stress)waves=Object.freeze([Object.freeze({start:0,interval:1.5,cap:FB.stressEnemyCount,batch:4,pool:Object.freeze(enemyUnlocks.map(([,id])=>Object.freeze([id,1])))})]);
+      return;}
     if(campaign){tuning=Object.freeze({...baseTuning,...campaign.patch.run});waves=Object.freeze(campaign.patch.waves.map(([start,interval,cap,batch,pool])=>Object.freeze({start,interval,cap,batch,pool})));itemSupply=Object.freeze({cap:campaign.itemCap});return;}
     if(!p)return;
     const round=x=>Math.round(x*10000)/10000;
