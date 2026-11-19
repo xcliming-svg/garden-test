@@ -247,21 +247,24 @@
               .setPosition(c.x,growth?c.y+g.cell/2-1:c.y);
           }
         }
+        function plantFlower(i,name){
+          occupied.add(i);addFlower(i,name,scene.run?.state.elapsed??patrol.elapsed);
+          scene.relicCollection?.model.syncFlowers(occupied);patrol.refreshHud();
+        }
         function finish(pointer,accept){
           if(!dragging)return;
           const f=dragging,i=accept&&pointer?hit(point(pointer)):-1;
           dragging=null;target=-1;
           f.marker.setDepth(f.idleDepth).setPosition(f.x,f.y).setAlpha(1).setStrokeStyle(0,0,0);
           if(valid(i,f)){
-            occupied.add(i);addFlower(i,f.spriteName,scene.run?.state.elapsed??patrol.elapsed);
-            scene.relicCollection?.model.syncFlowers(occupied);
+            plantFlower(i,f.spriteName);
             f.consumed=true;f.marker.disableInteractive().setVisible(false);if(playable)scene.runDrops?.consume(f);
-            patrol.refreshHud();
           }
           ghost.setVisible(false);refreshSoil(null);
         }
         function register(f){
           const o=f.marker;
+          if(playable&&window.GardenFlowerCarry?.enabled)return;
           o.setInteractive({useHandCursor:true,draggable:true});scene.input.setDraggable(o);
           o.on('pointerover',()=>{if(!dragging)o.setStrokeStyle(1,colors.flowerBorder,1);});
           o.on('pointerout',()=>{if(!dragging)o.setStrokeStyle(0,0,0);});
@@ -271,7 +274,7 @@
         }
         for(const f of previewFlowers)register(f);
         if(playable){
-          scene.runGarden={occupied,register,refreshSoil,refreshMismatch,remove(id){if(!occupied.delete(id))return false;if(hold?.id===id)clearHold();growth.remove(id);refreshSoil(null);return true;},isDragging:f=>dragging===f,get holding(){return hold!==null;},get holdProgress(){return hold?hold.elapsed/R.tuning.uprootSeconds:0;}};
+          scene.runGarden={occupied,register,refreshSoil,refreshMismatch,plantCarried(id,name){if(!window.GardenFlowerCarry?.enabled||hold||!R.blueprint.some(([i,n])=>i===id&&n===name)||!R.canPlant(occupied,growth.entries,id,name))return false;plantFlower(id,name);refreshSoil(null);return true;},remove(id){if(!occupied.delete(id))return false;if(hold?.id===id)clearHold();growth.remove(id);refreshSoil(null);return true;},isDragging:f=>dragging===f,get holding(){return hold!==null;},get holdProgress(){return hold?hold.elapsed/R.tuning.uprootSeconds:0;}};
           scene.input.on('pointerdown',beginHold);scene.input.on('pointermove',moveHold);scene.input.on('pointerup',endHold);scene.input.on('pointerupoutside',endHold);scene.events.on('update',advanceHold);
           scene.events.once('shutdown',()=>{scene.input.off('pointerdown',beginHold);scene.input.off('pointermove',moveHold);scene.input.off('pointerup',endHold);scene.input.off('pointerupoutside',endHold);scene.events.off('update',advanceHold);clearHold();delete scene.runGarden;});
         }
