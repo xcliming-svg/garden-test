@@ -17,13 +17,14 @@
   let selectedBlueprintId='classic';
   let initial=freezeCells(config.initial||catalog[0].initial);
   let blueprint=freezeCells(config.blueprint||catalog[0].blueprint);
+  const flowerPool=Object.freeze([...(config.flowerPool||['daisy','sunflower','tulip','hydrangea','rose','lavender'])]);
   const flowerWeights=Object.freeze({...Object.fromEntries(Object.values(flowerNames).map(name=>[name,1])),...config.flowerWeights});
   const tuning=Object.freeze({initialSlots:4,maxSlots:10,costs:Object.freeze([40,60,85,115,150,200]),growthSeconds:8,uprootSeconds:3,cardLifetime:45,dropWeights:Object.freeze([.69,.10,.18,.03]),itemInterval:30,starterRock:'rock',enemyDamage:4,enemyDamagePerLevel:2,spawnCap:65,neededFlowerBias:.75,startingGems:0,gemValue:1,...config.run});
   const damageToFlower=(entry,defense=0)=>Math.max(1,(config.enemyDamage?.[entry.id]??(tuning.enemyDamage+(entry.level-1)*tuning.enemyDamagePerLevel))-defense);
   const canEquip=(equipped,index,item)=>{const next=equipped.slice();next[index]=item;return next.some(i=>i?.stats.dps>0);};
   function chooseFlower(entries,random=Math.random){
     const needed=blueprint.filter(([cell,name])=>entries.get(cell)?.name!==name).map(([,name])=>name);
-    const pool=needed.length&&random()<tuning.neededFlowerBias?needed:window.GardenFlowerGrowth.names;
+    const pool=needed.length&&random()<tuning.neededFlowerBias?needed:flowerPool;
     const total=pool.reduce((sum,name)=>sum+flowerWeights[name],0);
     if(total<=0)return pool[Math.min(pool.length-1,Math.floor(random()*pool.length))];
     let roll=random()*total;
@@ -98,6 +99,8 @@
     [1380,2.2,28,1,[[V,7],[S,3]]],[1440,1.3,48,2,[[V,3],[R,3],[D,4]]],
     [1560,1.2,65,2,[[M,3],[D,3],[V,4]]]
   ]).map(([start,interval,cap,batch,pool])=>Object.freeze({start,interval,cap,batch,pool:Object.freeze(pool.map(Object.freeze))})));
+  // Scheduled formation pulses, independent of continuous ambient arrivals.
+  const formations=Object.freeze((config.formations||[]).map(row=>Object.freeze([...row])));
   function waveAt(seconds){return waves.findLast(w=>seconds+1e-7>=w.start)||waves[0];}
   function population(seconds){return waveAt(seconds).cap;}
   function spawnInterval(seconds){return waveAt(seconds).interval;}
@@ -157,5 +160,5 @@
     }
     return {state,credit,buy,tick,rewardDrop};
   }
-  window.GardenRunRules=Object.freeze({active,catalog,selectBlueprint,get selectedBlueprintId(){return selectedBlueprintId;},get initial(){return initial;},get blueprint(){return blueprint;},flowerWeights,tuning,cost,rollDrop,damageToFlower,canEquip,chooseFlower,itemUnlocks,stageAt,completion,blueprintStatus,plantCandidates,canPlant,uprootOutline,population,enemyUnlocks,eligibleEnemies,spawnInterval,waves,waveAt,itemPool,pickItem,cardPosition,depth,create});
+  window.GardenRunRules=Object.freeze({active,catalog,selectBlueprint,get selectedBlueprintId(){return selectedBlueprintId;},get initial(){return initial;},get blueprint(){return blueprint;},flowerPool,flowerWeights,tuning,cost,rollDrop,damageToFlower,canEquip,chooseFlower,itemUnlocks,stageAt,completion,blueprintStatus,plantCandidates,canPlant,uprootOutline,population,enemyUnlocks,eligibleEnemies,spawnInterval,waves,formations,waveAt,itemPool,pickItem,cardPosition,depth,create});
 }());

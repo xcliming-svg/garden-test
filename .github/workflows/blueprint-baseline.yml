@@ -21,12 +21,14 @@ jobs:
           - {group: swarm, runs: 5, seed: 101, dt: '.05', seconds: 600}
           - {group: fixed-combat, runs: 5, seed: 101, dt: '.05', seconds: 90}
           - {group: maps, runs: 5, seed: 101, dt: '.025', seconds: 900}
+          - {group: stages, runs: 12, seed: 401, dt: '.05', seconds: 900}
+          - {group: formations, runs: 8, seed: 601, dt: '.05', seconds: 900}
     steps:
       - uses: actions/checkout@v6
       - uses: actions/setup-node@v4
         with:
           node-version: '22'
-      - run: node tests/blueprint-selection-model.mjs
+      - run: node tests/blueprint-selection-model.mjs && node tests/formation-model.mjs
       - run: node simulation/experiments/blueprint-baseline.mjs --group ${{ matrix.group }} --runs ${{ matrix.runs }} --seed ${{ matrix.seed }} --dt ${{ matrix.dt }} --seconds ${{ matrix.seconds }} --output /tmp/study.json
       - run: |
           node --input-type=module -e "import {readFileSync} from 'node:fs'; import {concise} from './simulation/experiments/blueprint-baseline.mjs'; for(const r of concise(JSON.parse(readFileSync('/tmp/study.json')))) console.log('STUDY '+JSON.stringify(r))"
@@ -46,4 +48,5 @@ jobs:
         env:
           PLAYWRIGHT_SKIP_BROWSER_DOWNLOAD: '1'
       - run: node tests/blueprint-selection-browser.mjs
+      - run: node tests/formation-browser.mjs
       - run: node tests/playable-run-browser.mjs

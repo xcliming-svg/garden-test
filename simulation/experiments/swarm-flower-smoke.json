@@ -1,0 +1,48 @@
+{
+  "seed": 201,
+  "runs": 3,
+  "dt": 0.05,
+  "seconds": 600,
+  "baseCase": "swarm-normal",
+  "rows": [
+    {
+      "flower": 0.08,
+      "wins": 3,
+      "defeats": 0,
+      "timeouts": 0,
+      "t": 275.25,
+      "kills": 1246,
+      "peak": 167,
+      "progress": 100,
+      "slots": 10,
+      "flowersLost": 0,
+      "gap": 101.74999999999636
+    },
+    {
+      "flower": 0.12,
+      "wins": 3,
+      "defeats": 0,
+      "timeouts": 0,
+      "t": 260.65,
+      "kills": 1069,
+      "peak": 160,
+      "progress": 100,
+      "slots": 10,
+      "flowersLost": 0,
+      "gap": 55.649999999998975
+    },
+    {
+      "flower": 0.18,
+      "wins": 2,
+      "defeats": 1,
+      "timeouts": 0,
+      "t": 238.55,
+      "kills": 843,
+      "peak": 168,
+      "progress": 100,
+      "slots": 10,
+      "flowersLost": 0,
+      "gap": 36.55000000000006
+    }
+  ]
+}

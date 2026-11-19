@@ -10,12 +10,14 @@ export function createEngine(w,{seed=1,dt=1/60,maxSeconds=1800,trace=false,geome
     L=w.GardenRelicCollection,I=w.GardenItemCards,B=w.GardenWeaponBalance,G=w.GardenGameLayout;
   const progression=research?.progression??'none';
   if(!['none','duplicate','timed-drop'].includes(progression))throw Error('Invalid research progression');
+  const levelCap=research?.levelCap??3;
+  if(!Number.isInteger(levelCap)||levelCap<1||levelCap>3)throw Error('Invalid research levelCap');
   const levelTimes=research?.levelTimes??[180,360];
   if(levelTimes.length!==2||!levelTimes.every(Number.isFinite)||levelTimes[0]<0||levelTimes[1]<=levelTimes[0])throw Error('Invalid levelTimes');
   const spec=G.spec,entries=new Map(R.initial.map(([cell,name])=>[cell,{name,born:0,stage:3,mature:true}]));
   const occupied=new Set(entries.keys()),required=new Map(R.blueprint),cards=new Map(),gear=Array(R.tuning.maxSlots).fill(null);
   const streams=Object.fromEntries(['enemy','weapon','drop','flower','item','agent'].map(k=>[k,rng(seed,k)]));
-  const log=[],timeline=[],actions=[],counts={},byWeapon={},byEnemy={},byItem={},cardStats={};
+  const log=[],timeline=[],actions=[],counts={},byWeapon={},byEnemy={},byItem={},cardStats={},byFormation={};
   let t=0,serial=0,drag=null,hold=null,finished=null,peak=0,peakComplete=0,lastProgress=0,lastChoice=0,lastOpportunity=0,maxOpportunityGap=0,maxProgressGap=0,maxChoiceGap=0,firstKill=null,firstUsableFlower=null,firstItem=null,lastCellAt=null,lastSample=-1,damage=0,heal=0,overheal=0,prevented=0,flowersLost=0,wrongPlaced=0,purchases=0,regressions=0,offeredSeconds=0;
   const inc=(obj,k,n=1)=>obj[k]=(obj[k]||0)+n;
   const bucket=(obj,k)=>obj[k]||(obj[k]={});
@@ -27,6 +29,8 @@ export function createEngine(w,{seed=1,dt=1/60,maxSeconds=1800,trace=false,geome
     }
     if(type==='flower_damage')damage+=data.effective;
     if(type==='flower_heal'){heal+=data.effective;overheal+=data.amount-data.effective;}
+    if(type==='formation_spawn'){byFormation[data.group]={...data,kills:0};}
+    if(type==='enemy_kill'&&data.formation!==null&&data.formation!==undefined&&byFormation[data.formation])byFormation[data.formation].kills++;
     if(type==='enemy_spawn'||type==='enemy_kill'||type==='enemy_attack')inc(bucket(byEnemy,data.species),type,data.count||1);
     if(type==='card_spawn'||type==='card_expire'||type==='card_use'){
       const s=bucket(cardStats,data.kind);inc(s,type);
@@ -75,7 +79,7 @@ export function createEngine(w,{seed=1,dt=1/60,maxSeconds=1800,trace=false,geome
     return level>1&&B.data[name]?{...item,level,stats:{...item.stats,dps:B.nominalDps(name,level)}}:item;
   }
   function cardItem(c,slot){
-    const old=gear[slot],level=progression==='duplicate'&&B.data[c.name]&&old?.id===c.name?Math.min(3,(old.level||1)+1):c.level||1;
+    const old=gear[slot],level=progression==='duplicate'&&B.data[c.name]&&old?.id===c.name?Math.min(levelCap,(old.level||1)+1):c.level||1;
     return leveled(c.name,level);
   }
   if(research?.fixedLoadout){
@@ -102,7 +106,7 @@ export function createEngine(w,{seed=1,dt=1/60,maxSeconds=1800,trace=false,geome
     const size=G.assets[kind].dropSize;
     const p=R.cardPosition(spec,x,y,size,[...cards.values()]);
     if(!p)throw Error('No legal card position');
-    const level=kind==='item'&&progression==='timed-drop'&&B.data[name]?1+levelTimes.filter(at=>t>=at).length:1;
+    const level=kind==='item'&&progression==='timed-drop'&&B.data[name]?Math.min(levelCap,1+levelTimes.filter(at=>t>=at).length):1;
     const c={id:serial++,kind,name,level,x:p.x,y:p.y,size,age:0,born:t,everUsable:false};
     cards.set(c.id,c);const reason=cardReason(c);c.everUsable=reason==='usable'||reason==='equippable';
     if(kind==='flower'&&reason==='usable'&&firstUsableFlower===null)firstUsableFlower=t;
@@ -112,12 +116,12 @@ export function createEngine(w,{seed=1,dt=1/60,maxSeconds=1800,trace=false,geome
   const roster=E.roster.map(e=>geometry?{...e,...geometry.enemies[e.id]}:e);
   const pop=E.createPopulation(spec,patrol,roster,streams.enemy,R.population,(x,y,e)=>{
     if(firstKill===null)firstKill=t;
-    emit('enemy_kill',{id:e.id,species:e.entry.id,lifetime:pop.elapsed-e.spawnTime,x,y});
+    emit('enemy_kill',{id:e.id,species:e.entry.id,formation:e.formation,lifetime:pop.elapsed-e.spawnTime,x,y});
     const c=relic.death(x,y,boundary.patrol);if(c)spawnCard(c.kind,x,y);
-  },true);
+  },true,emit);
   const spawned=new Set();
   function logSpawns(){
-    for(const e of pop.actors)if(!spawned.has(e.id)){spawned.add(e.id);emit('enemy_spawn',{id:e.id,species:e.entry.id,hp:e.hp,x:e.pose.x,y:e.pose.ground,wave:R.waveAt(pop.elapsed).start});}
+    for(const e of pop.actors)if(!spawned.has(e.id)){spawned.add(e.id);emit('enemy_spawn',{id:e.id,species:e.entry.id,hp:e.hp,formation:e.formation,side:e.path.side,x:e.pose.x,y:e.pose.ground,wave:R.waveAt(pop.elapsed).start});}
   }
   pop.advance(0);logSpawns();
   function progress(){
@@ -263,7 +267,7 @@ export function createEngine(w,{seed=1,dt=1/60,maxSeconds=1800,trace=false,geome
       shots:weapon.state.fired,hits:weapon.state.hits,flowerDamage:damage,flowerHeal:heal,overheal,defensePrevented:prevented,flowersLost,wrongPlaced,regressions,
       gems:run.state.gems,gemPickups:relic.state.gems,hearts:relic.state.hearts,purchases,gear:snap.gear,gearLevels:snap.gearLevels,
       firstKill,firstUsableFlower,firstItem,maxProgressGap,maxChoiceGap,maxOpportunityGap,lastCellWait:lastCellAt===null?null:seconds-lastCellAt,offeredSeconds,
-      counts,byWeapon,byEnemy,byItem,cardStats,final:snap,actions,timeline,events:trace?log:undefined};
+      counts,byWeapon,byEnemy,byItem,cardStats,byFormation,final:snap,actions,timeline,events:trace?log:undefined};
   }
   return {observe,dispatch,step,result,streams,get time(){return t},get finished(){return finished}};
 }

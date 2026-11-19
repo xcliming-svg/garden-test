@@ -12,8 +12,8 @@ export function loadModels(sources,config={}) {
 export function defaults(w) {
   const R=w.GardenRunRules,B=w.GardenWeaponBalance,F=w.GardenFairyPatrol,I=w.GardenItemCards;
   return structuredClone({
-    schemaVersion:1,initial:R.initial,blueprint:R.blueprint,flowerWeights:R.flowerWeights,run:R.tuning,
-    enemyUnlocks:R.enemyUnlocks,waves:R.waves.map(x=>[x.start,x.interval,x.cap,x.batch,x.pool]),
+    schemaVersion:1,initial:R.initial,blueprint:R.blueprint,flowerPool:R.flowerPool,flowerWeights:R.flowerWeights,run:R.tuning,
+    enemyUnlocks:R.enemyUnlocks,formations:R.formations,waves:R.waves.map(x=>[x.start,x.interval,x.cap,x.batch,x.pool]),
     itemUnlocks:R.itemUnlocks,weapons:B.data,enemyHp:Object.fromEntries(w.GardenEnemyPreview.roster.map(e=>[e.id,B.hp(e)])),
     enemyDamage:{},heightLimits:B.heightLimits,enemyMotion:w.GardenEnemyMotion.profiles,projectiles:w.GardenHeroWeaponPreview.tuning,
     relic:w.GardenRelicCollection.tuning,fairy:{speed:F.speed,maxSpeed:F.maxSpeed},
@@ -66,6 +66,8 @@ export function resolveConfig(w,patch={}) {
   }
   for(const [name,weight] of Object.entries(c.flowerWeights))number(weight,'flowerWeights.'+name,.001,1000);
   const needed=cells(c.blueprint,'blueprint'),initial=cells(c.initial,'initial');
+  if(!Array.isArray(c.flowerPool)||!c.flowerPool.length||new Set(c.flowerPool).size!==c.flowerPool.length||c.flowerPool.some(name=>!flowers.has(name)))fail('flowerPool','must contain unique known flowers');
+  for(const name of needed.values())if(!c.flowerPool.includes(name))fail('flowerPool','missing required flower '+name);
   for(const [id,name] of initial)if(needed.get(id)!==name)fail('initial','must match blueprint');
   const reach=new Set(initial.keys()),queue=[...reach];
   while(queue.length){
@@ -118,6 +120,17 @@ export function resolveConfig(w,patch={}) {
     }
   }
   if(c.waves[0][0]!==0)fail('waves','must start at zero');
+  if(!Array.isArray(c.formations))fail('formations','expected array');
+  let lastFormation=-1;
+  for(const row of c.formations){
+    if(!Array.isArray(row)||row.length!==4)fail('formations','expected [time,pattern,enemy,count]');
+    const [at,pattern,id,count]=row;number(at,'formation.time');
+    if(at<lastFormation)fail('formations','must be sorted');lastFormation=at;
+    if(!['pack','ring','pincer','line'].includes(pattern))fail('formations','unknown pattern '+pattern);
+    if(!unlocked.has(id)||unlocked.get(id)>at)fail('formations','species not unlocked '+id);
+    integer(count,'formation.count',1,t.spawnCap);
+    const cap=c.waves.findLast(w=>w[0]<=at)[2];if(count>cap)fail('formations','count exceeds wave cap');
+  }
   for(const [id,hp] of Object.entries(c.enemyHp))number(hp,'enemyHp.'+id,.001);
   for(const [id,amount] of Object.entries(c.enemyDamage)){if(!enemies.has(id))fail('enemyDamage','unknown '+id);number(amount,'enemyDamage.'+id);}
   for(const group of ['weapons','projectiles','enemyMotion','passives']){

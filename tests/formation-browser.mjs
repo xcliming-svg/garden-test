@@ -1,0 +1,15 @@
+import assert from 'node:assert/strict';
+import {prepare} from '../simulation/io.mjs';
+import {captureGeometry,runBrowser} from '../simulation/browser.mjs';
+import {loadModels} from '../simulation/models.mjs';
+import {createEngine} from '../simulation/engine.mjs';
+import {play,profileFor} from '../simulation/agents.mjs';
+const C='3_caterpillar',B='1_butterfly',G='2_grasshopper',P='2_gray_bug';
+const patch={enemyUnlocks:[[0,C],[0,B],[0,G],[0,P]],waves:[[0,3,40,1,[[C,1]]]],formations:[[0,'pack',B,9],[.5,'ring',G,12],[1,'pincer',P,8],[1.5,'line',C,10],[2,'ring',G,30]],run:{spawnCap:40}};
+const p=prepare(),geometry=await captureGeometry(p),q=prepare(patch,geometry),opts={seed:42,dt:.05,maxSeconds:3,trace:true};
+const browser=await runBrowser(q,profileFor('idle'),opts),fast=play(createEngine(loadModels(q.sources,q.config),{...opts,geometry}),profileFor('idle'));
+const groups=r=>r.events.filter(e=>e.type==='formation_spawn').map(({t,type,...e})=>e);
+assert.equal(groups(browser).length,5);
+assert.deepEqual(groups(browser),groups(fast),'shared formation schedule and capacity');
+for(const k of ['completed','spawned','kills','shots','hits','damage','gems'])assert.equal(browser[k],fast[k],k);
+console.log('PASS browser formations',JSON.stringify(groups(browser)));
