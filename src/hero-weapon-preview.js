@@ -262,6 +262,14 @@
       state.shots=state.shots.filter(s=>s.slot!==index&&!s.preview);
       return true;
     }
+    function manualSafe(point,patrol){return !!window.GardenFlowerCarry?.enabled&&window.GardenFlowerCarry.installationSafe(spec,point,patrol?.occupied||[]);}
+    function install(id,level,point,patrol,life){
+      if(!installations.has(id)||!balanced||!manualSafe(point,patrol)||!(life>0))return false;
+      const cfg=tuning[id],size=measure(id,cfg.span),serialId=serial++,origin={x:point.x,y:point.y};
+      const shot={id:serialId,owner:0,slot:-10000-serialId,preview:false,manualInstalled:true,kind:id,x:point.x,y:point.y,tx:point.x,ty:point.y,dx:1,dy:0,origin,bounds:{...patrol.bounds},age:0,life,level:Math.max(1,Math.min(3,Math.trunc(level)||1)),size,span:cfg.span,targetId:null,hit:new Set(),hitRecords:new Map()};
+      state.shots.push(shot);state.fired++;onEvent?.('weapon_fire',{weapon:id,slot:shot.slot,owner:0,shot:shot.id,target:null});return true;
+    }
+    function removeObstructed(patrol){state.shots=state.shots.filter(s=>!s.manualInstalled||manualSafe({x:s.tx,y:s.ty},patrol));}
     function startLeg(s,x,y,tx,ty,age,speed){
       s.leg={x,y,tx,ty,age,speed,duration:Math.max(.04,Math.hypot(tx-x,ty-y)/speed)};
     }
@@ -275,7 +283,7 @@
       // Planting may expand the garden while an attack is already active.
       // Remove only ground attacks whose remaining footprint becomes unsafe.
       for(const s of state.shots){
-        if(installations.has(s.kind)&&!installationSafe(spec,s.kind,{x:s.tx,y:s.ty},garden,sizeOf(s))){s.done=true;continue;}
+        if(installations.has(s.kind)&&!(s.manualInstalled?manualSafe({x:s.tx,y:s.ty},patrol):installationSafe(spec,s.kind,{x:s.tx,y:s.ty},garden,sizeOf(s)))){s.done=true;continue;}
         if(s.kind==='wheel'&&garden){
           const p=pose(s,hero),end={x:s.x+s.dx*s.exitDistance,y:s.y+s.dy*s.exitDistance};
           if(segmentIntersects(p,end,expanded(garden,wheelRadius(sizeOf(s))+1))){s.done=true;continue;}
@@ -426,7 +434,7 @@
         (s.kind!=='wheel'||wheelTravel(s)<s.exitDistance));
       previousTargets.clear();for(const e of live)previousTargets.set(e.id,{...e});
       if(!hero||hero.index!==0||hero.type!=='garden'||!patrol?.bounds)return;
-      const slots=state.equipped.flatMap((id,index)=>id?[{id,index,preview:false,actor:hero}]:[]);
+      const slots=state.equipped.flatMap((id,index)=>id&&!(window.GardenFlowerCarry?.enabled&&installations.has(id))?[{id,index,preview:false,actor:hero}]:[]);
       if(playable)for(const actor of companions)slots.push({id:'rock',index:-100-actor.index,preview:false,actor});
       if(!slots.length&&state.selected)slots.push({id:state.selected,index:-1,preview:true,actor:hero});
       for(const slot of slots){
@@ -472,7 +480,7 @@
         state.fired++;onEvent?.('weapon_fire',{weapon:slot.id,slot:slot.index,owner:shooter.index,shot:shot.id,target:shot.targetId});next.set(slot.index,state.elapsed+(st?.cooldown??interval));
       }
     }
-    return {state,select,equip,step};
+    return {state,select,equip,step,install,removeObstructed};
   }
   // In the hidden-enemy mode the target is an invisible preview point.
   function pose(s,hero){
@@ -632,7 +640,7 @@
       scene.events.off('update',update);scene.events.off('pause',pause);scene.events.off('resume',resume);scene.scale.off('resize',resize);
       select.remove();images.clear();mask.destroy();clip.destroy();delete scene.heroWeaponPreview;
     });
-    scene.heroWeaponPreview={model,select:choose,equip,render,control:playable?null:select};
+    scene.heroWeaponPreview={model,select:choose,equip,render,install:(id,level,point,life)=>{const ok=model.install(id,level,point,patrol,life);if(ok)render();return ok;},removeObstructed:()=>{model.removeObstructed(patrol);render();},control:playable?null:select};
     return scene.heroWeaponPreview;
   }
   window.GardenHeroWeaponPreview=Object.freeze({enabled,combat,ids,tuning,rockSizeLimits,resolveRockSize,interval,range,create,pose,defaultSize,wheelTravel,wheelExit,wheelPath,placementExtent,installationSafe,segmentIntersects,validAim,randomPoint,inAttackRange,potFragments,balloonFlight,balloonHeight,balloonSplash,balloonDroplets,boomerangPath,planeFlight,planePath,sprinklerDrops,attach});

@@ -2,17 +2,27 @@
   'use strict';
   // Isolated human-play prototype. Explicit simulation and lab remain unchanged.
   const enabled=!!window.GardenRunRules?.active&&!window.GardenSimulationConfig&&!window.__gardenSimHarness&&!window.GardenFlowerCarryDisabled;
-  const speedBonus=80,pickupRadius=28;
+  const speedBonus=80,pickupRadius=28,slotLimit=4,installationLife=12;
+  const installationIds=Object.freeze(['yellow-floor','sprinkler','broom']);
+  const isInstallation=id=>installationIds.includes(id);
+  const carryable=c=>c.kind==='flower'||c.kind==='item'&&isInstallation(c.id);
+  const automatic=c=>c.kind==='item'&&!isInstallation(c.id);
+  function fifoSlot(order,limit=slotLimit){
+    if(order.length>=limit){const i=order.shift();order.push(i);return i;}
+    const i=Array.from({length:limit},(_,j)=>j).find(j=>!order.includes(j));order.push(i);return i;
+  }
+  function installationCell(spec,p){const g=spec.garden,x=Math.floor((p.x-g.x)/g.pitch),y=Math.floor((p.y-g.y)/g.pitch);return x>=0&&x<g.columns&&y>=0&&y<g.rows?y*g.columns+x:-1;}
+  function installationSafe(spec,p,occupied){return p.x>=0&&p.x<=spec.width&&p.y>=spec.top&&p.y<=spec.height-spec.bottom&&!new Set(occupied).has(installationCell(spec,p));}
   const clamp=(v,min,max)=>Math.max(min,Math.min(max,v));
   function step(p,x,y,dt,speed,bounds){
     const len=Math.hypot(x,y);
     if(!len||!(dt>0))return {...p};
     return {x:clamp(p.x+x/len*speed*dt,bounds.left,bounds.right),y:clamp(p.y+y/len*speed*dt,bounds.top,bounds.bottom)};
   }
-  function nearest(cards,p){
+  function nearest(cards,p,predicate=carryable){
     let best=null,distance=pickupRadius+1e-8;
     for(const card of cards){
-      if(card.kind!=='flower'||card.consumed)continue;
+      if(!predicate(card)||card.consumed)continue;
       const d=Math.hypot(card.x-p.x,card.y-p.y);
       if(d<distance){best=card;distance=d;}
     }
@@ -29,7 +39,7 @@
     const active=()=>scene.scene.isActive('Game')&&!scene.run?.state.result;
     function movement(){return {x:Number(keys.has('KeyD')||keys.has('ArrowRight'))-Number(keys.has('KeyA')||keys.has('ArrowLeft')),y:Number(keys.has('KeyS')||keys.has('ArrowDown'))-Number(keys.has('KeyW')||keys.has('ArrowUp'))};}
     function cell(){const p=hero().center;return L.gardenHit(p.x,p.y,spec.garden);}
-    function canPlant(id){return !!carried&&!scene.runGarden.holding&&R.blueprint.some(([i,name])=>i===id&&name===carried.name)&&R.canPlant(scene.runGarden.occupied,scene.flowerGrowth.entries,id,carried.name);}
+    function canPlant(id){return carried?.kind==='flower'&&!scene.runGarden.holding&&R.blueprint.some(([i,name])=>i===id&&name===carried.name)&&R.canPlant(scene.runGarden.occupied,scene.flowerGrowth.entries,id,carried.name);}
     function setHighlight(card){
       if(highlighted===card)return;
       if(highlighted?.marker.scene)highlighted.marker.setStrokeStyle(0,0,0);
@@ -37,49 +47,57 @@
       if(card?.marker.scene)card.marker.setStrokeStyle(1,L.colors.flowerBorder,1);
     }
     function setTarget(id){if(target===id)return;target=id;scene.runGarden.refreshSoil(id<0?null:id);}
+    function collectAutomatic(){
+      let card;while((card=nearest(scene.runDrops.drops.values(),hero().center,automatic))){
+        if(!scene.runEquipment.collectAutomatic(card.item))break;
+        scene.runDrops.consume(card);card.marker.disableInteractive().setVisible(false);
+      }
+    }
     function render(){
       if(!active())return;
-      const a=hero();
+      collectAutomatic();const a=hero();
       if(carried){
-        setHighlight(null);const id=cell(),valid=canPlant(id);setTarget(valid?id:-1);
-        icon.setTexture(G.key(carried.name,3,100)).setDisplaySize(20,20).setPosition(a.center.x,Math.max(spec.top+11,a.center.y-a.visibleHeight/2-12)).setVisible(true);
-        hint.setText(valid?'SPACE 심기  ·  Q 내려놓기':'일치하는 빈 도안으로 이동  ·  Q 내려놓기');
+        setHighlight(null);const id=cell(),valid=canPlant(id),install=carried.kind==='item';setTarget(valid?id:-1);
+        icon.setTexture(install?carried.texture:G.key(carried.name,3,100)).setDisplaySize(20,20).setPosition(a.center.x,Math.max(spec.top+11,a.center.y-a.visibleHeight/2-12)).setVisible(true);
+        hint.setText(install?(installationSafe(spec,a.center,scene.runGarden.occupied)?'SPACE 설치':'꽃이 없는 곳으로 이동'):valid?'SPACE 심기':scene.runGarden.occupied.has(id)?'빈 곳으로 이동':'SPACE 내려놓기');
       }else{
         icon.setVisible(false);setTarget(-1);
         const card=nearest(scene.runDrops.drops.values(),a.center);setHighlight(card);
-        hint.setText(card?'SPACE 꽃 줍기':'WASD / 방향키 이동  ·  SPACE 꽃 줍기');
+        hint.setText(card?(card.kind==='flower'?'SPACE 꽃 줍기':'SPACE 설치형 줍기'):'WASD / 방향키 이동  ·  SPACE 줍기');
       }
     }
     function interact(){
       if(!active()||scene.runGarden.holding)return false;
       if(carried){
         const id=cell();
-        if(!canPlant(id)||!scene.runGarden.plantCarried(id,carried.name))return false;
+        if(carried.kind==='item'){
+          if(!scene.heroWeaponPreview?.install(carried.id,carried.level,hero().center,installationLife))return false;
+        }else if(canPlant(id)){
+          if(!scene.runGarden.plantCarried(id,carried.name))return false;
+        }else{
+          if(scene.runGarden.occupied.has(id))return false;
+          const p=hero().center,card=scene.runDrops.spawn('flower',p.x,p.y,carried.name,1,{putDown:true});card.age=carried.age;
+        }
         carried=null;render();return true;
       }
       const card=nearest(scene.runDrops.drops.values(),hero().center);
       if(!card)return false;
-      carried={name:card.spriteName,age:card.age};
+      carried=card.kind==='flower'?{kind:'flower',name:card.spriteName,age:card.age}:{kind:'item',id:card.id,level:card.item.level,name:card.item.name,texture:card.item.texture,age:card.age};
       setHighlight(null);scene.runDrops.consume(card);card.marker.disableInteractive().setVisible(false);
       render();return true;
-    }
-    function putDown(){
-      if(!active()||!carried||scene.runGarden.holding)return false;
-      const p=hero().center,card=scene.runDrops.spawn('flower',p.x,p.y,carried.name);
-      card.age=carried.age;carried=null;render();return true;
     }
     function keydown(e){
       if(!active()||/^(INPUT|SELECT|TEXTAREA)$/.test(document.activeElement?.tagName||''))return;
       if(moveKeys.has(e.code)){e.preventDefault();keys.add(e.code);return;}
-      if(e.code==='Space'||e.code==='KeyQ'){e.preventDefault();if(!e.repeat)(e.code==='Space'?interact:putDown)();}
+      if(e.code==='Space'){e.preventDefault();if(!e.repeat)interact();}
     }
     function keyup(e){keys.delete(e.code);}
     function clear(){keys.clear();}
     window.addEventListener('keydown',keydown);window.addEventListener('keyup',keyup);window.addEventListener('blur',clear);
     scene.events.on('pause',clear);scene.events.on('update',render);
     scene.events.once('shutdown',()=>{window.removeEventListener('keydown',keydown);window.removeEventListener('keyup',keyup);window.removeEventListener('blur',clear);scene.events.off('pause',clear);scene.events.off('update',render);clear();delete scene.flowerCarry;});
-    const controller={movement,interact,putDown,get carried(){return carried?{...carried}:null;},get target(){return target;},get nearby(){return highlighted;}};
+    const controller={movement,interact,get carried(){return carried?{...carried}:null;},get target(){return target;},get nearby(){return highlighted;}};
     scene.flowerCarry=controller;render();return controller;
   }
-  window.GardenFlowerCarry=Object.freeze({enabled,speedBonus,pickupRadius,step,nearest,attach});
+  window.GardenFlowerCarry=Object.freeze({enabled,speedBonus,pickupRadius,slotLimit,installationLife,isInstallation,carryable,automatic,fifoSlot,installationCell,installationSafe,step,nearest,attach});
 }());

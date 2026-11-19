@@ -4,9 +4,11 @@
   function attach(scene,spec,assets,equipment,layout){
     const I=window.GardenItemCards,G=window.GardenFlowerGrowth,L=window.GardenGameLayout;
     const drops=new Map();let serial=0;
-    function spawn(kind,x,y,id,level=1){
+    function spawn(kind,x,y,id,level=1,options={}){
       const size=kind==='flower'?assets.flower.dropSize:assets.item.dropSize;
-      const p=R.cardPosition(spec,x,y,size,[...drops.values()].filter(c=>!c.consumed).map(c=>({x:c.x,y:c.y,size:c.marker.width})));
+      const carry=window.GardenFlowerCarry,putDown=options.putDown&&carry?.enabled&&kind==='flower';
+      const inside=putDown&&carry.installationCell(spec,{x,y})>=0&&!scene.runGarden.occupied.has(carry.installationCell(spec,{x,y}));
+      const p=inside?{x,y}:R.cardPosition(spec,x,y,size,[...drops.values()].filter(c=>!c.consumed).map(c=>({x:c.x,y:c.y,size:c.marker.width})));
       if(!p)throw Error('No legal card position');
       x=p.x;y=p.y;
       if(kind==='flower'&&!id){
