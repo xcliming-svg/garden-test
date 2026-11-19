@@ -237,25 +237,25 @@
   function destroyRelic(image){
     displayState.get(image.scene)?.images.delete(image);image.destroy();
   }
-  function runItemData(id){
+  function runItemData(id,level=1){
     const original=entries.find(e=>e.id===id);
     const item=id==='water-fairy'?{...original,desc:'장착하면 돌멩이만 사용하는 물방울 요정이 순찰에 합류합니다.'}:original;
     if(!item)throw Error('Unknown item: '+id);
-    const st=balance.stats(id,1),stats=Object.freeze(id==='water-fairy'?{dps:balance.nominalDps('rock',1)}:st?{dps:balance.nominalDps(id,1)}:{...item.stats,...window.GardenSimulationConfig?.passives?.[id]});
+    const st=balance.stats(id,level),stats=Object.freeze(id==='water-fairy'?{dps:balance.nominalDps('rock',1)}:st?{dps:balance.nominalDps(id,level)}:{...item.stats,...window.GardenSimulationConfig?.passives?.[id]});
     const detail=st?(id==='yellow-floor'?'감속 '+Math.round(st.slow*100)+'%':'피해 '+(Array.isArray(st.damage)?st.damage.join('/'):st.damage))+' · '+st.cooldown+'초 · '+st.range+'px':item.tooltipEffect;
-    return Object.freeze({...item,stats,tooltipEffect:detail});
+    return Object.freeze({...item,level:st?st.level:1,stats,tooltipEffect:detail});
   }
-  function runItem(scene,id){
-    const item=runItemData(id);
+  function runItem(scene,id,level=1){
+    const item=runItemData(id,level);
     const texture=id==='water-fairy'?trim(scene,id,window.GardenFairyPatrol.key('water','normal')):trim(scene,id,raw(id));
     return Object.freeze({...item,texture});
   }
-  function createDrop(scene,spec,assets,kind,id,x,y,serial){
+  function createDrop(scene,spec,assets,kind,id,x,y,serial,level=1){
     const isFlower=kind==='flower';
-    const item=isFlower?null:runItem(scene,id);
+    const item=isFlower?null:runItem(scene,id,level);
     const texture=isFlower?trim(scene,flowerId(id),G.key(id,G.maxStage,100)):item.texture;
     const marker=card(scene,x,y,isFlower?assets.flower.dropSize:assets.item.dropSize,texture,kind,id).setName('run-drop:'+kind+':'+serial);
-    if(!isFlower)setLevelLabel(marker,1);
+    if(!isFlower)setLevelLabel(marker,item.level);
     return {marker,x,y,idleDepth:marker.depth,...(isFlower?{spriteName:id}:{item})};
   }
   function disposeCard(marker){const image=marker.list[2];if(image)displayState.get(marker.scene)?.images.delete(image);marker.destroy();}

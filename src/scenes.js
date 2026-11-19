@@ -27,14 +27,17 @@
     const label=document.createElement('label'),select=document.createElement('select');
     label.id='blueprint-select-control';
     label.htmlFor='blueprint-select';
-    label.textContent='도안 선택 (임시)';
+    label.textContent='스테이지 선택';
     Object.assign(label.style,{position:'absolute',left:'65%',top:'43%',width:'29%',zIndex:'5',color:'#ddd',display:'block'});
     select.id='blueprint-select';
     select.setAttribute('aria-label','시작 도안');
     Object.assign(select.style,{display:'block',width:'100%',marginTop:'4px',font:'inherit',background:'#202023',color:'#eee',border:'1px solid #777',padding:'4px'});
+    const campaignGroup=document.createElement('optgroup'),legacyGroup=document.createElement('optgroup');
+    campaignGroup.label='캠페인 01–50';legacyGroup.label='기존 도안 (비교용)';
     for(const p of R.catalog){
-      const option=document.createElement('option');option.value=p.id;option.textContent=p.label+' ('+p.blueprint.length+'칸)';select.append(option);
+      const option=document.createElement('option');option.value=p.id;option.textContent=p.label+' ('+p.blueprint.length+'칸)';(p.stage?campaignGroup:legacyGroup).append(option);
     }
+    if(campaignGroup.children.length)select.append(campaignGroup);select.append(legacyGroup);
     select.value=R.selectedBlueprintId;
     select.addEventListener('change',()=>R.selectBlueprint(select.value));
     label.append(select);parent.append(label);
@@ -257,7 +260,8 @@
       });
       if(!live)centered(this, 480, 350, '결과 데이터 계산·저장은 미구현 상태입니다.', U.fontSize.menuBase, U.C.muted);
       const leave=key=>{if(live)this.scene.stop('Game');this.scene.start(key);};
-      U.button(this, 480 - pairOffset(200), footerCenter(410), 200, '새 게임', () => leave('Game'), { primary: true, height: menu.buttonHeight });
+      const R=window.GardenRunRules,stage=live?R.campaign?.stage:null,next=!!(this.victory&&stage&&stage<50);
+      U.button(this, 480 - pairOffset(200), footerCenter(410), 200, next?'다음 스테이지':'새 게임', () => {if(next)R.selectBlueprint('stage-'+(stage+1));leave('Game');}, { primary: true, height: menu.buttonHeight });
       U.button(this, 480 + pairOffset(200), footerCenter(410), 200, '메인 메뉴', () => leave('MainMenu'), { height: menu.buttonHeight, fontSize: U.fontSize.menuBase });
     }
     update(_time,delta){
