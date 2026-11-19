@@ -13,7 +13,7 @@
     if(state==='lose')return {expression:'closed',dx:Math.sin(time*2*Math.PI*2+phase)*.9*scale,lift:0};
     return {expression:state==='hit'?'dizzy':null,dx:0,lift:0};
   }
-  const count=11,speed=40,maxSpeed=80;
+  const count=11,speed=window.GardenSimulationConfig?.fairy?.speed??40,maxSpeed=window.GardenSimulationConfig?.fairy?.maxSpeed??80;
   const playable=!!window.GardenRunRules?.active;
   const ranks=Object.freeze([0,5]);
   const validRank=rank=>ranks.includes(rank);
@@ -243,5 +243,5 @@
     scene.events.once('shutdown',()=>{scene.events.off('update',update);delete scene.fairyPatrol;});
     render();return controller;
   }
-  window.GardenFairyPatrol=Object.freeze({enabled,preload,install,attach,key,count,speed,maxSpeed,ranks,validRank,speedAt,blinkSchedule,fairyStates,isResult,emotionPose,outlineConfig,adaptive,densityTuning,createDensity,mixColor,ringKey,syncOutline});
+  window.GardenFairyPatrol=Object.freeze({enabled,preload,install,attach,key,count,speed,maxSpeed,gait,ranks,validRank,speedAt,blinkSchedule,fairyStates,isResult,emotionPose,outlineConfig,adaptive,densityTuning,createDensity,mixColor,ringKey,syncOutline});
 }());

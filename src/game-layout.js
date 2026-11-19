@@ -58,7 +58,7 @@
       height: blueprintHeader + blueprintGap + blueprintGrid,
       gridX: hudPadding, gridY: blueprintY + blueprintHeader + blueprintGap
     }),
-    slots: Object.freeze({ size: slotSize, cell: slotSize - 2 * cellLine, line: cellLine, gap: bottomGap, initial: 4, preview: balancedCombat?window.GardenWeaponBalance.slots:9, max: 10, y: height - bottomHudHeight + bottomBoundary + bottomGap, exampleCost: 999 })
+    slots: Object.freeze({ size: slotSize, cell: slotSize - 2 * cellLine, line: cellLine, gap: bottomGap, initial: playable?window.GardenRunRules.tuning.initialSlots:4, preview: playable?window.GardenRunRules.tuning.maxSlots:balancedCombat?window.GardenWeaponBalance.slots:9, max: playable?window.GardenRunRules.tuning.maxSlots:10, y: height - bottomHudHeight + bottomBoundary + bottomGap, exampleCost: 999 })
   });
 
   const hud = Object.freeze({
@@ -351,7 +351,7 @@
     equipped.forEach(item => {
       if (item) statKeys.forEach(key => { result[key] += item.stats[key] || 0; });
     });
-    if(playable)result.moveSpeed=Math.min(80,result.moveSpeed);
+    if(playable)result.moveSpeed=Math.min(window.GardenFairyPatrol.maxSpeed,result.moveSpeed);
     if(balancedCombat)result.dps=Math.round(result.dps*10)/10;
     return result;
   }
@@ -790,8 +790,7 @@
     }
     function canEquip(index,item){
       if(!playable)return true;
-      const next=equipped.slice();next[index]=item;
-      return next.some(i=>i?.stats.dps>0);
+      return window.GardenRunRules.canEquip(equipped,index,item);
     }
     function finishDrag(pointer, accept) {
       if (!dragging) return;
@@ -1144,7 +1143,7 @@
     g.fillStyle(colors.field, 1).fillRect(0, spec.top, spec.width, spec.fieldHeight);
     if(P.uiType===1)window.GardenLightFieldPreview.field(scene,spec);
     else window.GardenDarkFieldPreview.field(scene,spec);
-    if(playable)scene.run=window.GardenRunRules.create();
+    if(playable)scene.run=window.GardenRunRules.create(window.GardenSimulationEvent);
     const updateHud=drawHud(scene);
     const layout=drawSlots(scene);
     if(!playable)drawBlueprint(scene);

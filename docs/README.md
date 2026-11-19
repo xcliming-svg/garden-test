@@ -35,6 +35,7 @@
 
 | 문서 | 역할 |
 | --- | --- |
+| [simulation-design.md](./simulation-design.md) | AI 자동 플레이, 외부 밸런스 설정, 실행·병렬 실험·재현·로그·검증 및 재미 평가 기준 |
 | [flower-removal-defense-pressure.md](./flower-removal-defense-pressure.md) | 만개 후 오배치 표시, 3초 제거, 슬롯 흰색 및 무조작 방어 압박 |
 | [blueprint-feedback.md](./blueprint-feedback.md) | 첫 난이도 플레이 피드백, 도안·보상·결과 팝업 및 10×10 시간 추정 |
 | [survivor-progression.md](./survivor-progression.md) | 기본 플레이 아이템 공급·웨이브 적용 규격 및 검증 |

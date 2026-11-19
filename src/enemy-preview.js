@@ -127,7 +127,7 @@
       }
       // Vertical/diagonal arrivals must also keep the entire attack visible.
       if(Math.abs(r.uy)>1e-9)for(let i=0;i<=64;i++){
-        const q=box(worldPose(spec,r,M.sample(e,'attack',(p.windup+p.strike+.55)*i/64,r,0),e));
+        const q=box(worldPose(spec,r,M.sample(e,'attack',(p.windup+p.strike+p.recovery)*i/64,r,0),e));
         if(q.top<spec.top+1||q.bottom>spec.height-spec.bottom-1)return false;
       }
       return true;
@@ -248,7 +248,7 @@
     function damage(id,amount){
       const i=actors.findIndex(a=>a.id===id);if(i<0||!Number.isFinite(amount)||amount<=0)return null;
       const a=actors[i];a.hp=Math.max(0,a.hp-amount);
-      if(a.hp===0){actors.splice(i,1);kills++;onDeath?.(a.pose.x,a.pose.ground);return {killed:true,hp:0};}
+      if(a.hp===0){actors.splice(i,1);kills++;onDeath?.(a.pose.x,a.pose.ground,a);return {killed:true,hp:0};}
       a.hitUntil=elapsed+window.GardenFairyAttack.tuning.hitSeconds;updateActor(a);return {killed:false,hp:a.hp};
     }
     function slow(id,amount,duration){
@@ -292,7 +292,7 @@
     const target=playable?window.GardenRunRules.population:finite!==null?t=>window.GardenWeaponBalance.finiteTarget(finite,t,model.actors.length,model.spawned):
       fixed!==null?()=>fixed:simulation?simulationTarget:targetCount;
     const relics=(A.enabled||weaponCombat)?window.GardenRelicCollection.attach(scene,spec,patrol):null;
-    model=createPopulation(spec,patrol,entries,Math.random,target,relics?.death,!!weaponCombat);
+    model=createPopulation(spec,patrol,entries,window.GardenSimulationRng?.enemy||Math.random,target,relics?.death,!!weaponCombat);
     const sprites=new Map();
     const occlusion=window.GardenEnemyOcclusion.attach(scene,spec,patrol);
     // The playable field clips partial entry/exit sprites; HUD is never covered.
@@ -331,7 +331,7 @@
           model.advance(step);
           relics.model.syncFlowers(patrol.occupied);
           for(const e of model.actors){
-            if(playable){if(e.pendingHits){const damage=Math.max(1,(window.GardenRunRules.tuning.enemyDamage+(e.entry.level-1)*window.GardenRunRules.tuning.enemyDamagePerLevel)-(scene.runEquipment?.defense()||0));relics.model.damageFlower(e.path.flower,damage*e.pendingHits);e.pendingHits=0;}}
+            if(playable){if(e.pendingHits){const damage=window.GardenRunRules.damageToFlower(e.entry,scene.runEquipment?.defense()||0);relics.model.damageFlower(e.path.flower,damage*e.pendingHits);e.pendingHits=0;}}
             else if(!e.flowerHit&&(e.pose.phase==='recover'||e.pose.phase==='return')){e.flowerHit=true;relics.model.damageFlower(e.path.flower);}
           }
           if(playable){for(const [id,f] of relics.state.flowers)if(f.energy<=0)scene.runGarden?.remove(id);if(!patrol.occupied.length)break;}

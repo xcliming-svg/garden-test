@@ -13,13 +13,14 @@
   const combat=playable||window.GardenEnemyPreview.enabled&&params.get('weapons')==='1'&&params.get('attack')!=='0';
   const enabled=window.GardenFairyPatrol.enabled&&(!window.GardenEnemyPreview.enabled||combat)&&
     window.GardenFlowerGrowth.enabled&&params.get('cards')!=='0'&&params.get('cards')!=='legacy';
-  const tuning=Object.freeze({
+  const defaultTuning={
     balloon:{life:1.55,span:22,minFlight:.64,maxFlight:.94,gravity:440,launchHeight:8,splashLife:.58,splashSpan:44,spread:.14},
     boomerang:{life:3.8,span:28,speed:380,minFlight:.46,maxFlight:1.6,curve:65,minCurve:30},wheel:{life:6,span:28,initialSpeed:420,minSpeed:180,drag:1.6},
     flowerpot:{life:1.15,span:22,fall:.52,height:120},'paper-plane':{life:3.2,span:22,speed:310,turn:4.2,minFlight:.55,bank:22},
     'bouncy-ball':{life:3.2,span:22,speed:340,hop:.34,lift:18,chainRange:120},'yellow-floor':{life:2.6,span:44,spread:.32},
     sprinkler:{life:1.9,span:24,radius:44,turn:4,emitInterval:.045,dropLife:.32,start:.12},rock:{life:1.5,span:resolveRockSize(params.get('rockSize')),speed:520,gravity:180},broom:{life:2.4,span:44,orbit:26,period:1.2}
-  });
+  };
+  const tuning=Object.freeze(Object.fromEntries(Object.entries(defaultTuning).map(([id,base])=>[id,Object.freeze({...base,...window.GardenSimulationConfig?.projectiles?.[id]})])));
   // Only explicitly implemented attacks belong in the weapon selector.
   const items=window.GardenItemCards.entries.filter(i=>Object.prototype.hasOwnProperty.call(tuning,i.id));
   const ids=Object.freeze(items.map(i=>i.id));
@@ -239,7 +240,7 @@
     }
     return null;
   }
-  function create(spec,random=Math.random,measure=defaultSize,balanced=false){
+  function create(spec,random=Math.random,measure=defaultSize,balanced=false,onEvent=null){
     const B=window.GardenWeaponBalance;
     if(balanced&&!B)throw Error('Missing weapon balance');
     const previousTargets=new Map();
@@ -352,7 +353,7 @@
           }
           hits.sort((a,b)=>distance(previous,a.e)-distance(previous,b.e)||a.e.id-b.e.id);
           if(kind==='yellow-floor'){
-            for(const {e} of hits)if(!(e.attackType==='charge'&&e.phase==='strike'))slow?.(e.id,st.slow,.25);
+            for(const {e} of hits)if(!(e.attackType==='charge'&&e.phase==='strike')){if(slow?.(e.id,st.slow,.25))onEvent?.('weapon_slow',{weapon:kind,slot:s.slot,owner:s.owner,enemy:e.id,amount:st.slow});}
           }else{
             const single=['rock','paper-plane','bouncy-ball'].includes(kind);
             for(const {e,direct,record} of single?hits.slice(0,1):hits){
@@ -361,10 +362,12 @@
               const amount=B.amount(kind,st,s.hit.size,primary),result=damage(e.id,amount);
               if(kind==='flowerpot'&&result&&primary)s.directDone=true;
               if(!result)continue;
-              state.damage+=Math.min(remaining.get(e.id)??amount,amount);remaining.set(e.id,result.hp??0);
+              const effective=Math.min(remaining.get(e.id)??amount,amount);
+              state.damage+=effective;remaining.set(e.id,result.hp??0);
+              onEvent?.('weapon_hit',{weapon:kind,slot:s.slot,owner:s.owner,enemy:e.id,amount,effective,killed:result.killed});
               s.hit.add(e.id);record.count++;record.last=s.age;record.phases.add(phase);s.hitRecords.set(e.id,record);state.hits++;
               if(result.killed)dead.add(e.id);
-              if(kind==='broom'&&!result.killed)push?.(e.id,st.push);
+              if(kind==='broom'&&!result.killed&&push?.(e.id,st.push))onEvent?.('weapon_push',{weapon:kind,slot:s.slot,owner:s.owner,enemy:e.id,pixels:st.push});
               if(kind==='bouncy-ball'){
                 const options=live.filter(q=>q.id!==e.id&&!dead.has(q.id)&&!s.hit.has(q.id)&&distance(p,q)<=tuning['bouncy-ball'].chainRange&&distance(q,s.origin)<=st.range);
                 options.sort((a,b)=>distance(p,a)-distance(p,b)||a.id-b.id);
@@ -466,7 +469,7 @@
         }
         if(st?.duration)shot.life=st.duration;
         state.shots.push(shot);
-        state.fired++;next.set(slot.index,state.elapsed+(st?.cooldown??interval));
+        state.fired++;onEvent?.('weapon_fire',{weapon:slot.id,slot:slot.index,owner:shooter.index,shot:shot.id,target:shot.targetId});next.set(slot.index,state.elapsed+(st?.cooldown??interval));
       }
     }
     return {state,select,equip,step};
@@ -533,7 +536,7 @@
   }
   function attach(scene,spec,patrol){
     if(!enabled)return null;
-    const I=window.GardenItemCards,P=window.GardenPalette,model=create(spec,Math.random,(id,height)=>I.attackSize(scene,id,height),combat),images=new Map();
+    const I=window.GardenItemCards,P=window.GardenPalette,model=create(spec,window.GardenSimulationRng?.weapon||Math.random,(id,height)=>I.attackSize(scene,id,height),combat,window.GardenSimulationEvent),images=new Map();
     const clip=scene.make.graphics({x:0,y:0,add:false});
     clip.fillStyle(0xffffff,1).fillRect(0,spec.top,spec.width,spec.height-spec.top-spec.bottom);
     const mask=clip.createGeometryMask();

@@ -237,14 +237,18 @@
   function destroyRelic(image){
     displayState.get(image.scene)?.images.delete(image);image.destroy();
   }
-  function runItem(scene,id){
+  function runItemData(id){
     const original=entries.find(e=>e.id===id);
     const item=id==='water-fairy'?{...original,desc:'장착하면 돌멩이만 사용하는 물방울 요정이 순찰에 합류합니다.'}:original;
     if(!item)throw Error('Unknown item: '+id);
-    const texture=id==='water-fairy'?trim(scene,id,window.GardenFairyPatrol.key('water','normal')):trim(scene,id,raw(id));
-    const st=balance.stats(id,1),stats=Object.freeze(id==='water-fairy'?{dps:balance.nominalDps('rock',1)}:st?{dps:balance.nominalDps(id,1)}:item.stats);
+    const st=balance.stats(id,1),stats=Object.freeze(id==='water-fairy'?{dps:balance.nominalDps('rock',1)}:st?{dps:balance.nominalDps(id,1)}:{...item.stats,...window.GardenSimulationConfig?.passives?.[id]});
     const detail=st?(id==='yellow-floor'?'감속 '+Math.round(st.slow*100)+'%':'피해 '+(Array.isArray(st.damage)?st.damage.join('/'):st.damage))+' · '+st.cooldown+'초 · '+st.range+'px':item.tooltipEffect;
-    return Object.freeze({...item,texture,stats,tooltipEffect:detail});
+    return Object.freeze({...item,stats,tooltipEffect:detail});
+  }
+  function runItem(scene,id){
+    const item=runItemData(id);
+    const texture=id==='water-fairy'?trim(scene,id,window.GardenFairyPatrol.key('water','normal')):trim(scene,id,raw(id));
+    return Object.freeze({...item,texture});
   }
   function createDrop(scene,spec,assets,kind,id,x,y,serial){
     const isFlower=kind==='flower';
@@ -291,5 +295,5 @@
     scene.events.once('shutdown',()=>delete scene.itemCardPreview);
     return {cards,flowers};
   }
-  window.GardenItemCards=Object.freeze({enabled,entries,relics,preload,draw,runItem,createDrop,disposeCard,setIcon,key,broomRotation,itemSpan,minLevel,maxLevel,setLevelLabel,gemIcon,gemInk,relicImage,destroyRelic,weaponImage,effectImage,attackSize});
+  window.GardenItemCards=Object.freeze({enabled,entries,relics,preload,draw,runItem,runItemData,createDrop,disposeCard,setIcon,key,broomRotation,itemSpan,minLevel,maxLevel,setLevelLabel,gemIcon,gemInk,relicImage,destroyRelic,weaponImage,effectImage,attackSize});
 }());

@@ -150,7 +150,7 @@
     const playable=!!window.GardenRunRules?.active;
     const fairy=window.GardenFairyPatrol.enabled;
     install(scene,spec.garden.cell);if(!fairy)installEnemy(scene);
-    const g=spec.garden,params=new URLSearchParams(window.location.search),occupied=fairy&&params.get('full')!=='1'?new Set([44,45,54,55]):window.GardenCombatPreview.initialGarden(spec);
+    const g=spec.garden,params=new URLSearchParams(window.location.search),occupied=playable?new Set(window.GardenRunRules.initial.map(([id])=>id)):fairy&&params.get('full')!=='1'?new Set([44,45,54,55]):window.GardenCombatPreview.initialGarden(spec);
     const textureKey='flower-head-preview:soil:'+g.cell;
     const texture=scene.textures.exists(textureKey)?scene.textures.get(textureKey):
       scene.textures.createCanvas(textureKey,g.size,g.size);
@@ -183,7 +183,8 @@
       if(growth)growth.plant(i,name,p,born,mature);
       else scene.add.image(p.x,p.y,key(name,g.cell)).setDisplaySize(g.cell,g.cell).setDepth(1).setName('garden-preview-flower:'+i);
     }
-    [...occupied].forEach((i,n)=>addFlower(i,types[n%types.length],0,playable));
+    if(playable)window.GardenRunRules.initial.forEach(([i,name])=>addFlower(i,name,0,true));
+    else [...occupied].forEach((i,n)=>addFlower(i,types[n%types.length],0,false));
     function clampedBounds(keys){return geometry(keys).patrol;}
     function plant(model,drop,index){
       const next=new Set(occupied);next.add(index);

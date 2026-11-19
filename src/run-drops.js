@@ -4,7 +4,6 @@
   function attach(scene,spec,assets,equipment,layout){
     const I=window.GardenItemCards,G=window.GardenFlowerGrowth,L=window.GardenGameLayout;
     const drops=new Map();let serial=0;
-    const choose=items=>items[Math.floor(Math.random()*items.length)];
     function spawn(kind,x,y,id){
       const size=kind==='flower'?assets.flower.dropSize:assets.item.dropSize;
       const p=R.cardPosition(spec,x,y,size,[...drops.values()].filter(c=>!c.consumed).map(c=>({x:c.x,y:c.y,size:c.marker.width})));
@@ -12,10 +11,9 @@
       x=p.x;y=p.y;
       if(kind==='flower'&&!id){
         // Bias toward outstanding blueprint flowers; preserve random variety.
-        const needed=R.blueprint.filter(([cell,name])=>scene.flowerGrowth.entries.get(cell)?.name!==name).map(([,name])=>name);
-        id=choose(needed.length&&Math.random()<.75?needed:G.names);
+        id=R.chooseFlower(scene.flowerGrowth.entries,window.GardenSimulationRng?.flower||Math.random);
       }
-      if(kind==='item'&&!id)id=R.pickItem(scene.run.state.elapsed);
+      if(kind==='item'&&!id)id=R.pickItem(scene.run.state.elapsed,window.GardenSimulationRng?.item||Math.random);
       const card=I.createDrop(scene,spec,assets,kind,id,x,y,serial++);
       card.age=0;card.kind=kind;card.id=id;
       card.float=L.floatingDrop(card.marker,serial);

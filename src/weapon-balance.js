@@ -9,7 +9,7 @@
   const slots=integer(params.get('weaponSlots'),4,10,10);
   const enemyCount=integer(params.get('enemyCount'),1,200,null);
   const balanceWave=integer(params.get('balanceWave'),1,200,null);
-  const data=Object.freeze({
+  const defaults={
     rock:{range:280,damage:[10,13,16],cooldown:[.8,.75,.7]},
     'paper-plane':{range:420,damage:[12,15,18],cooldown:[1.4,1.35,1.3]},
     balloon:{range:320,damage:[10,12,15],cooldown:[2.2,2.1,2]},
@@ -20,23 +20,26 @@
     'yellow-floor':{range:300,damage:[0,0,0],cooldown:[5,4.8,4.6],duration:4,slow:[.4,.45,.5]},
     sprinkler:{range:330,damage:[3,4,5],cooldown:[4.8,4.6,4.4],duration:3.2,repeat:.45,maxHits:6,radius:44},
     broom:{range:250,damage:[6,8,10],cooldown:[5.2,5,4.8],duration:3.6,repeat:1.2,maxHits:3,push:12}
-  });
+  };
+  const overrides=window.GardenSimulationConfig?.weapons||{};
+  const data=Object.freeze(Object.fromEntries(Object.entries(defaults).map(([id,base])=>[id,Object.freeze({...base,...overrides[id]})])));
   const loadout=Object.freeze((params.get('weaponLoadout')||'').split(',').map(id=>id.trim()).filter(id=>Object.prototype.hasOwnProperty.call(data,id)).slice(0,slots));
   const stats=(id,lvl=1)=>{
     const d=data[id];if(!d)return null;const n=clamp(Math.trunc(lvl)||1,1,3)-1;
     return {...d,level:n+1,damage:d.damage[n],cooldown:d.cooldown[n],slow:d.slow?.[n]};
   };
-  const hp=e=>({approach:10,charge:12,jump:10,fly:8}[e.attackType]||10)*e.level;
+  const hp=e=>window.GardenSimulationConfig?.enemyHp?.[e.id]??({approach:10,charge:12,jump:10,fly:8}[e.attackType]||10)*e.level;
   const finiteTarget=(total,elapsed,active,spawned)=>Math.min(200,active+Math.max(0,Math.min(total,Math.floor(elapsed*10)+1)-spawned));
-  const groundContact=e=>(e.lift??0)<=3;
+  const heightLimits=Object.freeze({ground:3,sprinkler:12,wheel:28,...window.GardenSimulationConfig?.heightLimits});
+  const groundContact=e=>(e.lift??0)<=heightLimits.ground;
   const distance=(a,b)=>Math.hypot(a.x-b.x,a.y-b.y);
   const ground=e=>({x:e.x,y:e.ground??e.y});
   const threat=e=>e.phase==='return'||e.phase==='recover'?-2:1+5/(.35+Math.max(0,e.attackIn??4));
   const groundKinds=new Set(['balloon','flowerpot','yellow-floor','sprinkler','broom','wheel']);
   const eligibleHeight=(id,e)=>{
     if(id==='yellow-floor'||id==='broom'||id==='balloon'||id==='flowerpot')return groundContact(e);
-    if(id==='sprinkler')return (e.lift??0)<=12;
-    if(id==='wheel')return (e.lift??0)<=28;
+    if(id==='sprinkler')return (e.lift??0)<=heightLimits.sprinkler;
+    if(id==='wheel')return (e.lift??0)<=heightLimits.wheel;
     return true;
   };
   function nominalDps(id,lvl){
@@ -137,5 +140,5 @@
     options.sort((a,b)=>b.score-a.score||a.target.id-b.target.id);
     return options[0]||null;
   }
-  window.GardenWeaponBalance=Object.freeze({data,stats,hp,level,slots,enemyCount,balanceWave,loadout,finiteTarget,groundContact,eligibleHeight,ground,target,amount,nominalDps,choose});
+  window.GardenWeaponBalance=Object.freeze({data,stats,hp,heightLimits,level,slots,enemyCount,balanceWave,loadout,finiteTarget,groundContact,eligibleHeight,ground,target,amount,nominalDps,choose});
 }());

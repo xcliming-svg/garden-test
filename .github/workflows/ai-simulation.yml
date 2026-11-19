@@ -1,0 +1,31 @@
+name: AI simulation verification
+on:
+  push:
+    branches: [feature/ai-simulation-system, devel, main]
+  pull_request:
+    branches: [devel]
+permissions:
+  contents: read
+jobs:
+  verify:
+    runs-on: ubuntu-latest
+    timeout-minutes: 12
+    steps:
+      - uses: actions/checkout@v6
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - run: for file in src/*.js simulation/*.mjs tests/simulation-*.mjs; do node --check "$file"; done
+      - run: node tests/playable-run-model.mjs && node tests/hero-weapon-model.mjs && node tests/relic-collection.mjs && node tests/weapon-balance-model.mjs
+      - run: node tests/simulation-model.mjs
+      - run: |
+          node simulation/cli.mjs defaults --output /tmp/garden-defaults.json
+          node simulation/cli.mjs run --seed 42 --agent normal --seconds 500 --output /tmp/garden-run.json
+          node simulation/cli.mjs replay --input /tmp/garden-run.json
+          node simulation/cli.mjs batch --runs 4 --workers 2 --seconds 60 --output /tmp/garden-batch.json
+          node simulation/cli.mjs sweep --input simulation/experiments/example.json --runs 2 --workers 2 --seconds 60 --output /tmp/garden-sweep.json
+      - run: npm install --no-save --package-lock=false playwright@1.51.1 phaser@3.90.0
+        env:
+          PLAYWRIGHT_SKIP_BROWSER_DOWNLOAD: '1'
+      - run: node tests/simulation-browser.mjs
+      - run: node tests/playable-run-browser.mjs
