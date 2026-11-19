@@ -627,6 +627,7 @@
       const current = sumPreviewStats(equipped);
       const next = dragging && target >= 0 ? getPreviewStats(equipped, target, dragging.item) : current;
       if(combatSpeed!==undefined){current.moveSpeed=combatSpeed;next.moveSpeed=combatSpeed;}
+      if(playable&&window.GardenFlowerCarry?.enabled){current.moveSpeed+=window.GardenFlowerCarry.speedBonus;if(next!==current)next.moveSpeed+=window.GardenFlowerCarry.speedBonus;}
       const rows = layout.alignCost();
       stats.forEach(row => {
         const d = Math.round((next[row.key] - current[row.key])*10)/10;
@@ -1161,7 +1162,7 @@
       const label='테스트 전투 · 공 '+count+'개';
       if(status.text!==label)status.setText(label);
     },itemPreview,markers.flowers);
-    if(playable){itemPreview.equipInitial();drawBlueprint(scene);window.GardenRunDrops.attach(scene,spec,assets,itemPreview,layout);}
+    if(playable){itemPreview.equipInitial();drawBlueprint(scene);window.GardenRunDrops.attach(scene,spec,assets,itemPreview,layout);window.GardenFlowerCarry?.attach(scene,spec);}
   }
 
   window.GardenGameLayout = Object.freeze({ spec, assets, colors, spacing, hud, slotCost, formatHudTime, formatHudCount, hudColumns, bottomStats, itemTooltip, replacementTitle, bottomLayout, sumPreviewStats, getPreviewStats, tooltipPosition, gardenCandidates, gardenGridRects, gardenRaster, gardenHit, patrolBounds, patrolPosition, nearestPatrolDistance, floatingDrop, animateFloatingDrops, draw });

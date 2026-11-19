@@ -174,6 +174,16 @@
     updateDensity(0,0);
     let elapsed=0,rank=0,currentSpeed=speed,state='normal',emotionTime=0;
     let distance=(b.right-b.left)/2;
+    const manual=!!window.GardenFlowerCarry?.enabled;
+    let manualPosition=manual?{...patrolPosition(b,distance)}:null,manualDirection='right',manualMoving=false,manualGait=0;
+    function advanceManual(dt){
+      if(!manual||!scene.flowerCarry)return;
+      const v=scene.flowerCarry.movement(),h=actors[0].visibleHeight/2+2;
+      const next=window.GardenFlowerCarry.step(manualPosition,v.x,v.y,dt,currentSpeed+window.GardenFlowerCarry.speedBonus,{left:h,right:spec.width-h,top:spec.top+h,bottom:spec.height-spec.bottom-h});
+      manualMoving=Math.hypot(next.x-manualPosition.x,next.y-manualPosition.y)>1e-7;
+      if(manualMoving){manualDirection=Math.abs(v.x)>Math.abs(v.y)?(v.x>0?'right':'left'):(v.y>0?'down':'up');manualGait+=dt;}
+      manualPosition=next;
+    }
     // Retained for future upgrades and combat/result events; no preview UI.
     function setState(next){
       if(!fairyStates.includes(next))return false;
@@ -206,13 +216,15 @@
       refreshBoundary();
       for(const a of actors){
         const d=distance+a.index*spacing;
-        const p=patrolPosition(b,d),q=patrolPosition(b,d+.01);
+        const controlled=manual&&a.index===0;
+        const p=controlled?{...manualPosition}:patrolPosition(b,d),q=patrolPosition(b,d+.01);
         const dx=q.x-p.x,dy=q.y-p.y;
-        a.direction=Math.abs(dx)>Math.abs(dy)?(dx>0?'right':'left'):(dy>0?'down':'up');
+        a.direction=controlled?manualDirection:Math.abs(dx)>Math.abs(dy)?(dx>0?'right':'left'):(dy>0?'down':'up');
         a.center=p;
-        const phase=elapsed*gait.frequency*Math.PI*2+a.phase;
-        const lift=Math.abs(Math.sin(phase))*gait.lift*(a.visibleHeight/40);
-        const tilt=Math.sin(phase)*gait.tilt;
+        const phase=(controlled?manualGait:elapsed)*gait.frequency*Math.PI*2+a.phase;
+        const walking=!controlled||manualMoving;
+        const lift=walking?Math.abs(Math.sin(phase))*gait.lift*(a.visibleHeight/40):0;
+        const tilt=walking?Math.sin(phase)*gait.tilt:0;
         const facing=a.direction==='left'?-1:a.direction==='right'?1:0;
         // The base art is front-facing only. Mirror horizontally on left/right;
         // up/down retain a front view, with gait and directional lean.
@@ -235,8 +247,8 @@
       }
       refreshHud();
     }
-    function advance(seconds){const dt=Math.max(0,seconds);emotionTime+=dt;if(!isResult(state)){elapsed+=dt;distance=(distance+dt*currentSpeed)%length;}render();return elapsed;}
-    const controller={get actors(){return actors;},border,advance,refreshHud,setCount,setSpeed,setSpeedRank,setState,updateDensity,density,get state(){return state;},get finished(){return isResult(state);},get emotionTime(){return emotionTime;},get speed(){return currentSpeed;},get speedRank(){return rank;},get distance(){return distance;},get bounds(){return b;},get length(){return length;},get spacing(){return spacing;},get boundary(){return info;},get occupied(){return [...occupied];},get elapsed(){return elapsed;}};
+    function advance(seconds){const dt=Math.max(0,seconds);emotionTime+=dt;if(!isResult(state)){elapsed+=dt;distance=(distance+dt*currentSpeed)%length;advanceManual(dt);}render();return elapsed;}
+    const controller={get actors(){return actors;},border,advance,refreshHud,setCount,setSpeed,setSpeedRank,setState,updateDensity,density,get state(){return state;},get finished(){return isResult(state);},get emotionTime(){return emotionTime;},get speed(){return currentSpeed;},get manualSpeed(){return manual?currentSpeed+window.GardenFlowerCarry.speedBonus:currentSpeed;},get speedRank(){return rank;},get distance(){return distance;},get bounds(){return b;},get length(){return length;},get spacing(){return spacing;},get boundary(){return info;},get occupied(){return [...occupied];},get elapsed(){return elapsed;}};
     scene.fairyPatrol=controller;
     const update=(_time,delta)=>advance(Math.min(.1,Math.max(0,delta/1000)));
     scene.events.on('update',update);
