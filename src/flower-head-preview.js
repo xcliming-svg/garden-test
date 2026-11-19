@@ -151,7 +151,7 @@
     const fairy=window.GardenFairyPatrol.enabled;
     install(scene,spec.garden.cell);if(!fairy)installEnemy(scene);
     const g=spec.garden,params=new URLSearchParams(window.location.search),occupied=playable?new Set(window.GardenRunRules.initial.map(([id])=>id)):fairy&&params.get('full')!=='1'?new Set([44,45,54,55]):window.GardenCombatPreview.initialGarden(spec);
-    const textureKey='flower-head-preview:soil:'+g.cell;
+    const textureKey='flower-head-preview:soil:'+g.cell+(window.GardenFairyFlowerbeds?.enabled?':9':'');
     const texture=scene.textures.exists(textureKey)?scene.textures.get(textureKey):
       scene.textures.createCanvas(textureKey,g.size,g.size);
     const soil=scene.add.image(g.x+g.size/2,g.y+g.size/2,textureKey)
@@ -248,6 +248,7 @@
           }
         }
         function plantFlower(i,name){
+          if(window.GardenFairyFlowerbeds?.enabled&&occupied.has(i)){growth.remove(i);scene.relicCollection?.state.flowers.delete(i);}
           occupied.add(i);addFlower(i,name,scene.run?.state.elapsed??patrol.elapsed);
           if(window.GardenFlowerCarry?.enabled)scene.heroWeaponPreview?.removeObstructed();
           scene.relicCollection?.model.syncFlowers(occupied);patrol.refreshHud();
@@ -275,7 +276,7 @@
         }
         for(const f of previewFlowers)register(f);
         if(playable){
-          scene.runGarden={occupied,register,refreshSoil,refreshMismatch,plantCarried(id,name){if(!window.GardenFlowerCarry?.enabled||hold||!R.blueprint.some(([i,n])=>i===id&&n===name)||!R.canPlant(occupied,growth.entries,id,name))return false;plantFlower(id,name);refreshSoil(null);return true;},remove(id){if(!occupied.delete(id))return false;if(hold?.id===id)clearHold();growth.remove(id);refreshSoil(null);return true;},isDragging:f=>dragging===f,get holding(){return hold!==null;},get holdProgress(){return hold?hold.elapsed/R.tuning.uprootSeconds:0;}};
+          scene.runGarden={occupied,register,refreshSoil,refreshMismatch,plantCarried(id,name){if(!window.GardenFlowerCarry?.enabled||hold||(!window.GardenFairyFlowerbeds?.enabled&&!R.blueprint.some(([i,n])=>i===id&&n===name))||!R.canPlant(occupied,growth.entries,id,name))return false;plantFlower(id,name);refreshSoil(null);return true;},remove(id){if(!occupied.delete(id))return false;if(hold?.id===id)clearHold();growth.remove(id);refreshSoil(null);return true;},isDragging:f=>dragging===f,get holding(){return hold!==null;},get holdProgress(){return hold?hold.elapsed/R.tuning.uprootSeconds:0;}};
           scene.input.on('pointerdown',beginHold);scene.input.on('pointermove',moveHold);scene.input.on('pointerup',endHold);scene.input.on('pointerupoutside',endHold);scene.events.on('update',advanceHold);
           scene.events.once('shutdown',()=>{scene.input.off('pointerdown',beginHold);scene.input.off('pointermove',moveHold);scene.input.off('pointerup',endHold);scene.input.off('pointerupoutside',endHold);scene.events.off('update',advanceHold);clearHold();delete scene.runGarden;});
         }

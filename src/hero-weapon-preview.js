@@ -94,7 +94,7 @@
     const cfg=tuning.boomerang,d=distance(s,{x:s.tx,y:s.ty}),flight=s.flight||.85;
     const out=s.age<=flight,u=clamp(out?s.age/flight:(s.age-flight)/(shotLife(s)-flight),0,1);
     const curve=clamp(d*.32,cfg.minCurve,cfg.curve),lead=Math.max(32,d*.42),over=Math.max(18,d*.15);
-    const origin={x:s.x,y:s.y},target={x:s.tx,y:s.ty},end=hero?.center||origin;
+    const origin={x:s.x,y:s.y},target={x:s.tx,y:s.ty},end=s.fixedOwner?origin:hero?.center||origin;
     const shift=(p,f,n)=>({x:p.x+s.dx*f-s.dy*n,y:p.y+s.dy*f+s.dx*n});
     // Paired cubic tangents agree at the exact target; the minimum bow keeps
     // near throws legible, rather than compressing them into a jittering line.
@@ -276,15 +276,15 @@
     function step(dt,hero,targets=[],damage=null,slow=null,patrol=null,push=null,companions=[]){
       if(!(dt>0))return;
       state.elapsed+=dt;
-      if(playable){const owners=new Set(companions.map(a=>a.index));state.shots=state.shots.filter(s=>s.owner===0||owners.has(s.owner));for(const key of next.keys())if(key<=-100&&!owners.has(-100-key))next.delete(key);}
+      if(playable){const owners=new Set(companions.map(a=>a.index)),fixed=new Map(companions.filter(a=>a.type==='fixed').map(a=>[a.index,a.weapon]));state.shots=state.shots.filter(s=>s.owner===0||owners.has(s.owner)&&(!s.fixedOwner||fixed.get(s.owner)===s.kind));for(const key of next.keys())if(key<=-100&&!owners.has(-100-key))next.delete(key);}
       const live=targets.filter(e=>e.x>=0&&e.x<=spec.width&&e.y>=spec.top&&e.y<=spec.height-spec.bottom);
       const dead=new Set(),garden=gardenOf(patrol),battle=balanced&&!!damage;
       const remaining=new Map(live.map(e=>[e.id,e.hp??10]));
       // Planting may expand the garden while an attack is already active.
       // Remove only ground attacks whose remaining footprint becomes unsafe.
       for(const s of state.shots){
-        if(installations.has(s.kind)&&!(s.manualInstalled?manualSafe({x:s.tx,y:s.ty},patrol):installationSafe(spec,s.kind,{x:s.tx,y:s.ty},garden,sizeOf(s)))){s.done=true;continue;}
-        if(s.kind==='wheel'&&garden){
+        if(installations.has(s.kind)&&!(s.manualInstalled?manualSafe({x:s.tx,y:s.ty},patrol):installationSafe(spec,s.kind,{x:s.tx,y:s.ty},s.fixedOwner?null:garden,sizeOf(s)))){s.done=true;continue;}
+        if(s.kind==='wheel'&&garden&&!s.fixedOwner){
           const p=pose(s,hero),end={x:s.x+s.dx*s.exitDistance,y:s.y+s.dy*s.exitDistance};
           if(segmentIntersects(p,end,expanded(garden,wheelRadius(sizeOf(s))+1))){s.done=true;continue;}
         }
@@ -361,13 +361,13 @@
           }
           hits.sort((a,b)=>distance(previous,a.e)-distance(previous,b.e)||a.e.id-b.e.id);
           if(kind==='yellow-floor'){
-            for(const {e} of hits)if(!(e.attackType==='charge'&&e.phase==='strike')){if(slow?.(e.id,st.slow,.25))onEvent?.('weapon_slow',{weapon:kind,slot:s.slot,owner:s.owner,enemy:e.id,amount:st.slow});}
+            for(const {e} of hits)if(!(e.attackType==='charge'&&e.phase==='strike')){if(slow?.(e.id,st.slow*(s.power??1),.25))onEvent?.('weapon_slow',{weapon:kind,slot:s.slot,owner:s.owner,enemy:e.id,amount:st.slow});}
           }else{
             const single=['rock','paper-plane','bouncy-ball'].includes(kind);
             for(const {e,direct,record} of single?hits.slice(0,1):hits){
               if(kind==='flowerpot'&&s.age<tuning.flowerpot.fall&&s.directDone)continue;
               const primary=direct&&!s.directDone;
-              const amount=B.amount(kind,st,s.hit.size,primary),result=damage(e.id,amount);
+              const amount=B.amount(kind,st,s.hit.size,primary)*(s.power??1),result=damage(e.id,amount);
               if(kind==='flowerpot'&&result&&primary)s.directDone=true;
               if(!result)continue;
               const effective=Math.min(remaining.get(e.id)??amount,amount);
@@ -375,7 +375,7 @@
               onEvent?.('weapon_hit',{weapon:kind,slot:s.slot,owner:s.owner,enemy:e.id,amount,effective,killed:result.killed});
               s.hit.add(e.id);record.count++;record.last=s.age;record.phases.add(phase);s.hitRecords.set(e.id,record);state.hits++;
               if(result.killed)dead.add(e.id);
-              if(kind==='broom'&&!result.killed&&push?.(e.id,st.push))onEvent?.('weapon_push',{weapon:kind,slot:s.slot,owner:s.owner,enemy:e.id,pixels:st.push});
+              if(kind==='broom'&&!result.killed&&push?.(e.id,st.push*(s.power??1)))onEvent?.('weapon_push',{weapon:kind,slot:s.slot,owner:s.owner,enemy:e.id,pixels:st.push});
               if(kind==='bouncy-ball'){
                 const options=live.filter(q=>q.id!==e.id&&!dead.has(q.id)&&!s.hit.has(q.id)&&distance(p,q)<=tuning['bouncy-ball'].chainRange&&distance(q,s.origin)<=st.range);
                 options.sort((a,b)=>distance(p,a)-distance(p,b)||a.id-b.id);
@@ -435,26 +435,26 @@
       previousTargets.clear();for(const e of live)previousTargets.set(e.id,{...e});
       if(!hero||hero.index!==0||hero.type!=='garden'||!patrol?.bounds)return;
       const slots=state.equipped.flatMap((id,index)=>id&&!(window.GardenFlowerCarry?.enabled&&installations.has(id))?[{id,index,preview:false,actor:hero}]:[]);
-      if(playable)for(const actor of companions)slots.push({id:'rock',index:-100-actor.index,preview:false,actor});
+      if(playable)for(const actor of companions)slots.push({id:actor.weapon||'rock',index:-100-actor.index,preview:false,actor});
       if(!slots.length&&state.selected)slots.push({id:state.selected,index:-1,preview:true,actor:hero});
       for(const slot of slots){
         if(state.elapsed+1e-8<(next.get(slot.index)||0))continue;
         const level=state.levels[slot.index]||1,st=battle&&!slot.preview?B.stats(slot.id,level):null;
         if(st&&slot.id==='boomerang'&&state.shots.some(s=>s.slot===slot.index&&s.kind==='boomerang'))continue;
         const shooter=slot.actor,x=shooter.center.x,y=shooter.center.y,origin={x,y},bounds={...patrol.bounds};
-        const cfg=tuning[slot.id],size=measure(slot.id,cfg.span),heroHeight=shooter.visibleHeight||40;
+        const cfg=tuning[slot.id],size=measure(slot.id,cfg.span),heroHeight=shooter.visibleHeight||40,fixedOwner=shooter.type==='fixed',attackGarden=fixedOwner?null:garden;
         // Ground effects use the actual ground coordinate, never the projected
         // airborne sprite center as a fallback for a forbidden installation.
         const aimOf=e=>({x:e.x,y:groundAim.has(slot.id)&&Number.isFinite(e.ground)?e.ground:e.y});
-        const valid=p=>validAim(spec,slot.id,p,origin,garden,size,heroHeight,true);
+        const valid=p=>validAim(spec,slot.id,p,origin,attackGarden,size,heroHeight,true);
         const available=live.filter(e=>!dead.has(e.id)).map(e=>({...e,hp:remaining.get(e.id)}));
         const chosen=st?B.choose(slot.id,level,origin,available,state.shots,valid,tuning,balloonFlight,size):null;
         const options=!st&&!slot.preview&&damage?available.filter(e=>valid(aimOf(e))):[];
         const target=st?chosen?.target:options[Math.floor(random()*options.length)]||null;
-        const aim=st?chosen?.aim:target?aimOf(target):randomPoint(spec,origin,garden,random,slot.id,size,heroHeight);
+        const aim=st?chosen?.aim:target?aimOf(target):randomPoint(spec,origin,attackGarden,random,slot.id,size,heroHeight);
         if(!aim)continue;
         const tx=aim.x,ty=aim.y,d=Math.hypot(tx-x,ty-y)||1,dx=(tx-x)/d,dy=(ty-y)/d;
-        const shot={id:serial++,owner:shooter.index,slot:slot.index,preview:slot.preview,kind:slot.id,x,y,tx,ty,dx,dy,origin,bounds,age:0,targetId:target?.id??null,hit:new Set(),hitRecords:new Map(),level,size,span:cfg.span};
+        const shot={id:serial++,owner:shooter.index,slot:slot.index,preview:slot.preview,kind:slot.id,fixedOwner,power:shooter.power??1,x,y,tx,ty,dx,dy,origin,bounds,age:0,targetId:target?.id??null,hit:new Set(),hitRecords:new Map(),level,size,span:cfg.span};
         if(slot.id==='balloon'){
           shot.launchY=y+heroHeight*.30;
           shot.flight=balloonFlight(d);shot.life=shot.flight+tuning.balloon.splashLife;
@@ -471,7 +471,7 @@
         if(slot.id==='bouncy-ball')startLeg(shot,x,y,tx,ty,0,cfg.speed);
         if(slot.id==='rock')shot.life=Math.max(.06,d/cfg.speed);
         if(slot.id==='wheel'){
-          const path=wheelPath(spec,origin,aim,garden,size,heroHeight);
+          const path=wheelPath(spec,origin,aim,attackGarden,size,heroHeight);
           if(!path)continue;
           shot.x=path.start.x;shot.y=path.start.y;shot.exitDistance=path.exit;
         }
@@ -632,7 +632,7 @@
       if(patrol.finished)return;
       const population=combat?scene.enemyPreview?.model:null;
       const targets=population?population.actors.map(a=>window.GardenWeaponBalance.target(a)):[];
-      model.step(Math.min(.1,Math.max(0,delta/1000)),patrol.actors[0],targets,population?.damage,population?.slow,patrol,population?.push,playable?patrol.actors.slice(1):[]);
+      model.step(Math.min(.1,Math.max(0,delta/1000)),patrol.actors[0],targets,population?.damage,population?.slow,patrol,population?.push,playable?[...patrol.actors.slice(1),...(scene.fairyFlowerbeds?.actors()||[])]:[]);
       render();
     }
     scene.events.on('update',update);scene.events.on('pause',pause);scene.events.on('resume',resume);scene.scale.on('resize',resize);

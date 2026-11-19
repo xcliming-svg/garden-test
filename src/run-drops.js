@@ -54,7 +54,7 @@
       if(lastGems!==scene.run.state.gems){lastGems=scene.run.state.gems;layout.updateCost();}
       scene.fairyPatrol.refreshHud();
       if(!scene.runGarden.occupied.size)result('Defeat');
-      else if(R.completion(scene.flowerGrowth.entries)===100)result('Victory');
+      else if(!window.GardenFairyFlowerbeds?.enabled&&R.completion(scene.flowerGrowth.entries)===100)result('Victory');
     }
     scene.runDrops={spawn,consume,drops};
     scene.events.on('update',update);
