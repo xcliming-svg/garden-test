@@ -101,7 +101,9 @@ AI 실험 절차: (1) 기본 설정·도안·정책·seed/dt 고정 (2) 각 설�
 - Vampire Survivors 공식 Steam https://store.steampowered.com/app/1794680/Vampire_Survivors/ — 시간 생존과 런 성장, 자동 공격 장르 사례. 공식 설명에서 Garden 최적 런 시간/보상 간격은 도출할 수 없다.
 
 ## 검증 및 남은 한계
-- 기존 무조작 모델 및 신규 모델 검증, CLI 단일/배치/스윕/재현, 실제 브라우저 reference/determinism/기존 플레이 회귀는 .github/workflows/ai-simulation.yml에 등록.
+- 2026-11-19 [AI simulation verification](https://github.com/xcliming-svg/garden-test/actions/runs/44439181237), 코드 커밋 `1922933`의 전체 작업 성공: 기존 플레이 35,173개·무기 29,081개·렐릭 1,655개·밸런스 74,418개 체크, 신규 모델 81개 체크, CLI 단일/배치/스윕/행동 재현 통과. 실제 Phaser 두 번의 동일 조건 재현 및 측정 geometry 적용 모델과 60초(seed 42, dt=.05, idle) 비교에서 결과·완성 칸·처치·출현·발사·명중·피해·보석 일치. normal 120초 실제 브라우저 카드 행동 성공. 기존 실제 포인터 플레이 회귀 960×540/1280×720 통과.
+- 기존 카드·꽃·색상·플레이 검증 성공. 기존 이동 속도 브라우저 테스트의 30초 Game 진입 대기 시간 초과는 [변경 전 main 8741ee2](https://github.com/xcliming-svg/garden-test/actions/runs/44434109139)에서도 동일한 테스트 35행에서 발생했으며 [이번 실행](https://github.com/xcliming-svg/garden-test/actions/runs/44439181270)에서도 관찰되어 재실행. 이 검사의 실패 원인 자체는 수정 범위가 아니다.
+- seed 42 normal 기본 설정(근사 geometry) 단일 런은 CI에서 게임 시간 202.35초를 약 0.113초의 모델 실행으로 처리했다. 해당 장비·조건의 단일 스모크 결과이며 대형 도안/장시간/1000회 성능을 보장하지 않는다.
 - 기존 에셋, Phaser 버전 및 배포 경로 유지. 테스트 코드는 별도 simulation/ 디렉터리이며 일반 index.html 또는 lab.html에서 로드하지 않는다.
 - 결과 지문 확인 및 같은 seed/action 재현이 필수. 새 src 함수/상태 갱신·공격 방식 추가 시 fast orchestrator 및 로그·config 스키마와 parity 테스트도 갱신한다.
 - 모델의 공격/보상/진행 동작은 검사했으나 아직 인간 재미 모델, 최적화 엔진, 모든 가능한 조합의 브라우저 동치, 실제 사람 반응, 장시간 성능/1000회 벤치마크까지 보장하지 않는다.
