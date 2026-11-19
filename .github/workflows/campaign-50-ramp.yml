@@ -3,7 +3,6 @@ on:
   push:
     branches: [feature/campaign-50-study]
     paths:
-      - 'simulation/experiments/campaign-50.mjs'
       - '.github/workflows/campaign-50-ramp.yml'
   workflow_dispatch:
 permissions:

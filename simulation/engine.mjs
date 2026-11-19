@@ -84,6 +84,12 @@ export function createEngine(w,{seed=1,dt=1/60,maxSeconds=1800,trace=false,geome
     const level=['duplicate','campaign-duplicate'].includes(progression)&&B.data[c.name]&&old?.id===c.name?Math.min(cap,(old.level||1)+1):c.level||1;
     return leveled(c.name,level);
   }
+  // Campaign-only starting weapon level experiment; never an ordered drop.
+  if(campaign?.starterLevel!==undefined){
+    const level=campaign.starterLevel;
+    if(!Number.isInteger(level)||level<1||level>(campaign.levelCaps[R.tuning.starterRock]??1))throw Error('Invalid campaign starter level');
+    if(level>1)equip(0,leveled(R.tuning.starterRock,level));
+  }
   if(research?.fixedLoadout){
     // Controlled combat fixture, never a player-accessible starting inventory.
     if(!Array.isArray(research.fixedLoadout)||research.fixedLoadout.length!==run.state.slotCount)throw Error('fixedLoadout must fill unlocked slots');

@@ -123,12 +123,20 @@ export function makeWorld(sources,stage,policy,mode='campaign-drop',overrides={}
   }});
   return {model,env,gear};
 }
+export const lateProtocol={seed:29401,runs:3,dt:.05,stages:[45,50],variant:'gradual',treatments:['baseline','starter','attack-weight','both']};
+export function applyLateTreatment(model,gear,treatment){
+  if(!lateProtocol.treatments.includes(treatment))throw Error('Unknown treatment');
+  const starterLevel=['starter','both'].includes(treatment)?gear.levelCaps.rock:1;
+  const pool=gear.pool.map(c=>({...c,weight:c.weight*(['attack-weight','both'].includes(treatment)&&((model.GardenWeaponBalance.data[c.id]?.damage[0]??0)!==0||c.id==='water-fairy')?2:1)}));
+  return {...gear,pool,starterLevel};
+}
 export function runStage(sources,geometry,stage,policy,opts={}){
-  const {seed=protocol.screen.seed,runs=protocol.screen.runs,dt=.05,agent='normal',mode='campaign-drop',maxSeconds=protocol.maxSeconds,variant=null}=opts;
+  const {seed=protocol.screen.seed,runs=protocol.screen.runs,dt=.05,agent='normal',mode='campaign-drop',maxSeconds=protocol.maxSeconds,variant=null,treatment=null}=opts;
   const rows=[];
   for(let i=0;i<runs;i++){
     const {model,env,gear}=makeWorld(sources,stage,policy,mode,{},variant);
-    const r=play(createEngine(model,{seed:seed+i,dt,maxSeconds,geometry,trace:true,research:{progression:mode,campaign:{...gear,itemCap:env.itemCap}}}),profileFor(agent));
+    const treated=treatment?applyLateTreatment(model,gear,treatment):gear;
+    const r=play(createEngine(model,{seed:seed+i,dt,maxSeconds,geometry,trace:true,research:{progression:mode,campaign:{...treated,itemCap:env.itemCap}}}),profileFor(agent));
     const items=r.events.filter(e=>e.type==='card_spawn'&&e.kind==='item'),newCards=items.filter(e=>gear.pool.some(c=>c.id===e.name&&c.level===e.level&&stage-c.stage<=4));
     if(items.some(e=>!gear.pool.some(c=>c.id===e.name&&c.level===e.level))||items.length>env.itemCap)throw Error('Locked or excess item');
     if(r.events.some(e=>e.type==='card_spawn'&&e.kind==='flower'&&!env.flowerPool.includes(e.name)))throw Error('Locked flower');
@@ -142,7 +150,7 @@ export function runStage(sources,geometry,stage,policy,opts={}){
   const g=protocol.goals,violations={survival:Math.max(0,g.winRate-metrics.winRate),gap:Math.max(0,metrics.gap.p90/g.maxGap-1),duration:Math.max(0,g.minDuration-metrics.seconds.p50,metrics.seconds.p50-g.maxDuration)/g.maxDuration,discovery:Math.max(0,g.minNewDiscovery-discovery)};
   // No recent unlock -> no new discovery gate at this representative stage.
   if(!stageGear(stage,policy,mode).pool.some(c=>stage-c.stage<=4))violations.discovery=0;
-  return {stage,policy,mode,agent,seed,runs,dt,...(variant?{variant}:{}),metrics,violations,pass:Object.values(violations).every(x=>x===0),rows};
+  return {stage,policy,mode,agent,seed,runs,dt,...(variant?{variant}:{}),...(treatment?{treatment}:{}),metrics,violations,pass:Object.values(violations).every(x=>x===0),rows};
 }
 export function profileGear(sources,geometry,stage,card,{seed=protocol.profile.seed,runs=3,dt=.05}={}){
   const results=[];
@@ -160,8 +168,9 @@ if(process.argv[1]&&import.meta.url===pathToFileURL(process.argv[1]).href){
   if(mode==='dataset')report=dataset();
   else if(mode==='screen'){const stage=Number(group);report={stage,reports:policies.map(policy=>runStage(sources,geometry,stage,policy))};}
   else if(mode==='ramp'){const stage=Number(group);report={stage,reports:rampProtocol.variants.flatMap(variant=>policies.map(policy=>runStage(sources,geometry,stage,policy,{...rampProtocol,variant})))};}
+  else if(mode==='late'){const [stage,policy]=group.split(':');report={stage:Number(stage),policy,reports:lateProtocol.treatments.map(treatment=>runStage(sources,geometry,Number(stage),policy,{...lateProtocol,treatment}))};}
   else if(mode==='profile'){const stage=Number(group);report={stage,reports:unlocks('counter-first').map(({id,level})=>profileGear(sources,geometry,stage,{id,level})),baseline:profileGear(sources,geometry,stage,{id:'rock',level:1})};}
   else throw Error('Unknown campaign command');
-  console.log('CAMPAIGN '+JSON.stringify(['screen','ramp'].includes(mode)?report.reports.map(r=>({stage:r.stage,policy:r.policy,variant:r.variant,pass:r.pass,metrics:r.metrics,violations:r.violations})):mode==='profile'?{stage:report.stage,profiles:report.reports.length}: {stages:report.stages.length}));
+  console.log('CAMPAIGN '+JSON.stringify(['screen','ramp','late'].includes(mode)?report.reports.map(r=>({stage:r.stage,policy:r.policy,variant:r.variant,treatment:r.treatment,pass:r.pass,metrics:r.metrics,violations:r.violations})):mode==='profile'?{stage:report.stage,profiles:report.reports.length}: {stages:report.stages.length}));
   saveJson(out,report);
 }

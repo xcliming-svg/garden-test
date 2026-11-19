@@ -1,0 +1,28 @@
+name: 50-stage late-start comparison
+on:
+  push:
+    branches: [feature/campaign-50-study]
+    paths:
+      - '.github/workflows/campaign-50-late.yml'
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  late:
+    runs-on: ubuntu-latest
+    timeout-minutes: 25
+    strategy:
+      fail-fast: false
+      matrix:
+        stage: [45, 50]
+        policy: [upgrade-first, variety-first, counter-first]
+    steps:
+      - uses: actions/checkout@v6
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - run: node simulation/experiments/campaign-50.mjs late ${{ matrix.stage }}:${{ matrix.policy }} /tmp/campaign-late.json
+      - uses: actions/upload-artifact@v4
+        with:
+          name: late-${{ matrix.stage }}-${{ matrix.policy }}
+          path: /tmp/campaign-late.json
