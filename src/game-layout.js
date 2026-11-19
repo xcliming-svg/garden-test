@@ -326,7 +326,7 @@
       cost.setMask(mask);
       cost.once('destroy', () => { mask.destroy(); clip.destroy(); });
     }
-    alignCost.move=(slot,price,show,affordable)=>{x=slot.x+spec.slots.line;cost.setX(x+size/2).setText(String(price??0)).setColor(affordable?R.hex.green:colors.disabledText).setVisible(show);icon.setVisible(show);alignCost();};
+    alignCost.move=(slot,price,show,affordable)=>{x=slot.x+spec.slots.line;cost.setX(x+size/2).setText(String(price??0)).setColor(affordable?window.GardenPalette.hex.paper:colors.disabledText).setVisible(show);icon.setVisible(show);alignCost();};
     if(!visible){cost.setVisible(false);icon.setVisible(false);}
     return alignCost;
   }
@@ -404,7 +404,7 @@
         layout.alignCost.move(slot,price,show,scene.run.state.gems>=price);
         scene.runEquipment?.refreshSlots();
       };
-      buyZone.on('pointerdown',()=>{if(scene.run.buy())layout.updateSlots();});
+      buyZone.on('pointerdown',()=>{if(!scene.runGarden?.holding&&scene.run.buy())layout.updateSlots();});
       layout.updateCost=()=>{const n=count(),price=window.GardenRunRules.cost(n);layout.alignCost.move(layout.slots[Math.min(n,s.max-1)],price,price!==null,scene.run.state.gems>=price);};
       layout.updateSlots();
     }
@@ -506,6 +506,7 @@
     scene.add.zone(b.x + b.width / 2, b.y + b.header / 2, b.width, b.header)
       .setDepth(playable?D.blueprintInput:13).setName('blueprint-toggle').setInteractive({ useHandCursor: true })
       .on('pointerdown', () => {
+        if(scene.runGarden?.holding)return;
         expanded = !expanded;
         body.setVisible(expanded);marks?.setVisible(expanded);targets.forEach(t=>t.setVisible(expanded));
         drawArrow();
@@ -813,6 +814,7 @@
         if (!dragging && sameFocus(hovered, focus)) { hovered = null; refresh(); }
       });
       obj.on('pointerdown', () => {
+        if(scene.runGarden?.holding)return;
         if (!dragging) {
           pinned = sameFocus(pinned, focus) ? null : focus;
           refresh();
@@ -833,6 +835,7 @@
       scene.input.setDraggable(marker);
       bindFocus(marker, { card });
       marker.on('dragstart', pointer => {
+        if(scene.runGarden?.holding)return;
         if (card.consumed || dragging) return;
         dragging = card; pinned = null; hovered = null;
         if(card.drop)card.drop.dragging=true;

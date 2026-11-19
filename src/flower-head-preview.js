@@ -201,9 +201,33 @@
         const L=window.GardenGameLayout;
         const ghost=scene.add.image(0,0,growth?G.key(types[0],1):key(types[0],g.cell))
           .setDepth(playable?window.GardenRunRules.depth.plantGhost:15).setAlpha(.45).setVisible(false).setName('garden-preview-ghost');
-        let dragging=null,target=-1;
+        let dragging=null,target=-1,hold=null;
+        const R=window.GardenRunRules;
+        const outline=playable?window.GardenUI.pixelGraphics(scene).setDepth(R.depth.plantGhost).setName('garden-uproot-outline').setVisible(false):null;
         const point=p=>scene.cameras.main.getWorldPoint(p.x,p.y);
         const hit=p=>L.gardenHit(p.x,p.y,g);
+        function clearHold(){hold=null;if(outline?.scene)outline.clear().setVisible(false);}
+        function drawHold(){
+          if(!hold)return;
+          const x=g.x+(hold.id%10)*g.pitch,y=g.y+Math.floor(hold.id/10)*g.pitch;
+          const segments=R.uprootOutline(x,y,g.pitch,1-hold.elapsed/R.tuning.uprootSeconds);
+          outline.clear().setVisible(true).fillStyle(window.GardenPalette.n.growth,1);
+          for(const s of segments)outline.fillRect(Math.min(s.x1,s.x2),Math.min(s.y1,s.y2),Math.max(1,Math.abs(s.x2-s.x1)),Math.max(1,Math.abs(s.y2-s.y1)));
+        }
+        function beginHold(pointer){
+          if(hold||dragging||!pointer.leftButtonDown()||scene.run?.state.result)return;
+          const id=hit(point(pointer));if(!occupied.has(id))return;
+          hold={id,pointer,elapsed:0};drawHold();
+        }
+        function moveHold(pointer){if(hold&&pointer===hold.pointer&&hit(point(pointer))!==hold.id)clearHold();}
+        function endHold(pointer){if(hold&&pointer===hold.pointer)clearHold();}
+        function advanceHold(_time,delta){
+          if(!hold)return;
+          if(!hold.pointer.leftButtonDown()||hit(point(hold.pointer))!==hold.id||!occupied.has(hold.id)){clearHold();return;}
+          hold.elapsed=Math.min(R.tuning.uprootSeconds,hold.elapsed+Math.min(.1,Math.max(0,delta/1000)));
+          if(hold.elapsed+1e-7>=R.tuning.uprootSeconds){const id=hold.id;clearHold();scene.runGarden.remove(id);scene.relicCollection?.model.syncFlowers(occupied);patrol.refreshHud();scene.blueprintRefresh?.();}
+          else drawHold();
+        }
         function valid(i,f){return playable?window.GardenRunRules.canPlant(occupied,growth.entries,i,f.spriteName):L.gardenCandidates(occupied).has(i);}
         function move(pointer){
           if(!dragging)return;
@@ -224,7 +248,6 @@
           dragging=null;target=-1;
           f.marker.setDepth(f.idleDepth).setPosition(f.x,f.y).setAlpha(1).setStrokeStyle(0,0,0);
           if(valid(i,f)){
-            if(occupied.has(i)){growth.remove(i);scene.relicCollection?.state.flowers.delete(i);}
             occupied.add(i);addFlower(i,f.spriteName,scene.run?.state.elapsed??patrol.elapsed);
             scene.relicCollection?.model.syncFlowers(occupied);
             f.consumed=true;f.marker.disableInteractive().setVisible(false);if(playable)scene.runDrops?.consume(f);
@@ -237,13 +260,17 @@
           o.setInteractive({useHandCursor:true,draggable:true});scene.input.setDraggable(o);
           o.on('pointerover',()=>{if(!dragging)o.setStrokeStyle(1,colors.flowerBorder,1);});
           o.on('pointerout',()=>{if(!dragging)o.setStrokeStyle(0,0,0);});
-          o.on('dragstart',p=>{if(dragging||f.consumed)return;dragging=f;target=-1;o.resetFloat?.();o.setDepth(playable?window.GardenRunRules.depth.drag:30).setStrokeStyle(1,colors.flowerBorder,1);refreshSoil(-1);move(p);});
+          o.on('dragstart',p=>{if(dragging||hold||f.consumed)return;dragging=f;target=-1;o.resetFloat?.();o.setDepth(playable?window.GardenRunRules.depth.drag:30).setStrokeStyle(1,colors.flowerBorder,1);refreshSoil(-1);move(p);});
           o.on('drag',p=>{if(dragging===f)move(p);});
           o.on('dragend',p=>{if(dragging===f)finish(p,true);});
         }
         for(const f of previewFlowers)register(f);
-        if(playable){scene.runGarden={occupied,register,refreshSoil,remove(id){if(!occupied.delete(id))return false;growth.remove(id);refreshSoil(null);return true;},isDragging:f=>dragging===f};scene.events.once('shutdown',()=>delete scene.runGarden);}
-        const cancel=()=>finish(null,false);
+        if(playable){
+          scene.runGarden={occupied,register,refreshSoil,remove(id){if(!occupied.delete(id))return false;if(hold?.id===id)clearHold();growth.remove(id);refreshSoil(null);return true;},isDragging:f=>dragging===f,get holding(){return hold!==null;},get holdProgress(){return hold?hold.elapsed/R.tuning.uprootSeconds:0;}};
+          scene.input.on('pointerdown',beginHold);scene.input.on('pointermove',moveHold);scene.input.on('pointerup',endHold);scene.input.on('pointerupoutside',endHold);scene.events.on('update',advanceHold);
+          scene.events.once('shutdown',()=>{scene.input.off('pointerdown',beginHold);scene.input.off('pointermove',moveHold);scene.input.off('pointerup',endHold);scene.input.off('pointerupoutside',endHold);scene.events.off('update',advanceHold);clearHold();delete scene.runGarden;});
+        }
+        const cancel=()=>{clearHold();finish(null,false);};
         scene.input.on('gameout',cancel);scene.events.on('pause',cancel);
         scene.events.once('shutdown',()=>{scene.input.off('gameout',cancel);scene.events.off('pause',cancel);});
       }

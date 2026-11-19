@@ -53,13 +53,20 @@
       const size=displaySize(g.cell);
       const image=scene.add.image(center.x,center.y+g.cell/2-1,key(name,1))
         .setOrigin(.5,.856).setDisplaySize(size,size).setDepth(window.GardenRunRules?.active?window.GardenRunRules.depth.flower+center.y/2000:1).setName('garden-preview-flower:'+index);
-      entries.set(index,{name,born,image,last:'1:100',stage:1,mature});
+      entries.set(index,{name,born,image,last:'1:100',stage:1,mature,center});
       return image;
     }
     function render(elapsed){
       for(const [index,entry] of entries){
         const sample=stateAt(elapsed-entry.born),stage=window.GardenRunRules?.active?(entry.mature?3:window.GardenRunRules.stageAt(elapsed-entry.born)):sample.stage;
         entry.stage=stage;
+        if(window.GardenRunRules?.active){
+          const wrong=window.GardenRunRules.blueprintStatus(entries,index)==='wrong';
+          if(wrong&&!entry.wrongLabel){
+            entry.wrongLabel=window.GardenUI.text(scene,entry.center.x+g.cell/2-1,entry.center.y+g.cell/2-1,'×',8,window.GardenPalette.hex.red,{originX:1,originY:1}).setDepth(window.GardenRunRules.depth.effects+.1).setName('garden-wrong:'+index);
+          }
+          entry.wrongLabel?.setVisible(wrong);
+        }
         const energy=scene.relicCollection?.state.flowers.get(index)?.energy;
         const hp=window.GardenRunRules?.active?(energy===undefined||energy>=67?100:energy>=34?66:33):energy===undefined?sample.hp:energy>=100?100:energy>33?66:33;
         const state=stage+':'+hp;
@@ -69,7 +76,7 @@
         entry.image.setTexture(key(entry.name,stage,hp)).setDisplaySize(size,size);
       }
     }
-    function remove(index){const entry=entries.get(index);if(!entry)return false;entry.image.destroy();entries.delete(index);return true;}
+    function remove(index){const entry=entries.get(index);if(!entry)return false;entry.wrongLabel?.destroy();entry.image.destroy();entries.delete(index);return true;}
     const controller={entries,plant,render,remove};
     scene.flowerGrowth=controller;
     scene.events.once('shutdown',()=>{entries.clear();delete scene.flowerGrowth;});

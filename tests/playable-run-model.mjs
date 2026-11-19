@@ -29,10 +29,16 @@ function runAudit(sources){
   garden.set(33,{name:'sunflower',stage:3});check(R.completion(garden)===93,'wrong flower not complete');
   const occupied=new Set(R.initial.map(([id])=>id)),allRequired=new Set(R.blueprint.map(([id])=>id));
   check(R.blueprintStatus(garden,33)==='wrong'&&R.blueprintStatus(garden,44)==='complete'&&R.blueprintStatus(garden,0)===null,'blueprint status');
-  garden.set(33,{name:'rose',stage:1});check(R.blueprintStatus(garden,33)==='growing','growing status');
+  garden.set(33,{name:'daisy',stage:1});check(R.blueprintStatus(garden,33)==='growing','wrong immature is not revealed');
+  garden.get(33).stage=2;check(R.blueprintStatus(garden,33)==='growing','wrong immature remains growing');
+  garden.get(33).stage=3;check(R.blueprintStatus(garden,33)==='wrong','wrong revealed only when mature');
   garden.delete(33);check(R.blueprintStatus(garden,33)==='empty','removed flower resets status');
   check([...R.plantCandidates(occupied)].every(id=>allRequired.has(id))&&!R.canPlant(occupied,garden,33,'rose')&&R.canPlant(occupied,garden,34,'daisy'),'connected planting preserved');
-  check(R.plantCandidates(allRequired).size===0&&!R.canPlant(allRequired,garden,32,'rose')&&R.canPlant(allRequired,garden,44,'rose'),'no off-blueprint expansion, replacement unchanged');
+  check(R.plantCandidates(allRequired).size===0&&!R.canPlant(allRequired,garden,32,'rose')&&!R.canPlant(allRequired,garden,44,'rose'),'no off-blueprint expansion or bypass of uprooting');
+  const perimeterLength=segments=>segments.reduce((sum,s)=>sum+Math.hypot(s.x2-s.x1,s.y2-s.y1),0);
+  check(R.tuning.uprootSeconds===3,'three-second removal');
+  for(let i=0;i<=100;i++){const remaining=1-i/100;check(Math.abs(perimeterLength(R.uprootOutline(0,0,23,remaining))-92*remaining)<1e-7,'reverse outline proportional to remaining hold');}
+  check(R.uprootOutline(0,0,23,0).length===0,'no outline at completion');
   const spec={width:960,height:540,top:32,bottom:44,blueprint:{x:8,y:39,width:93,height:116},garden:{x:364,y:148,columns:10,rows:10,cell:22,line:1,pitch:23,outer:24,size:231}};
   const g=spec.garden;
   const rect={left:g.x+3*g.pitch,right:g.x+6*g.pitch+g.outer,top:g.y+3*g.pitch,bottom:g.y+6*g.pitch+g.outer};
@@ -46,7 +52,7 @@ function runAudit(sources){
   check(R.eligibleEnemies(179.99).join(',')==='3_caterpillar','caterpillar only for three minutes');
   check(R.eligibleEnemies(180).join(',')==='3_caterpillar,4_beetle','first unlock');
   check(R.population(0)===3&&R.population(29.99)===3&&R.population(30)===4&&R.population(60)===4&&R.population(120)===7&&R.population(180)===6&&R.population(3600)===65,'wave concurrent cap');
-  check(R.spawnInterval(0)===3&&R.spawnInterval(30)===2.5&&R.spawnInterval(179)===2&&R.spawnInterval(180)===3&&R.spawnInterval(1560)===1.2,'wave cadence');
+  check(R.spawnInterval(0)===3&&R.spawnInterval(30)===2.5&&R.spawnInterval(179)===2&&R.spawnInterval(180)===3&&R.spawnInterval(269.99)===2&&R.spawnInterval(270)===1.2&&R.spawnInterval(300)===1.1&&R.spawnInterval(1560)===1.2,'wave cadence');
   const live=E.createPopulation(spec,patrol,E.roster,()=>.37,R.population,null,true);
   live.advance(0);check(live.actors.length===1,'first spawn immediate');
   live.advance(2.99);check(live.actors.length===1,'no spawn burst');
@@ -56,8 +62,9 @@ function runAudit(sources){
   live.advance(.01);check(live.actors.length===4,'fourth enemy at 30s');
   const opening=E.createPopulation(spec,patrol,E.roster,()=>.37,R.population,null,true);
   const seen=new Set();let lastSpawn=-Infinity,lastCount=0;
-  for(let t=0;t<=1600;t++){
-    opening.advance(t===0?0:1);
+  for(let tick=0;tick<=16000;tick++){
+    const t=tick/10;
+    opening.advance(tick===0?0:.1);
     check(opening.actors.length<=R.population(t+1e-6),'concurrent cap');
     if(opening.spawned!==lastCount){
       const at=opening.actors[0].spawnTime;
@@ -159,7 +166,42 @@ function runAudit(sources){
   check(!weapon.equip(10,'rock'),'reject eleventh slot');
   weapon.step(.05,hero,target,()=>({killed:false}),null,patrol);
   check(weapon.state.shots.every(s=>s.owner===0),'removed companion stops attacks');
-  return {checks,counts};
+  // Unattended play must eventually fail from actual enemy damage, not a timeout.
+  // No card placement, equipment changes, manual removal or synthetic damage.
+  const idleResults=[];
+  for(let seed=1;seed<=10;seed++){
+    let rng=seed;
+    const random=()=>{rng=(Math.imul(rng,1664525)+1013904223)>>>0;return rng/4294967296;};
+    let cells=R.initial.map(([id])=>id);
+    const route=()=>{const keys=[...cells,...R.plantCandidates(new Set(cells))],xs=keys.map(i=>i%10),ys=keys.map(i=>Math.floor(i/10));
+      return B.layout(spec,{left:g.x+Math.min(...xs)*g.pitch,right:g.x+Math.max(...xs)*g.pitch+g.outer,top:g.y+Math.min(...ys)*g.pitch,bottom:g.y+Math.max(...ys)*g.pitch+g.outer},40,{lift:.5,tilt:1.25,lean:.5},1);};
+    let area=route(),distance=(area.patrol.right-area.patrol.left)/2;
+    const position=(b,d)=>{const w=b.right-b.left,h=b.bottom-b.top;d%=2*(w+h);return d<=w?{x:b.left+d,y:b.top}:d<=w+h?{x:b.right,y:b.top+d-w}:d<=2*w+h?{x:b.right-(d-w-h),y:b.bottom}:{x:b.left,y:b.bottom-(d-2*w-h)};};
+    const idlePatrol={get boundary(){return area;},get bounds(){return area.patrol;},get occupied(){return cells;},finished:false};
+    const idle=R.create(),loot=L.create(spec,random,idle.rewardDrop);loot.syncFlowers(cells);
+    const pop=E.createPopulation(spec,idlePatrol,E.roster,random,R.population,(x,y)=>loot.death(x,y,idlePatrol.bounds),true);
+    const arm=A.create(spec,random,A.defaultSize,true);arm.equip(0,'rock');
+    let strikes=0,seconds=0,initialSafe=false,peak=0;
+    const dt=seed%2===0?.05:.1;
+    for(;seconds<540&&cells.length;seconds+=dt){
+      idle.tick(dt);distance=(distance+40*dt)%area.length;
+      const center=position(area.patrol,distance),q=position(area.patrol,distance+.01);
+      const direction=Math.abs(q.x-center.x)>Math.abs(q.y-center.y)?q.x>center.x?'right':'left':q.y>center.y?'down':'up';
+      const fairy={index:0,type:'garden',direction,center,visibleHeight:40};
+      pop.advance(dt);
+      for(const e of pop.actors){if(e.pendingHits){strikes+=e.pendingHits;loot.damageFlower(e.path.flower,(R.tuning.enemyDamage+(e.entry.level-1)*R.tuning.enemyDamagePerLevel)*e.pendingHits);e.pendingHits=0;}}
+      const remaining=cells.filter(i=>loot.state.flowers.get(i).energy>0);
+      if(remaining.length!==cells.length){cells=remaining;if(!cells.length)break;const fraction=distance/area.length;area=route();distance=fraction*area.length;loot.syncFlowers(cells);}
+      const prev=loot.state.gems;loot.step(dt,center,{bounds:area.patrol,direction,length:area.length,speed:40});if(loot.state.gems>prev)idle.credit(loot.state.gems-prev);
+      arm.step(dt,fairy,pop.actors.map(V.target),pop.damage,pop.slow,idlePatrol,pop.push);
+      peak=Math.max(peak,pop.actors.length);
+      if(seconds>=269.9&&seconds<=270.1)initialSafe=cells.length===4;
+    }
+    check(initialSafe,'idle first-stage opening preserved seed '+seed);
+    check(cells.length===0&&strikes>0&&seconds<540,'idle naturally defeated within 9min seed '+seed);
+    idleResults.push({seed,seconds:Math.round(seconds),kills:pop.kills,strikes,peak});
+  }
+  return {checks,counts,idleResults};
 }
 const files=['run-rules','palette','fairy-patrol','enemy-motion','pebble-boundary','fairy-attack','enemy-preview','weapon-balance','flower-growth','item-cards','hero-weapon-preview','relic-collection'];
 const sources=Object.fromEntries(files.map(f=>[f,readFileSync('src/'+f+'.js','utf8')]));

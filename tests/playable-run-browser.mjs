@@ -124,8 +124,34 @@ try{
     await page.waitForFunction(()=>!window.__previewGame.scene.getScene('Game').flowerGrowth.entries.has(34));
     await page.waitForFunction(()=>window.__previewGame.scene.getScene('Game').children.getByName('blueprint-flower:34').getData('blueprintStatus')==='empty');
     await drag('flower','rose',34);
-    await page.waitForFunction(()=>window.__previewGame.scene.getScene('Game').children.getByName('blueprint-flower:34').getData('blueprintStatus')==='wrong');
+    await page.waitForFunction(()=>window.__previewGame.scene.getScene('Game').children.getByName('blueprint-flower:34').getData('blueprintStatus')==='growing');
+    assert.equal(await read(()=>!!window.__previewGame.scene.getScene('Game').children.getByName('garden-wrong:34')),false);
+    await read(()=>{const s=window.__previewGame.scene.getScene('Game');s.run.tick(8);s.fairyPatrol.refreshHud();});
+    assert.equal(await read(()=>!!window.__previewGame.scene.getScene('Game').children.getByName('garden-wrong:34')),false);
+    await read(()=>{const s=window.__previewGame.scene.getScene('Game');s.run.tick(8);s.fairyPatrol.refreshHud();});
+    await page.waitForFunction(()=>{const s=window.__previewGame.scene.getScene('Game');return s.children.getByName('blueprint-flower:34').getData('blueprintStatus')==='wrong'&&s.children.getByName('garden-wrong:34')?.visible;});
+    // Direct replacement cannot bypass the hold penalty.
+    await drag('flower','daisy',34);
+    assert.equal(await read(()=>window.__previewGame.scene.getScene('Game').flowerGrowth.entries.get(34)?.name),'rose');
+    const cell=await read(()=>{const g=window.GardenGameLayout.spec.garden;return {x:g.x+4*g.pitch+g.line+g.cell/2,y:g.y+3*g.pitch+g.line+g.cell/2};});
+    const holding=()=>read(()=>window.__previewGame.scene.getScene('Game').runGarden.holding);
+    await page.mouse.move(...xy(cell));await page.mouse.down();
+    await page.waitForFunction(()=>window.__previewGame.scene.getScene('Game').runGarden.holdProgress>.05);
+    assert.equal(await holding(),true);
+    assert.equal(await read(()=>window.__previewGame.scene.getScene('Game').children.getByName('garden-uproot-outline').visible),true);
+    await page.mouse.up();assert.equal(await holding(),false);
+    assert.equal(await read(()=>window.__previewGame.scene.getScene('Game').flowerGrowth.entries.has(34)),true);
+    await page.mouse.move(...xy(cell));await page.mouse.down();
+    await page.waitForFunction(()=>window.__previewGame.scene.getScene('Game').runGarden.holdProgress>.05);
+    await page.mouse.move(...xy({x:cell.x+30,y:cell.y}));assert.equal(await holding(),false);await page.mouse.up();
+    await page.mouse.move(...xy(cell));await page.mouse.down();
+    await page.waitForFunction(()=>!window.__previewGame.scene.getScene('Game').flowerGrowth.entries.has(34),null,{timeout:30000});
+    await page.mouse.up();
+    await page.waitForFunction(()=>{const s=window.__previewGame.scene.getScene('Game');return s.children.getByName('blueprint-flower:34').getData('blueprintStatus')==='empty'&&!s.children.getByName('garden-wrong:34')&&!s.children.getByName('garden-uproot-outline').visible&&!s.relicCollection.state.flowers.has(34);});
+    await drag('flower','daisy',34);
+    assert.equal(await read(()=>window.__previewGame.scene.getScene('Game').flowerGrowth.entries.get(34)?.name),'daisy');
     await read(()=>window.__previewGame.scene.getScene('Game').run.credit(1000));
+    await page.waitForFunction(()=>window.__previewGame.scene.getScene('Game').children.getByName('slot-cost-value').style.color===window.GardenPalette.hex.paper);
     for(let n=4;n<10;n++){
       const p=await read(()=>{const z=window.__previewGame.scene.getScene('Game').children.getByName('run-slot-purchase');return {x:z.x,y:z.y};});
       await page.mouse.click(...xy(p));

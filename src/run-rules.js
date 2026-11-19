@@ -3,7 +3,7 @@
   const active=typeof document!=='undefined'&&document.documentElement.dataset.playable==='true';
   const initial=Object.freeze([[44,'daisy'],[45,'sunflower'],[54,'tulip'],[55,'hydrangea']].map(Object.freeze));
   const blueprint=Object.freeze([[33,'rose'],[34,'daisy'],[35,'sunflower'],[36,'lavender'],[43,'tulip'],...initial,[46,'rose'],[53,'lavender'],[56,'daisy'],[63,'hydrangea'],[64,'rose'],[65,'lavender'],[66,'sunflower']].sort((a,b)=>a[0]-b[0]).map(Object.freeze));
-  const tuning=Object.freeze({initialSlots:4,maxSlots:10,costs:Object.freeze([40,60,85,115,150,200]),growthSeconds:8,cardLifetime:45,dropWeights:Object.freeze([.69,.10,.18,.03]),itemInterval:30,starterRock:'rock',enemyDamage:4,enemyDamagePerLevel:2,spawnCap:65});
+  const tuning=Object.freeze({initialSlots:4,maxSlots:10,costs:Object.freeze([40,60,85,115,150,200]),growthSeconds:8,uprootSeconds:3,cardLifetime:45,dropWeights:Object.freeze([.69,.10,.18,.03]),itemInterval:30,starterRock:'rock',enemyDamage:4,enemyDamagePerLevel:2,spawnCap:65});
   const cost=count=>tuning.costs[count-tuning.initialSlots]??null;
   function rollDrop(random=Math.random){
     const r=random();let total=0;
@@ -16,7 +16,7 @@
   function blueprintStatus(entries,id){
     if(!required.has(id))return null;
     const f=entries.get(id);
-    return !f?'empty':f.name!==required.get(id)?'wrong':f.stage===3?'complete':'growing';
+    return !f?'empty':f.stage!==3?'growing':f.name!==required.get(id)?'wrong':'complete';
   }
   function completion(entries){
     let matches=0;
@@ -32,7 +32,17 @@
     return result;
   }
   function canPlant(occupied,entries,id,name){
-    return required.has(id)&&(plantCandidates(occupied).has(id)||occupied.has(id)&&entries.get(id)?.name!==name);
+    return required.has(id)&&plantCandidates(occupied).has(id);
+  }
+  // Clockwise full outline shrinks backwards to its start as the hold advances.
+  function uprootOutline(x,y,size,remaining){
+    let length=4*size*Math.max(0,Math.min(1,remaining));
+    const points=[[x,y],[x+size,y],[x+size,y+size],[x,y+size],[x,y]],segments=[];
+    for(let i=0;i<4&&length>0;i++){
+      const [ax,ay]=points[i],[bx,by]=points[i+1],t=Math.min(1,length/size);
+      segments.push({x1:ax,y1:ay,x2:ax+(bx-ax)*t,y2:ay+(by-ay)*t});length-=size;
+    }
+    return segments;
   }
   // Introduce one species at a time; never force the entire roster at the start.
   const enemyUnlocks=Object.freeze([[0,'3_caterpillar'],[180,'4_beetle'],[300,'2_grasshopper'],[420,'2_gray_bug'],[540,'1_butterfly'],[660,'2_frog'],[780,'1_cat'],[900,'6_sparrow'],[1020,'6_mouse'],[1140,'6_rabbit'],[1260,'5_bulldog'],[1380,'6_pigeon']].map(Object.freeze));
@@ -43,9 +53,9 @@
   const waves=Object.freeze([
     [0,3,3,1,[[C,1]]],[30,2.5,4,1,[[C,1]]],[90,2,7,1,[[C,1]]],
     [180,3,6,1,[[B,7],[C,3]]],[240,2,9,1,[[C,7],[B,3]]],
-    [300,2.5,8,1,[[G,7],[C,3]]],[360,1.8,12,1,[[G,4],[B,3],[C,3]]],
-    [420,2.4,10,1,[[P,7],[B,3]]],[480,1.8,15,1,[[C,4],[P,3],[G,3]]],
-    [540,2.5,12,1,[[F,7],[C,3]]],[600,2,18,2,[[F,4],[G,3],[B,3]]],
+    [270,1.2,12,1,[[B,7],[C,3]]],[300,1.1,18,2,[[G,7],[C,3]]],[360,1,24,2,[[G,4],[B,3],[C,3]]],
+    [420,1,28,2,[[P,7],[B,3]]],[480,.9,32,2,[[C,4],[P,3],[G,3]]],
+    [540,.9,36,2,[[F,7],[C,3]]],[600,.8,40,2,[[F,4],[G,3],[B,3]]],
     [660,2.5,13,1,[[J,7],[P,3]]],[720,1.8,22,2,[[J,4],[F,3],[C,3]]],
     [780,2.6,15,1,[[K,7],[B,3]]],[840,1.7,25,2,[[K,3],[P,4],[G,3]]],
     [900,2.5,16,1,[[S,7],[F,3]]],[960,1.6,29,2,[[S,3],[J,4],[C,3]]],
@@ -118,5 +128,5 @@
     }
     return {state,credit,buy,tick,rewardDrop};
   }
-  window.GardenRunRules=Object.freeze({active,initial,blueprint,tuning,cost,rollDrop,stageAt,completion,blueprintStatus,plantCandidates,canPlant,population,enemyUnlocks,eligibleEnemies,spawnInterval,waves,waveAt,itemPool,pickItem,resultPanel,cardPosition,depth,create});
+  window.GardenRunRules=Object.freeze({active,initial,blueprint,tuning,cost,rollDrop,stageAt,completion,blueprintStatus,plantCandidates,canPlant,uprootOutline,population,enemyUnlocks,eligibleEnemies,spawnInterval,waves,waveAt,itemPool,pickItem,resultPanel,cardPosition,depth,create});
 }());
