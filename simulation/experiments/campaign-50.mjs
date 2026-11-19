@@ -130,27 +130,52 @@ export function applyLateTreatment(model,gear,treatment){
   const pool=gear.pool.map(c=>({...c,weight:c.weight*(['attack-weight','both'].includes(treatment)&&((model.GardenWeaponBalance.data[c.id]?.damage[0]??0)!==0||c.id==='water-fairy')?2:1)}));
   return {...gear,pool,starterLevel};
 }
+// Keep the same unlock schedule, wave ramp, drops and max slots while testing
+// startup resources. Starter cards use only earlier unlocked eligible weapons;
+// the current-stage unlock remains an actual discovery, not a guaranteed drop.
+export const startProtocol={seed:29501,runs:4,dt:.05,stages:[3,10,20,30,40,45,50],policies:['counter-first'],variants:['one','open','level','two','half','full'],maxSeconds:720};
+export function startOverrides(stage,variant){
+  if(!startProtocol.variants.includes(variant))throw Error('Unknown start variant');
+  const env=makeStage(stage),base=env.patch.run;
+  const slots=variant==='one'?base.initialSlots:Math.min(base.maxSlots,base.initialSlots+1);
+  return {run:{initialSlots:slots,costs:Array.from({length:base.maxSlots-slots},(_,i)=>Math.round(30+stage*.5+i*20))}};
+}
+export function startGear(model,gear,stage,variant,seed){
+  const n=model.GardenRunRules.tuning.initialSlots;
+  const count=['one','open','level'].includes(variant)?1:variant==='two'?Math.min(2,n):variant==='half'?Math.max(1,Math.ceil(n/2)):n;
+  // Avoid granting the very latest unlock by default; level from prior stage.
+  const old=gear.pool.filter(c=>c.stage<stage),random=rng(seed,'campaign-start');
+  const rockLevel=Math.max(1,...old.filter(c=>c.id==='rock').map(c=>c.level));
+  const cards=[{id:'rock',level:variant==='one'||variant==='open'?1:rockLevel}];
+  const attack=old.filter(c=>model.GardenWeaponBalance.nominalDps(c.id,c.level)>0&&c.id!=='water-fairy');
+  const choices=attack.length?attack:[{id:'rock',level:1}];
+  // No forced order of dropped cards. Loadout is a controlled initial
+  // condition, independently seeded; allow duplicates and lower levels.
+  while(cards.length<count){const c=choices[Math.floor(random()*choices.length)];cards.push({id:c.id,level:c.level});}
+  return cards;
+}
 export function runStage(sources,geometry,stage,policy,opts={}){
-  const {seed=protocol.screen.seed,runs=protocol.screen.runs,dt=.05,agent='normal',mode='campaign-drop',maxSeconds=protocol.maxSeconds,variant=null,treatment=null}=opts;
+  const {seed=protocol.screen.seed,runs=protocol.screen.runs,dt=.05,agent='normal',mode='campaign-drop',maxSeconds=protocol.maxSeconds,variant=null,treatment=null,start=null}=opts;
   const rows=[];
   for(let i=0;i<runs;i++){
-    const {model,env,gear}=makeWorld(sources,stage,policy,mode,{},variant);
+    const {model,env,gear}=makeWorld(sources,stage,policy,mode,start?startOverrides(stage,start):{},variant);
     const treated=treatment?applyLateTreatment(model,gear,treatment):gear;
-    const r=play(createEngine(model,{seed:seed+i,dt,maxSeconds,geometry,trace:true,research:{progression:mode,campaign:{...treated,itemCap:env.itemCap}}}),profileFor(agent));
+    const startingGear=start?startGear(model,gear,stage,start,seed+i):null;
+    const r=play(createEngine(model,{seed:seed+i,dt,maxSeconds,geometry,trace:true,research:{progression:mode,campaign:{...treated,itemCap:env.itemCap,...(startingGear?{startingGear}:{})}}}),profileFor(agent));
     const items=r.events.filter(e=>e.type==='card_spawn'&&e.kind==='item'),newCards=items.filter(e=>gear.pool.some(c=>c.id===e.name&&c.level===e.level&&stage-c.stage<=4));
     if(items.some(e=>!gear.pool.some(c=>c.id===e.name&&c.level===e.level))||items.length>env.itemCap)throw Error('Locked or excess item');
     if(r.events.some(e=>e.type==='card_spawn'&&e.kind==='flower'&&!env.flowerPool.includes(e.name)))throw Error('Locked flower');
     if(r.events.some(e=>e.type==='enemy_spawn'&&!env.eligible.includes(e.species)))throw Error('Locked enemy');
     if(r.events.some(e=>e.type==='item_equip'&&e.level>(gear.levelCaps[e.name]??1)))throw Error('Locked upgrade');
     const groups=r.events.filter(e=>e.type==='formation_spawn');
-    rows.push({seed:seed+i,result:r.result,seconds:r.seconds,progress:r.progress,kills:r.kills,peakEnemies:r.peakEnemies,flowersLost:r.flowersLost,flowerDamage:r.flowerDamage,maxProgressGap:r.maxProgressGap,items:items.length,itemCards:items.map(e=>[e.name,e.level]),newFound:newCards.length>0,newCards:newCards.length,gear:r.gear,levels:r.gearLevels,filled:r.gear.filter(Boolean).length,formations:groups.reduce((a,e)=>a+e.count,0),requested:groups.reduce((a,e)=>a+e.requested,0),firstItem:r.firstItem});
+    rows.push({seed:seed+i,...(start?{startingGear,initialSlots:model.GardenRunRules.tuning.initialSlots,initialFlowers:model.GardenRunRules.initial.length}:{}),result:r.result,seconds:r.seconds,progress:r.progress,kills:r.kills,peakEnemies:r.peakEnemies,flowersLost:r.flowersLost,flowerDamage:r.flowerDamage,maxProgressGap:r.maxProgressGap,items:items.length,itemCards:items.map(e=>[e.name,e.level]),newFound:newCards.length>0,newCards:newCards.length,gear:r.gear,levels:r.gearLevels,filled:r.gear.filter(Boolean).length,formations:groups.reduce((a,e)=>a+e.count,0),requested:groups.reduce((a,e)=>a+e.requested,0),firstItem:r.firstItem});
   }
   const d=k=>distribution(rows.map(r=>r[k])),wins=rows.filter(r=>r.result==='victory').length,discovery=rows.filter(r=>r.newFound).length/runs;
   const metrics={wins,winRate:wins/runs,seconds:d('seconds'),kills:d('kills'),peak:d('peakEnemies'),gap:d('maxProgressGap'),items:d('items'),filled:d('filled'),flowersLost:d('flowersLost'),discovery,formations:d('formations'),requested:d('requested')};
   const g=protocol.goals,violations={survival:Math.max(0,g.winRate-metrics.winRate),gap:Math.max(0,metrics.gap.p90/g.maxGap-1),duration:Math.max(0,g.minDuration-metrics.seconds.p50,metrics.seconds.p50-g.maxDuration)/g.maxDuration,discovery:Math.max(0,g.minNewDiscovery-discovery)};
   // No recent unlock -> no new discovery gate at this representative stage.
   if(!stageGear(stage,policy,mode).pool.some(c=>stage-c.stage<=4))violations.discovery=0;
-  return {stage,policy,mode,agent,seed,runs,dt,...(variant?{variant}:{}),...(treatment?{treatment}:{}),metrics,violations,pass:Object.values(violations).every(x=>x===0),rows};
+  return {stage,policy,mode,agent,seed,runs,dt,...(variant?{variant}:{}),...(treatment?{treatment}:{}),...(start?{start}:{}),metrics,violations,pass:Object.values(violations).every(x=>x===0),rows};
 }
 export function profileGear(sources,geometry,stage,card,{seed=protocol.profile.seed,runs=3,dt=.05}={}){
   const results=[];
@@ -169,8 +194,9 @@ if(process.argv[1]&&import.meta.url===pathToFileURL(process.argv[1]).href){
   else if(mode==='screen'){const stage=Number(group);report={stage,reports:policies.map(policy=>runStage(sources,geometry,stage,policy))};}
   else if(mode==='ramp'){const stage=Number(group);report={stage,reports:rampProtocol.variants.flatMap(variant=>policies.map(policy=>runStage(sources,geometry,stage,policy,{...rampProtocol,variant})))};}
   else if(mode==='late'){const [stage,policy]=group.split(':');report={stage:Number(stage),policy,reports:lateProtocol.treatments.map(treatment=>runStage(sources,geometry,Number(stage),policy,{...lateProtocol,treatment}))};}
+  else if(mode==='start'){const stage=Number(group);report={stage,reports:startProtocol.variants.map(start=>runStage(sources,geometry,stage,'counter-first',{...startProtocol,start,variant:stage>=20?'gradual':null}))};}
   else if(mode==='profile'){const stage=Number(group);report={stage,reports:unlocks('counter-first').map(({id,level})=>profileGear(sources,geometry,stage,{id,level})),baseline:profileGear(sources,geometry,stage,{id:'rock',level:1})};}
   else throw Error('Unknown campaign command');
-  console.log('CAMPAIGN '+JSON.stringify(['screen','ramp','late'].includes(mode)?report.reports.map(r=>({stage:r.stage,policy:r.policy,variant:r.variant,treatment:r.treatment,pass:r.pass,metrics:r.metrics,violations:r.violations})):mode==='profile'?{stage:report.stage,profiles:report.reports.length}: {stages:report.stages.length}));
+  console.log('CAMPAIGN '+JSON.stringify(['screen','ramp','late','start'].includes(mode)?report.reports.map(r=>({stage:r.stage,policy:r.policy,variant:r.variant,treatment:r.treatment,start:r.start,pass:r.pass,metrics:r.metrics,violations:r.violations})):mode==='profile'?{stage:report.stage,profiles:report.reports.length}: {stages:report.stages.length}));
   saveJson(out,report);
 }

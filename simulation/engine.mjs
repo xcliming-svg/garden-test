@@ -90,6 +90,12 @@ export function createEngine(w,{seed=1,dt=1/60,maxSeconds=1800,trace=false,geome
     if(!Number.isInteger(level)||level<1||level>(campaign.levelCaps[R.tuning.starterRock]??1))throw Error('Invalid campaign starter level');
     if(level>1)equip(0,leveled(R.tuning.starterRock,level));
   }
+  if(campaign?.startingGear){
+    const cards=campaign.startingGear;
+    if(!Array.isArray(cards)||cards.length<1||cards.length>run.state.slotCount||cards.some(c=>!Number.isInteger(c.level)||c.level<1||c.level>(campaign.levelCaps[c.id]??0)))throw Error('Invalid campaign starting gear');
+    if(!cards.some(c=>c.id==='water-fairy'||B.data[c.id]&&B.nominalDps(c.id,c.level)>0))throw Error('Starting gear requires damage');
+    cards.forEach((c,i)=>equip(i,leveled(c.id,c.level)));
+  }
   if(research?.fixedLoadout){
     // Controlled combat fixture, never a player-accessible starting inventory.
     if(!Array.isArray(research.fixedLoadout)||research.fixedLoadout.length!==run.state.slotCount)throw Error('fixedLoadout must fill unlocked slots');

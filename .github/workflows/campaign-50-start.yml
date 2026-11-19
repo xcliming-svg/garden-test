@@ -1,0 +1,37 @@
+name: 50-stage starting inventory comparison
+on:
+  push:
+    branches: [feature/campaign-50-study]
+    paths:
+      - '.github/workflows/campaign-50-start.yml'
+      - 'tests/campaign-start-model.mjs'
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  start:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    strategy:
+      fail-fast: false
+      matrix:
+        stage: [3, 10, 20, 30, 40, 45, 50]
+    steps:
+      - uses: actions/checkout@v6
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - run: node simulation/experiments/campaign-50.mjs start ${{ matrix.stage }} /tmp/start.json
+      - uses: actions/upload-artifact@v4
+        with:
+          name: start-${{ matrix.stage }}
+          path: /tmp/start.json
+  model:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v6
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - run: node tests/campaign-start-model.mjs && node tests/campaign-50-model.mjs && node tests/simulation-model.mjs
