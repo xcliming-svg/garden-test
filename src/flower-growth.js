@@ -63,11 +63,14 @@
         if(window.GardenRunRules?.active){
           const wrong=window.GardenRunRules.blueprintStatus(entries,index)==='wrong';
           if(wrong&&!entry.wrongLabel){
-            // A monochrome 7×9 pixel warning badge remains readable over any flower color.
-            const P=window.GardenPalette.n,x=Math.round(entry.center.x+g.cell/2-8),y=Math.round(entry.center.y+g.cell/2-10);
+            // Mouse (left button highlighted) + 3s: action, not a color-dependent error mark.
+            const P=window.GardenPalette.n,x=Math.round(entry.center.x+g.cell/2-16),y=Math.round(entry.center.y+g.cell/2-10);
             const badge=window.GardenUI.pixelGraphics(scene).setPosition(x,y).setDepth(window.GardenRunRules.depth.effects+.1).setName('garden-wrong:'+index);
-            badge.fillStyle(P.ink,1).fillRect(0,0,7,9);
-            badge.fillStyle(P.paper,1).fillRect(3,1,1,4).fillRect(3,6,1,2);
+            badge.fillStyle(P.ink,1).fillRect(0,0,15,9);
+            const glyphs=[{x:1,y:1,bits:['01110','11001','11001','11111','10001','10001','01110']},
+              {x:7,y:2,bits:['111','001','111','001','111']},{x:11,y:2,bits:['000','011','110','001','110']}];
+            badge.fillStyle(P.paper,1);
+            for(const glyph of glyphs)glyph.bits.forEach((row,dy)=>[...row].forEach((bit,dx)=>{if(bit==='1')badge.fillRect(glyph.x+dx,glyph.y+dy,1,1);}));
             entry.wrongLabel=badge;
           }
           entry.wrongLabel?.setVisible(wrong);

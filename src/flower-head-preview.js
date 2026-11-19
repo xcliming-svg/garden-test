@@ -204,6 +204,20 @@
         let dragging=null,target=-1,hold=null;
         const R=window.GardenRunRules;
         const outline=playable?window.GardenUI.pixelGraphics(scene).setDepth(R.depth.plantGhost).setName('garden-uproot-outline').setVisible(false):null;
+        const U=window.GardenUI,P=window.GardenPalette;
+        const hintBg=playable?U.pixelGraphics(scene).setDepth(R.depth.tooltip).setName('garden-uproot-hint-bg').setVisible(false):null;
+        const hint=playable?U.text(scene,0,0,'마우스 왼쪽 버튼 3초 누르면 뽑기',10,P.hex.paper,{originX:.5,originY:.5}).setDepth(R.depth.tooltip+.1).setName('garden-uproot-hint').setVisible(false):null;
+        let hintCell=-1,hoverCell=-1;
+        function hideHint(){hintCell=-1;if(hint?.scene)hint.setVisible(false);if(hintBg?.scene)hintBg.setVisible(false);}
+        function refreshHint(){
+          if(!hint)return;
+          if(hold||dragging||scene.input.activePointer.isDown||scene.run?.state.result||R.blueprintStatus(growth.entries,hoverCell)!=='wrong'){hideHint();return;}
+          if(hintCell===hoverCell&&hint.visible)return;
+          hintCell=hoverCell;
+          const c=center(hintCell),w=Math.ceil(hint.width)+12,h=Math.ceil(hint.height)+8,x=Math.max(w/2+4,Math.min(spec.width-w/2-4,c.x)),y=c.y-g.cell/2-h/2-5;
+          hintBg.clear().fillStyle(P.n.ink,1).fillRect(x-w/2,y-h/2,w,h).setVisible(true);
+          hint.setPosition(x,y).setVisible(true);
+        }
         const point=p=>scene.cameras.main.getWorldPoint(p.x,p.y);
         const hit=p=>L.gardenHit(p.x,p.y,g);
         function clearHold(){hold=null;if(outline?.scene)outline.clear().setVisible(false);}
@@ -217,12 +231,12 @@
         function beginHold(pointer){
           if(hold||dragging||!pointer.leftButtonDown()||scene.run?.state.result)return;
           const id=hit(point(pointer));if(!occupied.has(id))return;
-          hold={id,pointer,elapsed:0};drawHold();
+          hideHint();hold={id,pointer,elapsed:0};drawHold();
         }
-        function moveHold(pointer){if(hold&&pointer===hold.pointer&&hit(point(pointer))!==hold.id)clearHold();}
-        function endHold(pointer){if(hold&&pointer===hold.pointer)clearHold();}
+        function moveHold(pointer){hoverCell=hit(point(pointer));if(hold&&pointer===hold.pointer&&hoverCell!==hold.id)clearHold();refreshHint();}
+        function endHold(pointer){if(hold&&pointer===hold.pointer)clearHold();refreshHint();}
         function advanceHold(_time,delta){
-          if(!hold)return;
+          if(!hold){refreshHint();return;}
           if(!hold.pointer.leftButtonDown()||hit(point(hold.pointer))!==hold.id||!occupied.has(hold.id)){clearHold();return;}
           hold.elapsed=Math.min(R.tuning.uprootSeconds,hold.elapsed+Math.min(.1,Math.max(0,delta/1000)));
           if(hold.elapsed+1e-7>=R.tuning.uprootSeconds){const id=hold.id;clearHold();scene.runGarden.remove(id);scene.relicCollection?.model.syncFlowers(occupied);patrol.refreshHud();scene.blueprintRefresh?.();}
@@ -268,9 +282,9 @@
         if(playable){
           scene.runGarden={occupied,register,refreshSoil,remove(id){if(!occupied.delete(id))return false;if(hold?.id===id)clearHold();growth.remove(id);refreshSoil(null);return true;},isDragging:f=>dragging===f,get holding(){return hold!==null;},get holdProgress(){return hold?hold.elapsed/R.tuning.uprootSeconds:0;}};
           scene.input.on('pointerdown',beginHold);scene.input.on('pointermove',moveHold);scene.input.on('pointerup',endHold);scene.input.on('pointerupoutside',endHold);scene.events.on('update',advanceHold);
-          scene.events.once('shutdown',()=>{scene.input.off('pointerdown',beginHold);scene.input.off('pointermove',moveHold);scene.input.off('pointerup',endHold);scene.input.off('pointerupoutside',endHold);scene.events.off('update',advanceHold);clearHold();delete scene.runGarden;});
+          scene.events.once('shutdown',()=>{scene.input.off('pointerdown',beginHold);scene.input.off('pointermove',moveHold);scene.input.off('pointerup',endHold);scene.input.off('pointerupoutside',endHold);scene.events.off('update',advanceHold);hideHint();clearHold();delete scene.runGarden;});
         }
-        const cancel=()=>{clearHold();finish(null,false);};
+        const cancel=()=>{hoverCell=-1;hideHint();clearHold();finish(null,false);};
         scene.input.on('gameout',cancel);scene.events.on('pause',cancel);
         scene.events.once('shutdown',()=>{scene.input.off('gameout',cancel);scene.events.off('pause',cancel);});
       }
