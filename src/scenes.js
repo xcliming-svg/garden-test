@@ -22,7 +22,7 @@
   // Keep the existing new-game button coordinates and hide it on overlays.
   function attachBlueprintSelector(scene){
     const R=window.GardenRunRules;
-    if(!R?.active||window.GardenSimulationConfig?.blueprint||window.GardenSimulationConfig?.initial)return;
+    if(!R?.active||window.GardenFairyFlowerbeds?.enabled||window.GardenSimulationConfig?.blueprint||window.GardenSimulationConfig?.initial)return;
     const parent=scene.game.canvas.parentElement;
     const label=document.createElement('label'),select=document.createElement('select');
     label.id='blueprint-select-control';
@@ -66,7 +66,7 @@
       U.background(this, 'MAIN MENU');
       centered(this, 480, 124, 'GARDEN', U.fontSize.menuTitle, U.C.text, { inkBackground: U.C.bg });
       centered(this, 480, 172, 'TEST', U.fontSize.menuTitle, U.C.text, { inkBackground: U.C.bg });
-      centered(this, 480, 216, window.GardenRunRules?.active?'ROGUELIKE':'ROGUELIKE / SCENE STRUCTURE', U.fontSize.menuBase, U.C.muted, { inkBackground: U.C.bg });
+      centered(this, 480, 216, window.GardenFairyFlowerbeds?.enabled?'9×9 정원 생존':window.GardenRunRules?.active?'ROGUELIKE':'ROGUELIKE / SCENE STRUCTURE', U.fontSize.menuBase, U.C.muted, { inkBackground: U.C.bg });
 
       const x = U.W / 2;
       const w = 200;

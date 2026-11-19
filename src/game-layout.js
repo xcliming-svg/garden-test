@@ -46,11 +46,12 @@
   // 비교 링크의 실제 실행 규격을 브라우저 탭 제목에서 식별할 수 있게 한다.
   if (['24', '32', '36'].includes(slotMode) || params.has('flower') || params.has('garden') || params.has('person'))
     document.title = 'Garden Test | 꽃 '+gardenCell+'px · 수호자 '+window.GardenFlowerHeadPreview.guardianSize+'px · 슬롯 '+slotSize+'px';
-  const gardenSize = 10 * gardenPitch + cellLine;
+  const flowerbeds=!!window.GardenFairyFlowerbeds?.enabled,gardenColumns=flowerbeds?9:10;
+  const gardenSize = gardenColumns * gardenPitch + cellLine;
   const spec = Object.freeze({
     width, height,
     top: topHudHeight, fieldHeight, bottom: bottomHudHeight,
-    garden: Object.freeze({ x: Math.floor((width - gardenSize) / 2), y: Math.floor(topHudHeight + (fieldHeight - gardenSize) / 2), columns: 10, rows: 10, cell: gardenCell, line: cellLine, gap: 0, pitch: gardenPitch, outer: gardenOuter, size: gardenSize }),
+    garden: Object.freeze({ x: Math.floor((width - gardenSize) / 2), y: Math.floor(topHudHeight + (fieldHeight - gardenSize) / 2), columns: gardenColumns, rows: gardenColumns, cell: gardenCell, line: cellLine, gap: 0, pitch: gardenPitch, outer: gardenOuter, size: gardenSize }),
     blueprint: Object.freeze({
       x: hudPadding, y: blueprintY, padding: blueprintPadding, gap: blueprintGap, topGap: blueprintTopGap, header: blueprintHeader, fontSize: blueprintFontSize,
       columns: 10, rows: 10, cell: blueprintCell, line: blueprintLine, pitch: blueprintPitch, frame: blueprintFrame,
@@ -252,7 +253,7 @@
     const c = columns.progress;
     // 게이지 오른쪽 끝은 고정. 짧은 번역도 실제 레이블 끝에서 5px 뒤에 게이지를 표시한다.
     const barX = spec.width - hud.padding - c.barWidth;
-    const progressLabel = text(scene, 0, hud.centerY, labels.progress, hud.labelSize, colors.hudLabel, 'left');
+    const progressLabel = text(scene, 0, hud.centerY, flowerbeds?'정원':labels.progress, hud.labelSize, colors.hudLabel, 'left');
     const barY = hud.centerY - hud.barHeight / 2;
     U.pixelFrame(g, barX, barY, c.barWidth, hud.barHeight, R.n.barFrame, colors.progressBorder);
     const progressGraphics=U.pixelGraphics(scene).setName('hud-progress-fill');
@@ -1166,7 +1167,7 @@
       const label='테스트 전투 · 공 '+count+'개';
       if(status.text!==label)status.setText(label);
     },itemPreview,markers.flowers);
-    if(playable){itemPreview.equipInitial();drawBlueprint(scene);window.GardenRunDrops.attach(scene,spec,assets,itemPreview,layout);window.GardenFlowerCarry?.attach(scene,spec);}
+    if(playable){itemPreview.equipInitial();if(flowerbeds)window.GardenFairyFlowerbeds.attach(scene,spec);else drawBlueprint(scene);window.GardenRunDrops.attach(scene,spec,assets,itemPreview,layout);window.GardenFlowerCarry?.attach(scene,spec);}
   }
 
   window.GardenGameLayout = Object.freeze({ spec, assets, colors, spacing, hud, slotCost, formatHudTime, formatHudCount, hudColumns, bottomStats, itemTooltip, replacementTitle, bottomLayout, sumPreviewStats, getPreviewStats, tooltipPosition, gardenCandidates, gardenGridRects, gardenRaster, gardenHit, patrolBounds, patrolPosition, nearestPatrolDistance, floatingDrop, animateFloatingDrops, draw });

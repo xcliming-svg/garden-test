@@ -1,8 +1,10 @@
 # 현재 설계 및 구현 정리
 
-> **devel 실험:** [나뭇잎 요정 직접 이동 및 꽃 운반](./fairy-flower-carry.md). main 미통합.
+> **현행 devel 기본 실험:** [9×9 요정 화단 생존](./fairy-flowerbeds.md). 기존 50스테이지는 비교/역사 기록이며 main은 미변경.
 
-> **현행 devel 50스테이지:** [V3 대칭 도안·규모 기반 캠페인](./campaign-v3-playable.md). 아래 6도안/단일 레벨 설명은 기존 비교용 규격 및 역사적 기록이다.
+> **이전 devel 실험:** [나뭇잎 요정 직접 이동 및 꽃 운반](./fairy-flower-carry.md). main 미통합.
+
+> **이전 devel 50스테이지:** [V3 대칭 도안·규모 기반 캠페인](./campaign-v3-playable.md). 아래 6도안/단일 레벨 설명은 기존 비교용 규격 및 역사적 기록이다.
 
 > **초반 도안 선택:** 메인 메뉴 임시 셀렉트박스에서 정사각형/십자/하트/꽃/나비/큰 하트 6종 선택. 정사각형은 [후속 장비·밀도 시험 설정](./early-pace-trial.md), 나머지 도안은 기존 각 설정 유지. [1차 비교 실험 및 재실행](./blueprint-balance-baseline.md).
 

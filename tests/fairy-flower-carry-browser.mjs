@@ -12,7 +12,7 @@ try{
  browser=await chromium.launch({channel:'chrome',headless:true,args:['--no-sandbox','--disable-dev-shm-usage','--use-gl=angle','--use-angle=swiftshader','--enable-unsafe-swiftshader']});
  for(const [width,height] of [[960,540],[1280,720]]){
   const page=await browser.newPage({viewport:{width,height}}),errors=[];page.on('pageerror',e=>{errors.push(String(e));console.error('PAGE ERROR',e.stack||String(e));});
-  await page.addInitScript(()=>{window.GardenSimulationRng={drop:()=>0};});
+  await page.addInitScript(()=>{window.GardenFairyFlowerbedsDisabled=true;window.GardenSimulationRng={drop:()=>0};});
   await page.goto('http://127.0.0.1:'+server.address().port);await page.waitForFunction(()=>window.__previewGame?.scene.isActive('MainMenu'));
   await page.locator('#blueprint-select').selectOption('stage-3');
   const box=await page.locator('canvas').boundingBox(),xy=(x,y)=>[box.x+x*box.width/960,box.y+y*box.height/540];
