@@ -86,8 +86,32 @@ export function researchSources(sources,formationSource){
   r=replaceOnce(r,'flowerWeights,paceProfiles,','flowerWeights,formations:Object.freeze(config.formations||[]),paceProfiles,');
   s['run-rules']=r;return s;
 }
-export function makeWorld(sources,stage,policy,mode='campaign-drop',overrides={}){
-  const env=makeStage(stage),gear=stageGear(stage,policy,mode),w=loadModels(sources);
+export const rampProtocol={seed:29301,runs:3,dt:.05,stages:[20,25,30,35,40,45,50],variants:['gradual','fast']};
+// A stage's full unlocked roster is eligible, but actual waves introduce its
+// stronger members over the run. No forced equipment or guaranteed rewards.
+export function rampStage(env,variant){
+  if(!rampProtocol.variants.includes(variant))throw Error('Unknown ramp');
+  const fast=variant==='fast',n=env.stage,full=env.cap,ids=env.eligible;
+  const times=[0,30,60,100,150,210,280,360,460];
+  const scales=fast?[.14,.22,.32,.48,.64,.8,1,1.12,1.2]:[.10,.16,.24,.35,.50,.65,.85,1,1.15];
+  const waves=times.map((at,i)=>{
+    const cap=Math.min(200,Math.max(i===0?6:8,Math.round(full*scales[i])));
+    const count=Math.min(ids.length,Math.max(2,Math.ceil(ids.length*(i+1)/5)));
+    const pool=ids.slice(0,count).map((id,j)=>[id,j===count-1?4:j===0?4:2]);
+    // During startup low tier enemies and slower replacement give the starter
+    // weapon time to earn the first random equipment cards.
+    const batch=Math.min(cap,i===0?1:i<=2?2:Math.max(2,Math.round(env.batch*Math.min(1,(i+1)/6))));
+    const interval=round(Math.max(env.interval, i===0?1.75:i===1?1.4:i===2?1.15:i===3?.95:.65));
+    return [at,interval,cap,batch,pool];
+  });
+  const formations=env.formations.map(([at,kind,id,count],i)=>{
+    const time=[75,145,225,315,415][i],wave=waves.findLast(w=>w[0]<=time),pool=wave[4].map(x=>x[0]);
+    return [time,kind,pool.includes(id)?id:pool.at(-1),Math.min(count,Math.max(2,Math.round(wave[2]*.35)))];
+  });
+  return {...env,formations,patch:{...env.patch,waves}};
+}
+export function makeWorld(sources,stage,policy,mode='campaign-drop',overrides={},variant=null){
+  const raw=makeStage(stage),env=variant?rampStage(raw,variant):raw,gear=stageGear(stage,policy,mode),w=loadModels(sources);
   const patch={...env.patch,...overrides,run:{...env.patch.run,...overrides.run},itemUnlocks:[[0,[...new Set(gear.pool.map(c=>c.id))]]]};
   const c=resolveConfig(w,patch);
   const model=loadModels(sources,{...c,flowerPool:env.flowerPool,formations:env.formations});
@@ -100,10 +124,10 @@ export function makeWorld(sources,stage,policy,mode='campaign-drop',overrides={}
   return {model,env,gear};
 }
 export function runStage(sources,geometry,stage,policy,opts={}){
-  const {seed=protocol.screen.seed,runs=protocol.screen.runs,dt=.05,agent='normal',mode='campaign-drop',maxSeconds=protocol.maxSeconds}=opts;
+  const {seed=protocol.screen.seed,runs=protocol.screen.runs,dt=.05,agent='normal',mode='campaign-drop',maxSeconds=protocol.maxSeconds,variant=null}=opts;
   const rows=[];
   for(let i=0;i<runs;i++){
-    const {model,env,gear}=makeWorld(sources,stage,policy,mode);
+    const {model,env,gear}=makeWorld(sources,stage,policy,mode,{},variant);
     const r=play(createEngine(model,{seed:seed+i,dt,maxSeconds,geometry,trace:true,research:{progression:mode,campaign:{...gear,itemCap:env.itemCap}}}),profileFor(agent));
     const items=r.events.filter(e=>e.type==='card_spawn'&&e.kind==='item'),newCards=items.filter(e=>gear.pool.some(c=>c.id===e.name&&c.level===e.level&&stage-c.stage<=4));
     if(items.some(e=>!gear.pool.some(c=>c.id===e.name&&c.level===e.level))||items.length>env.itemCap)throw Error('Locked or excess item');
@@ -118,7 +142,7 @@ export function runStage(sources,geometry,stage,policy,opts={}){
   const g=protocol.goals,violations={survival:Math.max(0,g.winRate-metrics.winRate),gap:Math.max(0,metrics.gap.p90/g.maxGap-1),duration:Math.max(0,g.minDuration-metrics.seconds.p50,metrics.seconds.p50-g.maxDuration)/g.maxDuration,discovery:Math.max(0,g.minNewDiscovery-discovery)};
   // No recent unlock -> no new discovery gate at this representative stage.
   if(!stageGear(stage,policy,mode).pool.some(c=>stage-c.stage<=4))violations.discovery=0;
-  return {stage,policy,mode,agent,seed,runs,dt,metrics,violations,pass:Object.values(violations).every(x=>x===0),rows};
+  return {stage,policy,mode,agent,seed,runs,dt,...(variant?{variant}:{}),metrics,violations,pass:Object.values(violations).every(x=>x===0),rows};
 }
 export function profileGear(sources,geometry,stage,card,{seed=protocol.profile.seed,runs=3,dt=.05}={}){
   const results=[];
@@ -135,8 +159,9 @@ if(process.argv[1]&&import.meta.url===pathToFileURL(process.argv[1]).href){
   const [mode,group,out]=process.argv.slice(2);let report;
   if(mode==='dataset')report=dataset();
   else if(mode==='screen'){const stage=Number(group);report={stage,reports:policies.map(policy=>runStage(sources,geometry,stage,policy))};}
+  else if(mode==='ramp'){const stage=Number(group);report={stage,reports:rampProtocol.variants.flatMap(variant=>policies.map(policy=>runStage(sources,geometry,stage,policy,{...rampProtocol,variant})))};}
   else if(mode==='profile'){const stage=Number(group);report={stage,reports:unlocks('counter-first').map(({id,level})=>profileGear(sources,geometry,stage,{id,level})),baseline:profileGear(sources,geometry,stage,{id:'rock',level:1})};}
   else throw Error('Unknown campaign command');
-  console.log('CAMPAIGN '+JSON.stringify(mode==='screen'?report.reports.map(r=>({stage:r.stage,policy:r.policy,pass:r.pass,metrics:r.metrics,violations:r.violations})):mode==='profile'?{stage:report.stage,profiles:report.reports.length}: {stages:report.stages.length}));
+  console.log('CAMPAIGN '+JSON.stringify(['screen','ramp'].includes(mode)?report.reports.map(r=>({stage:r.stage,policy:r.policy,variant:r.variant,pass:r.pass,metrics:r.metrics,violations:r.violations})):mode==='profile'?{stage:report.stage,profiles:report.reports.length}: {stages:report.stages.length}));
   saveJson(out,report);
 }

@@ -1,0 +1,28 @@
+name: 50-stage ramp comparison
+on:
+  push:
+    branches: [feature/campaign-50-study]
+    paths:
+      - 'simulation/experiments/campaign-50.mjs'
+      - '.github/workflows/campaign-50-ramp.yml'
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  ramp:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    strategy:
+      fail-fast: false
+      matrix:
+        stage: [20,25,30,35,40,45,50]
+    steps:
+      - uses: actions/checkout@v6
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - run: node simulation/experiments/campaign-50.mjs ramp ${{ matrix.stage }} /tmp/campaign-ramp.json
+      - uses: actions/upload-artifact@v4
+        with:
+          name: ramp-${{ matrix.stage }}
+          path: /tmp/campaign-ramp.json

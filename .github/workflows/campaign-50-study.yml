@@ -2,6 +2,9 @@ name: 50-stage campaign research
 on:
   push:
     branches: [feature/campaign-50-study]
+    paths:
+      - 'simulation/experiments/campaign-50-dataset.json'
+      - 'tests/campaign-50-model.mjs'
   workflow_dispatch:
 permissions:
   contents: read
