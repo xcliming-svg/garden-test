@@ -10,7 +10,7 @@ const require=createRequire(import.meta.url),phaser=require.resolve('phaser/dist
 const mime={'.js':'application/javascript','.html':'text/html; charset=utf-8','.css':'text/css; charset=utf-8','.svg':'image/svg+xml','.json':'application/json'};
 const server=createServer((req,res)=>{
  try{
-  const path=new URL(req.url,'http://localhost').pathname.slice(1)||'index.html';
+  const path=decodeURIComponent(new URL(req.url,'http://localhost').pathname.slice(1))||'index.html';
   if(path.includes('..'))return res.writeHead(404).end();
   let body=readFileSync(path==='phaser.js'?phaser:join(root,path==='index.html'?'lab.html':path));
   if(path==='index.html')body=body.toString().replace('https://cdn.jsdelivr.net/npm/phaser@3.90.0/dist/phaser.min.js','./phaser.js');
@@ -26,14 +26,17 @@ const baseById={'1_butterfly':40,'2_grasshopper':36,'6_mouse':36,'2_gray_bug':24
 try{
  for(const [name,w,h,query] of [['default',960,540,''],['fhd',1920,1080,''],['small',640,360,''],['full',960,540,'?full=1'],['hidden',960,540,'?enemies=0'],['combat',960,540,'?combat=1']]){
   const page=await browser.newPage({viewport:{width:w,height:h}});
-  const errors=[];page.on('pageerror',e=>errors.push(String(e)));
+  const errors=[];page.on('pageerror',e=>{errors.push(String(e));console.error('PAGE ERROR',e.stack||String(e));});
   try{
+   console.log('Movement speed fixture',name);
    await page.goto(url+'/index.html'+query+(query?'&':'?')+'attack=0');
    await page.waitForFunction(()=>window.__previewGame?.scene.isActive('MainMenu'));
    const canvas=await page.locator('canvas').boundingBox();
    await page.mouse.click(canvas.x+480*canvas.width/960,canvas.y+252*canvas.height/540);
    await page.waitForFunction(()=>{const s=window.__previewGame.scene.getScene('Game');return !!(s.fairyPatrol||s.combatPreview)});
-   assert.equal(await page.locator('select').count(),0);
+   // Enemies-off lab mode intentionally exposes the weapon comparison selector.
+   assert.equal(await page.locator('select').count(),name==='hidden'?1:0);
+   assert.equal(await page.locator('#hero-weapon-select').count(),name==='hidden'?1:0);
    if(name==='combat'){report.push({name,pass:true});continue;}
    const checked=await page.evaluate(()=>{
     const s=window.__previewGame.scene.getScene('Game'),F=s.fairyPatrol,c=s.enemyPreview,M=window.GardenEnemyMotion,E=window.GardenEnemyPreview;

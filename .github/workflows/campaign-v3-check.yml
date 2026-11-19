@@ -1,0 +1,30 @@
+name: Campaign V3 regression
+on:
+  pull_request:
+    branches: [devel]
+  push:
+    branches: [feature/campaign-v3-playable]
+permissions:
+  contents: read
+jobs:
+  model:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v6
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      - run: |
+          for script in src/*.js; do node --check "$script"; done
+          node tests/campaign-v3-model.mjs
+          node tests/playable-run-model.mjs
+  browser:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v6
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      - run: npm install --no-save --package-lock=false phaser@3.90.0 playwright@1.51.1
+      - run: node tests/campaign-v3-browser.mjs
+      - run: node tests/playable-run-browser.mjs

@@ -58,7 +58,7 @@
       height: blueprintHeader + blueprintGap + blueprintGrid,
       gridX: hudPadding, gridY: blueprintY + blueprintHeader + blueprintGap
     }),
-    slots: Object.freeze({ size: slotSize, cell: slotSize - 2 * cellLine, line: cellLine, gap: bottomGap, initial: playable?window.GardenRunRules.tuning.initialSlots:4, preview: playable?window.GardenRunRules.tuning.maxSlots:balancedCombat?window.GardenWeaponBalance.slots:9, max: playable?window.GardenRunRules.tuning.maxSlots:10, y: height - bottomHudHeight + bottomBoundary + bottomGap, exampleCost: 999 })
+    slots: Object.freeze({ size: slotSize, cell: slotSize - 2 * cellLine, line: cellLine, gap: bottomGap, initial: playable?window.GardenRunRules.tuning.initialSlots:4, preview: playable?(!window.GardenSimulationConfig?10:window.GardenRunRules.tuning.maxSlots):balancedCombat?window.GardenWeaponBalance.slots:9, max: playable&&window.GardenSimulationConfig?window.GardenRunRules.tuning.maxSlots:10, y: height - bottomHudHeight + bottomBoundary + bottomGap, exampleCost: 999 })
   });
 
   const hud = Object.freeze({
@@ -397,7 +397,7 @@
       const count=()=>scene.run.state.slotCount;
       const buyZone=scene.add.zone(0,s.y+s.size/2,s.size,s.size).setDepth(D.purchase).setName('run-slot-purchase').setInteractive({useHandCursor:true});
       layout.updateSlots=()=>{
-        const n=count(),shown=Math.min(n+1,s.max),left=Math.floor((spec.width-shown*s.size-(shown-1)*s.gap)/2);
+        const n=count(),shown=Math.min(n+(window.GardenRunRules.cost(n)!==null?1:0),s.max),left=Math.floor((spec.width-shown*s.size-(shown-1)*s.gap)/2);
         layout.slots.forEach((slot,i)=>{slot.x=left+i*(s.size+s.gap);const f=layout.slotFrames[i],locked=i===n;f.setPosition(slot.x+s.size/2,s.y+s.size/2).setFillStyle(locked?colors.disabledFill:colors.emptySlotFill).setStrokeStyle(s.line,locked?colors.disabledBorder:colors.normalBorder).setVisible(i<shown);});
         const price=window.GardenRunRules.cost(n),show=price!==null,slot=layout.slots[Math.min(n,s.max-1)];
         buyZone.setPosition(slot.x+s.size/2,s.y+s.size/2).setVisible(show);if(show)buyZone.setInteractive({useHandCursor:true});else buyZone.disableInteractive();
@@ -883,7 +883,7 @@
         if(card&&index<equipped.length&&scene.heroWeaponPreview.equip(index,id,card.item.level))equipped[index]=card.item;
       });refresh();
     }
-    const controller={applyLoadout,register,unregister,equipped,refreshSlots,equipInitial(){equipItem(0,window.GardenItemCards.runItem(scene,window.GardenRunRules.tuning.starterRock));refresh();},isDragging:card=>dragging===card,defense:()=>sumPreviewStats(equipped).defense};
+    const controller={applyLoadout,register,unregister,equipped,refreshSlots,equipInitial(){window.GardenRunRules.startingGear.forEach(({id,level},i)=>equipItem(i,window.GardenItemCards.runItem(scene,id,level)));refresh();},isDragging:card=>dragging===card,defense:()=>sumPreviewStats(equipped).defense};
     if(playable){scene.runEquipment=controller;refreshSlots();scene.events.once('shutdown',()=>delete scene.runEquipment);}else refresh();
     return controller;
   }

@@ -101,11 +101,11 @@
     const margin=e.span*.74+12,top=spec.top+e.span*(1+p.squash)+p.lift+p.bob+12,bottom=spec.height-spec.bottom-12;
     const path=flower=>{
       const left=side.includes('left'),right=side.includes('right'),north=side.includes('top'),south=side.includes('bottom');
-      const spawnX=left?margin:right?spec.width-margin:flower.x;
+      const spawnX=options.spawnPoint?.x??(left?margin:right?spec.width-margin:flower.x);
       // If a full garden leaves no room above/below the stones, enter through
       // the clipped field edge rather than spawning inside the garden.
-      const spawnY=north?(left||right?top:Math.min(top,b.top-m-12)):
-        south?(left||right?bottom:Math.max(bottom,b.bottom+m+e.span*(1+p.squash)+p.lift+p.bob+12)):flower.y;
+      const spawnY=options.spawnPoint?.y??(north?(left||right?top:Math.min(top,b.top-m-12)):
+        south?(left||right?bottom:Math.max(bottom,b.bottom+m+e.span*(1+p.squash)+p.lift+p.bob+12)):flower.y);
       const dx=spawnX-flower.x,dy=spawnY-flower.y,length=Math.hypot(dx,dy);
       return {start:flower.x+length,stage:flower.x+Math.min(p.reach,length*.55),target:flower.x,ground:flower.y,
         originX:flower.x,originY:flower.y,spawnX,spawnY,ux:dx/length,uy:dy/length,flower:flower.index,side};
@@ -132,9 +132,41 @@
       }
       return true;
     }
+    if(options.spawnPoint)cells.sort((a,b)=>Math.hypot(a.x-options.spawnPoint.x,a.y-options.spawnPoint.y)-Math.hypot(b.x-options.spawnPoint.x,b.y-options.spawnPoint.y)||a.index-b.index);
     const paths=cells.map(path);
     if(options.random){const candidate=shuffled(paths,options.random).find(fits);if(candidate)return candidate;}
     return paths.find(fits)||paths[0];
+  }
+  // Position formations around the field, not inside the planted garden.
+  // Elliptic ring follows the wide playfield; pack/line use spaced edge points.
+  function formationPoints(spec,entry,kind,count,random){
+    const p=window.GardenEnemyMotion.profiles[entry.id],margin=entry.span*.74+12;
+    const left=margin,right=spec.width-margin,top=spec.top+entry.span*(1+p.squash)+p.lift+p.bob+12,bottom=spec.height-spec.bottom-12;
+    const cx=(left+right)/2,cy=(top+bottom)/2,rx=(right-left)/2,ry=(bottom-top)/2;
+    const rotation=random()*Math.PI*2,side=Math.floor(random()*4);
+    const compass=(x,y)=>directions[(Math.round(Math.atan2(cy-y,x-cx)/(Math.PI/4))+8)%8];
+    function edge(s,u){return s===0?{x:right,y:top+u*(bottom-top)}:s===1?{x:left+u*(right-left),y:top}:s===2?{x:left,y:top+u*(bottom-top)}:{x:left+u*(right-left),y:bottom};}
+    return Array.from({length:count},(_,i)=>{
+      let pt;
+      if(kind==='ring'){
+        const angle=rotation+2*Math.PI*i/count;
+        // A true elliptical perimeter, adapted to the rectangular battlefield.
+        pt={x:cx+rx*Math.cos(angle),y:cy+ry*Math.sin(angle)};
+      }else if(kind==='pack'){
+        // Compact 2-D flock; keep it on the wide left/right approaches.
+        const s=side%2===0?0:2,rows=Math.ceil(Math.sqrt(count)),cols=Math.ceil(count/rows);
+        const gap=entry.span*.72,along=Math.min(gap,(bottom-top)/Math.max(1,rows+1));
+        const depth=Math.min(gap,Math.max(0,(spec.garden.x-margin-entry.span)/Math.max(1,cols)));
+        const row=i%rows,col=Math.floor(i/rows),centerY=cy+(rotation/Math.PI-1)*(bottom-top)*.16;
+        pt={x:s===0?right-col*depth:left+col*depth,y:Math.max(top,Math.min(bottom,centerY+(row-(rows-1)/2)*along))};
+      }else{
+        const split=kind==='pincer',n=split?Math.ceil(count/2):count,j=split?Math.floor(i/2):i;
+        const s=split?(side+2*(i%2))%4:side;
+        const u=n===1?.5:.12+.76*j/(n-1);
+        pt=edge(s,u);
+      }
+      return {...pt,side:compass(pt.x,pt.y)};
+    });
   }
   // Population target is a presentation stress test, not a combat wave rule.
   const spawning=Object.freeze({maxActive:200,rank:0,step:.1,maxBatch:8,
@@ -171,10 +203,11 @@
     const cycle=M.duration(entry,'attack',path,spawning.rank),delta=first-age;
     return delta>=0?delta:((delta%cycle)+cycle)%cycle;
   }
-  function createPopulation(spec,patrol,entries,random=Math.random,target=targetCount,onDeath=null,balanced=false){
+  function createPopulation(spec,patrol,entries,random=Math.random,target=targetCount,onDeath=null,balanced=false,onEvent=null){
     const M=window.GardenEnemyMotion,F=window.GardenFairyPatrol;
     const actors=[];let bag=[],directionBag=[],serial=0,elapsed=0,spawned=0,completed=0,kills=0;
-    const schedule=playable&&target===window.GardenRunRules.population, introduced=new Set();let nextSpawn=0;
+    const schedule=playable&&target===window.GardenRunRules.population, introduced=new Set();let nextSpawn=0,formationIndex=0;
+    const formations=schedule?window.GardenRunRules.formations:[];
     function nextEntry(){
       if(schedule){
         const wave=window.GardenRunRules.waveAt(elapsed),ids=wave.pool.map(([id])=>id),pool=entries.filter(e=>ids.includes(e.id));
@@ -200,12 +233,13 @@
       a.path=runPath({start:target.x+length,target:target.x,ground:target.y,originX:target.x,originY:target.y,ux:length?dx/length:1,uy:length?dy/length:0,flower:target.index,side:a.path.side});
       a.motionAge=0;a.strikes=0;a.flowerHit=false;
     }
-    function spawn(){
-      if(!directionBag.length)directionBag=shuffled(directions,random);
-      const entry=nextEntry(),side=directionBag.pop();
-      const initialPath=route(spec,patrol.boundary,entry,patrol.occupied,{side,random});
+    function spawn(forced=null,point=null,group=null){
+      if(!forced&&!directionBag.length)directionBag=shuffled(directions,random);
+      const entry=forced||nextEntry(),side=point?.side||directionBag.pop();
+      if(forced)introduced.add(entry.id);
+      const initialPath=route(spec,patrol.boundary,entry,patrol.occupied,point?{side,spawnPoint:point}:{side,random});
       const path=playable?runPath(initialPath):initialPath;
-      const actor={id:serial++,entry,path,age:0,spawnTime:elapsed,blink:F.blinkSchedule(serial+11),expressionState:'auto',expression:'normal',pose:null,hp:balanced?window.GardenWeaponBalance.hp(entry):entry.level,hitUntil:0,populationTime:elapsed,motionAge:0,strikes:0,pendingHits:0,persistent:playable};
+      const actor={id:serial++,entry,path,formation:group,age:0,spawnTime:elapsed,blink:F.blinkSchedule(serial+11),expressionState:'auto',expression:'normal',pose:null,hp:balanced?window.GardenWeaponBalance.hp(entry):entry.level,hitUntil:0,populationTime:elapsed,motionAge:0,strikes:0,pendingHits:0,persistent:playable};
       actor.duration=M.duration(entry,'auto',path,spawning.rank);actors.push(actor);spawned++;
       updateActor(actor);return actor;
     }
@@ -235,7 +269,16 @@
           else if(a.age>=a.duration){actors.splice(i,1);completed++;}else updateActor(a);
         }
         const wanted=target(elapsed);
-        if(schedule){if(actors.length<wanted&&elapsed+1e-7>=nextSpawn){const wave=window.GardenRunRules.waveAt(elapsed);for(let n=0;n<wave.batch&&actors.length<wanted;n++)spawn();nextSpawn=elapsed+wave.interval;}}
+        if(schedule){
+          while(formationIndex<formations.length&&formations[formationIndex][0]<=elapsed+1e-7){
+            const [at,kind,id,requested]=formations[formationIndex],group=formationIndex++;
+            const entry=entries.find(e=>e.id===id),count=Math.max(0,Math.min(requested,wanted-actors.length));
+            if(!entry)throw Error('Unknown formation enemy '+id);
+            const points=formationPoints(spec,entry,kind,count,random);
+            for(const point of points)spawn(entry,point,group);
+            onEvent?.('formation_spawn',{group,at,kind,species:id,requested,count,blocked:requested-count});
+          }
+          if(actors.length<wanted&&elapsed+1e-7>=nextSpawn){const wave=window.GardenRunRules.waveAt(elapsed);for(let n=0;n<wave.batch&&actors.length<wanted;n++)spawn();nextSpawn=elapsed+wave.interval;}}
         else for(let n=0;n<spawning.maxBatch&&actors.length<wanted;n++)spawn();
       } while(left>1e-9);
       return elapsed;
@@ -292,7 +335,7 @@
     const target=playable?window.GardenRunRules.population:finite!==null?t=>window.GardenWeaponBalance.finiteTarget(finite,t,model.actors.length,model.spawned):
       fixed!==null?()=>fixed:simulation?simulationTarget:targetCount;
     const relics=(A.enabled||weaponCombat)?window.GardenRelicCollection.attach(scene,spec,patrol):null;
-    model=createPopulation(spec,patrol,entries,window.GardenSimulationRng?.enemy||Math.random,target,relics?.death,!!weaponCombat);
+    model=createPopulation(spec,patrol,entries,window.GardenSimulationRng?.enemy||Math.random,target,relics?.death,!!weaponCombat,window.GardenSimulationEvent);
     const sprites=new Map();
     const occlusion=window.GardenEnemyOcclusion.attach(scene,spec,patrol);
     // The playable field clips partial entry/exit sprites; HUD is never covered.

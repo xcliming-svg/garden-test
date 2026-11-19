@@ -10,21 +10,27 @@
     const initial=freezeCells(blueprint.filter(([cell])=>[44,45,54,55].includes(cell)));
     return Object.freeze({id,label,blueprint,initial});
   };
-  const catalog=Object.freeze([
+  const legacyCatalog=Object.freeze([
     Object.freeze({id:'classic',label:'정사각형 · 입문',blueprint:freezeCells([[33,'rose'],[34,'daisy'],[35,'sunflower'],[36,'lavender'],[43,'tulip'],...defaultInitial,[46,'rose'],[53,'lavender'],[56,'daisy'],[63,'hydrangea'],[64,'rose'],[65,'lavender'],[66,'sunflower']]),initial:freezeCells(defaultInitial)}),
     ...[["cross","십자 · 입문",["..SS..",".SDDS.","SDDDDS",".SDDS.","..SS.."],2,2],["heart","하트 · 초급",[".RR.RR.","RRRRRRR","RRDDDRR",".RTTTR.","..TTT..","...T..."],1,2],["flower","꽃 · 중급",["...SS...","..SSSS..",".SSDDSS.","SSDDDDSS",".SSDDSS.","..SSSS..","...SS..."],1,1],["butterfly","나비 · 중급",["LL...LL","LHL.LHL","LHHSHHL",".HHSHH.","LTTSTTL","LT...TL"],1,2],["large-heart","큰 하트 · 확장 실험",[".RRR..RRR.","RRRRRRRRRR","RRRDDDDRRR","RRRDDDDRRR",".RRTTTTRR.","..RTTTTR..","...TTTT...","....TT...."],0,1]].map(row=>makePattern(...row))
   ]);
-  let selectedBlueprintId='classic';
-  let initial=freezeCells(config.initial||catalog[0].initial);
-  let blueprint=freezeCells(config.blueprint||catalog[0].blueprint);
+  const campaignCatalog=window.GardenCampaignV3?.stages||[];
+  const catalog=window.GardenSimulationConfig?legacyCatalog:Object.freeze([...campaignCatalog,...legacyCatalog]);
+  let campaign=active&&!window.GardenSimulationConfig?campaignCatalog[0]||null:null;
+  let selectedBlueprintId=campaign?.id||'classic';
+  let initial=freezeCells(config.initial||campaign?.initial||legacyCatalog[0].initial);
+  let blueprint=freezeCells(config.blueprint||campaign?.blueprint||legacyCatalog[0].blueprint);
   const flowerWeights=Object.freeze({...Object.fromEntries(Object.values(flowerNames).map(name=>[name,1])),...config.flowerWeights});
   const baseTuning=Object.freeze({initialSlots:4,maxSlots:10,costs:Object.freeze([40,60,85,115,150,200]),growthSeconds:8,uprootSeconds:3,cardLifetime:45,dropWeights:Object.freeze([.69,.10,.18,.03]),itemInterval:30,starterRock:'rock',enemyDamage:4,enemyDamagePerLevel:2,spawnCap:65,neededFlowerBias:.75,startingGems:0,gemValue:1,...config.run});
   let tuning=baseTuning;
   const damageToFlower=(entry,defense=0)=>Math.max(1,(config.enemyDamage?.[entry.id]??(tuning.enemyDamage+(entry.level-1)*tuning.enemyDamagePerLevel))-defense);
   const canEquip=(equipped,index,item)=>{const next=equipped.slice();next[index]=item;return next.some(i=>i?.stats.dps>0);};
   function chooseFlower(entries,random=Math.random){
-    const needed=blueprint.filter(([cell,name])=>entries.get(cell)?.name!==name).map(([,name])=>name);
-    const pool=needed.length&&random()<tuning.neededFlowerBias?needed:window.GardenFlowerGrowth.names;
+    const missing=blueprint.filter(([cell,name])=>entries.get(cell)?.name!==name);
+    const frontier=campaign?plantCandidates(new Set(entries.keys())):null;
+    const ready=frontier?missing.filter(([cell])=>frontier.has(cell)):[];
+    const needed=(ready.length?ready:missing).map(([,name])=>name);
+    const pool=needed.length&&random()<tuning.neededFlowerBias?needed:(campaign?.flowerPool||window.GardenFlowerGrowth.names);
     const total=pool.reduce((sum,name)=>sum+flowerWeights[name],0);
     if(total<=0)return pool[Math.min(pool.length-1,Math.floor(random()*pool.length))];
     let roll=random()*total;
@@ -42,7 +48,8 @@
   const required=new Map(blueprint);
   function selectBlueprint(id){
     if(config.blueprint||config.initial)return false; // explicit simulation configuration takes precedence
-    const pattern=catalog.find(p=>p.id===id);if(!pattern)return false;
+    const pattern=campaignCatalog.find(p=>p.id===id)||legacyCatalog.find(p=>p.id===id);if(!pattern)return false;
+    campaign=campaignCatalog.includes(pattern)?pattern:null;
     selectedBlueprintId=id;initial=pattern.initial;blueprint=pattern.blueprint;
     required.clear();for(const [cell,name] of blueprint)required.set(cell,name);
     applyPaceTrial(id);
@@ -81,7 +88,7 @@
   }
   // Introduce one species at a time; never force the entire roster at the start.
   const enemyUnlocks=Object.freeze((config.enemyUnlocks||[[0,'3_caterpillar'],[180,'4_beetle'],[300,'2_grasshopper'],[420,'2_gray_bug'],[540,'1_butterfly'],[660,'2_frog'],[780,'1_cat'],[900,'6_sparrow'],[1020,'6_mouse'],[1140,'6_rabbit'],[1260,'5_bulldog'],[1380,'6_pigeon']]).map(Object.freeze));
-  function eligibleEnemies(seconds){return enemyUnlocks.filter(([at])=>seconds>=at).map(([,id])=>id);}
+  function eligibleEnemies(seconds){return (campaign?.patch.enemyUnlocks||enemyUnlocks).filter(([at])=>seconds>=at).map(([,id])=>id);}
   // Each row is [start, interval, live cap, batch, weighted NEW arrivals].
   // Existing living enemies are never removed at a wave boundary.
   const C='3_caterpillar',B='4_beetle',G='2_grasshopper',P='2_gray_bug',F='1_butterfly',J='2_frog',K='1_cat',S='6_sparrow',M='6_mouse',R='6_rabbit',D='5_bulldog',V='6_pigeon';
@@ -113,6 +120,7 @@
   function applyPaceTrial(id){
     const p=active&&!window.GardenSimulationConfig?paceProfiles[id]:null;
     tuning=baseTuning;waves=baseWaves;itemSupply=p&&id==='classic'?classicSupply:null;
+    if(campaign){tuning=Object.freeze({...baseTuning,...campaign.patch.run});waves=Object.freeze(campaign.patch.waves.map(([start,interval,cap,batch,pool])=>Object.freeze({start,interval,cap,batch,pool})));itemSupply=Object.freeze({cap:campaign.itemCap});return;}
     if(!p)return;
     const round=x=>Math.round(x*10000)/10000;
     tuning=Object.freeze({...baseTuning,dropWeights:Object.freeze([round(.9-p.flower-p.item),.10,p.flower,p.item]),itemInterval:p.cooldown});
@@ -125,11 +133,17 @@
   function spawnInterval(seconds){return waveAt(seconds).interval;}
   const baseItemUnlocks=Object.freeze((config.itemUnlocks||[[0,['rock','boomerang','shoe','shield']],[90,['water-fairy','balloon']],[180,['wheel','flowerpot']],[300,['paper-plane','bouncy-ball']],[420,['yellow-floor','broom']],[540,['sprinkler']]]).map(([at,ids])=>Object.freeze([at,Object.freeze(ids)])));
   const classicItemUnlocks=Object.freeze([Object.freeze([0,Object.freeze(['rock','boomerang'])])]);
-  const currentItemUnlocks=()=>itemSupply?classicItemUnlocks:baseItemUnlocks;
+  const currentItemUnlocks=()=>campaign?.patch.itemUnlocks||(itemSupply?classicItemUnlocks:baseItemUnlocks);
   const itemPool=seconds=>currentItemUnlocks().flatMap(([at,ids])=>seconds>=at?ids:[]);
   function pickItem(seconds,random=Math.random){
     const pool=itemPool(seconds);
     return pool[Math.min(pool.length-1,Math.floor(random()*pool.length))];
+  }
+  function pickItemCard(seconds,random=Math.random){
+    if(!campaign)return {id:pickItem(seconds,random),level:1};
+    let roll=random()*campaign.gearPool.reduce((a,c)=>a+c.weight,0);
+    for(const c of campaign.gearPool){roll-=c.weight;if(roll<0)return {id:c.id,level:c.level};}
+    const c=campaign.gearPool.at(-1);return {id:c.id,level:c.level};
   }
   // Full card footprint (including 4px idle lift) stays outside the entire
   // 10x10 garden, not just currently planted cells. Preserve nearest death point.
@@ -189,7 +203,7 @@
     function pickRunItem(random=Math.random){
       return pickItem(state.elapsed,random);
     }
-    return {state,credit,buy,tick,rewardDrop,pickItem:pickRunItem};
+    return {state,credit,buy,tick,rewardDrop,pickItem:pickRunItem,pickItemCard:random=>pickItemCard(state.elapsed,random)};
   }
-  window.GardenRunRules=Object.freeze({active,catalog,selectBlueprint,get selectedBlueprintId(){return selectedBlueprintId;},get initial(){return initial;},get blueprint(){return blueprint;},flowerWeights,paceProfiles,get tuning(){return tuning;},cost,rollDrop,damageToFlower,canEquip,chooseFlower,get itemUnlocks(){return currentItemUnlocks();},get itemSupply(){return itemSupply;},stageAt,completion,blueprintStatus,plantCandidates,canPlant,uprootOutline,population,enemyUnlocks,eligibleEnemies,spawnInterval,get waves(){return waves;},waveAt,itemPool,pickItem,cardPosition,depth,create});
+  window.GardenRunRules=Object.freeze({active,catalog,selectBlueprint,get selectedBlueprintId(){return selectedBlueprintId;},get initial(){return initial;},get blueprint(){return blueprint;},flowerWeights,paceProfiles,get campaign(){return campaign;},get formations(){return campaign?.formations||[];},get startingGear(){return campaign?.startingGear||[{id:tuning.starterRock,level:1}];},get tuning(){return tuning;},cost,rollDrop,damageToFlower,canEquip,chooseFlower,get itemUnlocks(){return currentItemUnlocks();},get itemSupply(){return itemSupply;},stageAt,completion,blueprintStatus,plantCandidates,canPlant,uprootOutline,population,get enemyUnlocks(){return campaign?.patch.enemyUnlocks||enemyUnlocks;},eligibleEnemies,spawnInterval,get waves(){return waves;},waveAt,itemPool,pickItem,cardPosition,depth,create});
 }());

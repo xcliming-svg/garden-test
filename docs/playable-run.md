@@ -1,5 +1,7 @@
 # 기본 플레이 통합 (devel)
 
+> **현행 devel 50스테이지:** [V3 대칭 도안·규모 기반 캠페인](./campaign-v3-playable.md). 아래 6도안/단일 레벨 설명은 기존 비교용 규격 및 역사적 기록이다.
+
 2026-11-19 · feature/playable-garden-loop · Phaser 3.90.0 유지. 최신 devel 5362528의 [무기 밸런스 v1](./weapon-balance-v1.md) 및 물방울 요정 카드 구현을 보존하여 통합.
 
 ## 사용자 확정

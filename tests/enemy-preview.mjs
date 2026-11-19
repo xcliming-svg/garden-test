@@ -30,7 +30,7 @@ const require=createRequire(import.meta.url),phaser=require.resolve('phaser/dist
 const mime={'.js':'application/javascript','.html':'text/html; charset=utf-8','.css':'text/css; charset=utf-8','.svg':'image/svg+xml','.json':'application/json'};
 const server=createServer((req,res)=>{
  try{
-  const path=new URL(req.url,'http://localhost').pathname.slice(1)||'index.html';
+  const path=decodeURIComponent(new URL(req.url,'http://localhost').pathname.slice(1))||'index.html';
   if(path.includes('..'))return res.writeHead(404).end();
   let body=readFileSync(path==='phaser.js'?phaser:join(root,path==='index.html'?'lab.html':path));
   if(path==='index.html')body=body.toString().replace('https://cdn.jsdelivr.net/npm/phaser@3.90.0/dist/phaser.min.js','./phaser.js');
@@ -52,7 +52,7 @@ try{
  ]){
   const page=await browser.newPage({viewport:{width:960,height:540}});
   page.setDefaultTimeout(20000);
-  const errors=[];page.on('pageerror',e=>errors.push(String(e)));page.on('requestfailed',r=>errors.push(r.url()));
+  const errors=[];page.on('pageerror',e=>{errors.push(String(e));console.error('PAGE ERROR',e.stack||String(e));});page.on('requestfailed',r=>errors.push(r.url()));
   try{
    await page.addInitScript(()=>{let seed=42;Math.random=()=>{seed=(Math.imul(seed,1664525)+1013904223)>>>0;return seed/4294967296;};});
    await page.goto(url+'/index.html'+query+(query?'&':'?')+'enemies=1');
@@ -133,7 +133,7 @@ try{
  ]){
   const page=await browser.newPage({viewport:{width:w,height:h},deviceScaleFactor:dpr});
   const errors=[],failed=[],loaded=new Set();
-  page.on('pageerror',e=>errors.push(String(e)));page.on('requestfailed',r=>failed.push(r.url()));
+  page.on('pageerror',e=>{errors.push(String(e));console.error('PAGE ERROR',e.stack||String(e));});page.on('requestfailed',r=>failed.push(r.url()));
   page.on('response',r=>{if(/\/assets\/(?:palette16\/)?enemies\//.test(r.url())&&r.ok())loaded.add(new URL(r.url()).pathname)});
   try{
    await page.addInitScript(()=>{let seed=42;Math.random=()=>{seed=(Math.imul(seed,1664525)+1013904223)>>>0;return seed/4294967296;};});

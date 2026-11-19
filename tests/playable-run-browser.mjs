@@ -25,6 +25,8 @@ try{
     page.on('pageerror',e=>{errors.push(String(e));console.error('PAGE ERROR',e.stack||String(e));});page.on('requestfailed',r=>errors.push(r.url()));
     await page.goto('http://127.0.0.1:'+server.address().port+'/?enemies=0&weapons=0');
     await page.waitForFunction(()=>window.__previewGame?.scene.isActive('MainMenu'));
+    // Historical regression retains the old classic fixture; campaign has its own test.
+    await page.locator('#blueprint-select').selectOption('classic');
     const box=await page.locator('canvas').boundingBox();
     const xy=p=>[box.x+p.x*box.width/960,box.y+p.y*box.height/540];
     await page.mouse.click(...xy({x:480,y:252}));
