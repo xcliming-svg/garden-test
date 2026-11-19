@@ -1,7 +1,7 @@
 name: Fairy flower carry experiment
 on:
   push:
-    branches: [feature/fairy-flower-carry]
+    branches: [feature/fairy-flower-carry, feature/keyboard-installation-fifo]
   pull_request:
     branches: [main, devel]
 permissions:

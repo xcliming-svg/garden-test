@@ -220,7 +220,7 @@
           for(const s of segments)outline.fillRect(Math.min(s.x1,s.x2),Math.min(s.y1,s.y2),Math.max(1,Math.abs(s.x2-s.x1)),Math.max(1,Math.abs(s.y2-s.y1)));
         }
         function beginHold(pointer){
-          if(hold||dragging||!pointer.leftButtonDown()||scene.run?.state.result)return;
+          if(window.GardenFlowerCarry?.enabled||hold||dragging||!pointer.leftButtonDown()||scene.run?.state.result)return;
           const id=hit(point(pointer));if(!occupied.has(id))return;
           hold={id,pointer,elapsed:0};drawHold();
         }
@@ -249,6 +249,7 @@
         }
         function plantFlower(i,name){
           occupied.add(i);addFlower(i,name,scene.run?.state.elapsed??patrol.elapsed);
+          if(window.GardenFlowerCarry?.enabled)scene.heroWeaponPreview?.removeObstructed();
           scene.relicCollection?.model.syncFlowers(occupied);patrol.refreshHud();
         }
         function finish(pointer,accept){

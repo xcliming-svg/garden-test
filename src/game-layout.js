@@ -395,17 +395,18 @@
     });
     if(playable){
       const count=()=>scene.run.state.slotCount;
+      const priceFor=n=>window.GardenFlowerCarry?.enabled?null:window.GardenRunRules.cost(n);
       const buyZone=scene.add.zone(0,s.y+s.size/2,s.size,s.size).setDepth(D.purchase).setName('run-slot-purchase').setInteractive({useHandCursor:true});
       layout.updateSlots=()=>{
-        const n=count(),shown=Math.min(n+(window.GardenRunRules.cost(n)!==null?1:0),s.max),left=Math.floor((spec.width-shown*s.size-(shown-1)*s.gap)/2);
+        const n=count(),shown=Math.min(n+(priceFor(n)!==null?1:0),s.max),left=Math.floor((spec.width-shown*s.size-(shown-1)*s.gap)/2);
         layout.slots.forEach((slot,i)=>{slot.x=left+i*(s.size+s.gap);const f=layout.slotFrames[i],locked=i===n;f.setPosition(slot.x+s.size/2,s.y+s.size/2).setFillStyle(locked?colors.disabledFill:colors.emptySlotFill).setStrokeStyle(s.line,locked?colors.disabledBorder:colors.normalBorder).setVisible(i<shown);});
-        const price=window.GardenRunRules.cost(n),show=price!==null,slot=layout.slots[Math.min(n,s.max-1)];
+        const price=priceFor(n),show=price!==null,slot=layout.slots[Math.min(n,s.max-1)];
         buyZone.setPosition(slot.x+s.size/2,s.y+s.size/2).setVisible(show);if(show)buyZone.setInteractive({useHandCursor:true});else buyZone.disableInteractive();
         layout.alignCost.move(slot,price,show,scene.run.state.gems>=price);
         scene.runEquipment?.refreshSlots();
       };
-      buyZone.on('pointerdown',()=>{if(!scene.runGarden?.holding&&scene.run.buy())layout.updateSlots();});
-      layout.updateCost=()=>{const n=count(),price=window.GardenRunRules.cost(n);layout.alignCost.move(layout.slots[Math.min(n,s.max-1)],price,price!==null,scene.run.state.gems>=price);};
+      buyZone.on('pointerdown',()=>{if(!window.GardenFlowerCarry?.enabled&&!scene.runGarden?.holding&&scene.run.buy())layout.updateSlots();});
+      layout.updateCost=()=>{const n=count(),price=priceFor(n);layout.alignCost.move(layout.slots[Math.min(n,s.max-1)],price,price!==null,scene.run.state.gems>=price);};
       layout.updateSlots();
     }
     return layout;
@@ -593,7 +594,7 @@
   function drawItemPreview(scene, layout, cards, combatSpeed, ballMode=false) {
     const U = window.GardenUI;
     const s = spec.slots;
-    const equipped = Array(playable?s.max:s.preview).fill(null);
+    const equipped = Array(playable?s.max:s.preview).fill(null),fifoOrder=[];
     const unlocked=()=>playable?scene.run.state.slotCount:s.preview;
     let hovered = null, pinned = null, dragging = null, target = -1;
     const clickable = new Set();
@@ -846,7 +847,7 @@
       marker.on('dragend', pointer => { if (dragging === card) finishDrag(pointer, true); });
     }
     cards.forEach(bindCard);
-    function register(card){cards.push(card);bindCard(card);}
+    function register(card){if(playable&&window.GardenFlowerCarry?.enabled)return;cards.push(card);bindCard(card);}
     function unregister(card){
       const i=cards.indexOf(card);if(i>=0)cards.splice(i,1);
       clickable.delete(card.marker);
@@ -884,7 +885,10 @@
         if(card&&index<equipped.length&&scene.heroWeaponPreview.equip(index,id,card.item.level))equipped[index]=card.item;
       });refresh();
     }
-    const controller={applyLoadout,register,unregister,equipped,refreshSlots,equipInitial(){window.GardenRunRules.startingGear.forEach(({id,level},i)=>equipItem(i,window.GardenItemCards.runItem(scene,id,level)));refresh();},isDragging:card=>dragging===card,defense:()=>sumPreviewStats(equipped).defense};
+    const controller={applyLoadout,register,unregister,equipped,refreshSlots,get fifoOrder(){return [...fifoOrder];},collectAutomatic(item){
+      const C=window.GardenFlowerCarry;if(!playable||!C?.enabled||!item||C.isInstallation(item.id))return false;
+      const i=C.fifoSlot(fifoOrder,C.slotLimit);equipItem(i,item);refresh();return true;
+    },equipInitial(){const C=window.GardenFlowerCarry,gear=window.GardenRunRules.startingGear;const start=C?.enabled?gear.filter(x=>!C.isInstallation(x.id)).slice(0,C.slotLimit):gear;start.forEach(({id,level},i)=>{equipItem(i,window.GardenItemCards.runItem(scene,id,level));if(C?.enabled)fifoOrder.push(i);});refresh();},isDragging:card=>dragging===card,defense:()=>sumPreviewStats(equipped).defense};
     if(playable){scene.runEquipment=controller;refreshSlots();scene.events.once('shutdown',()=>delete scene.runEquipment);}else refresh();
     return controller;
   }
@@ -1144,7 +1148,7 @@
     g.fillStyle(colors.field, 1).fillRect(0, spec.top, spec.width, spec.fieldHeight);
     if(P.uiType===1)window.GardenLightFieldPreview.field(scene,spec);
     else window.GardenDarkFieldPreview.field(scene,spec);
-    if(playable)scene.run=window.GardenRunRules.create(window.GardenSimulationEvent);
+    if(playable){scene.run=window.GardenRunRules.create(window.GardenSimulationEvent);if(window.GardenFlowerCarry?.enabled)scene.run.state.slotCount=window.GardenFlowerCarry.slotLimit;}
     const updateHud=drawHud(scene);
     const layout=drawSlots(scene);
     if(!playable)drawBlueprint(scene);

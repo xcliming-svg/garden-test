@@ -48,17 +48,44 @@ try{
   await page.keyboard.press('Space');await page.waitForFunction(()=>!!window.__previewGame.scene.getScene('Game').flowerCarry.carried);
   assert.equal(await read(()=>window.__previewGame.scene.getScene('Game').flowerCarry.carried.name),fixture.name);
   assert.equal(await read(()=>window.__previewGame.scene.getScene('Game').children.getByName('flower-carry-icon').visible),true);
-  await page.keyboard.press('Space');assert.equal(await read(()=>window.__previewGame.scene.getScene('Game').flowerCarry.carried.name),fixture.name,'outside garden cannot plant');
-  await page.keyboard.press('q');await page.waitForFunction(()=>!window.__previewGame.scene.getScene('Game').flowerCarry.carried);
+  await page.keyboard.press('Space');await page.waitForFunction(()=>!window.__previewGame.scene.getScene('Game').flowerCarry.carried);
   const drop=await read(()=>{const s=window.__previewGame.scene.getScene('Game');const c=[...s.runDrops.drops.values()].find(c=>c.kind==='flower'&&!c.consumed);return {x:c.x,y:c.y};});await go(drop.x,drop.y);await page.keyboard.press('Space');
   await page.waitForFunction(()=>!!window.__previewGame.scene.getScene('Game').flowerCarry.carried);
   await go(fixture.cx,fixture.cy);
   await page.keyboard.press('Space');await page.waitForFunction(id=>window.__previewGame.scene.getScene('Game').flowerGrowth.entries.has(id),fixture.id);
   assert.equal(await read(()=>window.__previewGame.scene.getScene('Game').flowerCarry.carried),null);
   assert.equal(await read(id=>window.__previewGame.scene.getScene('Game').flowerGrowth.entries.get(id)?.name,fixture.id),fixture.name);
-  const equipment=await read(()=>{const s=window.__previewGame.scene.getScene('Game'),c=s.runDrops.spawn('item',700,200,'boomerang',1),z=s.children.getByName('preview-slot:1');return {x:c.x,y:c.y,sx:z.x,sy:z.y};});
-  await page.mouse.move(...xy(equipment.x,equipment.y));await page.mouse.down();await page.mouse.move(...xy(equipment.sx,equipment.sy),{steps:12});await page.mouse.up();
-  await page.waitForFunction(()=>window.__previewGame.scene.getScene('Game').runEquipment.equipped[1]?.id==='boomerang');
+  // Ordinary pickups need no mouse or Space. The fifth replaces the oldest.
+  assert.equal(await read(()=>window.__previewGame.scene.getScene('Game').run.state.slotCount),4);
+  assert.equal(await read(()=>window.__previewGame.scene.getScene('Game').children.getByName('run-slot-purchase').visible),false);
+  for(const id of ['boomerang','paper-plane','shoe','shield','balloon']){
+    const c=await read(id=>{const s=window.__previewGame.scene.getScene('Game'),c=s.runDrops.spawn('item',700,200,id,1);return {x:c.x,y:c.y};},id);
+    await go(c.x,c.y);await page.waitForFunction(id=>window.__previewGame.scene.getScene('Game').runEquipment.equipped.some(x=>x?.id===id),id);
+  }
+  const fifo=await read(()=>{const e=window.__previewGame.scene.getScene('Game').runEquipment;return e.fifoOrder.map(i=>e.equipped[i].id);});
+  assert.deepEqual(fifo,['paper-plane','shoe','shield','balloon']);
+  // Carry a one-shot installation into an empty cell inside the future garden.
+  const place=await read(()=>{const R=window.GardenRunRules,s=window.__previewGame.scene.getScene('Game'),g=window.GardenGameLayout.spec.garden;
+    const id=[...R.plantCandidates(s.runGarden.occupied)][0],name=R.blueprint.find(x=>x[0]===id)[1],c=s.runDrops.spawn('item',700,200,'sprinkler',2);
+    const center=i=>({x:g.x+(i%10)*g.pitch+g.line+g.cell/2,y:g.y+Math.floor(i/10)*g.pitch+g.line+g.cell/2});
+    return {id,name,x:c.x,y:c.y,point:center(id),occupied:center(44)};
+  });
+  await go(place.x,place.y);assert.equal(await read(()=>window.__previewGame.scene.getScene('Game').flowerCarry.carried),null,'installation not automatic');
+  await page.keyboard.press('Space');await page.waitForFunction(()=>window.__previewGame.scene.getScene('Game').flowerCarry.carried?.id==='sprinkler');
+  await go(place.occupied.x,place.occupied.y);await page.keyboard.press('Space');
+  assert.equal(await read(()=>window.__previewGame.scene.getScene('Game').flowerCarry.carried?.id),'sprinkler','cannot install on a flower');
+  await go(place.point.x,place.point.y);await page.keyboard.press('Space');
+  const installed=await read(()=>{const s=window.__previewGame.scene.getScene('Game');return s.heroWeaponPreview.model.state.shots.filter(x=>x.manualInstalled).map(x=>({kind:x.kind,level:x.level,life:x.life}));});
+  assert.deepEqual(installed,[{kind:'sprinkler',level:2,life:12}]);
+  assert.equal(await read(()=>window.__previewGame.scene.getScene('Game').flowerCarry.carried),null);
+  const flower=await read(name=>{const s=window.__previewGame.scene.getScene('Game'),c=s.runDrops.spawn('flower',700,200,name);return {x:c.x,y:c.y};},place.name);
+  await go(flower.x,flower.y);await page.keyboard.press('Space');await page.waitForFunction(()=>!!window.__previewGame.scene.getScene('Game').flowerCarry.carried);
+  await go(place.point.x,place.point.y);await page.keyboard.press('Space');
+  assert.equal(await read(()=>window.__previewGame.scene.getScene('Game').heroWeaponPreview.model.state.shots.some(x=>x.manualInstalled)),false,'planting removes installation');
+  // Advance existing weapon simulation to test the lifetime without a wall-clock wait.
+  const expires=await read(()=>{const s=window.__previewGame.scene.getScene('Game'),p=s.fairyPatrol.actors[0].center,api=s.heroWeaponPreview,point={x:700,y:200};if(!api.install('yellow-floor',1,point,12))throw Error('install outside');
+    const shot=api.model.state.shots.find(x=>x.manualInstalled);shot.age=11.99;api.model.step(.1,s.fairyPatrol.actors[0],[],()=>null,()=>false,s.fairyPatrol,()=>false,[]);return !api.model.state.shots.some(x=>x.manualInstalled);});
+  assert(expires,'expired installation removed');
   await page.keyboard.press('Escape');await page.waitForFunction(()=>window.__previewGame.scene.isActive('Pause'));const paused=await pos();await page.keyboard.down('d');await page.waitForTimeout(250);await page.keyboard.up('d');assert.deepEqual(await pos(),paused);
   await page.keyboard.press('Escape');await page.waitForFunction(()=>window.__previewGame.scene.isActive('Game'));await page.waitForTimeout(150);assert.deepEqual(await pos(),paused);
   assert.deepEqual(errors,[]);await page.close();console.log('PASS carry browser',width,height);
