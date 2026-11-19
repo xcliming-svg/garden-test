@@ -470,12 +470,26 @@
     const body = U.pixelGraphics(scene).setDepth(playable?D.blueprint:10).setName('blueprint-body');
     // 제목 박스와 그리드를 독립 외곽선으로 그리고 사이에 3px 공백을 둔다.
     grid(body, b.gridX, b.gridY, b, colors.gridFill, colors.blueprintLine);
+    const marks=playable?U.pixelGraphics(scene).setDepth(D.blueprintIcon-.1).setName('blueprint-status'):null;
     const targets=playable?window.GardenRunRules.blueprint.map(([id,name])=>{const x=b.gridX+b.frame+b.line+(id%10)*b.pitch+b.cell/2,y=b.gridY+b.frame+b.line+Math.floor(id/10)*b.pitch+b.cell/2;return scene.add.image(x,y,window.GardenFlowerGrowth.key(name,3)).setDisplaySize(8,8).setDepth(D.blueprintIcon).setName('blueprint-flower:'+id);}):[];
 
     const header = U.pixelGraphics(scene).setDepth(playable?D.blueprintIcon:11).setName('blueprint-header');
     text(scene, b.x + b.padding, b.y + b.header / 2 - 0.75, '도안', b.fontSize, colors.hudLabel, 'left').setDepth(playable?D.blueprintText:12).setName('blueprint-title');
     const arrow = scene.add.graphics().setDepth(playable?D.blueprintText:12).setName('blueprint-chevron');
-    let expanded = true;
+    let expanded = true,lastStatus='';
+    function refreshStatus(){
+      if(!playable)return;
+      const entries=scene.flowerGrowth.entries,R=window.GardenRunRules;
+      const statuses=R.blueprint.map(([id])=>R.blueprintStatus(entries,id)),signature=statuses.join(',');
+      if(lastStatus===signature)return;lastStatus=signature;marks.clear();
+      const fills={empty:R.n.tab,growing:P.n.gold,complete:P.n.growth,wrong:P.n.redDark};
+      targets.forEach((icon,i)=>{
+        const status=statuses[i],x=icon.x-b.cell/2,y=icon.y-b.cell/2;
+        marks.fillStyle(fills[status],1).fillRect(x,y,b.cell,b.cell);
+        icon.setAlpha(status==='empty'?.55:1).setData('blueprintStatus',status);
+      });
+    }
+    if(playable){refreshStatus();scene.blueprintRefresh=refreshStatus;scene.events.on('update',refreshStatus);scene.events.once('shutdown',()=>{scene.events.off('update',refreshStatus);delete scene.blueprintRefresh;});}
     function drawArrow() {
       header.clear();
       blueprintFrameBox(header,b.x,b.y,b.width,b.header,R.n.header);
@@ -493,7 +507,7 @@
       .setDepth(playable?D.blueprintInput:13).setName('blueprint-toggle').setInteractive({ useHandCursor: true })
       .on('pointerdown', () => {
         expanded = !expanded;
-        body.setVisible(expanded);targets.forEach(t=>t.setVisible(expanded));
+        body.setVisible(expanded);marks?.setVisible(expanded);targets.forEach(t=>t.setVisible(expanded));
         drawArrow();
       });
   }

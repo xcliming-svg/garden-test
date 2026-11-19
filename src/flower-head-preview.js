@@ -162,7 +162,7 @@
     let hover=null;
     function refreshSoil(target=hover){
       hover=target;
-      const candidates=window.GardenGameLayout.gardenCandidates(occupied);
+      const candidates=playable?window.GardenRunRules.plantCandidates(occupied):window.GardenGameLayout.gardenCandidates(occupied);
       const z=scene.cameras.main.zoom,raster=gardenRaster(visible,g,z);
       if(texture.width!==raster.width||texture.height!==raster.height)texture.setSize(raster.width,raster.height);
       soil.setTexture(textureKey).setDisplaySize(raster.width/z,raster.height/z)
@@ -204,7 +204,7 @@
         let dragging=null,target=-1;
         const point=p=>scene.cameras.main.getWorldPoint(p.x,p.y);
         const hit=p=>L.gardenHit(p.x,p.y,g);
-        function valid(i,f){return L.gardenCandidates(occupied).has(i)||(playable&&occupied.has(i)&&growth.entries.get(i)?.name!==f.spriteName);}
+        function valid(i,f){return playable?window.GardenRunRules.canPlant(occupied,growth.entries,i,f.spriteName):L.gardenCandidates(occupied).has(i);}
         function move(pointer){
           if(!dragging)return;
           const p=point(pointer),next=hit(p),allowed=valid(next,dragging);
@@ -242,7 +242,7 @@
           o.on('dragend',p=>{if(dragging===f)finish(p,true);});
         }
         for(const f of previewFlowers)register(f);
-        if(playable){scene.runGarden={occupied,register,remove(id){if(!occupied.delete(id))return false;growth.remove(id);refreshSoil(null);return true;},isDragging:f=>dragging===f};scene.events.once('shutdown',()=>delete scene.runGarden);}
+        if(playable){scene.runGarden={occupied,register,refreshSoil,remove(id){if(!occupied.delete(id))return false;growth.remove(id);refreshSoil(null);return true;},isDragging:f=>dragging===f};scene.events.once('shutdown',()=>delete scene.runGarden);}
         const cancel=()=>finish(null,false);
         scene.input.on('gameout',cancel);scene.events.on('pause',cancel);
         scene.events.once('shutdown',()=>{scene.input.off('gameout',cancel);scene.events.off('pause',cancel);});

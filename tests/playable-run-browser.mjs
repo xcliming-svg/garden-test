@@ -108,14 +108,24 @@ try{
     assert.equal(await read(()=>window.__previewGame.scene.getScene('Game').runEquipment.equipped[0].level),1);
     await drag('item','water-fairy',1);
     assert.equal(await read(()=>window.__previewGame.scene.getScene('Game').fairyPatrol.actors.length),2);
+    assert.equal(await read(()=>window.__previewGame.scene.getScene('Game').children.getByName('blueprint-flower:44').getData('blueprintStatus')),'complete');
+    await drag('flower','rose',33);
+    assert.equal(await read(()=>window.__previewGame.scene.getScene('Game').flowerGrowth.entries.has(33)),false);
     await drag('flower','daisy',34);
     assert.equal(await read(()=>window.__previewGame.scene.getScene('Game').flowerGrowth.entries.get(34)?.name),'daisy');
     assert.equal(await read(()=>window.__previewGame.scene.getScene('Game').flowerGrowth.entries.get(34)?.stage),1);
+    await page.waitForFunction(()=>window.__previewGame.scene.getScene('Game').children.getByName('blueprint-flower:34').getData('blueprintStatus')==='growing');
     await read(()=>{const s=window.__previewGame.scene.getScene('Game');s.run.tick(16);s.fairyPatrol.refreshHud();});
     assert.equal(await read(()=>window.__previewGame.scene.getScene('Game').flowerGrowth.entries.get(34)?.stage),3);
+    await page.waitForFunction(()=>window.__previewGame.scene.getScene('Game').children.getByName('blueprint-flower:34').getData('blueprintStatus')==='complete');
+    await drag('flower','rose',24);
+    assert.equal(await read(()=>window.__previewGame.scene.getScene('Game').flowerGrowth.entries.has(24)),false);
     await read(()=>window.__previewGame.scene.getScene('Game').relicCollection.model.damageFlower(34,1000));
     await page.waitForFunction(()=>!window.__previewGame.scene.getScene('Game').flowerGrowth.entries.has(34));
-    await read(()=>window.__previewGame.scene.getScene('Game').run.credit(500));
+    await page.waitForFunction(()=>window.__previewGame.scene.getScene('Game').children.getByName('blueprint-flower:34').getData('blueprintStatus')==='empty');
+    await drag('flower','rose',34);
+    await page.waitForFunction(()=>window.__previewGame.scene.getScene('Game').children.getByName('blueprint-flower:34').getData('blueprintStatus')==='wrong');
+    await read(()=>window.__previewGame.scene.getScene('Game').run.credit(1000));
     for(let n=4;n<10;n++){
       const p=await read(()=>{const z=window.__previewGame.scene.getScene('Game').children.getByName('run-slot-purchase');return {x:z.x,y:z.y};});
       await page.mouse.click(...xy(p));
@@ -131,26 +141,32 @@ try{
       await page.waitForFunction(k=>window.__previewGame.scene.isActive(k),key);
       const snapshot=()=>read(()=>{
         const game=window.__previewGame,s=game.scene.getScene('Game'),r=game.scene.getScene(s.run.state.result);
-        return {paused:game.scene.isPaused('Game'),elapsed:s.run.state.elapsed,enemyElapsed:s.enemyPreview.elapsed,hero:s.fairyPatrol.actors.map(a=>[a.image.x,a.image.y,a.expression]),enemy:s.enemyPreview.actors.map(a=>[a.id,a.pose.x,a.pose.ground]),cards:[...s.runDrops.drops.values()].map(c=>[c.x,c.y,c.age]),children:s.children.list.length,text:r.children.list.filter(o=>o.type==='Text').map(o=>o.text),visible:s.sys.settings.visible};
+        return {paused:game.scene.isPaused('Game'),elapsed:s.run.state.elapsed,enemyElapsed:s.enemyPreview.elapsed,hero:s.fairyPatrol.actors.map(a=>[a.center.x,a.center.y,a.expression]),enemy:s.enemyPreview.actors.map(a=>[a.id,a.pose.x,a.pose.ground]),cards:[...s.runDrops.drops.values()].map(c=>[c.x,c.y,c.age]),children:s.children.list.length,text:r.children.list.filter(o=>o.type==='Text').map(o=>o.text),visible:s.sys.settings.visible};
       });
       const before=await snapshot();assert.equal(before.paused,true);assert.equal(before.visible,true);
       assert.ok(before.text.includes(key==='Defeat'?'실패':'성공'));assert.ok(!before.text.some(t=>/GARDEN TEST|RESULT|런 결과|저장/.test(t)));
       const clip={x:Math.floor(box.x+10*box.width/960),y:Math.floor(box.y+40*box.height/540),width:Math.floor(180*box.width/960),height:Math.floor(450*box.height/540)};
+      assert.ok(before.hero.every(a=>a[2]===(key==='Victory'?'happy':'closed')));
+      const emotion=await read(()=>window.__previewGame.scene.getScene('Game').fairyPatrol.emotionTime);
+      await page.waitForFunction(t=>window.__previewGame.scene.getScene('Game').fairyPatrol.emotionTime>t+.2,emotion);
       const first=await page.screenshot({clip});await page.waitForTimeout(250);
       assert.deepEqual(await snapshot(),before,'game remains frozen behind result');assert.deepEqual(await page.screenshot({clip}),first,'outside popup stays unchanged');
       await page.keyboard.press('Escape');assert.equal(await read(()=>window.__previewGame.scene.isPaused('Game')),true);
     }
     await assertResult('Defeat');
-    await page.mouse.click(...xy({x:378,y:380}));
+    await page.mouse.click(...xy(await page.evaluate(()=>{const s=window.__previewGame.scene.getScene('Game'),p=window.GardenRunRules.resultPanel(window.GardenGameLayout.spec,s.fairyPatrol.boundary.swept);return {x:p.x,y:p.top+205};})));
     await page.waitForFunction(()=>{const g=window.__previewGame;return g.scene.isActive('Game')&&g.scene.getScene('Game').run?.state.result===null;});
     assert.equal(await read(()=>window.__previewGame.scene.getScene('Game').run.state.slotCount),4);
     await read(()=>{
       const s=window.__previewGame.scene.getScene('Game'),g=window.GardenGameLayout.spec.garden;
-      for(const [id,name] of window.GardenRunRules.blueprint){if(s.flowerGrowth.entries.has(id))continue;s.runGarden.occupied.add(id);s.flowerGrowth.plant(id,name,{x:g.x+(id%10)*g.pitch+g.line+g.cell/2,y:g.y+Math.floor(id/10)*g.pitch+g.line+g.cell/2},0,true);}
+      // Synthetic full-size garden: verify the result layout at maximum 10x10 footprint without adding a new stage.
+      const needed=new Map(window.GardenRunRules.blueprint);
+      for(let id=0;id<100;id++){if(s.flowerGrowth.entries.has(id))continue;s.runGarden.occupied.add(id);s.flowerGrowth.plant(id,needed.get(id)||'daisy',{x:g.x+(id%10)*g.pitch+g.line+g.cell/2,y:g.y+Math.floor(id/10)*g.pitch+g.line+g.cell/2},0,true);}
       s.fairyPatrol.refreshHud();
     });
     await assertResult('Victory');
-    await page.mouse.click(...xy({x:582,y:380}));await page.waitForFunction(()=>window.__previewGame.scene.isActive('MainMenu'));
+    assert.ok(await read(()=>{const s=window.__previewGame.scene.getScene('Game'),p=window.GardenRunRules.resultPanel(window.GardenGameLayout.spec,s.fairyPatrol.boundary.swept);return s.runGarden.occupied.size===100&&p.x-p.w/2>s.fairyPatrol.boundary.swept.right+12;}));
+    await page.mouse.click(...xy(await page.evaluate(()=>{const s=window.__previewGame.scene.getScene('Game'),p=window.GardenRunRules.resultPanel(window.GardenGameLayout.spec,s.fairyPatrol.boundary.swept);return {x:p.x,y:p.top+250};})));await page.waitForFunction(()=>window.__previewGame.scene.isActive('MainMenu'));
     assert.equal(await read(()=>window.__previewGame.scene.isPaused('Game')),false);
     assert.deepEqual(errors,[]);
     console.log('PASS playable browser',width,height);

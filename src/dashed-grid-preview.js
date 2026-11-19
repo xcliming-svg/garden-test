@@ -8,7 +8,7 @@
   // The guardian's full sprite stays outside the visible grid, not merely
   // outside the planted cells. Retain the existing rectangular patrol motion.
   function geometry(spec,occupied,guardianWidth,guardianHeight){
-    const g=spec.garden,candidates=window.GardenGameLayout.gardenCandidates(occupied);
+    const g=spec.garden,candidates=window.GardenRunRules?.active?window.GardenRunRules.plantCandidates(occupied):window.GardenGameLayout.gardenCandidates(occupied);
     const keys=[...visible(occupied,candidates)],xs=keys.map(i=>i%g.columns),ys=keys.map(i=>Math.floor(i/g.columns));
     const garden={left:g.x+Math.min(...xs)*g.pitch,top:g.y+Math.min(...ys)*g.pitch,
       right:g.x+Math.max(...xs)*g.pitch+g.outer,bottom:g.y+Math.max(...ys)*g.pitch+g.outer};

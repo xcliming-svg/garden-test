@@ -9,7 +9,7 @@ function runAudit(sources){
   const r=R.create();
   check(r.state.slotCount===4&&r.state.gems===0&&R.tuning.starterRock==='rock','initial run');
   check(!r.buy(),'insufficient gems');
-  r.credit(500);
+  r.credit(1000);
   for(const price of R.tuning.costs){
     const before=r.state.gems,shown=r.state.displayGems;
     check(R.cost(r.state.slotCount)===price&&r.buy(),'buy next slot');
@@ -27,11 +27,21 @@ function runAudit(sources){
   check(R.completion(garden)===100,'complete blueprint');
   garden.get(33).stage=2;check(R.completion(garden)===93,'immature not complete');garden.get(33).stage=3;
   garden.set(33,{name:'sunflower',stage:3});check(R.completion(garden)===93,'wrong flower not complete');
+  const occupied=new Set(R.initial.map(([id])=>id)),allRequired=new Set(R.blueprint.map(([id])=>id));
+  check(R.blueprintStatus(garden,33)==='wrong'&&R.blueprintStatus(garden,44)==='complete'&&R.blueprintStatus(garden,0)===null,'blueprint status');
+  garden.set(33,{name:'rose',stage:1});check(R.blueprintStatus(garden,33)==='growing','growing status');
+  garden.delete(33);check(R.blueprintStatus(garden,33)==='empty','removed flower resets status');
+  check([...R.plantCandidates(occupied)].every(id=>allRequired.has(id))&&!R.canPlant(occupied,garden,33,'rose')&&R.canPlant(occupied,garden,34,'daisy'),'connected planting preserved');
+  check(R.plantCandidates(allRequired).size===0&&!R.canPlant(allRequired,garden,32,'rose')&&R.canPlant(allRequired,garden,44,'rose'),'no off-blueprint expansion, replacement unchanged');
   const spec={width:960,height:540,top:32,bottom:44,blueprint:{x:8,y:39,width:93,height:116},garden:{x:364,y:148,columns:10,rows:10,cell:22,line:1,pitch:23,outer:24,size:231}};
   const g=spec.garden;
   const rect={left:g.x+3*g.pitch,right:g.x+6*g.pitch+g.outer,top:g.y+3*g.pitch,bottom:g.y+6*g.pitch+g.outer};
   const boundary=B.layout(spec,rect,40,{frequency:1.6,lift:.5,tilt:1.25,lean:.5},1);
   const patrol={boundary,occupied:[44,45,54,55],finished:false};
+  for(const count of [1,11]){
+    const full=B.layout(spec,{left:g.x,right:g.x+g.size,top:g.y,bottom:g.y+g.size},40,{frequency:1.6,lift:.5,tilt:1.25,lean:.5},count),panel=R.resultPanel(spec,full.swept);
+    check(panel.x-panel.w/2>full.swept.right+12&&panel.x+panel.w/2<=spec.width-14&&panel.top>=spec.top&&panel.bottom<=spec.height-spec.bottom,'full 10x10 result panel clear');
+  }
   // Opening is time-gated, not an initial shuffle of the complete roster.
   check(R.eligibleEnemies(179.99).join(',')==='3_caterpillar','caterpillar only for three minutes');
   check(R.eligibleEnemies(180).join(',')==='3_caterpillar,4_beetle','first unlock');
@@ -69,7 +79,7 @@ function runAudit(sources){
   check(drops.rewardDrop(()=>.99)==='item','first random item permitted');
   check(drops.rewardDrop(()=>.99)==='gem','same instant item converted to gem');
   check(drops.rewardDrop(()=>.85)==='flower'&&drops.rewardDrop(()=>.70)==='heart','protect flower and heart supply');
-  drops.credit(500);check(drops.buy()&&drops.state.gems===485,'unchanged slot purchase');
+  drops.credit(500);check(drops.buy()&&drops.state.gems===460,'new first slot price');
   check(!('xp' in drops.state)&&!('level' in drops.state)&&!('pendingGrowth' in drops.state),'no additional growth system');
   drops.tick(29.99);check(drops.rewardDrop(()=>.99)==='gem','no early payout');drops.tick(.01);
   check(drops.rewardDrop(()=>.1)==='gem'&&drops.rewardDrop(()=>.99)==='item','only random item at cooldown boundary');
@@ -98,7 +108,7 @@ function runAudit(sources){
     check(model.state.drops.length+(card?1:0)===1,'exactly one death drop');
     counts[kind]++;
   }
-  check(counts.gem===640&&counts.heart===150&&counts.flower===180&&counts.item===30,'exclusive base distribution');
+  check(counts.gem===690&&counts.heart===100&&counts.flower===180&&counts.item===30,'exclusive base distribution');
   {
     const m=L.create(spec,()=>.70),p={x:boundary.patrol.right,y:(boundary.patrol.top+boundary.patrol.bottom)/2};
     const frame={bounds:boundary.patrol,length:boundary.length,speed:40};

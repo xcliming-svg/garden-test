@@ -3,7 +3,7 @@
   const active=typeof document!=='undefined'&&document.documentElement.dataset.playable==='true';
   const initial=Object.freeze([[44,'daisy'],[45,'sunflower'],[54,'tulip'],[55,'hydrangea']].map(Object.freeze));
   const blueprint=Object.freeze([[33,'rose'],[34,'daisy'],[35,'sunflower'],[36,'lavender'],[43,'tulip'],...initial,[46,'rose'],[53,'lavender'],[56,'daisy'],[63,'hydrangea'],[64,'rose'],[65,'lavender'],[66,'sunflower']].sort((a,b)=>a[0]-b[0]).map(Object.freeze));
-  const tuning=Object.freeze({initialSlots:4,maxSlots:10,costs:Object.freeze([15,25,40,60,85,120]),growthSeconds:8,cardLifetime:45,dropWeights:Object.freeze([.64,.15,.18,.03]),itemInterval:30,starterRock:'rock',enemyDamage:4,enemyDamagePerLevel:2,spawnCap:65});
+  const tuning=Object.freeze({initialSlots:4,maxSlots:10,costs:Object.freeze([40,60,85,115,150,200]),growthSeconds:8,cardLifetime:45,dropWeights:Object.freeze([.69,.10,.18,.03]),itemInterval:30,starterRock:'rock',enemyDamage:4,enemyDamagePerLevel:2,spawnCap:65});
   const cost=count=>tuning.costs[count-tuning.initialSlots]??null;
   function rollDrop(random=Math.random){
     const r=random();let total=0;
@@ -12,10 +12,27 @@
     return 'item';
   }
   const stageAt=age=>Math.min(3,1+Math.floor((Math.max(0,age)+1e-7)/tuning.growthSeconds));
+  const required=new Map(blueprint);
+  function blueprintStatus(entries,id){
+    if(!required.has(id))return null;
+    const f=entries.get(id);
+    return !f?'empty':f.name!==required.get(id)?'wrong':f.stage===3?'complete':'growing';
+  }
   function completion(entries){
-    const required=new Map(blueprint);let matches=0;
-    for(const [id,f] of entries)if(required.get(id)===f.name&&f.stage===3)matches++;
+    let matches=0;
+    for(const id of required.keys())if(blueprintStatus(entries,id)==='complete')matches++;
     return Math.floor(100*matches/required.size);
+  }
+  function plantCandidates(occupied){
+    const result=new Set();
+    for(const i of occupied)for(const [dx,dy] of [[-1,0],[1,0],[0,-1],[0,1]]){
+      const x=i%10+dx,y=Math.floor(i/10)+dy,id=y*10+x;
+      if(x>=0&&x<10&&y>=0&&y<10&&required.has(id)&&!occupied.has(id))result.add(id);
+    }
+    return result;
+  }
+  function canPlant(occupied,entries,id,name){
+    return required.has(id)&&(plantCandidates(occupied).has(id)||occupied.has(id)&&entries.get(id)?.name!==name);
   }
   // Introduce one species at a time; never force the entire roster at the start.
   const enemyUnlocks=Object.freeze([[0,'3_caterpillar'],[180,'4_beetle'],[300,'2_grasshopper'],[420,'2_gray_bug'],[540,'1_butterfly'],[660,'2_frog'],[780,'1_cat'],[900,'6_sparrow'],[1020,'6_mouse'],[1140,'6_rabbit'],[1260,'5_bulldog'],[1380,'6_pigeon']].map(Object.freeze));
@@ -46,6 +63,14 @@
   function pickItem(seconds,random=Math.random){
     const pool=itemPool(seconds);
     return pool[Math.min(pool.length-1,Math.floor(random()*pool.length))];
+  }
+  // Reserve the full 10x10 garden and its possible fairy sweep even on a small blueprint.
+  function resultPanel(spec,swept){
+    const margin=14,g=spec.garden,protectedRight=Math.max(g.x+g.size+65,swept?.right??0);
+    const w=Math.min(280,Math.floor(spec.width-margin-protectedRight-12));
+    if(w<240)throw Error('Insufficient result panel space beside garden');
+    const h=280,top=Math.floor(spec.top+(spec.height-spec.top-spec.bottom-h)/2);
+    return {x:spec.width-margin-w/2,w,top,bottom:top+h};
   }
   // Full card footprint (including 4px idle lift) stays outside the entire
   // 10x10 garden, not just currently planted cells. Preserve nearest death point.
@@ -93,5 +118,5 @@
     }
     return {state,credit,buy,tick,rewardDrop};
   }
-  window.GardenRunRules=Object.freeze({active,initial,blueprint,tuning,cost,rollDrop,stageAt,completion,population,enemyUnlocks,eligibleEnemies,spawnInterval,waves,waveAt,itemPool,pickItem,cardPosition,depth,create});
+  window.GardenRunRules=Object.freeze({active,initial,blueprint,tuning,cost,rollDrop,stageAt,completion,blueprintStatus,plantCandidates,canPlant,population,enemyUnlocks,eligibleEnemies,spawnInterval,waves,waveAt,itemPool,pickItem,resultPanel,cardPosition,depth,create});
 }());

@@ -32,7 +32,10 @@
       if(scene.run.state.result)return;
       scene.run.state.result=outcome;
       const state=scene.run.state;
-      // Pause instead of stopping: the exact final game display list remains visible.
+      // Freeze the entire run. Only the existing fairy emotion animates from ResultScene.
+      scene.blueprintRefresh?.();
+      scene.runGarden.refreshSoil(null);
+      scene.fairyPatrol.setState(outcome==='Victory'?'win':'lose');
       scene.scene.pause('Game');
       scene.scene.launch(outcome,{elapsed:state.elapsed,kills:scene.enemyPreview.model.kills,gems:state.gems,progress:R.completion(scene.flowerGrowth.entries)});
     }
