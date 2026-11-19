@@ -34,7 +34,9 @@ try{
    const canvas=await page.locator('canvas').boundingBox();
    await page.mouse.click(canvas.x+480*canvas.width/960,canvas.y+252*canvas.height/540);
    await page.waitForFunction(()=>{const s=window.__previewGame.scene.getScene('Game');return !!(s.fairyPatrol||s.combatPreview)});
-   assert.equal(await page.locator('select').count(),0);
+   // Enemies-off lab mode intentionally exposes the weapon comparison selector.
+   assert.equal(await page.locator('select').count(),name==='hidden'?1:0);
+   assert.equal(await page.locator('#hero-weapon-select').count(),name==='hidden'?1:0);
    if(name==='combat'){report.push({name,pass:true});continue;}
    const checked=await page.evaluate(()=>{
     const s=window.__previewGame.scene.getScene('Game'),F=s.fairyPatrol,c=s.enemyPreview,M=window.GardenEnemyMotion,E=window.GardenEnemyPreview;
