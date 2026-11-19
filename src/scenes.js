@@ -208,21 +208,7 @@
       const live=!!(window.GardenRunRules?.active&&this.runResult);
       if(live){U.fitCamera(this,U.W,U.H);this.scene.bringToTop();}
       else U.background(this, this.victory ? 'RESULT / VICTORY' : 'RESULT / DEFEAT');
-      if(live){
-        const game=this.scene.get('Game'),{x,w,top,bottom}=window.GardenRunRules.resultPanel(window.GardenGameLayout.spec,game.fairyPatrol.boundary.swept);
-        const left=x-w/2+pad,right=x+w/2-pad;
-        const r=this.runResult,seconds=Math.floor(r.elapsed);
-        U.panel(this,x,(top+bottom)/2,w,bottom-top,{fill:U.C.panel,stroke:this.victory?U.C.green:U.C.red});
-        U.panelHeader(this,x,top,w);
-        centered(this,x,headerCenter(top),this.victory?'성공':'실패',U.fontSize.menuHeading,U.C.text,{inkBackground:U.C.header});
-        const rows=[['정원 완성도',r.progress+'%'],['플레이 시간',window.GardenGameLayout.formatHudTime(Math.floor(seconds/3600),Math.floor(seconds/60)%60,seconds%60)],['처치 수',String(r.kills)],['남은 보석',String(r.gems)]];
-        rows.forEach(([name,value],i)=>{const y=top+51+i*36;aligned(this,left,y,name,U.fontSize.menuBase,U.C.muted);aligned(this,right,y,value,U.fontSize.menuBase,U.C.text,'right');});
-        const leave=key=>{this.scene.stop('Game');this.scene.start(key);};
-        U.button(this,x,top+205,w-2*pad,'새 게임',()=>leave('Game'),{primary:true,height:menu.buttonHeight});
-        U.button(this,x,top+250,w-2*pad,'메인 메뉴',()=>leave('MainMenu'),{height:menu.buttonHeight,fontSize:U.fontSize.menuBase});
-        return;
-      }
-      U.panel(this, 480, 270, 480, 280, { fill: U.C.panel, stroke: this.victory ? U.C.green : U.C.red });
+      U.panel(this, 480, 270, 480, 280, { fill: U.C.panel, stroke: this.victory ? U.C.green : U.C.red }).setName('run-result-panel');
       U.panelHeader(this, 480, 130, 480);
       centered(this, 480, headerCenter(130), this.victory ? '성공' : '실패', U.fontSize.menuHeading,
         U.C.text, { inkBackground: U.C.header });

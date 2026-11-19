@@ -74,14 +74,6 @@
     const pool=itemPool(seconds);
     return pool[Math.min(pool.length-1,Math.floor(random()*pool.length))];
   }
-  // Reserve the full 10x10 garden and its possible fairy sweep even on a small blueprint.
-  function resultPanel(spec,swept){
-    const margin=14,g=spec.garden,protectedRight=Math.max(g.x+g.size+65,swept?.right??0);
-    const w=Math.min(280,Math.floor(spec.width-margin-protectedRight-12));
-    if(w<240)throw Error('Insufficient result panel space beside garden');
-    const h=280,top=Math.floor(spec.top+(spec.height-spec.top-spec.bottom-h)/2);
-    return {x:spec.width-margin-w/2,w,top,bottom:top+h};
-  }
   // Full card footprint (including 4px idle lift) stays outside the entire
   // 10x10 garden, not just currently planted cells. Preserve nearest death point.
   function cardPosition(spec,x,y,size,otherCards=[]){
@@ -128,5 +120,5 @@
     }
     return {state,credit,buy,tick,rewardDrop};
   }
-  window.GardenRunRules=Object.freeze({active,initial,blueprint,tuning,cost,rollDrop,stageAt,completion,blueprintStatus,plantCandidates,canPlant,uprootOutline,population,enemyUnlocks,eligibleEnemies,spawnInterval,waves,waveAt,itemPool,pickItem,resultPanel,cardPosition,depth,create});
+  window.GardenRunRules=Object.freeze({active,initial,blueprint,tuning,cost,rollDrop,stageAt,completion,blueprintStatus,plantCandidates,canPlant,uprootOutline,population,enemyUnlocks,eligibleEnemies,spawnInterval,waves,waveAt,itemPool,pickItem,cardPosition,depth,create});
 }());

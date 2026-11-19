@@ -63,7 +63,12 @@
         if(window.GardenRunRules?.active){
           const wrong=window.GardenRunRules.blueprintStatus(entries,index)==='wrong';
           if(wrong&&!entry.wrongLabel){
-            entry.wrongLabel=window.GardenUI.text(scene,entry.center.x+g.cell/2-1,entry.center.y+g.cell/2-1,'×',8,window.GardenPalette.hex.red,{originX:1,originY:1}).setDepth(window.GardenRunRules.depth.effects+.1).setName('garden-wrong:'+index);
+            // A monochrome 7×9 pixel warning badge remains readable over any flower color.
+            const P=window.GardenPalette.n,x=Math.round(entry.center.x+g.cell/2-8),y=Math.round(entry.center.y+g.cell/2-10);
+            const badge=window.GardenUI.pixelGraphics(scene).setPosition(x,y).setDepth(window.GardenRunRules.depth.effects+.1).setName('garden-wrong:'+index);
+            badge.fillStyle(P.ink,1).fillRect(0,0,7,9);
+            badge.fillStyle(P.paper,1).fillRect(3,1,1,4).fillRect(3,6,1,2);
+            entry.wrongLabel=badge;
           }
           entry.wrongLabel?.setVisible(wrong);
         }

@@ -44,10 +44,6 @@ function runAudit(sources){
   const rect={left:g.x+3*g.pitch,right:g.x+6*g.pitch+g.outer,top:g.y+3*g.pitch,bottom:g.y+6*g.pitch+g.outer};
   const boundary=B.layout(spec,rect,40,{frequency:1.6,lift:.5,tilt:1.25,lean:.5},1);
   const patrol={boundary,occupied:[44,45,54,55],finished:false};
-  for(const count of [1,11]){
-    const full=B.layout(spec,{left:g.x,right:g.x+g.size,top:g.y,bottom:g.y+g.size},40,{frequency:1.6,lift:.5,tilt:1.25,lean:.5},count),panel=R.resultPanel(spec,full.swept);
-    check(panel.x-panel.w/2>full.swept.right+12&&panel.x+panel.w/2<=spec.width-14&&panel.top>=spec.top&&panel.bottom<=spec.height-spec.bottom,'full 10x10 result panel clear');
-  }
   // Opening is time-gated, not an initial shuffle of the complete roster.
   check(R.eligibleEnemies(179.99).join(',')==='3_caterpillar','caterpillar only for three minutes');
   check(R.eligibleEnemies(180).join(',')==='3_caterpillar,4_beetle','first unlock');
