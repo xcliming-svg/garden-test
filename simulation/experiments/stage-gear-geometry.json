@@ -1,0 +1,120 @@
+{
+  "schemaVersion": 1,
+  "sourceHash": "ccbb91581280ffbb290fb27df9f56329132ec95e0796ac0003e70b9338cb835e",
+  "assetHash": "46e714b8c598a1bbfdf2a931ae24bc1bb879496cbcbe54c162c8168d6b2a395d",
+  "waterHeightRatio": 0.7011173184357542,
+  "enemies": {
+    "1_butterfly": {
+      "width": 24,
+      "height": 22.05235602094241
+    },
+    "2_grasshopper": {
+      "width": 24,
+      "height": 17
+    },
+    "6_mouse": {
+      "width": 34,
+      "height": 20.010416666666668
+    },
+    "2_gray_bug": {
+      "width": 25.999999999999996,
+      "height": 12.966233766233765
+    },
+    "1_cat": {
+      "width": 32,
+      "height": 25.333333333333332
+    },
+    "3_caterpillar": {
+      "width": 24,
+      "height": 14.6875
+    },
+    "6_sparrow": {
+      "width": 28,
+      "height": 18.349869451697128
+    },
+    "6_pigeon": {
+      "width": 34,
+      "height": 23.552083333333336
+    },
+    "4_beetle": {
+      "width": 28,
+      "height": 21.875
+    },
+    "2_frog": {
+      "width": 28,
+      "height": 20.34375
+    },
+    "6_rabbit": {
+      "width": 34,
+      "height": 29.130208333333336
+    },
+    "5_bulldog": {
+      "width": 40,
+      "height": 32.29166666666667
+    }
+  },
+  "weapons": {
+    "balloon": {
+      "width": 0.8532608695652174,
+      "height": 1
+    },
+    "boomerang": {
+      "width": 1,
+      "height": 0.4782608695652174
+    },
+    "wheel": {
+      "width": 1.005464480874317,
+      "height": 1
+    },
+    "flowerpot": {
+      "width": 1.1219512195121952,
+      "height": 1
+    },
+    "paper-plane": {
+      "width": 0.9510869565217391,
+      "height": 1
+    },
+    "bouncy-ball": {
+      "width": 0.967391304347826,
+      "height": 1
+    },
+    "yellow-floor": {
+      "width": 1.005464480874317,
+      "height": 1
+    },
+    "sprinkler": {
+      "width": 1.1719745222929936,
+      "height": 1,
+      "pivot": {
+        "x": 0.4966745184513716,
+        "y": 0.37872536978362276
+      },
+      "nozzles": [
+        {
+          "x": 0.5298713890411048,
+          "y": -0.2676669903403521
+        },
+        {
+          "x": -0.5244087974015059,
+          "y": -0.2676669903403521
+        },
+        {
+          "x": 0,
+          "y": 0.562646938878699
+        }
+      ]
+    },
+    "rock": {
+      "width": 1.2867132867132867,
+      "height": 1
+    },
+    "broom": {
+      "width": 0.9720496894409937,
+      "height": 0.9999999999999999
+    },
+    "water-splash": {
+      "width": 2.4210526315789473,
+      "height": 1
+    }
+  }
+}

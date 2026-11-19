@@ -1,0 +1,20 @@
+[
+  {
+    "name": "m1",
+    "interval": 1.25,
+    "cap": 8,
+    "batch": 2,
+    "rate": 0.04,
+    "cooldown": 40,
+    "flower": 0.07
+  },
+  {
+    "name": "m2",
+    "interval": 1,
+    "cap": 12,
+    "batch": 2,
+    "rate": 0.04,
+    "cooldown": 40,
+    "flower": 0.055
+  }
+]

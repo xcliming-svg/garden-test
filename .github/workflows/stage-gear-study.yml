@@ -1,0 +1,19 @@
+name: Stage gear research verification
+on:
+  push:
+    branches: [feature/stage-gear-curve]
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  reproduce:
+    runs-on: ubuntu-latest
+    timeout-minutes: 12
+    steps:
+      - uses: actions/checkout@v6
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - run: node --check simulation/experiments/stage-gear-search.mjs
+      - run: node tests/stage-gear-model.mjs
+      - run: node tests/simulation-model.mjs && node tests/blueprint-selection-model.mjs

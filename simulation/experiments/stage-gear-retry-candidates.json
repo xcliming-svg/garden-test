@@ -1,0 +1,11 @@
+[
+  {
+    "name": "m1",
+    "interval": 1.25,
+    "cap": 8,
+    "batch": 2,
+    "rate": 0.04,
+    "cooldown": 35,
+    "flower": 0.065
+  }
+]

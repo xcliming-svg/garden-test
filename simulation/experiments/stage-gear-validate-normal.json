@@ -1,0 +1,2456 @@
+{
+  "phase": "validate",
+  "agent": "normal",
+  "base": {
+    "p": null,
+    "seed": 17101,
+    "runs": 16,
+    "agent": "normal",
+    "dt": 0.05,
+    "sequence": true,
+    "wins": 16,
+    "defeats": 0,
+    "seconds": {
+      "n": 16,
+      "mean": 194.490625,
+      "p10": 136.75,
+      "p50": 187.9,
+      "p90": 261.95,
+      "p95": 294.4,
+      "min": 120.25,
+      "max": 294.4
+    },
+    "alive60": {
+      "n": 16,
+      "mean": 4.429303278688524,
+      "p10": 4.229508196721311,
+      "p50": 4.409836065573771,
+      "p90": 4.688524590163935,
+      "p95": 4.754098360655738,
+      "min": 4.114754098360656,
+      "max": 4.754098360655738
+    },
+    "alive": {
+      "n": 16,
+      "mean": 5.036145198987635,
+      "p10": 4.751908396946565,
+      "p50": 5.037634408602151,
+      "p90": 5.2690582959641254,
+      "p95": 5.464406779661017,
+      "min": 4.484978540772532,
+      "max": 5.464406779661017
+    },
+    "kills60": {
+      "n": 16,
+      "mean": 35.4375,
+      "p10": 33,
+      "p50": 35,
+      "p90": 38,
+      "p95": 39,
+      "min": 33,
+      "max": 39
+    },
+    "kills": {
+      "n": 16,
+      "mean": 144.875,
+      "p10": 98,
+      "p50": 140,
+      "p90": 201,
+      "p95": 230,
+      "min": 83,
+      "max": 230
+    },
+    "peak": {
+      "n": 16,
+      "mean": 8.125,
+      "p10": 8,
+      "p50": 8,
+      "p90": 9,
+      "p95": 9,
+      "min": 7,
+      "max": 9
+    },
+    "flowers": {
+      "n": 16,
+      "mean": 14.8125,
+      "p10": 12,
+      "p50": 14,
+      "p90": 19,
+      "p95": 19,
+      "min": 12,
+      "max": 19
+    },
+    "flowersPerMinute": {
+      "n": 16,
+      "mean": 4.75300875374007,
+      "p10": 3.870967741935484,
+      "p50": 4.351975567856462,
+      "p90": 5.703839122486289,
+      "p95": 7.983367983367984,
+      "min": 3.2899246058944485,
+      "max": 7.983367983367984
+    },
+    "items": {
+      "n": 16,
+      "mean": 4.875,
+      "p10": 3,
+      "p50": 4,
+      "p90": 7,
+      "p95": 7,
+      "min": 3,
+      "max": 7
+    },
+    "firstItem": {
+      "n": 16,
+      "mean": 24.681249999999903,
+      "p10": 8.899999999999991,
+      "p50": 17.400000000000112,
+      "p90": 61.14999999999866,
+      "p95": 68.39999999999826,
+      "min": 6.299999999999986,
+      "max": 68.39999999999826
+    },
+    "firstFlower": {
+      "n": 16,
+      "mean": 23.646875000000065,
+      "p10": 10.85000000000002,
+      "p50": 20.65000000000016,
+      "p90": 42.24999999999974,
+      "p95": 45.19999999999957,
+      "min": 6.249999999999986,
+      "max": 45.19999999999957
+    },
+    "thirdItem": {
+      "n": 16,
+      "mean": 96.44375,
+      "p10": 68.7,
+      "p50": 90.6,
+      "p90": 137.85,
+      "p95": 138.4,
+      "min": 63,
+      "max": 138.4
+    },
+    "filled": {
+      "n": 16,
+      "mean": 5.125,
+      "p10": 4,
+      "p50": 5,
+      "p90": 6,
+      "p95": 6,
+      "min": 3,
+      "max": 6
+    },
+    "gap": {
+      "n": 16,
+      "mean": 29.61562500000119,
+      "p10": 15.950000000003627,
+      "p50": 24.6499999999986,
+      "p90": 46.09999999999952,
+      "p95": 56.15000000001277,
+      "min": 15.950000000000227,
+      "max": 56.15000000001277
+    },
+    "flowersLost": {
+      "n": 16,
+      "mean": 0,
+      "p10": 0,
+      "p50": 0,
+      "p90": 0,
+      "p95": 0,
+      "min": 0,
+      "max": 0
+    },
+    "damage": {
+      "n": 16,
+      "mean": 0,
+      "p10": 0,
+      "p50": 0,
+      "p90": 0,
+      "p95": 0,
+      "min": 0,
+      "max": 0
+    },
+    "progress": {
+      "n": 16,
+      "mean": 100,
+      "p10": 100,
+      "p50": 100,
+      "p90": 100,
+      "p95": 100,
+      "min": 100,
+      "max": 100
+    },
+    "thirdSeen": 16,
+    "rows": [
+      {
+        "seed": 17101,
+        "result": "victory",
+        "seconds": 140.3,
+        "alive60": 4.459016393442623,
+        "alive": 4.929078014184397,
+        "kills60": 36,
+        "kills": 101,
+        "peak": 8,
+        "flowers": 12,
+        "flowersPerMinute": 5.131860299358517,
+        "items": 4,
+        "itemNames": [
+          "boomerang",
+          "rock",
+          "shield",
+          "boomerang"
+        ],
+        "itemTimes": [
+          17.4,
+          45.65,
+          75.75,
+          111.6
+        ],
+        "firstItem": 17.400000000000112,
+        "firstFlower": 19.800000000000146,
+        "thirdItem": 75.75,
+        "gear": [
+          "rock",
+          "boomerang",
+          "rock",
+          "shield",
+          "boomerang"
+        ],
+        "filled": 5,
+        "gap": 20.600000000000158,
+        "flowersLost": 0,
+        "damage": 0,
+        "progress": 100
+      },
+      {
+        "seed": 17102,
+        "result": "victory",
+        "seconds": 182.3,
+        "alive60": 4.377049180327869,
+        "alive": 5.054644808743169,
+        "kills60": 33,
+        "kills": 132,
+        "peak": 8,
+        "flowers": 14,
+        "flowersPerMinute": 4.607789358200768,
+        "items": 4,
+        "itemNames": [
+          "shoe",
+          "rock",
+          "balloon",
+          "shield"
+        ],
+        "itemTimes": [
+          26.85,
+          53.45,
+          100.45,
+          148.55
+        ],
+        "firstItem": 26.850000000000247,
+        "firstFlower": 45.19999999999957,
+        "thirdItem": 100.45,
+        "gear": [
+          "rock",
+          "shoe",
+          "rock",
+          "balloon",
+          "shield"
+        ],
+        "filled": 5,
+        "gap": 46.09999999999952,
+        "flowersLost": 0,
+        "damage": 0,
+        "progress": 100
+      },
+      {
+        "seed": 17103,
+        "result": "victory",
+        "seconds": 207.8,
+        "alive60": 4.754098360655738,
+        "alive": 5.072115384615385,
+        "kills60": 35,
+        "kills": 157,
+        "peak": 9,
+        "flowers": 15,
+        "flowersPerMinute": 4.331087584215592,
+        "items": 4,
+        "itemNames": [
+          "shield",
+          "rock",
+          "water-fairy",
+          "water-fairy"
+        ],
+        "itemTimes": [
+          16.1,
+          98.65,
+          137.85,
+          173.25
+        ],
+        "firstItem": 16.100000000000094,
+        "firstFlower": 22.15000000000018,
+        "thirdItem": 137.85,
+        "gear": [
+          "rock",
+          "shield",
+          "rock",
+          "water-fairy",
+          "water-fairy"
+        ],
+        "filled": 5,
+        "gap": 34.60000000000787,
+        "flowersLost": 0,
+        "damage": 0,
+        "progress": 100
+      },
+      {
+        "seed": 17104,
+        "result": "victory",
+        "seconds": 294.4,
+        "alive60": 4.688524590163935,
+        "alive": 5.464406779661017,
+        "kills60": 35,
+        "kills": 230,
+        "peak": 8,
+        "flowers": 19,
+        "flowersPerMinute": 3.8722826086956523,
+        "items": 7,
+        "itemNames": [
+          "shield",
+          "rock",
+          "shoe",
+          "boomerang",
+          "rock",
+          "boomerang",
+          "wheel"
+        ],
+        "itemTimes": [
+          14.25,
+          74.95,
+          100.35,
+          127.2,
+          184.6,
+          218.3,
+          248.85
+        ],
+        "firstItem": 14.250000000000068,
+        "firstFlower": 32.75000000000028,
+        "thirdItem": 100.35,
+        "gear": [
+          "rock",
+          "shield",
+          "rock",
+          "boomerang",
+          "boomerang",
+          "rock"
+        ],
+        "filled": 6,
+        "gap": 56.15000000001277,
+        "flowersLost": 0,
+        "damage": 0,
+        "progress": 100
+      },
+      {
+        "seed": 17105,
+        "result": "victory",
+        "seconds": 120.25,
+        "alive60": 4.295081967213115,
+        "alive": 5,
+        "kills60": 35,
+        "kills": 83,
+        "peak": 8,
+        "flowers": 16,
+        "flowersPerMinute": 7.983367983367984,
+        "items": 3,
+        "itemNames": [
+          "boomerang",
+          "shield",
+          "rock"
+        ],
+        "itemTimes": [
+          25.45,
+          60,
+          90.6
+        ],
+        "firstItem": 25.450000000000227,
+        "firstFlower": 34.65000000000017,
+        "thirdItem": 90.6,
+        "gear": [
+          "rock",
+          "boomerang",
+          "shield",
+          "rock"
+        ],
+        "filled": 4,
+        "gap": 35.600000000000115,
+        "flowersLost": 0,
+        "damage": 0,
+        "progress": 100
+      },
+      {
+        "seed": 17106,
+        "result": "victory",
+        "seconds": 187.9,
+        "alive60": 4.114754098360656,
+        "alive": 4.888297872340425,
+        "kills60": 39,
+        "kills": 140,
+        "peak": 8,
+        "flowers": 16,
+        "flowersPerMinute": 5.109100585417775,
+        "items": 6,
+        "itemNames": [
+          "boomerang",
+          "boomerang",
+          "shield",
+          "balloon",
+          "shield",
+          "boomerang"
+        ],
+        "itemTimes": [
+          8.9,
+          40,
+          78.75,
+          113,
+          139.7,
+          164.8
+        ],
+        "firstItem": 8.899999999999991,
+        "firstFlower": 6.249999999999986,
+        "thirdItem": 78.75,
+        "gear": [
+          "rock",
+          "boomerang",
+          "boomerang",
+          "boomerang",
+          "shield"
+        ],
+        "filled": 5,
+        "gap": 24.6499999999986,
+        "flowersLost": 0,
+        "damage": 0,
+        "progress": 100
+      },
+      {
+        "seed": 17107,
+        "result": "victory",
+        "seconds": 136.75,
+        "alive60": 4.409836065573771,
+        "alive": 4.978102189781022,
+        "kills60": 36,
+        "kills": 98,
+        "peak": 8,
+        "flowers": 13,
+        "flowersPerMinute": 5.703839122486289,
+        "items": 4,
+        "itemNames": [
+          "boomerang",
+          "rock",
+          "shoe",
+          "boomerang"
+        ],
+        "itemTimes": [
+          6.3,
+          33.5,
+          63,
+          133.15
+        ],
+        "firstItem": 6.299999999999986,
+        "firstFlower": 10.85000000000002,
+        "thirdItem": 63,
+        "gear": [
+          "rock",
+          "rock",
+          "shoe",
+          "boomerang"
+        ],
+        "filled": 4,
+        "gap": 15.950000000000227,
+        "flowersLost": 0,
+        "damage": 0,
+        "progress": 100
+      },
+      {
+        "seed": 17108,
+        "result": "victory",
+        "seconds": 159.25,
+        "alive60": 4.360655737704918,
+        "alive": 5.0875,
+        "kills60": 33,
+        "kills": 114,
+        "peak": 8,
+        "flowers": 15,
+        "flowersPerMinute": 5.65149136577708,
+        "items": 3,
+        "itemNames": [
+          "boomerang",
+          "balloon",
+          "boomerang"
+        ],
+        "itemTimes": [
+          68.4,
+          98.95,
+          131.5
+        ],
+        "firstItem": 68.39999999999826,
+        "firstFlower": 11.60000000000003,
+        "thirdItem": 131.5,
+        "gear": [
+          "rock",
+          "boomerang",
+          "boomerang"
+        ],
+        "filled": 3,
+        "gap": 22.599999999998722,
+        "flowersLost": 0,
+        "damage": 0,
+        "progress": 100
+      },
+      {
+        "seed": 17109,
+        "result": "victory",
+        "seconds": 232.5,
+        "alive60": 4.344262295081967,
+        "alive": 4.484978540772532,
+        "kills60": 38,
+        "kills": 179,
+        "peak": 8,
+        "flowers": 15,
+        "flowersPerMinute": 3.870967741935484,
+        "items": 7,
+        "itemNames": [
+          "boomerang",
+          "shoe",
+          "shield",
+          "water-fairy",
+          "water-fairy",
+          "boomerang",
+          "water-fairy"
+        ],
+        "itemTimes": [
+          15.75,
+          41.1,
+          68.7,
+          123.7,
+          158.95,
+          184.1,
+          210
+        ],
+        "firstItem": 15.750000000000089,
+        "firstFlower": 42.24999999999974,
+        "thirdItem": 68.7,
+        "gear": [
+          "rock",
+          "boomerang",
+          "water-fairy",
+          "water-fairy",
+          "water-fairy",
+          "boomerang"
+        ],
+        "filled": 6,
+        "gap": 43.09999999999969,
+        "flowersLost": 0,
+        "damage": 0,
+        "progress": 100
+      },
+      {
+        "seed": 17110,
+        "result": "victory",
+        "seconds": 261.95,
+        "alive60": 4.491803278688525,
+        "alive": 4.751908396946565,
+        "kills60": 35,
+        "kills": 201,
+        "peak": 8,
+        "flowers": 19,
+        "flowersPerMinute": 4.351975567856462,
+        "items": 7,
+        "itemNames": [
+          "rock",
+          "rock",
+          "shoe",
+          "water-fairy",
+          "shield",
+          "shoe",
+          "boomerang"
+        ],
+        "itemTimes": [
+          15.85,
+          55.55,
+          94.4,
+          133.3,
+          159.7,
+          201.75,
+          232.1
+        ],
+        "firstItem": 15.85000000000009,
+        "firstFlower": 20.65000000000016,
+        "thirdItem": 94.4,
+        "gear": [
+          "rock",
+          "rock",
+          "rock",
+          "shield",
+          "water-fairy",
+          "boomerang"
+        ],
+        "filled": 6,
+        "gap": 27.09999999999846,
+        "flowersLost": 0,
+        "damage": 0,
+        "progress": 100
+      },
+      {
+        "seed": 17111,
+        "result": "victory",
+        "seconds": 218.85,
+        "alive60": 4.524590163934426,
+        "alive": 5.178082191780822,
+        "kills60": 35,
+        "kills": 163,
+        "peak": 8,
+        "flowers": 12,
+        "flowersPerMinute": 3.2899246058944485,
+        "items": 5,
+        "itemNames": [
+          "rock",
+          "boomerang",
+          "balloon",
+          "balloon",
+          "rock"
+        ],
+        "itemTimes": [
+          37.4,
+          63.25,
+          127.35,
+          154.25,
+          188.65
+        ],
+        "firstItem": 37.40000000000001,
+        "firstFlower": 15.000000000000078,
+        "thirdItem": 127.35,
+        "gear": [
+          "rock",
+          "rock",
+          "boomerang",
+          "balloon",
+          "balloon",
+          "rock"
+        ],
+        "filled": 6,
+        "gap": 21.649999999998776,
+        "flowersLost": 0,
+        "damage": 0,
+        "progress": 100
+      },
+      {
+        "seed": 17112,
+        "result": "victory",
+        "seconds": 185.85,
+        "alive60": 4.311475409836065,
+        "alive": 5.037634408602151,
+        "kills60": 36,
+        "kills": 137,
+        "peak": 9,
+        "flowers": 12,
+        "flowersPerMinute": 3.87409200968523,
+        "items": 5,
+        "itemNames": [
+          "boomerang",
+          "boomerang",
+          "shoe",
+          "shield",
+          "balloon"
+        ],
+        "itemTimes": [
+          26,
+          55.1,
+          83.3,
+          134.5,
+          164.3
+        ],
+        "firstItem": 26.000000000000234,
+        "firstFlower": 22.450000000000184,
+        "thirdItem": 83.3,
+        "gear": [
+          "rock",
+          "boomerang",
+          "boomerang",
+          "balloon",
+          "shield"
+        ],
+        "filled": 5,
+        "gap": 23.050000000000193,
+        "flowersLost": 0,
+        "damage": 0,
+        "progress": 100
+      },
+      {
+        "seed": 17113,
+        "result": "victory",
+        "seconds": 222.4,
+        "alive60": 4.426229508196721,
+        "alive": 5.2690582959641254,
+        "kills60": 36,
+        "kills": 169,
+        "peak": 8,
+        "flowers": 17,
+        "flowersPerMinute": 4.586330935251798,
+        "items": 6,
+        "itemNames": [
+          "boomerang",
+          "boomerang",
+          "shoe",
+          "shield",
+          "shield",
+          "water-fairy"
+        ],
+        "itemTimes": [
+          17.45,
+          43.75,
+          70.1,
+          95.95,
+          153.4,
+          199
+        ],
+        "firstItem": 17.450000000000113,
+        "firstFlower": 36.70000000000005,
+        "thirdItem": 70.1,
+        "gear": [
+          "rock",
+          "boomerang",
+          "boomerang",
+          "shield",
+          "shield",
+          "water-fairy"
+        ],
+        "filled": 6,
+        "gap": 38.599999999999945,
+        "flowersLost": 0,
+        "damage": 0,
+        "progress": 100
+      },
+      {
+        "seed": 17114,
+        "result": "victory",
+        "seconds": 201.8,
+        "alive60": 4.229508196721311,
+        "alive": 5.138613861386139,
+        "kills60": 35,
+        "kills": 152,
+        "peak": 7,
+        "flowers": 14,
+        "flowersPerMinute": 4.162537165510406,
+        "items": 5,
+        "itemNames": [
+          "shoe",
+          "shoe",
+          "boomerang",
+          "boomerang",
+          "flowerpot"
+        ],
+        "itemTimes": [
+          14.75,
+          54.95,
+          88.25,
+          144.45,
+          183.6
+        ],
+        "firstItem": 14.750000000000075,
+        "firstFlower": 12.950000000000049,
+        "thirdItem": 88.25,
+        "gear": [
+          "rock",
+          "shoe",
+          "shoe",
+          "boomerang",
+          "boomerang",
+          "flowerpot"
+        ],
+        "filled": 6,
+        "gap": 15.950000000003627,
+        "flowersLost": 0,
+        "damage": 0,
+        "progress": 100
+      },
+      {
+        "seed": 17115,
+        "result": "victory",
+        "seconds": 204.25,
+        "alive60": 4.508196721311475,
+        "alive": 5.2439024390243905,
+        "kills60": 34,
+        "kills": 152,
+        "peak": 8,
+        "flowers": 14,
+        "flowersPerMinute": 4.112607099143207,
+        "items": 4,
+        "itemNames": [
+          "boomerang",
+          "shield",
+          "boomerang",
+          "boomerang"
+        ],
+        "itemTimes": [
+          61.15,
+          110.2,
+          138.4,
+          185.25
+        ],
+        "firstItem": 61.14999999999866,
+        "firstFlower": 20.15000000000015,
+        "thirdItem": 138.4,
+        "gear": [
+          "rock",
+          "boomerang",
+          "shield",
+          "boomerang",
+          "boomerang"
+        ],
+        "filled": 5,
+        "gap": 21.55000000000017,
+        "flowersLost": 0,
+        "damage": 0,
+        "progress": 100
+      },
+      {
+        "seed": 17116,
+        "result": "victory",
+        "seconds": 155.3,
+        "alive60": 4.573770491803279,
+        "alive": 5,
+        "kills60": 36,
+        "kills": 110,
+        "peak": 9,
+        "flowers": 14,
+        "flowersPerMinute": 5.40888602704443,
+        "items": 4,
+        "itemNames": [
+          "shield",
+          "rock",
+          "shield",
+          "shield"
+        ],
+        "itemTimes": [
+          22.9,
+          48.75,
+          94.35,
+          123.75
+        ],
+        "firstItem": 22.90000000000019,
+        "firstFlower": 24.95000000000022,
+        "thirdItem": 94.35,
+        "gear": [
+          "rock",
+          "shield",
+          "rock",
+          "shield",
+          "shield"
+        ],
+        "filled": 5,
+        "gap": 26.600000000000243,
+        "flowersLost": 0,
+        "damage": 0,
+        "progress": 100
+      }
+    ]
+  },
+  "results": [
+    {
+      "p": {
+        "name": "m1",
+        "interval": 1.25,
+        "cap": 8,
+        "batch": 2,
+        "rate": 0.04,
+        "cooldown": 40,
+        "flower": 0.07
+      },
+      "seed": 17101,
+      "runs": 16,
+      "agent": "normal",
+      "dt": 0.05,
+      "sequence": true,
+      "wins": 16,
+      "defeats": 0,
+      "seconds": {
+        "n": 16,
+        "mean": 159.53750000000002,
+        "p10": 123.65,
+        "p50": 161.7,
+        "p90": 185.3,
+        "p95": 195.25,
+        "min": 110.15,
+        "max": 195.25
+      },
+      "alive60": {
+        "n": 16,
+        "mean": 7.8862704918032795,
+        "p10": 7.770491803278689,
+        "p50": 7.885245901639344,
+        "p90": 8.01639344262295,
+        "p95": 8.01639344262295,
+        "min": 7.704918032786885,
+        "max": 8.01639344262295
+      },
+      "alive": {
+        "n": 16,
+        "mean": 9.466944469942549,
+        "p10": 9.088709677419354,
+        "p50": 9.462962962962964,
+        "p90": 9.728260869565217,
+        "p95": 9.744565217391305,
+        "min": 8.882882882882884,
+        "max": 9.744565217391305
+      },
+      "kills60": {
+        "n": 16,
+        "mean": 61.0625,
+        "p10": 58,
+        "p50": 61,
+        "p90": 63,
+        "p95": 64,
+        "min": 56,
+        "max": 64
+      },
+      "kills": {
+        "n": 16,
+        "mean": 202.5625,
+        "p10": 132,
+        "p50": 205,
+        "p90": 242,
+        "p95": 264,
+        "min": 130,
+        "max": 264
+      },
+      "peak": {
+        "n": 16,
+        "mean": 12.125,
+        "p10": 12,
+        "p50": 12,
+        "p90": 13,
+        "p95": 13,
+        "min": 12,
+        "max": 13
+      },
+      "flowers": {
+        "n": 16,
+        "mean": 15.5,
+        "p10": 13,
+        "p50": 15,
+        "p90": 18,
+        "p95": 20,
+        "min": 13,
+        "max": 20
+      },
+      "flowersPerMinute": {
+        "n": 16,
+        "mean": 5.941818182299406,
+        "p10": 4.911323328785811,
+        "p50": 5.63711098062243,
+        "p90": 7.458866544789762,
+        "p95": 8.734330772341286,
+        "min": 4.377104377104377,
+        "max": 8.734330772341286
+      },
+      "items": {
+        "n": 16,
+        "mean": 2.8125,
+        "p10": 2,
+        "p50": 3,
+        "p90": 4,
+        "p95": 4,
+        "min": 1,
+        "max": 4
+      },
+      "firstItem": {
+        "n": 16,
+        "mean": 27.3156249999998,
+        "p10": 5.299999999999989,
+        "p50": 16.6000000000001,
+        "p90": 48.99999999999935,
+        "p95": 104.39999999999621,
+        "min": 2.9999999999999973,
+        "max": 104.39999999999621
+      },
+      "firstFlower": {
+        "n": 16,
+        "mean": 17.206250000000104,
+        "p10": 10.600000000000016,
+        "p50": 13.450000000000056,
+        "p90": 29.85000000000029,
+        "p95": 33.80000000000022,
+        "min": 5.4999999999999885,
+        "max": 33.80000000000022
+      },
+      "thirdItem": {
+        "n": 12,
+        "mean": 131.15416666666667,
+        "p10": 101.3,
+        "p50": 137.4,
+        "p90": 149.9,
+        "p95": 171.8,
+        "min": 100.65,
+        "max": 171.8
+      },
+      "filled": {
+        "n": 16,
+        "mean": 3.8125,
+        "p10": 3,
+        "p50": 4,
+        "p90": 5,
+        "p95": 5,
+        "min": 2,
+        "max": 5
+      },
+      "gap": {
+        "n": 16,
+        "mean": 25.590625000000237,
+        "p10": 13.89999999999921,
+        "p50": 22.049999999998747,
+        "p90": 39.09999999999778,
+        "p95": 52.60000000001013,
+        "min": 12.550000000000178,
+        "max": 52.60000000001013
+      },
+      "flowersLost": {
+        "n": 16,
+        "mean": 0,
+        "p10": 0,
+        "p50": 0,
+        "p90": 0,
+        "p95": 0,
+        "min": 0,
+        "max": 0
+      },
+      "damage": {
+        "n": 16,
+        "mean": 0,
+        "p10": 0,
+        "p50": 0,
+        "p90": 0,
+        "p95": 0,
+        "min": 0,
+        "max": 0
+      },
+      "progress": {
+        "n": 16,
+        "mean": 100,
+        "p10": 100,
+        "p50": 100,
+        "p90": 100,
+        "p95": 100,
+        "min": 100,
+        "max": 100
+      },
+      "thirdSeen": 12,
+      "rows": [
+        {
+          "seed": 17101,
+          "result": "victory",
+          "seconds": 161.7,
+          "alive60": 7.885245901639344,
+          "alive": 9.462962962962964,
+          "kills60": 62,
+          "kills": 206,
+          "peak": 12,
+          "flowers": 14,
+          "flowersPerMinute": 5.194805194805195,
+          "items": 3,
+          "itemNames": [
+            "rock",
+            "rock",
+            "boomerang"
+          ],
+          "itemTimes": [
+            30.2,
+            79.65,
+            145.75
+          ],
+          "firstItem": 30.200000000000294,
+          "firstFlower": 12.800000000000047,
+          "thirdItem": 145.75,
+          "gear": [
+            "rock",
+            "rock",
+            "rock",
+            "boomerang"
+          ],
+          "filled": 4,
+          "gap": 25.599999999998683,
+          "flowersLost": 0,
+          "damage": 0,
+          "progress": 100
+        },
+        {
+          "seed": 17102,
+          "result": "victory",
+          "seconds": 157.75,
+          "alive60": 7.770491803278689,
+          "alive": 9.29746835443038,
+          "kills60": 63,
+          "kills": 200,
+          "peak": 12,
+          "flowers": 14,
+          "flowersPerMinute": 5.324881141045958,
+          "items": 3,
+          "itemNames": [
+            "rock",
+            "rock",
+            "boomerang"
+          ],
+          "itemTimes": [
+            16.05,
+            68.75,
+            121.8
+          ],
+          "firstItem": 16.050000000000093,
+          "firstFlower": 33.80000000000022,
+          "thirdItem": 121.8,
+          "gear": [
+            "rock",
+            "rock",
+            "rock",
+            "boomerang"
+          ],
+          "filled": 4,
+          "gap": 35.600000000000115,
+          "flowersLost": 0,
+          "damage": 0,
+          "progress": 100
+        },
+        {
+          "seed": 17103,
+          "result": "victory",
+          "seconds": 163.75,
+          "alive60": 7.704918032786885,
+          "alive": 9.432926829268293,
+          "kills60": 62,
+          "kills": 211,
+          "peak": 12,
+          "flowers": 17,
+          "flowersPerMinute": 6.229007633587786,
+          "items": 4,
+          "itemNames": [
+            "rock",
+            "rock",
+            "boomerang",
+            "boomerang"
+          ],
+          "itemTimes": [
+            12.8,
+            62.15,
+            110.75,
+            159.55
+          ],
+          "firstItem": 12.800000000000047,
+          "firstFlower": 15.650000000000087,
+          "thirdItem": 110.75,
+          "gear": [
+            "rock",
+            "rock",
+            "rock",
+            "boomerang",
+            "boomerang"
+          ],
+          "filled": 5,
+          "gap": 17.600000000000115,
+          "flowersLost": 0,
+          "damage": 0,
+          "progress": 100
+        },
+        {
+          "seed": 17104,
+          "result": "victory",
+          "seconds": 195.25,
+          "alive60": 7.868852459016393,
+          "alive": 9.71938775510204,
+          "kills60": 59,
+          "kills": 264,
+          "peak": 13,
+          "flowers": 20,
+          "flowersPerMinute": 6.145966709346991,
+          "items": 3,
+          "itemNames": [
+            "rock",
+            "rock",
+            "boomerang"
+          ],
+          "itemTimes": [
+            16.6,
+            56.85,
+            112.9
+          ],
+          "firstItem": 16.6000000000001,
+          "firstFlower": 12.700000000000045,
+          "thirdItem": 112.9,
+          "gear": [
+            "rock",
+            "rock",
+            "rock",
+            "boomerang"
+          ],
+          "filled": 4,
+          "gap": 52.60000000001013,
+          "flowersLost": 0,
+          "damage": 0,
+          "progress": 100
+        },
+        {
+          "seed": 17105,
+          "result": "victory",
+          "seconds": 145.2,
+          "alive60": 8.01639344262295,
+          "alive": 9.575342465753424,
+          "kills60": 62,
+          "kills": 181,
+          "peak": 12,
+          "flowers": 15,
+          "flowersPerMinute": 6.198347107438017,
+          "items": 2,
+          "itemNames": [
+            "rock",
+            "rock"
+          ],
+          "itemTimes": [
+            28.4,
+            102.45
+          ],
+          "firstItem": 28.40000000000027,
+          "firstFlower": 27.650000000000258,
+          "thirdItem": null,
+          "gear": [
+            "rock",
+            "rock",
+            "rock"
+          ],
+          "filled": 3,
+          "gap": 31.100000000000307,
+          "flowersLost": 0,
+          "damage": 0,
+          "progress": 100
+        },
+        {
+          "seed": 17106,
+          "result": "victory",
+          "seconds": 151.2,
+          "alive60": 7.885245901639344,
+          "alive": 9.394736842105264,
+          "kills60": 61,
+          "kills": 193,
+          "peak": 12,
+          "flowers": 16,
+          "flowersPerMinute": 6.34920634920635,
+          "items": 3,
+          "itemNames": [
+            "rock",
+            "rock",
+            "boomerang"
+          ],
+          "itemTimes": [
+            5.3,
+            81.85,
+            144.1
+          ],
+          "firstItem": 5.299999999999989,
+          "firstFlower": 29.85000000000029,
+          "thirdItem": 144.1,
+          "gear": [
+            "rock",
+            "rock",
+            "rock",
+            "boomerang"
+          ],
+          "filled": 4,
+          "gap": 31.100000000000307,
+          "flowersLost": 0,
+          "damage": 0,
+          "progress": 100
+        },
+        {
+          "seed": 17107,
+          "result": "victory",
+          "seconds": 110.15,
+          "alive60": 7.868852459016393,
+          "alive": 8.882882882882884,
+          "kills60": 63,
+          "kills": 130,
+          "peak": 12,
+          "flowers": 13,
+          "flowersPerMinute": 7.081252837040399,
+          "items": 2,
+          "itemNames": [
+            "rock",
+            "rock"
+          ],
+          "itemTimes": [
+            3,
+            96.45
+          ],
+          "firstItem": 2.9999999999999973,
+          "firstFlower": 5.4999999999999885,
+          "thirdItem": null,
+          "gear": [
+            "rock",
+            "rock",
+            "rock"
+          ],
+          "filled": 3,
+          "gap": 12.550000000000178,
+          "flowersLost": 0,
+          "damage": 0,
+          "progress": 100
+        },
+        {
+          "seed": 17108,
+          "result": "victory",
+          "seconds": 164.7,
+          "alive60": 7.967213114754099,
+          "alive": 9.63030303030303,
+          "kills60": 59,
+          "kills": 205,
+          "peak": 12,
+          "flowers": 14,
+          "flowersPerMinute": 5.100182149362477,
+          "items": 2,
+          "itemNames": [
+            "rock",
+            "rock"
+          ],
+          "itemTimes": [
+            44.55,
+            132.05
+          ],
+          "firstItem": 44.549999999999606,
+          "firstFlower": 26.650000000000244,
+          "thirdItem": null,
+          "gear": [
+            "rock",
+            "rock",
+            "rock"
+          ],
+          "filled": 3,
+          "gap": 27.550000000000257,
+          "flowersLost": 0,
+          "damage": 0,
+          "progress": 100
+        },
+        {
+          "seed": 17109,
+          "result": "victory",
+          "seconds": 185.3,
+          "alive60": 7.901639344262295,
+          "alive": 9.655913978494624,
+          "kills60": 60,
+          "kills": 242,
+          "peak": 13,
+          "flowers": 16,
+          "flowersPerMinute": 5.180787911494873,
+          "items": 3,
+          "itemNames": [
+            "rock",
+            "rock",
+            "boomerang"
+          ],
+          "itemTimes": [
+            11.4,
+            77.9,
+            137.85
+          ],
+          "firstItem": 11.400000000000027,
+          "firstFlower": 12.250000000000039,
+          "thirdItem": 137.85,
+          "gear": [
+            "rock",
+            "rock",
+            "rock",
+            "boomerang"
+          ],
+          "filled": 4,
+          "gap": 21.0999999999988,
+          "flowersLost": 0,
+          "damage": 0,
+          "progress": 100
+        },
+        {
+          "seed": 17110,
+          "result": "victory",
+          "seconds": 170.3,
+          "alive60": 7.836065573770492,
+          "alive": 9.596491228070175,
+          "kills60": 64,
+          "kills": 221,
+          "peak": 12,
+          "flowers": 16,
+          "flowersPerMinute": 5.63711098062243,
+          "items": 4,
+          "itemNames": [
+            "rock",
+            "rock",
+            "boomerang",
+            "boomerang"
+          ],
+          "itemTimes": [
+            10.75,
+            57.35,
+            101.3,
+            143.65
+          ],
+          "firstItem": 10.750000000000018,
+          "firstFlower": 13.450000000000056,
+          "thirdItem": 101.3,
+          "gear": [
+            "rock",
+            "rock",
+            "rock",
+            "boomerang",
+            "boomerang"
+          ],
+          "filled": 5,
+          "gap": 22.049999999998747,
+          "flowersLost": 0,
+          "damage": 0,
+          "progress": 100
+        },
+        {
+          "seed": 17111,
+          "result": "victory",
+          "seconds": 178.2,
+          "alive60": 7.786885245901639,
+          "alive": 9.59217877094972,
+          "kills60": 61,
+          "kills": 232,
+          "peak": 12,
+          "flowers": 13,
+          "flowersPerMinute": 4.377104377104377,
+          "items": 3,
+          "itemNames": [
+            "rock",
+            "rock",
+            "boomerang"
+          ],
+          "itemTimes": [
+            34.75,
+            87.2,
+            171.8
+          ],
+          "firstItem": 34.75000000000016,
+          "firstFlower": 11.750000000000032,
+          "thirdItem": 171.8,
+          "gear": [
+            "rock",
+            "rock",
+            "rock",
+            "boomerang"
+          ],
+          "filled": 4,
+          "gap": 25.049999999998583,
+          "flowersLost": 0,
+          "damage": 0,
+          "progress": 100
+        },
+        {
+          "seed": 17112,
+          "result": "victory",
+          "seconds": 142.2,
+          "alive60": 7.918032786885246,
+          "alive": 9.391608391608392,
+          "kills60": 63,
+          "kills": 179,
+          "peak": 12,
+          "flowers": 14,
+          "flowersPerMinute": 5.907172995780591,
+          "items": 3,
+          "itemNames": [
+            "rock",
+            "rock",
+            "boomerang"
+          ],
+          "itemTimes": [
+            27.8,
+            86.9,
+            139.65
+          ],
+          "firstItem": 27.80000000000026,
+          "firstFlower": 17.450000000000113,
+          "thirdItem": 139.65,
+          "gear": [
+            "rock",
+            "rock",
+            "rock",
+            "boomerang"
+          ],
+          "filled": 4,
+          "gap": 18.55000000000013,
+          "flowersLost": 0,
+          "damage": 0,
+          "progress": 100
+        },
+        {
+          "seed": 17113,
+          "result": "victory",
+          "seconds": 183.25,
+          "alive60": 7.80327868852459,
+          "alive": 9.744565217391305,
+          "kills60": 63,
+          "kills": 239,
+          "peak": 12,
+          "flowers": 16,
+          "flowersPerMinute": 5.2387448840382,
+          "items": 3,
+          "itemNames": [
+            "rock",
+            "rock",
+            "boomerang"
+          ],
+          "itemTimes": [
+            28.3,
+            97.4,
+            149.9
+          ],
+          "firstItem": 28.300000000000267,
+          "firstFlower": 12.000000000000036,
+          "thirdItem": 149.9,
+          "gear": [
+            "rock",
+            "rock",
+            "rock",
+            "boomerang"
+          ],
+          "filled": 4,
+          "gap": 39.09999999999778,
+          "flowersLost": 0,
+          "damage": 0,
+          "progress": 100
+        },
+        {
+          "seed": 17114,
+          "result": "victory",
+          "seconds": 136.75,
+          "alive60": 7.950819672131147,
+          "alive": 9.277372262773723,
+          "kills60": 58,
+          "kills": 167,
+          "peak": 12,
+          "flowers": 17,
+          "flowersPerMinute": 7.458866544789762,
+          "items": 3,
+          "itemNames": [
+            "rock",
+            "rock",
+            "boomerang"
+          ],
+          "itemTimes": [
+            13.75,
+            58.35,
+            100.65
+          ],
+          "firstItem": 13.75000000000006,
+          "firstFlower": 10.600000000000016,
+          "thirdItem": 100.65,
+          "gear": [
+            "rock",
+            "rock",
+            "rock",
+            "boomerang"
+          ],
+          "filled": 4,
+          "gap": 13.89999999999921,
+          "flowersLost": 0,
+          "damage": 0,
+          "progress": 100
+        },
+        {
+          "seed": 17115,
+          "result": "victory",
+          "seconds": 183.25,
+          "alive60": 8,
+          "alive": 9.728260869565217,
+          "kills60": 61,
+          "kills": 239,
+          "peak": 12,
+          "flowers": 15,
+          "flowersPerMinute": 4.911323328785811,
+          "items": 3,
+          "itemNames": [
+            "rock",
+            "rock",
+            "boomerang"
+          ],
+          "itemTimes": [
+            49,
+            89.7,
+            137.4
+          ],
+          "firstItem": 48.99999999999935,
+          "firstFlower": 18.300000000000125,
+          "thirdItem": 137.4,
+          "gear": [
+            "rock",
+            "rock",
+            "rock",
+            "boomerang"
+          ],
+          "filled": 4,
+          "gap": 20.05000000000015,
+          "flowersLost": 0,
+          "damage": 0,
+          "progress": 100
+        },
+        {
+          "seed": 17116,
+          "result": "victory",
+          "seconds": 123.65,
+          "alive60": 8.01639344262295,
+          "alive": 9.088709677419354,
+          "kills60": 56,
+          "kills": 132,
+          "peak": 12,
+          "flowers": 18,
+          "flowersPerMinute": 8.734330772341286,
+          "items": 1,
+          "itemNames": [
+            "rock"
+          ],
+          "itemTimes": [
+            104.4
+          ],
+          "firstItem": 104.39999999999621,
+          "firstFlower": 14.900000000000077,
+          "thirdItem": null,
+          "gear": [
+            "rock",
+            "rock"
+          ],
+          "filled": 2,
+          "gap": 15.950000000000227,
+          "flowersLost": 0,
+          "damage": 0,
+          "progress": 100
+        }
+      ],
+      "assessment": {
+        "pass": true,
+        "ratios": {
+          "density": 1.7881040892193307,
+          "kills": 1.7428571428571429,
+          "time": 0.8605641298563065,
+          "gap": 0.848156182212542,
+          "flowerRate": 1.2952993169947766
+        },
+        "violations": {
+          "density": 0,
+          "kills": 0,
+          "duration": 0,
+          "gap": 0,
+          "gear": 0,
+          "survival": 0,
+          "third": 0
+        },
+        "score": 0.266234677087555
+      }
+    },
+    {
+      "p": {
+        "name": "m2",
+        "interval": 1,
+        "cap": 12,
+        "batch": 2,
+        "rate": 0.04,
+        "cooldown": 40,
+        "flower": 0.055
+      },
+      "seed": 17101,
+      "runs": 16,
+      "agent": "normal",
+      "dt": 0.05,
+      "sequence": true,
+      "wins": 16,
+      "defeats": 0,
+      "seconds": {
+        "n": 16,
+        "mean": 155.209375,
+        "p10": 119.15,
+        "p50": 155.7,
+        "p90": 190.35,
+        "p95": 227.3,
+        "min": 109.2,
+        "max": 227.3
+      },
+      "alive60": {
+        "n": 16,
+        "mean": 11.672131147540986,
+        "p10": 11.459016393442623,
+        "p50": 11.655737704918034,
+        "p90": 11.852459016393443,
+        "p95": 12.032786885245901,
+        "min": 11.39344262295082,
+        "max": 12.032786885245901
+      },
+      "alive": {
+        "n": 16,
+        "mean": 13.13388194296989,
+        "p10": 12.591666666666667,
+        "p50": 13.210526315789474,
+        "p90": 13.475138121546962,
+        "p95": 13.947368421052632,
+        "min": 12.336363636363636,
+        "max": 13.947368421052632
+      },
+      "kills60": {
+        "n": 16,
+        "mean": 84.3125,
+        "p10": 81,
+        "p50": 85,
+        "p90": 88,
+        "p95": 92,
+        "min": 69,
+        "max": 92
+      },
+      "kills": {
+        "n": 16,
+        "mean": 268.4375,
+        "p10": 180,
+        "p50": 272,
+        "p90": 349,
+        "p95": 421,
+        "min": 165,
+        "max": 421
+      },
+      "peak": {
+        "n": 16,
+        "mean": 16.125,
+        "p10": 16,
+        "p50": 16,
+        "p90": 17,
+        "p95": 17,
+        "min": 16,
+        "max": 17
+      },
+      "flowers": {
+        "n": 16,
+        "mean": 14.6875,
+        "p10": 14,
+        "p50": 14,
+        "p90": 17,
+        "p95": 17,
+        "min": 12,
+        "max": 17
+      },
+      "flowersPerMinute": {
+        "n": 16,
+        "mean": 5.87341052693879,
+        "p10": 4.357034795763994,
+        "p50": 5.736782902137232,
+        "p90": 7.334963325183374,
+        "p95": 7.6923076923076925,
+        "min": 3.695556533216014,
+        "max": 7.6923076923076925
+      },
+      "items": {
+        "n": 16,
+        "mean": 3,
+        "p10": 2,
+        "p50": 3,
+        "p90": 4,
+        "p95": 4,
+        "min": 1,
+        "max": 4
+      },
+      "firstItem": {
+        "n": 16,
+        "mean": 23.084374999999884,
+        "p10": 4.399999999999992,
+        "p50": 15.10000000000008,
+        "p90": 41.69999999999977,
+        "p95": 89.29999999999707,
+        "min": 2.549999999999999,
+        "max": 89.29999999999707
+      },
+      "firstFlower": {
+        "n": 16,
+        "mean": 17.35937500000004,
+        "p10": 8.349999999999984,
+        "p50": 13.250000000000053,
+        "p90": 36.45000000000007,
+        "p95": 44.99999999999958,
+        "min": 6.499999999999985,
+        "max": 44.99999999999958
+      },
+      "thirdItem": {
+        "n": 13,
+        "mean": 121.38461538461539,
+        "p10": 105.2,
+        "p50": 116.8,
+        "p90": 137.4,
+        "p95": 145.85,
+        "min": 101.95,
+        "max": 145.85
+      },
+      "filled": {
+        "n": 16,
+        "mean": 3.9375,
+        "p10": 3,
+        "p50": 4,
+        "p90": 5,
+        "p95": 5,
+        "min": 2,
+        "max": 5
+      },
+      "gap": {
+        "n": 16,
+        "mean": 27.73749999999974,
+        "p10": 14.0500000000002,
+        "p50": 22.599999999998715,
+        "p90": 46.09999999999952,
+        "p95": 63.64999999999682,
+        "min": 13.89999999999921,
+        "max": 63.64999999999682
+      },
+      "flowersLost": {
+        "n": 16,
+        "mean": 0,
+        "p10": 0,
+        "p50": 0,
+        "p90": 0,
+        "p95": 0,
+        "min": 0,
+        "max": 0
+      },
+      "damage": {
+        "n": 16,
+        "mean": 0,
+        "p10": 0,
+        "p50": 0,
+        "p90": 0,
+        "p95": 0,
+        "min": 0,
+        "max": 0
+      },
+      "progress": {
+        "n": 16,
+        "mean": 100,
+        "p10": 100,
+        "p50": 100,
+        "p90": 100,
+        "p95": 100,
+        "min": 100,
+        "max": 100
+      },
+      "thirdSeen": 13,
+      "rows": [
+        {
+          "seed": 17101,
+          "result": "victory",
+          "seconds": 166.75,
+          "alive60": 11.836065573770492,
+          "alive": 13.275449101796408,
+          "kills60": 84,
+          "kills": 294,
+          "peak": 16,
+          "flowers": 14,
+          "flowersPerMinute": 5.037481259370315,
+          "items": 3,
+          "itemNames": [
+            "rock",
+            "rock",
+            "boomerang"
+          ],
+          "itemTimes": [
+            26.05,
+            82.6,
+            127.95
+          ],
+          "firstItem": 26.050000000000235,
+          "firstFlower": 9.600000000000001,
+          "thirdItem": 127.95,
+          "gear": [
+            "rock",
+            "rock",
+            "rock",
+            "boomerang"
+          ],
+          "filled": 4,
+          "gap": 31.599999999998555,
+          "flowersLost": 0,
+          "damage": 0,
+          "progress": 100
+        },
+        {
+          "seed": 17102,
+          "result": "victory",
+          "seconds": 155.7,
+          "alive60": 11.540983606557377,
+          "alive": 13.243589743589743,
+          "kills60": 87,
+          "kills": 272,
+          "peak": 16,
+          "flowers": 15,
+          "flowersPerMinute": 5.780346820809249,
+          "items": 2,
+          "itemNames": [
+            "rock",
+            "rock"
+          ],
+          "itemTimes": [
+            14.3,
+            94.25
+          ],
+          "firstItem": 14.300000000000068,
+          "firstFlower": 27.15000000000025,
+          "thirdItem": null,
+          "gear": [
+            "rock",
+            "rock",
+            "rock"
+          ],
+          "filled": 3,
+          "gap": 28.100000000000264,
+          "flowersLost": 0,
+          "damage": 0,
+          "progress": 100
+        },
+        {
+          "seed": 17103,
+          "result": "victory",
+          "seconds": 180.25,
+          "alive60": 11.80327868852459,
+          "alive": 13.475138121546962,
+          "kills60": 86,
+          "kills": 322,
+          "peak": 16,
+          "flowers": 14,
+          "flowersPerMinute": 4.660194174757281,
+          "items": 3,
+          "itemNames": [
+            "rock",
+            "rock",
+            "boomerang"
+          ],
+          "itemTimes": [
+            9.3,
+            84.05,
+            137.4
+          ],
+          "firstItem": 9.299999999999997,
+          "firstFlower": 17.30000000000011,
+          "thirdItem": 137.4,
+          "gear": [
+            "rock",
+            "rock",
+            "rock",
+            "boomerang"
+          ],
+          "filled": 4,
+          "gap": 19.100000000000136,
+          "flowersLost": 0,
+          "damage": 0,
+          "progress": 100
+        },
+        {
+          "seed": 17104,
+          "result": "victory",
+          "seconds": 177.8,
+          "alive60": 11.688524590163935,
+          "alive": 13.353932584269662,
+          "kills60": 85,
+          "kills": 320,
+          "peak": 16,
+          "flowers": 17,
+          "flowersPerMinute": 5.736782902137232,
+          "items": 4,
+          "itemNames": [
+            "rock",
+            "rock",
+            "boomerang",
+            "rock"
+          ],
+          "itemTimes": [
+            15.1,
+            60.85,
+            101.95,
+            157.7
+          ],
+          "firstItem": 15.10000000000008,
+          "firstFlower": 10.300000000000011,
+          "thirdItem": 101.95,
+          "gear": [
+            "rock",
+            "rock",
+            "rock",
+            "boomerang",
+            "rock"
+          ],
+          "filled": 5,
+          "gap": 20.549999999998832,
+          "flowersLost": 0,
+          "damage": 0,
+          "progress": 100
+        },
+        {
+          "seed": 17105,
+          "result": "victory",
+          "seconds": 143.7,
+          "alive60": 11.524590163934427,
+          "alive": 13.034722222222221,
+          "kills60": 82,
+          "kills": 238,
+          "peak": 16,
+          "flowers": 15,
+          "flowersPerMinute": 6.263048016701462,
+          "items": 3,
+          "itemNames": [
+            "rock",
+            "rock",
+            "boomerang"
+          ],
+          "itemTimes": [
+            24.65,
+            79.25,
+            127.25
+          ],
+          "firstItem": 24.650000000000215,
+          "firstFlower": 36.45000000000007,
+          "thirdItem": 127.25,
+          "gear": [
+            "rock",
+            "rock",
+            "rock",
+            "boomerang"
+          ],
+          "filled": 4,
+          "gap": 37.10000000000003,
+          "flowersLost": 0,
+          "damage": 0,
+          "progress": 100
+        },
+        {
+          "seed": 17106,
+          "result": "victory",
+          "seconds": 122.7,
+          "alive60": 11.78688524590164,
+          "alive": 12.8130081300813,
+          "kills60": 87,
+          "kills": 204,
+          "peak": 16,
+          "flowers": 15,
+          "flowersPerMinute": 7.334963325183374,
+          "items": 3,
+          "itemNames": [
+            "rock",
+            "rock",
+            "boomerang"
+          ],
+          "itemTimes": [
+            4.4,
+            62.6,
+            111.4
+          ],
+          "firstItem": 4.399999999999992,
+          "firstFlower": 22.000000000000178,
+          "thirdItem": 111.4,
+          "gear": [
+            "rock",
+            "rock",
+            "rock",
+            "boomerang"
+          ],
+          "filled": 4,
+          "gap": 23.6000000000002,
+          "flowersLost": 0,
+          "damage": 0,
+          "progress": 100
+        },
+        {
+          "seed": 17107,
+          "result": "victory",
+          "seconds": 130.75,
+          "alive60": 11.39344262295082,
+          "alive": 12.748091603053435,
+          "kills60": 92,
+          "kills": 223,
+          "peak": 16,
+          "flowers": 15,
+          "flowersPerMinute": 6.8833652007648185,
+          "items": 3,
+          "itemNames": [
+            "rock",
+            "rock",
+            "boomerang"
+          ],
+          "itemTimes": [
+            2.55,
+            69.85,
+            111.55
+          ],
+          "firstItem": 2.549999999999999,
+          "firstFlower": 6.499999999999985,
+          "thirdItem": 111.55,
+          "gear": [
+            "rock",
+            "rock",
+            "rock",
+            "boomerang"
+          ],
+          "filled": 4,
+          "gap": 19.599999999998886,
+          "flowersLost": 0,
+          "damage": 0,
+          "progress": 100
+        },
+        {
+          "seed": 17108,
+          "result": "victory",
+          "seconds": 227.3,
+          "alive60": 12.032786885245901,
+          "alive": 13.947368421052632,
+          "kills60": 81,
+          "kills": 421,
+          "peak": 17,
+          "flowers": 14,
+          "flowersPerMinute": 3.695556533216014,
+          "items": 4,
+          "itemNames": [
+            "rock",
+            "rock",
+            "boomerang",
+            "boomerang"
+          ],
+          "itemTimes": [
+            36.75,
+            104.35,
+            145.85,
+            187.2
+          ],
+          "firstItem": 36.75000000000005,
+          "firstFlower": 44.99999999999958,
+          "thirdItem": 145.85,
+          "gear": [
+            "rock",
+            "rock",
+            "rock",
+            "boomerang",
+            "boomerang"
+          ],
+          "filled": 5,
+          "gap": 46.09999999999952,
+          "flowersLost": 0,
+          "damage": 0,
+          "progress": 100
+        },
+        {
+          "seed": 17109,
+          "result": "victory",
+          "seconds": 190.35,
+          "alive60": 11.62295081967213,
+          "alive": 13.38219895287958,
+          "kills60": 87,
+          "kills": 349,
+          "peak": 17,
+          "flowers": 17,
+          "flowersPerMinute": 5.358550039401103,
+          "items": 4,
+          "itemNames": [
+            "rock",
+            "rock",
+            "boomerang",
+            "boomerang"
+          ],
+          "itemTimes": [
+            10.35,
+            58.65,
+            105.2,
+            152.75
+          ],
+          "firstItem": 10.350000000000012,
+          "firstFlower": 11.150000000000023,
+          "thirdItem": 105.2,
+          "gear": [
+            "rock",
+            "rock",
+            "rock",
+            "boomerang",
+            "boomerang"
+          ],
+          "filled": 5,
+          "gap": 36.65000000000592,
+          "flowersLost": 0,
+          "damage": 0,
+          "progress": 100
+        },
+        {
+          "seed": 17110,
+          "result": "victory",
+          "seconds": 159.25,
+          "alive60": 11.459016393442623,
+          "alive": 13.1125,
+          "kills60": 87,
+          "kills": 278,
+          "peak": 16,
+          "flowers": 15,
+          "flowersPerMinute": 5.65149136577708,
+          "items": 4,
+          "itemNames": [
+            "rock",
+            "rock",
+            "boomerang",
+            "boomerang"
+          ],
+          "itemTimes": [
+            9.1,
+            70.65,
+            111.8,
+            156.85
+          ],
+          "firstItem": 9.099999999999994,
+          "firstFlower": 11.450000000000028,
+          "thirdItem": 111.8,
+          "gear": [
+            "rock",
+            "rock",
+            "rock",
+            "boomerang"
+          ],
+          "filled": 4,
+          "gap": 22.599999999998715,
+          "flowersLost": 0,
+          "damage": 0,
+          "progress": 100
+        },
+        {
+          "seed": 17111,
+          "result": "victory",
+          "seconds": 151.75,
+          "alive60": 11.688524590163935,
+          "alive": 13.210526315789474,
+          "kills60": 86,
+          "kills": 263,
+          "peak": 16,
+          "flowers": 16,
+          "flowersPerMinute": 6.326194398682043,
+          "items": 3,
+          "itemNames": [
+            "rock",
+            "rock",
+            "boomerang"
+          ],
+          "itemTimes": [
+            28.5,
+            75.45,
+            132.9
+          ],
+          "firstItem": 28.50000000000027,
+          "firstFlower": 18.70000000000013,
+          "thirdItem": 132.9,
+          "gear": [
+            "rock",
+            "rock",
+            "rock",
+            "boomerang"
+          ],
+          "filled": 4,
+          "gap": 20.05000000000015,
+          "flowersLost": 0,
+          "damage": 0,
+          "progress": 100
+        },
+        {
+          "seed": 17112,
+          "result": "victory",
+          "seconds": 119.7,
+          "alive60": 11.573770491803279,
+          "alive": 12.591666666666667,
+          "kills60": 84,
+          "kills": 198,
+          "peak": 16,
+          "flowers": 14,
+          "flowersPerMinute": 7.017543859649122,
+          "items": 3,
+          "itemNames": [
+            "rock",
+            "rock",
+            "boomerang"
+          ],
+          "itemTimes": [
+            21.75,
+            65.85,
+            110.65
+          ],
+          "firstItem": 21.750000000000174,
+          "firstFlower": 15.250000000000082,
+          "thirdItem": 110.65,
+          "gear": [
+            "rock",
+            "rock",
+            "rock",
+            "boomerang"
+          ],
+          "filled": 4,
+          "gap": 17.050000000000107,
+          "flowersLost": 0,
+          "damage": 0,
+          "progress": 100
+        },
+        {
+          "seed": 17113,
+          "result": "victory",
+          "seconds": 163.75,
+          "alive60": 11.852459016393443,
+          "alive": 13.298780487804878,
+          "kills60": 83,
+          "kills": 282,
+          "peak": 16,
+          "flowers": 14,
+          "flowersPerMinute": 5.129770992366412,
+          "items": 3,
+          "itemNames": [
+            "rock",
+            "rock",
+            "boomerang"
+          ],
+          "itemTimes": [
+            24.5,
+            75.9,
+            116.8
+          ],
+          "firstItem": 24.500000000000213,
+          "firstFlower": 10.15000000000001,
+          "thirdItem": 116.8,
+          "gear": [
+            "rock",
+            "rock",
+            "rock",
+            "boomerang"
+          ],
+          "filled": 4,
+          "gap": 63.64999999999682,
+          "flowersLost": 0,
+          "damage": 0,
+          "progress": 100
+        },
+        {
+          "seed": 17114,
+          "result": "victory",
+          "seconds": 109.2,
+          "alive60": 11.459016393442623,
+          "alive": 12.336363636363636,
+          "kills60": 88,
+          "kills": 180,
+          "peak": 16,
+          "flowers": 14,
+          "flowersPerMinute": 7.6923076923076925,
+          "items": 2,
+          "itemNames": [
+            "rock",
+            "rock"
+          ],
+          "itemTimes": [
+            11.05,
+            72.65
+          ],
+          "firstItem": 11.050000000000022,
+          "firstFlower": 8.349999999999984,
+          "thirdItem": null,
+          "gear": [
+            "rock",
+            "rock",
+            "rock"
+          ],
+          "filled": 3,
+          "gap": 13.89999999999921,
+          "flowersLost": 0,
+          "damage": 0,
+          "progress": 100
+        },
+        {
+          "seed": 17115,
+          "result": "victory",
+          "seconds": 165.25,
+          "alive60": 11.655737704918034,
+          "alive": 13.27710843373494,
+          "kills60": 81,
+          "kills": 286,
+          "peak": 16,
+          "flowers": 12,
+          "flowersPerMinute": 4.357034795763994,
+          "items": 3,
+          "itemNames": [
+            "rock",
+            "rock",
+            "boomerang"
+          ],
+          "itemTimes": [
+            41.7,
+            90.75,
+            137.3
+          ],
+          "firstItem": 41.69999999999977,
+          "firstFlower": 15.15000000000008,
+          "thirdItem": 137.3,
+          "gear": [
+            "rock",
+            "rock",
+            "rock",
+            "boomerang"
+          ],
+          "filled": 4,
+          "gap": 30.09999999999829,
+          "flowersLost": 0,
+          "damage": 0,
+          "progress": 100
+        },
+        {
+          "seed": 17116,
+          "result": "victory",
+          "seconds": 119.15,
+          "alive60": 11.836065573770492,
+          "alive": 13.041666666666666,
+          "kills60": 69,
+          "kills": 165,
+          "peak": 16,
+          "flowers": 14,
+          "flowersPerMinute": 7.049937054133445,
+          "items": 1,
+          "itemNames": [
+            "rock"
+          ],
+          "itemTimes": [
+            89.3
+          ],
+          "firstItem": 89.29999999999707,
+          "firstFlower": 13.250000000000053,
+          "thirdItem": null,
+          "gear": [
+            "rock",
+            "rock"
+          ],
+          "filled": 2,
+          "gap": 14.0500000000002,
+          "flowersLost": 0,
+          "damage": 0,
+          "progress": 100
+        }
+      ],
+      "assessment": {
+        "pass": true,
+        "ratios": {
+          "density": 2.643122676579926,
+          "kills": 2.4285714285714284,
+          "time": 0.8286322511974453,
+          "gap": 1,
+          "flowerRate": 1.3182020010656559
+        },
+        "violations": {
+          "density": 0,
+          "kills": 0,
+          "duration": 0,
+          "gap": 0,
+          "gear": 0,
+          "survival": 0,
+          "third": 0
+        },
+        "score": 0.4116989182139501
+      }
+    }
+  ],
+  "simulations": 48
+}
