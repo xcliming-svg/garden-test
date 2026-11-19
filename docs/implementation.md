@@ -1,6 +1,6 @@
 # 현재 설계 및 구현 정리
 
-> **독립 실험 브랜치:** [나뭇잎 요정 직접 이동 및 꽃 운반](./fairy-flower-carry.md). main/devel 미통합.
+> **devel 실험:** [나뭇잎 요정 직접 이동 및 꽃 운반](./fairy-flower-carry.md). main 미통합.
 
 > **현행 devel 50스테이지:** [V3 대칭 도안·규모 기반 캠페인](./campaign-v3-playable.md). 아래 6도안/단일 레벨 설명은 기존 비교용 규격 및 역사적 기록이다.
 
