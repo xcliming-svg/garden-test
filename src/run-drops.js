@@ -13,7 +13,7 @@
         // Bias toward outstanding blueprint flowers; preserve random variety.
         id=R.chooseFlower(scene.flowerGrowth.entries,window.GardenSimulationRng?.flower||Math.random);
       }
-      if(kind==='item'&&!id)id=R.pickItem(scene.run.state.elapsed,window.GardenSimulationRng?.item||Math.random);
+      if(kind==='item'&&!id)id=scene.run.pickItem(window.GardenSimulationRng?.item||Math.random);
       const card=I.createDrop(scene,spec,assets,kind,id,x,y,serial++);
       card.age=0;card.kind=kind;card.id=id;
       card.float=L.floatingDrop(card.marker,serial);

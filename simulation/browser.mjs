@@ -11,7 +11,7 @@ import {rng} from './models.mjs';
 const require=createRequire(import.meta.url);
 const mime={'.js':'application/javascript','.html':'text/html; charset=utf-8','.css':'text/css; charset=utf-8','.svg':'image/svg+xml','.json':'application/json'};
 function replaceOnce(s,a,b){if(s.split(a).length!==2)throw Error('Browser harness hook changed: '+a);return s.replace(a,b);}
-async function withScene(p,{channel='chrome',seed=1,trace=false,menuSelection=null,viewport={width:960,height:540}}={},fn){
+async function withScene(p,{channel='chrome',seed=1,trace=false,menuSelection=null,forceDropRoll=null,viewport={width:960,height:540}}={},fn){
   const {chromium}=await import('playwright'),phaser=require.resolve('phaser/dist/phaser.min.js');
   const server=createServer((req,res)=>{
     try{
@@ -37,11 +37,12 @@ async function withScene(p,{channel='chrome',seed=1,trace=false,menuSelection=nu
     const page=await browser.newPage({viewport,deviceScaleFactor:1}),errors=[];
     page.on('pageerror',e=>{errors.push(e.stack||String(e));console.error('PAGE ERROR',e.stack||String(e));});
     page.on('requestfailed',r=>errors.push(r.url()));
-    await page.addInitScript(({config,seed,trace,rngSource})=>{
+    await page.addInitScript(({config,seed,trace,rngSource,forceDropRoll})=>{
       const makeRng=new Function('return ('+rngSource+')')();
       window.__gardenSimHarness=true;window.__gardenSimTime=0;window.__gardenSimStep=false;
       if(config)window.GardenSimulationConfig=config;
       window.GardenSimulationRng=Object.fromEntries(['enemy','drop','flower','item','weapon','agent'].map(k=>[k,makeRng(seed,k)]));
+      if(forceDropRoll!==null)window.GardenSimulationRng.drop=()=>forceDropRoll;
       const counters={},events=[],weapon={};
       window.__gardenSimTelemetry={counters,events,weapon};
       window.GardenSimulationEvent=(type,data)=>{
@@ -53,7 +54,7 @@ async function withScene(p,{channel='chrome',seed=1,trace=false,menuSelection=nu
         }
         if(trace)events.push({t:window.__gardenSimTime,type,...data});
       };
-    },{config:menuSelection?null:p.config,seed,trace,rngSource:rng.toString()});
+    },{config:menuSelection?null:p.config,seed,trace,rngSource:rng.toString(),forceDropRoll});
     await page.goto('http://127.0.0.1:'+server.address().port+'/');
     await page.waitForFunction(()=>window.__gardenTestGame?.scene.isActive('MainMenu'),null,{timeout:60000});
     if(menuSelection){
@@ -189,7 +190,7 @@ export async function verifyBlueprintSelector(p,opts={}){
 }
 
 export async function verifyPaceTrial(p,opts={}){
-  return withScene(p,{...opts,menuSelection:'classic'},async page=>{
+  return withScene(p,{...opts,menuSelection:'classic',forceDropRoll:.99999,trace:true},async page=>{
     const inspect=()=>page.evaluate(()=>{
       const R=window.GardenRunRules,s=window.__gardenSimScene;
       window.__gardenSimStep=true;
@@ -197,16 +198,30 @@ export async function verifyPaceTrial(p,opts={}){
         const t=s.run.state.elapsed+.05;window.__gardenSimTime=t;s.events.emit('update',t*1000,50);
       }
       window.__gardenSimStep=false;
-      return {id:R.selectedBlueprintId,required:R.blueprint.length,drops:R.tuning.dropWeights,cooldown:R.tuning.itemInterval,
+      const initial={id:R.selectedBlueprintId,required:R.blueprint.length,drops:R.tuning.dropWeights,cooldown:R.tuning.itemInterval,
         interval:R.spawnInterval(0),cap:R.population(0),batch:R.waveAt(0).batch,spawned:s.enemyPreview.model.spawned,
         elapsed:s.run.state.elapsed,slots:s.run.state.slotCount,gear:s.runEquipment.equipped[0]?.id};
+      // Real enemy-death reward controller with only its RNG forced. Do not
+      // replace the run: scene restart must reset both cap and ordered prefix.
+      const telemetry=window.__gardenSimTelemetry,offset=telemetry.events.length;
+      const gemsBefore=s.relicCollection.state.spawnedGems;
+      const preItems=[...s.runDrops.drops.values()].filter(c=>c.kind==='item').map(c=>c.id);
+      for(let i=0;i<5;i++){
+        s.run.tick(R.tuning.itemInterval);
+        s.relicCollection.death(230,170);
+      }
+      const rolls=telemetry.events.slice(offset).filter(e=>e.type==='drop_roll');
+      const items=[...s.runDrops.drops.values()].filter(c=>c.kind==='item').map(c=>c.id);
+      return {...initial,kinds:rolls.map(e=>e.kind),reasons:rolls.map(e=>e.reason),items,preItems,gemsAdded:s.relicCollection.state.spawnedGems-gemsBefore,pool:R.itemPool(10000),supply:R.itemSupply};
     });
     const result=[await inspect()];
     for(const map of ['cross','heart','butterfly','classic']){
       await page.evaluate(()=>{const g=window.__gardenTestGame;g.scene.stop('Game');g.scene.start('MainMenu');});
-      await page.waitForFunction(()=>window.__gardenTestGame.scene.isActive('MainMenu')&&document.querySelector('#blueprint-select'));
+      await page.waitForFunction(()=>window.__gardenTestGame.scene.isActive('MainMenu')&&document.querySelector('#blueprint-select'),null,{timeout:60000});
       await page.locator('#blueprint-select').selectOption(map);
-      await page.evaluate(()=>window.__gardenTestGame.scene.start('Game'));
+      const box=await page.locator('canvas').boundingBox();
+      await page.mouse.move(box.x+box.width/2,box.y+box.height*252/540);
+      await page.mouse.click(box.x+box.width/2,box.y+box.height*252/540);
       await page.waitForFunction(()=>window.__gardenTestGame.scene.isActive('Game')&&window.__gardenSimScene?.runDrops&&window.__gardenSimScene.run.state.elapsed===0,null,{timeout:60000});
       result.push(await inspect());
     }

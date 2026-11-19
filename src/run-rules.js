@@ -103,14 +103,16 @@
   // devel human playtest: profiles selected by the repeated pace study. Explicit
   // simulation configs (including {}) always bypass the trial to preserve baselines.
   const paceProfiles=Object.freeze({
-    classic:Object.freeze({interval:1.5,cap:5,batch:1,flower:.10,item:.08,cooldown:25}),
+    classic:Object.freeze({interval:1.25,cap:8,batch:2,flower:.065,item:.04,cooldown:35}),
     cross:Object.freeze({interval:2.5,cap:11,batch:2,flower:.10,item:.08,cooldown:15}),
     heart:Object.freeze({interval:2,cap:8,batch:2,flower:.09,item:.06,cooldown:30})
   });
   let waves=baseWaves;
+  const classicSupply=Object.freeze({cap:3,sequence:Object.freeze(['rock','rock','boomerang'])});
+  let itemSupply=null;
   function applyPaceTrial(id){
     const p=active&&!window.GardenSimulationConfig?paceProfiles[id]:null;
-    tuning=baseTuning;waves=baseWaves;
+    tuning=baseTuning;waves=baseWaves;itemSupply=p&&id==='classic'?classicSupply:null;
     if(!p)return;
     const round=x=>Math.round(x*10000)/10000;
     tuning=Object.freeze({...baseTuning,dropWeights:Object.freeze([round(.9-p.flower-p.item),.10,p.flower,p.item]),itemInterval:p.cooldown});
@@ -121,8 +123,10 @@
   function waveAt(seconds){return waves.findLast(w=>seconds+1e-7>=w.start)||waves[0];}
   function population(seconds){return waveAt(seconds).cap;}
   function spawnInterval(seconds){return waveAt(seconds).interval;}
-  const itemUnlocks=Object.freeze((config.itemUnlocks||[[0,['rock','boomerang','shoe','shield']],[90,['water-fairy','balloon']],[180,['wheel','flowerpot']],[300,['paper-plane','bouncy-ball']],[420,['yellow-floor','broom']],[540,['sprinkler']]]).map(([at,ids])=>Object.freeze([at,Object.freeze(ids)])));
-  const itemPool=seconds=>itemUnlocks.flatMap(([at,ids])=>seconds>=at?ids:[]);
+  const baseItemUnlocks=Object.freeze((config.itemUnlocks||[[0,['rock','boomerang','shoe','shield']],[90,['water-fairy','balloon']],[180,['wheel','flowerpot']],[300,['paper-plane','bouncy-ball']],[420,['yellow-floor','broom']],[540,['sprinkler']]]).map(([at,ids])=>Object.freeze([at,Object.freeze(ids)])));
+  const classicItemUnlocks=Object.freeze([Object.freeze([0,Object.freeze(['rock','boomerang'])])]);
+  const currentItemUnlocks=()=>itemSupply?classicItemUnlocks:baseItemUnlocks;
+  const itemPool=seconds=>currentItemUnlocks().flatMap(([at,ids])=>seconds>=at?ids:[]);
   function pickItem(seconds,random=Math.random){
     const pool=itemPool(seconds);
     return pool[Math.min(pool.length-1,Math.floor(random()*pool.length))];
@@ -152,17 +156,24 @@
   const depth=Object.freeze({field:-2,pattern:-1.8,soil:-1,shadow:.75,groundEffect:.8,flower:1,installation:1.8,enemy:3,fairy:4,projectile:6,effects:6.1,relic:7,card:8,blueprint:10,blueprintIcon:11,blueprintText:12,blueprintInput:13,plantGhost:15,hud:16,hudContent:17,slotFrame:18,equipped:20,slotInput:21,slotGhost:22,purchase:23,drag:30,tooltip:40});
   function create(onEvent=null){
     const state={slotCount:tuning.initialSlots,gems:tuning.startingGems,displayGems:tuning.startingGems,elapsed:0,kills:0,result:null,lastItemAt:-Infinity};
+    // Supply belongs to this run, never to the menu or a previous playthrough.
+    const supply=itemSupply;
+    let accepted=0,picked=0;
     let from=0,rollTime=0,rolling=false;
     function credit(n=1){state.gems+=n*tuning.gemValue;if(!rolling)state.displayGems=state.gems;}
     function rewardDrop(random=Math.random){
       const raw=rollDrop(random);
-      let kind=raw;
+      let kind=raw,reason=null;
       if(raw==='item'){
         const t=state.elapsed;
-        if(t-state.lastItemAt+1e-7<tuning.itemInterval)kind='gem';
-        else state.lastItemAt=t;
+        if(t-state.lastItemAt+1e-7<tuning.itemInterval){kind='gem';reason='item_cooldown';}
+        else{
+          state.lastItemAt=t;
+          if(supply&&accepted>=supply.cap){kind='gem';reason='stage_item_cap';}
+          else accepted++;
+        }
       }
-      onEvent?.('drop_roll',{raw,kind,reason:kind!==raw?'item_cooldown':null});
+      onEvent?.('drop_roll',{raw,kind,reason});
       return kind;
     }
     function buy(){
@@ -175,7 +186,11 @@
       state.elapsed+=dt;
       if(rolling){rollTime+=dt;const t=Math.min(1,rollTime/.65);state.displayGems=Math.max(state.gems,Math.ceil(from+(state.gems-from)*(1-(1-t)**3)));if(t===1){rolling=false;state.displayGems=state.gems;}}
     }
-    return {state,credit,buy,tick,rewardDrop};
+    function pickRunItem(random=Math.random){
+      const id=pickItem(state.elapsed,random); // consume the original RNG draw even for the ordered prefix
+      return supply?.sequence[picked++]??id;
+    }
+    return {state,credit,buy,tick,rewardDrop,pickItem:pickRunItem};
   }
-  window.GardenRunRules=Object.freeze({active,catalog,selectBlueprint,get selectedBlueprintId(){return selectedBlueprintId;},get initial(){return initial;},get blueprint(){return blueprint;},flowerWeights,paceProfiles,get tuning(){return tuning;},cost,rollDrop,damageToFlower,canEquip,chooseFlower,itemUnlocks,stageAt,completion,blueprintStatus,plantCandidates,canPlant,uprootOutline,population,enemyUnlocks,eligibleEnemies,spawnInterval,get waves(){return waves;},waveAt,itemPool,pickItem,cardPosition,depth,create});
+  window.GardenRunRules=Object.freeze({active,catalog,selectBlueprint,get selectedBlueprintId(){return selectedBlueprintId;},get initial(){return initial;},get blueprint(){return blueprint;},flowerWeights,paceProfiles,get tuning(){return tuning;},cost,rollDrop,damageToFlower,canEquip,chooseFlower,get itemUnlocks(){return currentItemUnlocks();},get itemSupply(){return itemSupply;},stageAt,completion,blueprintStatus,plantCandidates,canPlant,uprootOutline,population,enemyUnlocks,eligibleEnemies,spawnInterval,get waves(){return waves;},waveAt,itemPool,pickItem,cardPosition,depth,create});
 }());
