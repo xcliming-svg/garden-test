@@ -10,7 +10,7 @@ const require=createRequire(import.meta.url),phaser=require.resolve('phaser/dist
 const mime={'.js':'application/javascript','.html':'text/html; charset=utf-8','.css':'text/css; charset=utf-8','.svg':'image/svg+xml','.json':'application/json'};
 const server=createServer((req,res)=>{
  try{
-  const path=new URL(req.url,'http://localhost').pathname.slice(1)||'index.html';
+  const path=decodeURIComponent(new URL(req.url,'http://localhost').pathname.slice(1))||'index.html';
   if(path.includes('..'))return res.writeHead(404).end();
   let body=readFileSync(path==='phaser.js'?phaser:join(root,path==='index.html'?'lab.html':path));
   if(path==='index.html')body=body.toString().replace('https://cdn.jsdelivr.net/npm/phaser@3.90.0/dist/phaser.min.js','./phaser.js');
