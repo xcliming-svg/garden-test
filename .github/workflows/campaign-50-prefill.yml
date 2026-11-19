@@ -1,0 +1,27 @@
+name: Campaign pre-planted garden comparison
+on:
+  push:
+    branches: [feature/campaign-50-study]
+    paths:
+      - '.github/workflows/campaign-50-prefill.yml'
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  prefill:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    strategy:
+      fail-fast: false
+      matrix:
+        stage: [45, 50]
+    steps:
+      - uses: actions/checkout@v6
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - run: node simulation/experiments/campaign-50.mjs prefill ${{ matrix.stage }} /tmp/prefill.json
+      - uses: actions/upload-artifact@v4
+        with:
+          name: prefill-${{ matrix.stage }}
+          path: /tmp/prefill.json

@@ -154,11 +154,25 @@ export function startGear(model,gear,stage,variant,seed){
   while(cards.length<count){const c=choices[Math.floor(random()*choices.length)];cards.push({id:c.id,level:c.level});}
   return cards;
 }
+// Fixed, connected pre-planted portion, independent of the equipment RNG.
+export const prefillProtocol={seed:29601,runs:4,dt:.05,stages:[45,50],starts:['half','full'],fractions:[0,.15,.25],maxSeconds:720};
+export function prefill(stage,fraction){
+  const env=makeStage(stage),goal=Math.max(4,Math.round(env.count*fraction)),cells=new Set(env.initial.map(([i])=>i)),map=new Map(env.blueprint);
+  while(cells.size<goal){
+    const choices=[...new Set([...cells].flatMap(neigh))].filter(i=>map.has(i)&&!cells.has(i));
+    choices.sort((a,b)=>Math.hypot(a%10-4.5,Math.floor(a/10)-4.5)-Math.hypot(b%10-4.5,Math.floor(b/10)-4.5)||a-b);
+    if(!choices.length)throw Error('Disconnected prefill');
+    cells.add(choices[0]);
+  }
+  return env.blueprint.filter(([i])=>cells.has(i));
+}
 export function runStage(sources,geometry,stage,policy,opts={}){
-  const {seed=protocol.screen.seed,runs=protocol.screen.runs,dt=.05,agent='normal',mode='campaign-drop',maxSeconds=protocol.maxSeconds,variant=null,treatment=null,start=null}=opts;
+  const {seed=protocol.screen.seed,runs=protocol.screen.runs,dt=.05,agent='normal',mode='campaign-drop',maxSeconds=protocol.maxSeconds,variant=null,treatment=null,start=null,prefillFraction=null}=opts;
   const rows=[];
   for(let i=0;i<runs;i++){
-    const {model,env,gear}=makeWorld(sources,stage,policy,mode,start?startOverrides(stage,start):{},variant);
+    const overrides=start?startOverrides(stage,start):{};
+    if(prefillFraction!==null)overrides.initial=prefill(stage,prefillFraction);
+    const {model,env,gear}=makeWorld(sources,stage,policy,mode,overrides,variant);
     const treated=treatment?applyLateTreatment(model,gear,treatment):gear;
     const startingGear=start?startGear(model,gear,stage,start,seed+i):null;
     const r=play(createEngine(model,{seed:seed+i,dt,maxSeconds,geometry,trace:true,research:{progression:mode,campaign:{...treated,itemCap:env.itemCap,...(startingGear?{startingGear}:{})}}}),profileFor(agent));
@@ -175,7 +189,7 @@ export function runStage(sources,geometry,stage,policy,opts={}){
   const g=protocol.goals,violations={survival:Math.max(0,g.winRate-metrics.winRate),gap:Math.max(0,metrics.gap.p90/g.maxGap-1),duration:Math.max(0,g.minDuration-metrics.seconds.p50,metrics.seconds.p50-g.maxDuration)/g.maxDuration,discovery:Math.max(0,g.minNewDiscovery-discovery)};
   // No recent unlock -> no new discovery gate at this representative stage.
   if(!stageGear(stage,policy,mode).pool.some(c=>stage-c.stage<=4))violations.discovery=0;
-  return {stage,policy,mode,agent,seed,runs,dt,...(variant?{variant}:{}),...(treatment?{treatment}:{}),...(start?{start}:{}),metrics,violations,pass:Object.values(violations).every(x=>x===0),rows};
+  return {stage,policy,mode,agent,seed,runs,dt,...(variant?{variant}:{}),...(treatment?{treatment}:{}),...(start?{start}:{}),...(prefillFraction!==null?{prefillFraction}:{}),metrics,violations,pass:Object.values(violations).every(x=>x===0),rows};
 }
 export function profileGear(sources,geometry,stage,card,{seed=protocol.profile.seed,runs=3,dt=.05}={}){
   const results=[];
@@ -195,8 +209,9 @@ if(process.argv[1]&&import.meta.url===pathToFileURL(process.argv[1]).href){
   else if(mode==='ramp'){const stage=Number(group);report={stage,reports:rampProtocol.variants.flatMap(variant=>policies.map(policy=>runStage(sources,geometry,stage,policy,{...rampProtocol,variant})))};}
   else if(mode==='late'){const [stage,policy]=group.split(':');report={stage:Number(stage),policy,reports:lateProtocol.treatments.map(treatment=>runStage(sources,geometry,Number(stage),policy,{...lateProtocol,treatment}))};}
   else if(mode==='start'){const stage=Number(group);report={stage,reports:startProtocol.variants.map(start=>runStage(sources,geometry,stage,'counter-first',{...startProtocol,start,variant:stage>=20?'gradual':null}))};}
+  else if(mode==='prefill'){const stage=Number(group);report={stage,reports:prefillProtocol.starts.flatMap(start=>prefillProtocol.fractions.map(prefillFraction=>runStage(sources,geometry,stage,'counter-first',{...prefillProtocol,start,prefillFraction,variant:'gradual'})))};}
   else if(mode==='profile'){const stage=Number(group);report={stage,reports:unlocks('counter-first').map(({id,level})=>profileGear(sources,geometry,stage,{id,level})),baseline:profileGear(sources,geometry,stage,{id:'rock',level:1})};}
   else throw Error('Unknown campaign command');
-  console.log('CAMPAIGN '+JSON.stringify(['screen','ramp','late','start'].includes(mode)?report.reports.map(r=>({stage:r.stage,policy:r.policy,variant:r.variant,treatment:r.treatment,start:r.start,pass:r.pass,metrics:r.metrics,violations:r.violations})):mode==='profile'?{stage:report.stage,profiles:report.reports.length}: {stages:report.stages.length}));
+  console.log('CAMPAIGN '+JSON.stringify(['screen','ramp','late','start','prefill'].includes(mode)?report.reports.map(r=>({stage:r.stage,policy:r.policy,variant:r.variant,treatment:r.treatment,start:r.start,prefillFraction:r.prefillFraction,pass:r.pass,metrics:r.metrics,violations:r.violations})):mode==='profile'?{stage:report.stage,profiles:report.reports.length}: {stages:report.stages.length}));
   saveJson(out,report);
 }
