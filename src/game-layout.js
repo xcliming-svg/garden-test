@@ -479,8 +479,8 @@
     let expanded = true,lastStatus='';
     function refreshStatus(){
       if(!playable)return;
-      const entries=scene.flowerGrowth.entries,R=window.GardenRunRules;
-      const statuses=R.blueprint.map(([id])=>R.blueprintStatus(entries,id)),signature=statuses.join(',');
+      const entries=scene.flowerGrowth.entries,rules=window.GardenRunRules;
+      const statuses=rules.blueprint.map(([id])=>rules.blueprintStatus(entries,id)),signature=statuses.join(',');
       if(lastStatus===signature)return;lastStatus=signature;marks.clear();
       const fills={empty:R.n.tab,growing:P.n.gold,complete:P.n.growth,wrong:P.n.redDark};
       targets.forEach((icon,i)=>{
