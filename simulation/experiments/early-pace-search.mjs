@@ -15,6 +15,12 @@ export const protocol=Object.freeze({
   refine:{seed:3101,runs:6,keep:2},
   validate:{seed:4101,runs:16,agents:['beginner','normal','expert']},
   sensitivity:{seed:5101,runs:8,dt:.025},
+  retry:{seed:6101,runs:8,agents:['beginner','normal'],keep:2,flowers:[.10,.11,.12],cooldowns:[20,25]},
+  heartRetry:{seed:9101,runs:8,agents:['beginner','normal'],keep:2,flowers:[.09,.10,.11],items:[.05,.06,.07],cooldowns:[20,30]},
+  heartValidate:{seed:10101,runs:20,agents:['beginner','normal','expert']},
+  heartSensitivity:{seed:11101,runs:16,dt:.025},
+  revalidate:{seed:7101,runs:20,agents:['beginner','normal','expert']},
+  resensitivity:{seed:8101,runs:8,dt:.025},
   maxSeconds:600,dt:.05,
   gates:{winRateMin:.9,winRateLoss:.1,timeMin:.8,timeMax:1.2,timeP90Max:1.25,gapMax:1.15,firstItemMaxRatio:.65,densityMinRatio:1.5,slotsGain:1}
 });
@@ -31,7 +37,7 @@ export function configFor(w,map,p){
   const run=p.flower===undefined?{}:{dropWeights:[round(.9-p.flower-p.item),.1,p.flower,p.item],itemInterval:p.cooldown};
   return {initial,blueprint,waves,run};
 }
-function evaluate(sources,w,map,p,{seed,runs,agent='normal',dt=protocol.dt,maxSeconds=protocol.maxSeconds,geometry=null}){
+export function evaluate(sources,w,map,p,{seed,runs,agent='normal',dt=protocol.dt,maxSeconds=protocol.maxSeconds,geometry=null}){
   const cfg=resolveConfig(w,configFor(w,map,p)),rows=[];
   for(let i=0;i<runs;i++){
     const r=play(createEngine(loadModels(sources,cfg),{seed:seed+i,dt,maxSeconds,geometry}),profileFor(agent));
@@ -97,8 +103,16 @@ export function searchPhase(sources,map,phase,previous=null,geometry=null){
     const results=ordered(unique.map(p=>{const r=ev(p,o);return {...small(r),assessment:assess(map,r,base)};}));
     return {map,phase,base:small(base),results,selected:results.slice(0,q.keep).map(r=>r.p),simulations:(results.length+1)*q.runs};
   }
-  if(phase==='validate'||phase==='sensitivity'){
-    const q=protocol[phase],agents=phase==='validate'?q.agents:['normal'],results=[],bases=[];
+  if(phase==='retry'||phase==='heartRetry'){
+    const q=protocol[phase],ps=[];
+    for(const p of previous.selected)for(const flower of q.flowers)for(const item of q.items??[p.item])for(const cooldown of q.cooldowns)ps.push({...p,flower,item,cooldown});
+    const unique=[...new Map(ps.map(p=>[key(p),p])).values()];
+    const bases=q.agents.map(agent=>ev(null,{seed:q.seed,runs:q.runs,agent}));
+    const results=unique.map(p=>{const policies=q.agents.map((agent,i)=>{const r=ev(p,{seed:q.seed,runs:q.runs,agent});return {...small(r),assessment:assess(map,r,bases[i])};});return {...policies[1],policies,assessment:{pass:policies.every(r=>r.assessment.pass),score:Math.max(...policies.map(r=>r.assessment.score)),violations:Object.fromEntries(policies.map(r=>[r.agent,r.assessment.violations]))}};});
+    ordered(results);return {map,phase,bases:bases.map(small),results,selected:results.slice(0,q.keep).map(r=>r.p),simulations:(results.length+1)*q.runs*q.agents.length};
+  }
+  if(['validate','sensitivity','revalidate','resensitivity','heartValidate','heartSensitivity'].includes(phase)){
+    const q=protocol[phase],agents=q.agents??['normal'],results=[],bases=[];
     for(const agent of agents){
       const o={seed:q.seed,runs:q.runs,agent,dt:q.dt??protocol.dt},base=ev(null,o);bases.push(base);
       for(const p of previous.selected){
@@ -112,7 +126,7 @@ export function searchPhase(sources,map,phase,previous=null,geometry=null){
 }
 export function digest(report){
   const compact=r=>({p:r.p,agent:r.agent,n:r.runs,wins:r.wins,defeats:r.defeats,time:r.seconds.p50,p90:r.seconds.p90,alive:r.alive30.p50,kills30:r.kills30.p50,kills60:r.kills60.p50,firstItem:r.firstItem.p50,gap90:r.maxProgressGap.p90,gear:r.filled.p50,peak:r.peakEnemies.p50,flowersLost:r.flowersLost.p90,score:r.assessment?.score??r.score,pass:r.assessment?.pass,violations:r.assessment?.violations});
-  return {map:report.map,phase:report.phase,simulations:report.simulations,base:report.base?compact(report.base):report.bases.map(compact),top:report.results.slice(0,report.phase==='validate'||report.phase==='sensitivity'?100:5).map(compact),selected:report.selected,passing:report.results.filter(r=>r.assessment?.pass).length};
+  return {map:report.map,phase:report.phase,simulations:report.simulations,base:report.base?compact(report.base):report.bases.map(compact),top:report.results.slice(0,['validate','sensitivity','revalidate','resensitivity','heartValidate','heartSensitivity'].includes(report.phase)?100:5).map(compact),selected:report.selected,passing:report.results.filter(r=>r.assessment?.pass).length};
 }
 if(process.argv[1]&&import.meta.url===pathToFileURL(process.argv[1]).href){
   const {values:o}=parseArgs({options:{map:{type:'string'},phase:{type:'string'},previous:{type:'string'},geometry:{type:'string'},output:{type:'string'}}});
