@@ -12,7 +12,7 @@ export function loadModels(sources,config={}) {
 export function defaults(w) {
   const R=w.GardenRunRules,B=w.GardenWeaponBalance,F=w.GardenFairyPatrol,I=w.GardenItemCards;
   return structuredClone({
-    schemaVersion:1,initial:R.initial,blueprint:R.blueprint,run:R.tuning,
+    schemaVersion:1,initial:R.initial,blueprint:R.blueprint,flowerWeights:R.flowerWeights,run:R.tuning,
     enemyUnlocks:R.enemyUnlocks,waves:R.waves.map(x=>[x.start,x.interval,x.cap,x.batch,x.pool]),
     itemUnlocks:R.itemUnlocks,weapons:B.data,enemyHp:Object.fromEntries(w.GardenEnemyPreview.roster.map(e=>[e.id,B.hp(e)])),
     enemyDamage:{},heightLimits:B.heightLimits,enemyMotion:w.GardenEnemyMotion.profiles,projectiles:w.GardenHeroWeaponPreview.tuning,
@@ -64,6 +64,7 @@ export function resolveConfig(w,patch={}) {
     }
     return seen;
   }
+  for(const [name,weight] of Object.entries(c.flowerWeights))number(weight,'flowerWeights.'+name,.001,1000);
   const needed=cells(c.blueprint,'blueprint'),initial=cells(c.initial,'initial');
   for(const [id,name] of initial)if(needed.get(id)!==name)fail('initial','must match blueprint');
   const reach=new Set(initial.keys()),queue=[...reach];

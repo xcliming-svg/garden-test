@@ -18,6 +18,37 @@
   }
   const previewMode = new URLSearchParams(window.location.search).get('preview') === '1';
 
+  // Temporary native selector: only the playable main menu owns this element.
+  // Keep the existing new-game button coordinates and hide it on overlays.
+  function attachBlueprintSelector(scene){
+    const R=window.GardenRunRules;
+    if(!R?.active||window.GardenSimulationConfig?.blueprint||window.GardenSimulationConfig?.initial)return;
+    const parent=scene.game.canvas.parentElement;
+    const label=document.createElement('label'),select=document.createElement('select');
+    label.id='blueprint-select-control';
+    label.htmlFor='blueprint-select';
+    label.textContent='도안 선택 (임시)';
+    Object.assign(label.style,{position:'absolute',left:'65%',top:'43%',width:'29%',zIndex:'5',color:'#ddd',display:'block'});
+    select.id='blueprint-select';
+    select.setAttribute('aria-label','시작 도안');
+    Object.assign(select.style,{display:'block',width:'100%',marginTop:'4px',font:'inherit',background:'#202023',color:'#eee',border:'1px solid #777',padding:'4px'});
+    for(const p of R.catalog){
+      const option=document.createElement('option');option.value=p.id;option.textContent=p.label+' ('+p.blueprint.length+'칸)';select.append(option);
+    }
+    select.value=R.selectedBlueprintId;
+    select.addEventListener('change',()=>R.selectBlueprint(select.value));
+    label.append(select);parent.append(label);
+    const resize=()=>{label.style.fontSize=Math.max(9,14*parent.clientWidth/960)+'px';};
+    const hide=()=>{label.hidden=true;label.style.display='none';};
+    const show=()=>{label.hidden=false;label.style.display='block';resize();};
+    resize();window.addEventListener('resize',resize);
+    scene.events.on('pause',hide);scene.events.on('resume',show);
+    scene.events.once('shutdown',()=>{
+      scene.events.off('pause',hide);scene.events.off('resume',show);
+      window.removeEventListener('resize',resize);label.remove();
+    });
+  }
+
   class BootScene extends Phaser.Scene {
     constructor() { super('Boot'); }
     create() {
@@ -39,6 +70,7 @@
       const first = 252;
       const step = menu.navHeight + menu.navGap;
       const nav = { height: menu.navHeight };
+      attachBlueprintSelector(this);
       U.button(this, x, first, w, '새 게임', () => this.scene.start('Game'), { ...nav, primary: true });
       U.button(this, x, first + step, w, '이어하기 · 미구현', null, { ...nav, disabled: true });
       U.button(this, x, first + step * 2, w, '설정', () => U.openSubscene(this, 'Settings'), nav);
