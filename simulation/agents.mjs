@@ -7,7 +7,10 @@ export const PROFILES=Object.freeze({
   expert:{reaction:.5,drag:.3,mistake:0,style:'expert'},
   'garden-first':{reaction:1,drag:.5,mistake:0,style:'garden'},
   'combat-first':{reaction:1,drag:.5,mistake:0,style:'combat'},
-  'economy-first':{reaction:1,drag:.5,mistake:0,style:'economy'}
+  'economy-first':{reaction:1,drag:.5,mistake:0,style:'economy'},
+  'rock-only':{reaction:1,drag:.5,mistake:0,style:'rock'},
+  'speed-first':{reaction:1,drag:.5,mistake:0,style:'speed'},
+  'diverse':{reaction:1,drag:.5,mistake:0,style:'diverse'}
 });
 export function makeAgent(profile,random){
   const p=profile;let nextAt=0,pending=null;
@@ -38,9 +41,13 @@ export function makeAgent(profile,random){
           opts.push({start:{type:'DRAG_START',cardId:c.id},end:{type:'DRAG_END',cell},weight:weight+c.age*.08});
         }
       }else{
-        const item=c.item,inc=score(item,o);
+        if(p.style==='rock'&&c.item.id!=='rock')continue;
         for(let slot=0;slot<o.slotCount;slot++){
-          const old=o.gear[slot],diff=inc-score(old,o);
+          const item=c.slotItems?.[slot]||c.item,old=o.gear[slot];
+          let diff=score(item,o)-score(old,o);
+          if(p.style==='speed')diff+=(item.id==='shoe'?18:0)-(old?.id==='shoe'?18:0);
+          if(p.style==='diverse'&&item.id!==old?.id){const duplicates=o.gear.filter((i,j)=>j!==slot&&i?.id===item.id).length;diff-=duplicates*5;}
+          if(item.id===old?.id&&item.level>old?.level)diff+=4;
           const next=o.gear.slice();next[slot]=item;
           if(!next.some(i=>(i?.stats?.dps||0)>0))continue;
           if(p.style!=='random'&&diff<=.15)continue;

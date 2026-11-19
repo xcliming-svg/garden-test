@@ -3,15 +3,32 @@
   const active=typeof document!=='undefined'&&document.documentElement.dataset.playable==='true';
   const config=window.GardenSimulationConfig||{};
   const defaultInitial=[[44,'daisy'],[45,'sunflower'],[54,'tulip'],[55,'hydrangea']];
-  const initial=Object.freeze((config.initial||defaultInitial).map(Object.freeze));
-  const blueprint=Object.freeze((config.blueprint||[[33,'rose'],[34,'daisy'],[35,'sunflower'],[36,'lavender'],[43,'tulip'],...defaultInitial,[46,'rose'],[53,'lavender'],[56,'daisy'],[63,'hydrangea'],[64,'rose'],[65,'lavender'],[66,'sunflower']]).slice().sort((a,b)=>a[0]-b[0]).map(Object.freeze));
+  const freezeCells=rows=>Object.freeze(rows.map(row=>Object.freeze([...row])).sort((a,b)=>a[0]-b[0]));
+  const flowerNames=Object.freeze({D:'daisy',S:'sunflower',T:'tulip',H:'hydrangea',R:'rose',L:'lavender'});
+  const makePattern=(id,label,rows,x0,y0)=>{
+    const blueprint=freezeCells(rows.flatMap((row,y)=>Array.from(row).flatMap((key,x)=>flowerNames[key]?[[10*(y+y0)+x+x0,flowerNames[key]]]:[])));
+    const initial=freezeCells(blueprint.filter(([cell])=>[44,45,54,55].includes(cell)));
+    return Object.freeze({id,label,blueprint,initial});
+  };
+  const catalog=Object.freeze([
+    Object.freeze({id:'classic',label:'정사각형 · 입문',blueprint:freezeCells([[33,'rose'],[34,'daisy'],[35,'sunflower'],[36,'lavender'],[43,'tulip'],...defaultInitial,[46,'rose'],[53,'lavender'],[56,'daisy'],[63,'hydrangea'],[64,'rose'],[65,'lavender'],[66,'sunflower']]),initial:freezeCells(defaultInitial)}),
+    ...[["cross","십자 · 입문",["..SS..",".SDDS.","SDDDDS",".SDDS.","..SS.."],2,2],["heart","하트 · 초급",[".RR.RR.","RRRRRRR","RRDDDRR",".RTTTR.","..TTT..","...T..."],1,2],["flower","꽃 · 중급",["...SS...","..SSSS..",".SSDDSS.","SSDDDDSS",".SSDDSS.","..SSSS..","...SS..."],1,1],["butterfly","나비 · 중급",["LL...LL","LHL.LHL","LHHSHHL",".HHSHH.","LTTSTTL","LT...TL"],1,2],["large-heart","큰 하트 · 확장 실험",[".RRR..RRR.","RRRRRRRRRR","RRRDDDDRRR","RRRDDDDRRR",".RRTTTTRR.","..RTTTTR..","...TTTT...","....TT...."],0,1]].map(row=>makePattern(...row))
+  ]);
+  let selectedBlueprintId='classic';
+  let initial=freezeCells(config.initial||catalog[0].initial);
+  let blueprint=freezeCells(config.blueprint||catalog[0].blueprint);
+  const flowerWeights=Object.freeze({...Object.fromEntries(Object.values(flowerNames).map(name=>[name,1])),...config.flowerWeights});
   const tuning=Object.freeze({initialSlots:4,maxSlots:10,costs:Object.freeze([40,60,85,115,150,200]),growthSeconds:8,uprootSeconds:3,cardLifetime:45,dropWeights:Object.freeze([.69,.10,.18,.03]),itemInterval:30,starterRock:'rock',enemyDamage:4,enemyDamagePerLevel:2,spawnCap:65,neededFlowerBias:.75,startingGems:0,gemValue:1,...config.run});
   const damageToFlower=(entry,defense=0)=>Math.max(1,(config.enemyDamage?.[entry.id]??(tuning.enemyDamage+(entry.level-1)*tuning.enemyDamagePerLevel))-defense);
   const canEquip=(equipped,index,item)=>{const next=equipped.slice();next[index]=item;return next.some(i=>i?.stats.dps>0);};
   function chooseFlower(entries,random=Math.random){
     const needed=blueprint.filter(([cell,name])=>entries.get(cell)?.name!==name).map(([,name])=>name);
     const pool=needed.length&&random()<tuning.neededFlowerBias?needed:window.GardenFlowerGrowth.names;
-    return pool[Math.min(pool.length-1,Math.floor(random()*pool.length))];
+    const total=pool.reduce((sum,name)=>sum+flowerWeights[name],0);
+    if(total<=0)return pool[Math.min(pool.length-1,Math.floor(random()*pool.length))];
+    let roll=random()*total;
+    for(const name of pool){roll-=flowerWeights[name];if(roll<0)return name;}
+    return pool.at(-1);
   }
   const cost=count=>tuning.costs[count-tuning.initialSlots]??null;
   function rollDrop(random=Math.random){
@@ -22,6 +39,13 @@
   }
   const stageAt=age=>Math.min(3,1+Math.floor((Math.max(0,age)+1e-7)/tuning.growthSeconds));
   const required=new Map(blueprint);
+  function selectBlueprint(id){
+    if(config.blueprint||config.initial)return false; // explicit simulation configuration takes precedence
+    const pattern=catalog.find(p=>p.id===id);if(!pattern)return false;
+    selectedBlueprintId=id;initial=pattern.initial;blueprint=pattern.blueprint;
+    required.clear();for(const [cell,name] of blueprint)required.set(cell,name);
+    return true;
+  }
   function blueprintStatus(entries,id){
     if(!required.has(id))return null;
     const f=entries.get(id);
@@ -133,5 +157,5 @@
     }
     return {state,credit,buy,tick,rewardDrop};
   }
-  window.GardenRunRules=Object.freeze({active,initial,blueprint,tuning,cost,rollDrop,damageToFlower,canEquip,chooseFlower,itemUnlocks,stageAt,completion,blueprintStatus,plantCandidates,canPlant,uprootOutline,population,enemyUnlocks,eligibleEnemies,spawnInterval,waves,waveAt,itemPool,pickItem,cardPosition,depth,create});
+  window.GardenRunRules=Object.freeze({active,catalog,selectBlueprint,get selectedBlueprintId(){return selectedBlueprintId;},get initial(){return initial;},get blueprint(){return blueprint;},flowerWeights,tuning,cost,rollDrop,damageToFlower,canEquip,chooseFlower,itemUnlocks,stageAt,completion,blueprintStatus,plantCandidates,canPlant,uprootOutline,population,enemyUnlocks,eligibleEnemies,spawnInterval,waves,waveAt,itemPool,pickItem,cardPosition,depth,create});
 }());

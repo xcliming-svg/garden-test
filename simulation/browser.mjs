@@ -11,7 +11,7 @@ import {rng} from './models.mjs';
 const require=createRequire(import.meta.url);
 const mime={'.js':'application/javascript','.html':'text/html; charset=utf-8','.css':'text/css; charset=utf-8','.svg':'image/svg+xml','.json':'application/json'};
 function replaceOnce(s,a,b){if(s.split(a).length!==2)throw Error('Browser harness hook changed: '+a);return s.replace(a,b);}
-async function withScene(p,{channel='chrome',seed=1,trace=false}={},fn){
+async function withScene(p,{channel='chrome',seed=1,trace=false,menuSelection=null,viewport={width:960,height:540}}={},fn){
   const {chromium}=await import('playwright'),phaser=require.resolve('phaser/dist/phaser.min.js');
   const server=createServer((req,res)=>{
     try{
@@ -34,13 +34,13 @@ async function withScene(p,{channel='chrome',seed=1,trace=false}={},fn){
   let browser;
   try{
     browser=await chromium.launch({...(channel==='chromium'?{}:{channel}),headless:true,args:['--no-sandbox','--disable-dev-shm-usage','--use-gl=angle','--use-angle=swiftshader','--enable-unsafe-swiftshader']});
-    const page=await browser.newPage({viewport:{width:960,height:540},deviceScaleFactor:1}),errors=[];
-    page.on('pageerror',e=>errors.push(e.stack||String(e)));
+    const page=await browser.newPage({viewport,deviceScaleFactor:1}),errors=[];
+    page.on('pageerror',e=>{errors.push(e.stack||String(e));console.error('PAGE ERROR',e.stack||String(e));});
     page.on('requestfailed',r=>errors.push(r.url()));
     await page.addInitScript(({config,seed,trace,rngSource})=>{
       const makeRng=new Function('return ('+rngSource+')')();
       window.__gardenSimHarness=true;window.__gardenSimTime=0;window.__gardenSimStep=false;
-      window.GardenSimulationConfig=config;
+      if(config)window.GardenSimulationConfig=config;
       window.GardenSimulationRng=Object.fromEntries(['enemy','drop','flower','item','weapon','agent'].map(k=>[k,makeRng(seed,k)]));
       const counters={},events=[],weapon={};
       window.__gardenSimTelemetry={counters,events,weapon};
@@ -53,10 +53,14 @@ async function withScene(p,{channel='chrome',seed=1,trace=false}={},fn){
         }
         if(trace)events.push({t:window.__gardenSimTime,type,...data});
       };
-    },{config:p.config,seed,trace,rngSource:rng.toString()});
+    },{config:menuSelection?null:p.config,seed,trace,rngSource:rng.toString()});
     await page.goto('http://127.0.0.1:'+server.address().port+'/');
     await page.waitForFunction(()=>window.__gardenTestGame?.scene.isActive('MainMenu'),null,{timeout:60000});
-    await page.evaluate(()=>window.__gardenTestGame.scene.start('Game'));
+    if(menuSelection){
+      await page.locator('#blueprint-select').selectOption(menuSelection);
+      const box=await page.locator('canvas').boundingBox();
+      await page.mouse.click(box.x+box.width/2,box.y+box.height*252/540);
+    }else await page.evaluate(()=>window.__gardenTestGame.scene.start('Game'));
     await page.waitForFunction(()=>window.__gardenSimScene?.runDrops,null,{timeout:60000});
     // A real animation frame may render, but its UPDATE is blocked until the
     // harness explicitly emits it. Verify that no real-time step leaked in.
@@ -91,7 +95,7 @@ export async function runBrowser(p,profile,{seed=1,dt=.05,maxSeconds=1800,trace=
       return {time,finished:s.run.state.result,blueprint:R.blueprint.map(([cell,name])=>({cell,name,status:R.blueprintStatus(s.flowerGrowth.entries,cell)})),
         flowers:[...s.flowerGrowth.entries].map(([cell,f])=>({cell,name:f.name,stage:f.stage,healthBand:Math.ceil(3*(s.relicCollection.state.flowers.get(cell)?.energy??0)/window.GardenRelicCollection.tuning.maxEnergy)})),
         cards:cardList().map(c=>({id:cardId(c),kind:c.kind,name:c.id,x:c.x,y:c.y,age:c.age,validCells:c.kind==='flower'?candidates:[],matchingCells:c.kind==='flower'?candidates.filter(i=>required.get(i)===c.id):[],item:c.kind==='item'?I.runItemData(c.id):null})),
-        gear:gear.map(i=>i?{id:i.id,stats:{...i.stats}}:null),stats:L.sumPreviewStats(gear),slotCount:s.run.state.slotCount,price:R.cost(s.run.state.slotCount),gems:s.run.state.gems,
+        gear:gear.map(i=>i?{id:i.id,level:i.level,stats:{...i.stats}}:null),stats:L.sumPreviewStats(gear),slotCount:s.run.state.slotCount,price:R.cost(s.run.state.slotCount),gems:s.run.state.gems,
         drag,hold:s.runGarden.holding,completed:complete(),requiredCount:required.size,patrolLength:s.fairyPatrol.length,enemies:s.enemyPreview.actors.length};
     };
     const ptr=(p,down=true)=>({...p,leftButtonDown:()=>down});
@@ -160,4 +164,26 @@ export async function runBrowser(p,profile,{seed=1,dt=.05,maxSeconds=1800,trace=
       kills:final.kills,spawned:final.spawned,damage:final.damage,actualDps:seconds?final.damage/seconds:0,shots:final.shots,hits:final.hits,gems:final.gems,gear:final.gear,
       final,counts:telemetry.counters,byWeapon:telemetry.weapon,actions,timeline,events:trace?telemetry.events:undefined};
   },{seed,dt,maxSeconds,profile,makeAgentSource:makeAgent.toString(),replayActions,trace}));
+}
+
+export async function verifyBlueprintSelector(p,opts={}){
+  return withScene(p,{...opts,menuSelection:'heart'},async page=>{
+    const inspect=()=>page.evaluate(()=>{
+      const R=window.GardenRunRules,s=window.__gardenSimScene;
+      return {id:R.selectedBlueprintId,cells:R.blueprint.length,initial:[...s.flowerGrowth.entries].map(([cell,f])=>[cell,f.name]).sort((a,b)=>a[0]-b[0]),
+        icons:R.blueprint.filter(([cell])=>!!s.children.getByName('blueprint-flower:'+cell)).length,
+        occupied:s.runGarden.occupied.size,selects:document.querySelectorAll('#blueprint-select').length};
+    });
+    const heart=await inspect();
+    await page.evaluate(()=>{const g=window.__gardenTestGame;g.scene.stop('Game');g.scene.start('MainMenu');});
+    await page.waitForFunction(()=>window.__gardenTestGame.scene.isActive('MainMenu')&&document.querySelector('#blueprint-select'));
+    const menu=await page.locator('#blueprint-select').evaluate(s=>({value:s.value,options:[...s.options].map(o=>o.value)}));
+    await page.locator('#blueprint-select').selectOption('butterfly');
+    const box=await page.locator('canvas').boundingBox();
+    await page.mouse.move(box.x+box.width/2,box.y+box.height*252/540);
+    await page.mouse.click(box.x+box.width/2,box.y+box.height*252/540);
+    await page.waitForFunction(()=>window.__gardenSimScene?.runDrops&&window.__gardenTestGame.scene.isActive('Game'),null,{timeout:60000});
+    const butterfly=await inspect();
+    return {heart,menu,butterfly};
+  });
 }

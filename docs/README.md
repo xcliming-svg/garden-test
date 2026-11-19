@@ -1,5 +1,7 @@
 # 개발 문서
 
+> **초반 도안 및 성장 실험:** [579회 밸런스 비교·도안 선택·후속 판단](./blueprint-balance-baseline.md).
+
 > **devel 기본 플레이:** [플레이 통합 규격](./playable-run.md)이 게임 동작 및 임시 밸런스의 최신 기준이다. 아래 미리보기 문서는 `lab.html`에 보존된 비교 동작을 설명한다.
 
 > **장착 무기 밸런스 v1 (devel):** `?enemies=1&weapons=1`에서 무기별 피해·사거리·쿨타임·레벨, 적 HP, 높이별 상성, 예측 조준 및 중복 10슬롯을 적용한다. `weaponSlots`, `weaponLevel`, `enemyCount`, `balanceWave`, `weaponLoadout` 비교 가능. [현행 밸런스 규격 및 시험 결과](./weapon-balance-v1.md). 기본 적 없는 모션과 기존 구슬 전투는 유지한다.
@@ -36,6 +38,7 @@
 | 문서 | 역할 |
 | --- | --- |
 | [simulation-design.md](./simulation-design.md) | AI 자동 플레이, 외부 밸런스 설정, 실행·병렬 실험·재현·로그·검증 및 재미 평가 기준 |
+| [blueprint-balance-baseline.md](./blueprint-balance-baseline.md) | 도안 선택 6종, 1차 579회 기준 실험, 꽃 희귀도/성장/무기 조합/고밀도 검증 및 후속 기준 |
 | [flower-removal-defense-pressure.md](./flower-removal-defense-pressure.md) | 만개 후 오배치 표시, 3초 제거, 슬롯 흰색 및 무조작 방어 압박 |
 | [blueprint-feedback.md](./blueprint-feedback.md) | 첫 난이도 플레이 피드백, 도안·보상·결과 팝업 및 10×10 시간 추정 |
 | [survivor-progression.md](./survivor-progression.md) | 기본 플레이 아이템 공급·웨이브 적용 규격 및 검증 |

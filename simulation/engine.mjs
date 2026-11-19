@@ -2,12 +2,16 @@ import {rng} from './models.mjs';
 
 // This runner composes the actual production models. The Phaser scene runner is
 // the reference for timing/input/raster geometry; this is the fast model path.
-export function createEngine(w,{seed=1,dt=1/60,maxSeconds=1800,trace=false,geometry=null}={}) {
+export function createEngine(w,{seed=1,dt=1/60,maxSeconds=1800,trace=false,geometry=null,research=null}={}) {
   if(!Number.isInteger(seed)||seed<0||seed>0xffffffff)throw Error('seed must be uint32');
   if(!Number.isFinite(dt)||dt<=0||dt>.1)throw Error('dt must be in (0,.1]');
   if(!Number.isFinite(maxSeconds)||maxSeconds<=0||maxSeconds>7200)throw Error('maxSeconds must be in (0,7200]');
   const R=w.GardenRunRules,F=w.GardenFairyPatrol,E=w.GardenEnemyPreview,A=w.GardenHeroWeaponPreview,
     L=w.GardenRelicCollection,I=w.GardenItemCards,B=w.GardenWeaponBalance,G=w.GardenGameLayout;
+  const progression=research?.progression??'none';
+  if(!['none','duplicate','timed-drop'].includes(progression))throw Error('Invalid research progression');
+  const levelTimes=research?.levelTimes??[180,360];
+  if(levelTimes.length!==2||!levelTimes.every(Number.isFinite)||levelTimes[0]<0||levelTimes[1]<=levelTimes[0])throw Error('Invalid levelTimes');
   const spec=G.spec,entries=new Map(R.initial.map(([cell,name])=>[cell,{name,born:0,stage:3,mature:true}]));
   const occupied=new Set(entries.keys()),required=new Map(R.blueprint),cards=new Map(),gear=Array(R.tuning.maxSlots).fill(null);
   const streams=Object.fromEntries(['enemy','weapon','drop','flower','item','agent'].map(k=>[k,rng(seed,k)]));
@@ -65,6 +69,21 @@ export function createEngine(w,{seed=1,dt=1/60,maxSeconds=1800,trace=false,geome
     if(n!==activeCount){activeCount=n;signature='';renderPatrol();}
   }
   equip(0,I.runItemData(R.tuning.starterRock));
+  // Model-only counterfactual; no weapon-level rule is enabled in the actual game.
+  function leveled(name,level=1){
+    const item=I.runItemData(name);
+    return level>1&&B.data[name]?{...item,level,stats:{...item.stats,dps:B.nominalDps(name,level)}}:item;
+  }
+  function cardItem(c,slot){
+    const old=gear[slot],level=progression==='duplicate'&&B.data[c.name]&&old?.id===c.name?Math.min(3,(old.level||1)+1):c.level||1;
+    return leveled(c.name,level);
+  }
+  if(research?.fixedLoadout){
+    // Controlled combat fixture, never a player-accessible starting inventory.
+    if(!Array.isArray(research.fixedLoadout)||research.fixedLoadout.length!==run.state.slotCount)throw Error('fixedLoadout must fill unlocked slots');
+    research.fixedLoadout.forEach((id,slot)=>equip(slot,leveled(id)));
+    if(!gear.some(i=>i?.stats.dps>0))throw Error('fixedLoadout needs damage');
+  }
   function candidates(name,correctOnly=false){
     return [...R.plantCandidates(occupied)].filter(i=>!correctOnly||required.get(i)===name);
   }
@@ -83,11 +102,12 @@ export function createEngine(w,{seed=1,dt=1/60,maxSeconds=1800,trace=false,geome
     const size=G.assets[kind].dropSize;
     const p=R.cardPosition(spec,x,y,size,[...cards.values()]);
     if(!p)throw Error('No legal card position');
-    const c={id:serial++,kind,name,x:p.x,y:p.y,size,age:0,born:t,everUsable:false};
+    const level=kind==='item'&&progression==='timed-drop'&&B.data[name]?1+levelTimes.filter(at=>t>=at).length:1;
+    const c={id:serial++,kind,name,level,x:p.x,y:p.y,size,age:0,born:t,everUsable:false};
     cards.set(c.id,c);const reason=cardReason(c);c.everUsable=reason==='usable'||reason==='equippable';
     if(kind==='flower'&&reason==='usable'&&firstUsableFlower===null)firstUsableFlower=t;
     if(kind==='item'&&firstItem===null)firstItem=t;
-    emit('card_spawn',{id:c.id,kind,name,x:c.x,y:c.y,reason});return c;
+    emit('card_spawn',{id:c.id,kind,name,level:c.level,x:c.x,y:c.y,reason});return c;
   }
   const roster=E.roster.map(e=>geometry?{...e,...geometry.enemies[e.id]}:e);
   const pop=E.createPopulation(spec,patrol,roster,streams.enemy,R.population,(x,y,e)=>{
@@ -142,9 +162,9 @@ export function createEngine(w,{seed=1,dt=1/60,maxSeconds=1800,trace=false,geome
         if(correct){lastProgress=t;lastChoice=t;}
       }else{
         if(!Number.isInteger(a.slot)||a.slot<0||a.slot>=run.state.slotCount)return actionResult(a,false,'locked_slot');
-        const item=I.runItemData(c.name);if(!R.canEquip(gear,a.slot,item))return actionResult(a,false,'last_damage_weapon');
-        const prev=gear[a.slot]?.id??null;
-        equip(a.slot,item);emit('item_equip',{slot:a.slot,previous:prev,name:item.id,stats:G.sumPreviewStats(gear)});lastChoice=t;
+        const item=cardItem(c,a.slot);if(!R.canEquip(gear,a.slot,item))return actionResult(a,false,'last_damage_weapon');
+        const prev=gear[a.slot]?.id??null,previousLevel=gear[a.slot]?.level??null;
+        equip(a.slot,item);emit('item_equip',{slot:a.slot,previous:prev,previousLevel,name:item.id,level:item.level,stats:G.sumPreviewStats(gear)});lastChoice=t;
       }
       cards.delete(c.id);emit('card_use',{id:c.id,kind:c.kind,name:c.name,age:c.age});return actionResult(a,true);
     }
@@ -167,8 +187,8 @@ export function createEngine(w,{seed=1,dt=1/60,maxSeconds=1800,trace=false,geome
     const stats=G.sumPreviewStats(gear);
     return {time:t,finished,blueprint:R.blueprint.map(([cell,name])=>({cell,name,status:R.blueprintStatus(entries,cell)})),
       flowers:[...entries].map(([cell,f])=>({cell,name:f.name,stage:f.stage,healthBand:Math.ceil(3*(relic.state.flowers.get(cell)?.energy??0)/L.tuning.maxEnergy)})),
-      cards:[...cards.values()].map(c=>({id:c.id,kind:c.kind,name:c.name,x:c.x,y:c.y,age:c.age,validCells:c.kind==='flower'?candidates(c.name):[],matchingCells:c.kind==='flower'?candidates(c.name,true):[],item:c.kind==='item'?I.runItemData(c.name):null})),
-      gear:gear.slice(0,run.state.slotCount).map(i=>i?{id:i.id,stats:{...i.stats}}:null),stats,
+      cards:[...cards.values()].map(c=>({id:c.id,kind:c.kind,name:c.name,x:c.x,y:c.y,age:c.age,validCells:c.kind==='flower'?candidates(c.name):[],matchingCells:c.kind==='flower'?candidates(c.name,true):[],item:c.kind==='item'?leveled(c.name,c.level):null,...(research&&c.kind==='item'?{slotItems:gear.slice(0,run.state.slotCount).map((_,i)=>cardItem(c,i))}:{})})),
+      gear:gear.slice(0,run.state.slotCount).map(i=>i?{id:i.id,level:i.level,stats:{...i.stats}}:null),stats,
       slotCount:run.state.slotCount,price:R.cost(run.state.slotCount),gems:run.state.gems,drag:drag?{...drag}:null,hold:hold?{...hold}:null,
       enemies:pop.actors.length,requiredCount:required.size,completed:progress(),patrolLength:boundary.length};
   }
@@ -180,7 +200,7 @@ export function createEngine(w,{seed=1,dt=1/60,maxSeconds=1800,trace=false,geome
       minEnergy:n?energies[0]:0,meanEnergy:n?energies.reduce((a,b)=>a+b,0)/n:0,p25Energy:n?energies[Math.floor((n-1)*.25)]:0,
       enemies:pop.actors.length,attacking:pop.actors.filter(e=>['windup','strike','recover','ready'].includes(e.pose.phase)).length,
       enemyHp:pop.actors.reduce((a,e)=>a+e.hp,0),kills,spawned:pop.spawned,damage:weapon.state.damage,shots:weapon.state.fired,hits:weapon.state.hits,
-      flowerDamage:damage,flowerHeal:heal,gear:gear.map(i=>i?.id??null),gems:run.state.gems,slots:run.state.slotCount,patrolLength:boundary.length,fairies:activeCount,speed:currentSpeed,
+      flowerDamage:damage,flowerHeal:heal,gear:gear.map(i=>i?.id??null),gearLevels:gear.map(i=>i?.level??null),gems:run.state.gems,slots:run.state.slotCount,patrolLength:boundary.length,fairies:activeCount,speed:currentSpeed,
       cards:cards.size,usableCards:[...cards.values()].filter(c=>['usable','equippable'].includes(cardReason(c))).length,
       lastProgressGap:t-lastProgress,lastChoiceGap:t-lastChoice};
   }
@@ -238,10 +258,10 @@ export function createEngine(w,{seed=1,dt=1/60,maxSeconds=1800,trace=false,geome
   }
   function result(){
     const snap=snapshot(),seconds=t;
-    return {seed,dt,maxSeconds,geometry:geometry?'measured':'fallback',result:finished??'running',seconds:Number(seconds.toFixed(6)),completed:snap.completed,required:required.size,progress:100*snap.completed/required.size,
+    return {seed,dt,maxSeconds,research,geometry:geometry?'measured':'fallback',result:finished??'running',seconds:Number(seconds.toFixed(6)),completed:snap.completed,required:required.size,progress:100*snap.completed/required.size,
       peakComplete,kills:pop.kills,spawned:pop.spawned,peakEnemies:peak,damage:weapon.state.damage,actualDps:seconds?weapon.state.damage/seconds:0,
       shots:weapon.state.fired,hits:weapon.state.hits,flowerDamage:damage,flowerHeal:heal,overheal,defensePrevented:prevented,flowersLost,wrongPlaced,regressions,
-      gems:run.state.gems,gemPickups:relic.state.gems,hearts:relic.state.hearts,purchases,gear:snap.gear,
+      gems:run.state.gems,gemPickups:relic.state.gems,hearts:relic.state.hearts,purchases,gear:snap.gear,gearLevels:snap.gearLevels,
       firstKill,firstUsableFlower,firstItem,maxProgressGap,maxChoiceGap,maxOpportunityGap,lastCellWait:lastCellAt===null?null:seconds-lastCellAt,offeredSeconds,
       counts,byWeapon,byEnemy,byItem,cardStats,final:snap,actions,timeline,events:trace?log:undefined};
   }
