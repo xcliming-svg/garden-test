@@ -1,5 +1,5 @@
 // Shared source loader. No copied damage, wave, patrol or drop formulas.
-export const SOURCE_ORDER = ['campaign-v3','run-rules','flower-carry','palette','svg-palette','ui','test-sprites','flower-damage','flower-growth','combat-preview','loot-preview','stone-border-preview','patrol-path-preview','dashed-grid-preview','light-field-preview','dark-field-preview','guardian-walk-preview','pebble-boundary','fairy-patrol','enemy-motion','enemy-occlusion','fairy-attack','weapon-balance','enemy-preview','flower-head-preview','item-cards','hero-weapon-preview','relic-collection','game-layout','run-drops'];
+export const SOURCE_ORDER = ['campaign-v3','fairy-flowerbeds','run-rules','flower-carry','palette','svg-palette','ui','test-sprites','flower-damage','flower-growth','combat-preview','loot-preview','stone-border-preview','patrol-path-preview','dashed-grid-preview','light-field-preview','dark-field-preview','guardian-walk-preview','pebble-boundary','fairy-patrol','enemy-motion','enemy-occlusion','fairy-attack','weapon-balance','enemy-preview','flower-head-preview','item-cards','hero-weapon-preview','relic-collection','game-layout','run-drops'];
 export function loadModels(sources,config={}) {
   const w={location:{search:''},GardenSimulationConfig:structuredClone(config)};
   const document={documentElement:{dataset:{playable:'true'}}};
