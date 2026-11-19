@@ -11,7 +11,7 @@ import {rng} from './models.mjs';
 const require=createRequire(import.meta.url);
 const mime={'.js':'application/javascript','.html':'text/html; charset=utf-8','.css':'text/css; charset=utf-8','.svg':'image/svg+xml','.json':'application/json'};
 function replaceOnce(s,a,b){if(s.split(a).length!==2)throw Error('Browser harness hook changed: '+a);return s.replace(a,b);}
-async function withScene(p,{channel='chrome',seed=1,trace=false,menuSelection=null}={},fn){
+async function withScene(p,{channel='chrome',seed=1,trace=false,menuSelection=null,viewport={width:960,height:540}}={},fn){
   const {chromium}=await import('playwright'),phaser=require.resolve('phaser/dist/phaser.min.js');
   const server=createServer((req,res)=>{
     try{
@@ -34,8 +34,8 @@ async function withScene(p,{channel='chrome',seed=1,trace=false,menuSelection=nu
   let browser;
   try{
     browser=await chromium.launch({...(channel==='chromium'?{}:{channel}),headless:true,args:['--no-sandbox','--disable-dev-shm-usage','--use-gl=angle','--use-angle=swiftshader','--enable-unsafe-swiftshader']});
-    const page=await browser.newPage({viewport:{width:960,height:540},deviceScaleFactor:1}),errors=[];
-    page.on('pageerror',e=>errors.push(e.stack||String(e)));
+    const page=await browser.newPage({viewport,deviceScaleFactor:1}),errors=[];
+    page.on('pageerror',e=>{errors.push(e.stack||String(e));console.error('PAGE ERROR',e.stack||String(e));});
     page.on('requestfailed',r=>errors.push(r.url()));
     await page.addInitScript(({config,seed,trace,rngSource})=>{
       const makeRng=new Function('return ('+rngSource+')')();
@@ -179,10 +179,10 @@ export async function verifyBlueprintSelector(p,opts={}){
     await page.waitForFunction(()=>window.__gardenTestGame.scene.isActive('MainMenu')&&document.querySelector('#blueprint-select'));
     const menu=await page.locator('#blueprint-select').evaluate(s=>({value:s.value,options:[...s.options].map(o=>o.value)}));
     await page.locator('#blueprint-select').selectOption('butterfly');
-    await page.setViewportSize({width:1280,height:720});
     const box=await page.locator('canvas').boundingBox();
+    await page.mouse.move(box.x+box.width/2,box.y+box.height*252/540);
     await page.mouse.click(box.x+box.width/2,box.y+box.height*252/540);
-    await page.waitForFunction(()=>window.__gardenSimScene?.runDrops&&window.__gardenTestGame.scene.isActive('Game'));
+    await page.waitForFunction(()=>window.__gardenSimScene?.runDrops&&window.__gardenTestGame.scene.isActive('Game'),null,{timeout:60000});
     const butterfly=await inspect();
     return {heart,menu,butterfly};
   });

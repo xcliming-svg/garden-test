@@ -5,7 +5,7 @@ import {loadModels} from '../simulation/models.mjs';
 import {createEngine} from '../simulation/engine.mjs';
 import {profileFor,play} from '../simulation/agents.mjs';
 const p=prepare(),w=loadModels(p.sources),catalog=w.GardenRunRules.catalog;
-const result=await verifyBlueprintSelector(p);
+const result=await verifyBlueprintSelector(p,{viewport:{width:960,height:540}});
 for(const key of ['heart','butterfly']){
   const pattern=catalog.find(x=>x.id===key),r=result[key];
   assert.equal(r.id,key);assert.equal(r.cells,pattern.blueprint.length);
@@ -14,6 +14,9 @@ for(const key of ['heart','butterfly']){
 }
 assert.equal(result.menu.value,'heart');assert.deepEqual(result.menu.options,catalog.map(x=>x.id));
 console.log('PASS native blueprint selector',JSON.stringify(result));
+const large=await verifyBlueprintSelector(p,{viewport:{width:1280,height:720}});
+assert.deepEqual(large,result,'same selected maps and initial state at 1280x720');
+console.log('PASS native blueprint selector 1280x720');
 const pattern=catalog.find(x=>x.id==='heart'),patch={initial:pattern.initial,blueprint:pattern.blueprint};
 const geometry=await captureGeometry(p),q=prepare(patch,geometry),opts={seed:42,dt:.05,maxSeconds:90};
 const model=play(createEngine(loadModels(q.sources,q.config),{...opts,geometry}),profileFor('normal'));
