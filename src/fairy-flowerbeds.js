@@ -1,6 +1,9 @@
 (function(){
   'use strict';
   const enabled=typeof document!=='undefined'&&document.documentElement.dataset.playable==='true'&&!window.GardenSimulationConfig&&!window.__gardenSimHarness&&!window.GardenFlowerCarryDisabled&&!window.GardenFairyFlowerbedsDisabled;
+  // Temporary opt-in scene, independent of the default start and AI/lab.
+  const stress=enabled&&window.location?.hash==='#stress7';
+  const stressEnemyCount=48;
   const recipes=Object.freeze([
     ['rock','돌멩이',{daisy:8}],['boomerang','부메랑',{sunflower:8}],['paper-plane','종이비행기',{tulip:8}],['balloon','물풍선',{hydrangea:8}],['flowerpot','화분',{rose:8}],['broom','빗자루',{lavender:8}],
     ['bouncy-ball','탱탱볼',{tulip:4,hydrangea:4}],['wheel','바퀴',{sunflower:4,rose:4}],['yellow-floor','끈끈이',{sunflower:4,lavender:4}],['sprinkler','스프링클러',{hydrangea:4,lavender:4}]
@@ -11,7 +14,14 @@
     return Object.freeze({id:i,center,ring:Object.freeze(Array.from({length:9},(_,j)=>(y+Math.floor(j/3))*9+x+j%3).filter(c=>c!==center))});
   }));
   const rings=new Set(beds.flatMap(b=>b.ring)),centers=new Set(beds.map(b=>b.center));
-  const initial=Object.freeze(beds[4].ring.map(id=>Object.freeze([id,'daisy'])));
+  const stressLayout=Object.freeze(['boomerang','paper-plane',null,'sprinkler','rock','balloon',null,'wheel','broom']);
+  function initialFor(test=false){return Object.freeze(beds.flatMap(b=>{
+    const weapon=test?stressLayout[b.id]:b.id===4?'rock':null;
+    if(!weapon)return [];
+    const names=Object.entries(byId.get(weapon).needs).flatMap(([name,n])=>Array(n).fill(name));
+    return b.ring.map((id,i)=>Object.freeze([id,names[i]]));
+  }));}
+  const initial=initialFor(stress);
   const candidates=occupied=>new Set([...rings].filter(id=>!occupied.has(id)));
   const canPlant=(entries,id,name)=>rings.has(id)&&entries.get(id)?.name!==name;
   function counts(bed,entries,mature=true){
@@ -48,6 +58,7 @@
       return {image,label,icon:null,weapon:null,p};
     });
     const panel=U.text(scene,12,spec.top+10,'요정 조합 (만개 8송이)\n'+recipes.map(r=>Object.entries(r.needs).map(([n,v])=>({daisy:'데이지',sunflower:'해바라기',tulip:'튤립',hydrangea:'수국',rose:'장미',lavender:'라벤더'}[n])+v).join(' + ')+' → '+r.label).join('\n')+'\n중앙 SPACE : 요정 변경',11,U.C.muted,{originX:0,originY:0,inkAlign:'left'}).setDepth(R.depth.blueprintText).setName('flowerbed-recipes');
+    if(stress)U.text(scene,12,spec.top+191,'임시 TEST · 화단 7 / 적 48',12,U.C.text,{originX:0,originY:0,inkAlign:'left'}).setDepth(R.depth.blueprintText).setName('flowerbed-stress-label');
     let signature='';
     function refresh(){
       model.sync(scene.flowerGrowth.entries);
@@ -76,5 +87,5 @@
     scene.events.once('shutdown',()=>{scene.events.off('update',refresh);delete scene.fairyFlowerbeds;});
     refresh();return scene.fairyFlowerbeds;
   }
-  window.GardenFairyFlowerbeds=Object.freeze({enabled,recipes,beds,rings,centers,initial,candidates,canPlant,counts,matching,resolve,create,attach});
+  window.GardenFairyFlowerbeds=Object.freeze({enabled,stress,stressEnemyCount,stressLayout,initialFor,recipes,beds,rings,centers,initial,candidates,canPlant,counts,matching,resolve,create,attach});
 }());

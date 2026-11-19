@@ -56,7 +56,7 @@
     constructor() { super('Boot'); }
     create() {
       // 외부 이미지·사운드가 없는 현재 단계에는 가짜 로딩 단계를 두지 않는다.
-      this.scene.start('MainMenu');
+      this.scene.start(window.GardenFairyFlowerbeds?.stress?'Game':'MainMenu');
     }
   }
 
@@ -66,7 +66,7 @@
       U.background(this, 'MAIN MENU');
       centered(this, 480, 124, 'GARDEN', U.fontSize.menuTitle, U.C.text, { inkBackground: U.C.bg });
       centered(this, 480, 172, 'TEST', U.fontSize.menuTitle, U.C.text, { inkBackground: U.C.bg });
-      centered(this, 480, 216, window.GardenFairyFlowerbeds?.enabled?'9×9 정원 생존':window.GardenRunRules?.active?'ROGUELIKE':'ROGUELIKE / SCENE STRUCTURE', U.fontSize.menuBase, U.C.muted, { inkBackground: U.C.bg });
+      centered(this, 480, 216, window.GardenFairyFlowerbeds?.stress?'임시 TEST · 화단 7 / 적 48':window.GardenFairyFlowerbeds?.enabled?'9×9 정원 생존':window.GardenRunRules?.active?'ROGUELIKE':'ROGUELIKE / SCENE STRUCTURE', U.fontSize.menuBase, U.C.muted, { inkBackground: U.C.bg });
 
       const x = U.W / 2;
       const w = 200;

@@ -13,3 +13,5 @@ for(const [i,id] of F.beds[0].ring.entries())entries.set(id,{name:i<4?'tulip':'h
 m.sync(entries);assert.equal(m.state[0].weapon,'bouncy-ball');assert.equal(m.state[0].power,1);
 for(const id of F.beds[0].ring)entries.delete(id);m.sync(entries);assert.equal(m.state[0].weapon,'bouncy-ball');assert.equal(m.state[0].power,0);
 assert(!F.canPlant(entries,40,'rose'));assert(F.canPlant(entries,ring[0],'rose'));assert(!F.canPlant(entries,ring[0],'sunflower'));console.log('PASS 9 beds, 72 ring cells, damage, regrowth, conversion, hybrid and dormancy');
+
+const preset=F.initialFor(true),state=F.create();assert.equal(preset.length,56);state.sync(new Map(preset.map(([id,name])=>[id,{name,stage:3}])));assert.equal(state.state.filter(s=>s.power===1).length,7);assert.deepEqual(state.state.map(s=>s.weapon),F.stressLayout);assert.equal(F.initialFor(false).length,8);console.log('PASS opt-in seven-bed preset');

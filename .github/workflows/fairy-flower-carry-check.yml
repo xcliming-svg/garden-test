@@ -1,7 +1,7 @@
 name: Fairy flower carry experiment
 on:
   push:
-    branches: [feature/fairy-flower-carry, feature/keyboard-installation-fifo, feature/fairy-flowerbeds]
+    branches: [feature/fairy-flower-carry, feature/keyboard-installation-fifo, feature/fairy-flowerbeds, feature/flowerbed-stress7]
   pull_request:
     branches: [main, devel]
 permissions:
@@ -28,6 +28,7 @@ jobs:
         with:
           node-version: 22
       - run: npm install --no-save --package-lock=false phaser@3.90.0 playwright@1.51.1
+      - run: node tests/fairy-flowerbed-stress7-browser.mjs
       - run: node tests/fairy-flowerbeds-browser.mjs
       - run: node tests/fairy-flower-carry-browser.mjs
       - run: node tests/playable-run-browser.mjs
