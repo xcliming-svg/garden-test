@@ -19,19 +19,29 @@ try{
   await page.mouse.click(...xy(480,252));await page.waitForFunction(()=>window.__previewGame.scene.getScene('Game').flowerCarry);
   const read=(fn,arg)=>page.evaluate(fn,arg),pos=()=>read(()=>({...window.__previewGame.scene.getScene('Game').fairyPatrol.actors[0].center}));
   async function go(x,y){
-    const b=await read(()=>{const s=window.__previewGame.scene.getScene('Game'),g=window.GardenGameLayout.spec,h=s.fairyPatrol.actors[0].visibleHeight/2+2;return {left:h,right:g.width-h,top:g.top+h,bottom:g.height-g.bottom-h};});x=Math.max(b.left,Math.min(b.right,x));y=Math.max(b.top,Math.min(b.bottom,y));
-    console.log('go',width,height,x,y);
-    for(const [axis,dest,neg,posKey] of [['x',x,'a','d'],['y',y,'w','s']]){
+    const bounds=await read(()=>{const s=window.__previewGame.scene.getScene('Game'),g=window.GardenGameLayout.spec,h=s.fairyPatrol.actors[0].visibleHeight/2+2;return {left:h,right:g.width-h,top:g.top+h,bottom:g.height-g.bottom-h};});
+    x=Math.max(bounds.left,Math.min(bounds.right,x));y=Math.max(bounds.top,Math.min(bounds.bottom,y));
+    // Drive actual key events through the real Phaser scene, then advance its
+    // existing movement controller in bounded logical steps. CI frame-rate
+    // variance cannot turn a 2-second walk into a wall-clock timeout.
+    for(const [axis,dest,neg,positive] of [['x',x,'a','d'],['y',y,'w','s']]){
       for(let attempt=0;attempt<5;attempt++){
-        const p=await pos(),delta=dest-p[axis];if(Math.abs(delta)<7)break;
-        const key=delta<0?neg:posKey;await page.keyboard.down(key);
-        try{await page.waitForFunction(({axis,dest,sign})=>{const p=window.__previewGame.scene.getScene('Game').fairyPatrol.actors[0].center;return sign*(dest-p[axis])<=5;},{axis,dest,sign:Math.sign(delta)},{timeout:8000});}catch(e){console.error('go failure',axis,dest,await pos());throw e;}finally{await page.keyboard.up(key);}
+        const p=await pos(),delta=dest-p[axis];if(Math.abs(delta)<4)break;
+        const key=delta<0?neg:positive,sign=Math.sign(delta);
+        await page.keyboard.down(key);
+        try{await read(({axis,dest,sign})=>{
+          const g=window.__previewGame,s=g.scene.getScene('Game'),patrol=s.fairyPatrol;
+          if(!g.scene.isActive('Game')||s.flowerCarry.movement()[axis]!==sign)throw Error('Movement input not active');
+          for(let i=0;i<200;i++){const remaining=sign*(dest-patrol.actors[0].center[axis]);if(remaining<=1)break;patrol.advance(Math.min(.1,remaining/patrol.manualSpeed));}
+        },{axis,dest,sign});}finally{await page.keyboard.up(key);}
       }
     }
     const p=await pos();assert(Math.hypot(p.x-x,p.y-y)<13,'movement destination '+JSON.stringify({p,x,y}));
   }
   const initial=await pos();await page.waitForTimeout(180);assert.deepEqual(await pos(),initial,'idle stays in place');
   assert.equal(await read(()=>window.__previewGame.scene.getScene('Game').fairyPatrol.manualSpeed),120);
+  await page.keyboard.down('d');try{await page.waitForFunction(x=>window.__previewGame.scene.getScene('Game').fairyPatrol.actors[0].center.x>x+2,initial.x,{timeout:15000});}finally{await page.keyboard.up('d');}
+  console.log('PASS real frame movement',width,height);
   const fixture=await read(()=>{const R=window.GardenRunRules,s=window.__previewGame.scene.getScene('Game'),g=window.GardenGameLayout.spec.garden;const id=[...R.plantCandidates(s.runGarden.occupied)][0],name=R.blueprint.find(x=>x[0]===id)[1],p=s.fairyPatrol.actors[0].center,c=s.runDrops.spawn('flower',700,200,name);return {id,name,x:c.x,y:c.y,cx:g.x+(id%10)*g.pitch+g.line+g.cell/2,cy:g.y+Math.floor(id/10)*g.pitch+g.line+g.cell/2,card:c.marker.name};});
   await page.keyboard.press('Space');assert.equal(await read(()=>window.__previewGame.scene.getScene('Game').flowerCarry.carried),null,'remote pickup denied');
   await go(fixture.x,fixture.y);
