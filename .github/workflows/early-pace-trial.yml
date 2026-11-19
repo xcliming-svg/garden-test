@@ -1,7 +1,7 @@
 name: Devel early pace trial verification
 on:
   push:
-    branches: [feature/devel-early-pace-trial, feature/devel-stage-gear-trial, devel]
+    branches: [feature/devel-early-pace-trial, feature/devel-stage-gear-trial, feature/random-stage-gear, devel]
   workflow_dispatch:
 permissions:
   contents: read
@@ -19,3 +19,25 @@ jobs:
         env:
           PLAYWRIGHT_SKIP_BROWSER_DOWNLOAD: '1'
       - run: node tests/early-pace-trial-browser.mjs
+
+  random-supply:
+    runs-on: ubuntu-latest
+    timeout-minutes: 12
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - {agent: beginner, dt: '0.05'}
+          - {agent: normal, dt: '0.05'}
+          - {agent: expert, dt: '0.05'}
+          - {agent: normal, dt: '0.025'}
+    steps:
+      - uses: actions/checkout@v6
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - run: node tests/stage-gear-random-model.mjs ${{ matrix.agent }} ${{ matrix.dt }} /tmp/stage-gear-random.json
+      - uses: actions/upload-artifact@v4
+        with:
+          name: stage-gear-random-${{ matrix.agent }}-${{ matrix.dt }}
+          path: /tmp/stage-gear-random.json

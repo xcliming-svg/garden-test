@@ -108,7 +108,7 @@
     heart:Object.freeze({interval:2,cap:8,batch:2,flower:.09,item:.06,cooldown:30})
   });
   let waves=baseWaves;
-  const classicSupply=Object.freeze({cap:3,sequence:Object.freeze(['rock','rock','boomerang'])});
+  const classicSupply=Object.freeze({cap:3});
   let itemSupply=null;
   function applyPaceTrial(id){
     const p=active&&!window.GardenSimulationConfig?paceProfiles[id]:null;
@@ -158,7 +158,7 @@
     const state={slotCount:tuning.initialSlots,gems:tuning.startingGems,displayGems:tuning.startingGems,elapsed:0,kills:0,result:null,lastItemAt:-Infinity};
     // Supply belongs to this run, never to the menu or a previous playthrough.
     const supply=itemSupply;
-    let accepted=0,picked=0;
+    let accepted=0;
     let from=0,rollTime=0,rolling=false;
     function credit(n=1){state.gems+=n*tuning.gemValue;if(!rolling)state.displayGems=state.gems;}
     function rewardDrop(random=Math.random){
@@ -187,8 +187,7 @@
       if(rolling){rollTime+=dt;const t=Math.min(1,rollTime/.65);state.displayGems=Math.max(state.gems,Math.ceil(from+(state.gems-from)*(1-(1-t)**3)));if(t===1){rolling=false;state.displayGems=state.gems;}}
     }
     function pickRunItem(random=Math.random){
-      const id=pickItem(state.elapsed,random); // consume the original RNG draw even for the ordered prefix
-      return supply?.sequence[picked++]??id;
+      return pickItem(state.elapsed,random);
     }
     return {state,credit,buy,tick,rewardDrop,pickItem:pickRunItem};
   }

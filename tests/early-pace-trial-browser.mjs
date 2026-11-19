@@ -13,9 +13,10 @@ for(const [i,r] of rows.entries()){
   assert.deepEqual([r.id,r.required,r.drops,r.cooldown,r.interval,r.cap,r.batch],expected[i]);
   if(r.id==='classic'){
     const remaining=3-r.preItems.length;assert.ok(remaining>=0&&remaining<=3);
-    assert.deepEqual(r.kinds,[...Array(remaining).fill('item'),...Array(5-remaining).fill('gem')]);assert.deepEqual(r.items,['rock','rock','boomerang']);
+    assert.deepEqual(r.kinds,[...Array(remaining).fill('item'),...Array(5-remaining).fill('gem')]);assert.deepEqual(r.items,[...r.preItems,...r.expectedItems]);assert.equal(r.items.length,3);
+    assert.deepEqual(r.expectedItems,Array(remaining).fill(i===0?'boomerang':'rock'));
     assert.equal(r.gemsAdded,5-remaining);assert.equal(r.reasons.filter(x=>x==='stage_item_cap').length,5-remaining);
-    assert.deepEqual(r.pool,['rock','boomerang']);assert.deepEqual(r.supply,{cap:3,sequence:['rock','rock','boomerang']});
+    assert.deepEqual(r.pool,['rock','boomerang']);assert.deepEqual(r.supply,{cap:3});
   }else{
     assert.equal(r.supply,null);assert.ok(r.pool.includes('water-fairy'));assert.deepEqual(r.kinds,Array(5).fill('item'));assert.equal(r.items.length,r.preItems.length+5);assert.equal(r.gemsAdded,0);
   }

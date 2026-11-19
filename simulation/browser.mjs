@@ -191,6 +191,7 @@ export async function verifyBlueprintSelector(p,opts={}){
 
 export async function verifyPaceTrial(p,opts={}){
   return withScene(p,{...opts,menuSelection:'classic',forceDropRoll:.99999,trace:true},async page=>{
+    await page.evaluate(()=>{window.__gardenRandomTrialIndex=0;});
     const inspect=()=>page.evaluate(()=>{
       const R=window.GardenRunRules,s=window.__gardenSimScene;
       window.__gardenSimStep=true;
@@ -202,17 +203,26 @@ export async function verifyPaceTrial(p,opts={}){
         interval:R.spawnInterval(0),cap:R.population(0),batch:R.waveAt(0).batch,spawned:s.enemyPreview.model.spawned,
         elapsed:s.run.state.elapsed,slots:s.run.state.slotCount,gear:s.runEquipment.equipped[0]?.id};
       // Real enemy-death reward controller with only its RNG forced. Do not
-      // replace the run: scene restart must reset both cap and ordered prefix.
+      // replace the run: scene restart must reset the cap.
       const telemetry=window.__gardenSimTelemetry,offset=telemetry.events.length;
       const gemsBefore=s.relicCollection.state.spawnedGems;
       const preItems=[...s.runDrops.drops.values()].filter(c=>c.kind==='item').map(c=>c.id);
-      for(let i=0;i<5;i++){
-        s.run.tick(R.tuning.itemInterval);
-        s.relicCollection.death(230,170);
-      }
+      const expectedItems=[];
+      const originalItemRng=window.GardenSimulationRng.item;
+      try{
+        for(let i=0;i<5;i++){
+          s.run.tick(R.tuning.itemInterval);
+          if(R.selectedBlueprintId==='classic'){
+            const roll=window.__gardenRandomTrialIndex===0?.75:.25;
+            window.GardenSimulationRng.item=()=>{expectedItems.push(roll<.5?'rock':'boomerang');return roll;};
+          }
+          s.relicCollection.death(230,170);
+        }
+      }finally{window.GardenSimulationRng.item=originalItemRng;}
+      window.__gardenRandomTrialIndex++;
       const rolls=telemetry.events.slice(offset).filter(e=>e.type==='drop_roll');
       const items=[...s.runDrops.drops.values()].filter(c=>c.kind==='item').map(c=>c.id);
-      return {...initial,kinds:rolls.map(e=>e.kind),reasons:rolls.map(e=>e.reason),items,preItems,gemsAdded:s.relicCollection.state.spawnedGems-gemsBefore,pool:R.itemPool(10000),supply:R.itemSupply};
+      return {...initial,kinds:rolls.map(e=>e.kind),reasons:rolls.map(e=>e.reason),items,preItems,expectedItems,gemsAdded:s.relicCollection.state.spawnedGems-gemsBefore,pool:R.itemPool(10000),supply:R.itemSupply};
     });
     const result=[await inspect()];
     for(const map of ['cross','heart','butterfly','classic']){

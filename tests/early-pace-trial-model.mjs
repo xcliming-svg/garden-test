@@ -30,7 +30,7 @@ function check(map){
   run.tick(R.tuning.itemInterval-.1);assert.equal(run.rewardDrop(()=>.99999),'gem');
   run.tick(.1);assert.equal(run.rewardDrop(()=>.99999),'item');
   if(map==='classic'){
-    assert.deepEqual(R.itemSupply,{cap:3,sequence:['rock','rock','boomerang']});
+    assert.deepEqual(R.itemSupply,{cap:3});
     for(const t of [0,90,180,300,10000])assert.deepEqual(R.itemPool(t),['rock','boomerang']);
     const events=[],fresh=R.create((type,data)=>events.push({type,...data})),items=[];
     for(let i=0;i<6;i++){
@@ -39,11 +39,20 @@ function check(map){
       else assert.equal(kind,'gem');
       fresh.tick(35);
     }
-    assert.deepEqual(items,['rock','rock','boomerang']);
+    assert.deepEqual(items,['boomerang','boomerang','boomerang']);
     assert.equal(events.filter(e=>e.reason==='stage_item_cap').length,3);
     assert.equal(fresh.rewardDrop(()=>.85),'heart');
     assert.equal(fresh.rewardDrop(()=>.92),'flower');
-    const reset=R.create();assert.equal(reset.rewardDrop(()=>.99999),'item');assert.equal(reset.pickItem(()=>.99999),'rock');
+    const reset=R.create();assert.equal(reset.rewardDrop(()=>.99999),'item');assert.equal(reset.pickItem(()=>.99999),'boomerang');
+    // Every three-card ordering is reachable, with replacement.
+    for(let mask=0;mask<8;mask++){
+      const r=R.create(),actual=[],expected=[];
+      for(let i=0;i<3;i++){
+        const bit=(mask>>i)&1;expected.push(bit?'boomerang':'rock');
+        assert.equal(r.rewardDrop(()=>.99999),'item');actual.push(r.pickItem(()=>bit?.75:.25));r.tick(35);
+      }
+      assert.deepEqual(actual,expected);assert.equal(r.rewardDrop(()=>.99999),'gem');
+    }
   }else{
     assert.equal(R.itemSupply,null);
     assert.deepEqual(R.itemUnlocks,baseline.itemUnlocks);
