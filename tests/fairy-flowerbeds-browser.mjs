@@ -40,6 +40,7 @@ try{
   assert.equal(await page.locator('#blueprint-select').count(),0);
   const snap=()=>read(()=>{const s=window.__previewGame.scene.getScene('Game');return {cols:window.GardenGameLayout.spec.garden.columns,count:s.runGarden.occupied.size,bed:s.fairyFlowerbeds.model.state.map(b=>({weapon:b.weapon,power:b.power,ready:b.ready})),actors:s.fairyFlowerbeds.actors().map(a=>({id:a.index,x:a.center.x,y:a.center.y,weapon:a.weapon})),result:s.run.state.result};});
   let a=await snap();assert.equal(a.cols,9);assert.equal(a.count,8);assert.equal(a.bed[4].weapon,'rock');assert.equal(a.bed[4].power,1);assert.equal(a.actors.length,1);
+  assert.equal(await read(()=>{const s=window.__previewGame.scene.getScene('Game'),p=s.fairyFlowerbeds.point(40);return window.GardenFlowerCarry.installationSafe(window.GardenGameLayout.spec,p,s.runGarden.occupied);}),false,'reserved fairy center');
   const center=a.actors[0];await go(700,200);assert.deepEqual((await snap()).actors[0],center);
   const fired=await read(()=>{const s=window.__previewGame.scene.getScene('Game'),api=s.heroWeaponPreview.model,patrol=s.fairyPatrol,a=s.fairyFlowerbeds.actors(),target={id:999,x:a[0].center.x+100,y:a[0].center.y,ground:a[0].center.y,lift:0,hp:100,radius:5,phase:'move'};api.step(.9,patrol.actors[0],[target],()=>({hp:90}),()=>false,patrol,()=>false,a);return api.state.shots.some(q=>q.owner===104&&q.kind==='rock'&&q.origin.x===a[0].center.x);});
   assert(fired,'fixed rock fairy fires');
@@ -55,6 +56,10 @@ try{
   await read(()=>{const s=window.__previewGame.scene.getScene('Game'),F=window.GardenFairyFlowerbeds;for(const id of F.beds[4].ring){if(s.flowerGrowth.entries.get(id).name!=='sunflower')s.runGarden.plantCarried(id,'sunflower');s.flowerGrowth.entries.get(id).mature=true;}s.flowerGrowth.render(s.run.state.elapsed);s.fairyFlowerbeds.refresh();});
   a=await snap();assert.equal(a.bed[4].weapon,'rock');assert.equal(a.bed[4].ready,'boomerang');assert.equal(a.bed[4].power,0);
   await go(center.x,center.y);await page.keyboard.press('Space');a=await snap();assert.equal(a.bed[4].weapon,'boomerang');assert.equal(a.bed[4].power,1);
+  await read(()=>{const s=window.__previewGame.scene.getScene('Game'),id=window.GardenFairyFlowerbeds.beds[0].ring[0];s.runGarden.plantCarried(id,'daisy');s.fairyFlowerbeds.refresh();});
+  assert.equal(await read(()=>window.__previewGame.scene.getScene('Game').children.getByName('flowerbed-power:0').text),'0/8');
+  await read(()=>{const s=window.__previewGame.scene.getScene('Game'),id=window.GardenFairyFlowerbeds.beds[0].ring[0];s.flowerGrowth.entries.get(id).mature=true;s.flowerGrowth.render(s.run.state.elapsed);s.fairyFlowerbeds.refresh();});
+  assert.equal(await read(()=>window.__previewGame.scene.getScene('Game').children.getByName('flowerbed-power:0').text),'1/8');
   await read(()=>{const s=window.__previewGame.scene.getScene('Game'),F=window.GardenFairyFlowerbeds;for(const bed of F.beds)for(const id of bed.ring){if(!s.runGarden.occupied.has(id))s.runGarden.plantCarried(id,'daisy');s.flowerGrowth.entries.get(id).mature=true;}s.flowerGrowth.render(s.run.state.elapsed);s.fairyFlowerbeds.refresh();});
   await page.waitForTimeout(150);a=await snap();assert.equal(a.count,72);assert.equal(a.actors.length,9);assert.equal(a.result,null);
   await read(()=>{const s=window.__previewGame.scene.getScene('Game');for(const id of [...s.runGarden.occupied])s.runGarden.remove(id);});

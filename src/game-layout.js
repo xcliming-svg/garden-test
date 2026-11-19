@@ -55,8 +55,8 @@
     blueprint: Object.freeze({
       x: hudPadding, y: blueprintY, padding: blueprintPadding, gap: blueprintGap, topGap: blueprintTopGap, header: blueprintHeader, fontSize: blueprintFontSize,
       columns: 10, rows: 10, cell: blueprintCell, line: blueprintLine, pitch: blueprintPitch, frame: blueprintFrame,
-      width: blueprintGrid,
-      height: blueprintHeader + blueprintGap + blueprintGrid,
+      width: flowerbeds?210:blueprintGrid,
+      height: flowerbeds?180:blueprintHeader + blueprintGap + blueprintGrid,
       gridX: hudPadding, gridY: blueprintY + blueprintHeader + blueprintGap
     }),
     slots: Object.freeze({ size: slotSize, cell: slotSize - 2 * cellLine, line: cellLine, gap: bottomGap, initial: playable?window.GardenRunRules.tuning.initialSlots:4, preview: playable?(!window.GardenSimulationConfig?10:window.GardenRunRules.tuning.maxSlots):balancedCombat?window.GardenWeaponBalance.slots:9, max: playable&&window.GardenSimulationConfig?window.GardenRunRules.tuning.maxSlots:10, y: height - bottomHudHeight + bottomBoundary + bottomGap, exampleCost: 999 })

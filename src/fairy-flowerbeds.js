@@ -51,7 +51,7 @@
     let signature='';
     function refresh(){
       model.sync(scene.flowerGrowth.entries);
-      const sig=model.state.map(s=>[s.weapon,s.power,s.ready,JSON.stringify(counts(s.bed,scene.flowerGrowth.entries,false))].join(':')).join('|');
+      const sig=model.state.map(s=>[s.weapon,s.power,s.ready,JSON.stringify(counts(s.bed,scene.flowerGrowth.entries,false)),JSON.stringify(counts(s.bed,scene.flowerGrowth.entries))].join(':')).join('|');
       if(signature===sig)return;signature=sig;frame.clear();
       for(const s of model.state){
         const v=visual[s.bed.id],p=v.p,recipe=byId.get(s.weapon),tint=recipe?color[Object.keys(recipe.needs)[0]]:0x66705e;

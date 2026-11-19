@@ -12,7 +12,7 @@
     const i=Array.from({length:limit},(_,j)=>j).find(j=>!order.includes(j));order.push(i);return i;
   }
   function installationCell(spec,p){const g=spec.garden,x=Math.floor((p.x-g.x)/g.pitch),y=Math.floor((p.y-g.y)/g.pitch);return x>=0&&x<g.columns&&y>=0&&y<g.rows?y*g.columns+x:-1;}
-  function installationSafe(spec,p,occupied){return p.x>=0&&p.x<=spec.width&&p.y>=spec.top&&p.y<=spec.height-spec.bottom&&!new Set(occupied).has(installationCell(spec,p));}
+  function installationSafe(spec,p,occupied){const id=installationCell(spec,p),FB=window.GardenFairyFlowerbeds;return p.x>=0&&p.x<=spec.width&&p.y>=spec.top&&p.y<=spec.height-spec.bottom&&!new Set(occupied).has(id)&&!(FB?.enabled&&FB.centers.has(id));}
   const clamp=(v,min,max)=>Math.max(min,Math.min(max,v));
   function step(p,x,y,dt,speed,bounds){
     const len=Math.hypot(x,y);
