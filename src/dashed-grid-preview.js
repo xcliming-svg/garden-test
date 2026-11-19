@@ -1,7 +1,7 @@
 (function(){
   'use strict';
   const R=window.GardenPalette.reference.n;
-  const colors=Object.freeze({base:R.flowerFrame,active:R.flowerBorder});
+  const colors=Object.freeze({base:R.flowerFrame,active:R.flowerBorder,wrong:window.GardenPalette.n.red});
 
   const all=g=>new Set(Array.from({length:g.columns*g.rows},(_,i)=>i));
   const visible=(occupied,candidates)=>new Set([...occupied,...candidates]);
@@ -19,7 +19,21 @@
   }
   // Shared 1px corner brackets, 5px arms including each junction.
   // Active edges take precedence; interiors and edge middles stay transparent.
-  function rectangles(g,occupied,candidates,hover=null){
+  // Playable mode uses the approved comparison: independent inset corners
+  // with the same 1px/5px arms, so a wrong flower never colors a neighbor.
+  function cellRectangles(g,occupied,candidates,hover,wrong){
+    const rects=[],p=g.pitch,lo=g.line,hi=p-1,arm=Math.min(5,Math.floor((hi-lo+1)/2));
+    for(const id of visible(occupied,candidates)){
+      const x=id%g.columns*p,y=Math.floor(id/g.columns)*p;
+      const active=hover!==null&&candidates.has(id)&&(!candidates.has(hover)||id===hover);
+      const color=occupied.has(id)&&wrong.has(id)?colors.wrong:active?colors.active:colors.base;
+      for(const [a,b,w,h] of [[lo,lo,arm,1],[lo,lo+1,1,arm-1],[hi-arm+1,lo,arm,1],[hi,lo+1,1,arm-1],[lo,hi,arm,1],[lo,hi-arm+1,1,arm-1],[hi-arm+1,hi,arm,1],[hi,hi-arm+1,1,arm-1]])
+        rects.push({x:x+a,y:y+b,w,h,color});
+    }
+    return rects;
+  }
+  function rectangles(g,occupied,candidates,hover=null,wrong=null){
+    if(wrong!==null)return cellRectangles(g,occupied,candidates,hover,wrong);
     const rects=[],p=g.pitch,shown=visible(occupied,candidates);
     const get=(x,y)=>x>=0&&x<g.columns&&y>=0&&y<g.rows?y*g.columns+x:-1;
     function color(a,b){
@@ -45,7 +59,7 @@
     }
     return rects;
   }
-  function draw(ctx,g,z,raster,occupied,candidates,hover){
+  function draw(ctx,g,z,raster,occupied,candidates,hover,wrong=null){
     ctx.clearRect(0,0,raster.width,raster.height);ctx.globalAlpha=1;
 
     // Match gardenRaster's shared axis mapping, including 1 physical px
@@ -56,7 +70,7 @@
       return Math.min(Math.round((base+(n+1)*g.pitch)*z),Math.max(start+1,Math.round((base+v)*z)))-offset;
     };
     const ax=axis(g.x,raster.x),ay=axis(g.y,raster.y);
-    for(const r of rectangles(g,occupied,candidates,hover)){
+    for(const r of rectangles(g,occupied,candidates,hover,wrong)){
       const x=ax(r.x),y=ay(r.y),w=ax(r.x+r.w)-x,h=ay(r.y+r.h)-y;
       if(w<=0||h<=0)continue;
       ctx.fillStyle='#'+r.color.toString(16).padStart(6,'0');ctx.fillRect(x,y,w,h);

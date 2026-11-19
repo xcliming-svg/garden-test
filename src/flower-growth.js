@@ -60,21 +60,6 @@
       for(const [index,entry] of entries){
         const sample=stateAt(elapsed-entry.born),stage=window.GardenRunRules?.active?(entry.mature?3:window.GardenRunRules.stageAt(elapsed-entry.born)):sample.stage;
         entry.stage=stage;
-        if(window.GardenRunRules?.active){
-          const wrong=window.GardenRunRules.blueprintStatus(entries,index)==='wrong';
-          if(wrong&&!entry.wrongLabel){
-            // Mouse (left button highlighted) + 3s: action, not a color-dependent error mark.
-            const P=window.GardenPalette.n,x=Math.round(entry.center.x+g.cell/2-16),y=Math.round(entry.center.y+g.cell/2-10);
-            const badge=window.GardenUI.pixelGraphics(scene).setPosition(x,y).setDepth(window.GardenRunRules.depth.effects+.1).setName('garden-wrong:'+index);
-            badge.fillStyle(P.ink,1).fillRect(0,0,15,9);
-            const glyphs=[{x:1,y:1,bits:['01110','11001','11001','11111','10001','10001','01110']},
-              {x:7,y:2,bits:['111','001','111','001','111']},{x:11,y:2,bits:['000','011','110','001','110']}];
-            badge.fillStyle(P.paper,1);
-            for(const glyph of glyphs)glyph.bits.forEach((row,dy)=>[...row].forEach((bit,dx)=>{if(bit==='1')badge.fillRect(glyph.x+dx,glyph.y+dy,1,1);}));
-            entry.wrongLabel=badge;
-          }
-          entry.wrongLabel?.setVisible(wrong);
-        }
         const energy=scene.relicCollection?.state.flowers.get(index)?.energy;
         const hp=window.GardenRunRules?.active?(energy===undefined||energy>=67?100:energy>=34?66:33):energy===undefined?sample.hp:energy>=100?100:energy>33?66:33;
         const state=stage+':'+hp;
@@ -83,8 +68,9 @@
         const size=displaySize(g.cell);
         entry.image.setTexture(key(entry.name,stage,hp)).setDisplaySize(size,size);
       }
+      scene.runGarden?.refreshMismatch();
     }
-    function remove(index){const entry=entries.get(index);if(!entry)return false;entry.wrongLabel?.destroy();entry.image.destroy();entries.delete(index);return true;}
+    function remove(index){const entry=entries.get(index);if(!entry)return false;entry.image.destroy();entries.delete(index);return true;}
     const controller={entries,plant,render,remove};
     scene.flowerGrowth=controller;
     scene.events.once('shutdown',()=>{entries.clear();delete scene.flowerGrowth;});

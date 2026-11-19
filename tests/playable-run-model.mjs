@@ -1,7 +1,7 @@
 import {readFileSync} from 'node:fs';
 function runAudit(sources){
   const w={location:{search:''}},doc={documentElement:{dataset:{playable:'true'}}};
-  for(const f of ['run-rules','palette','fairy-patrol','enemy-motion','pebble-boundary','fairy-attack','enemy-preview','weapon-balance','flower-growth','item-cards','hero-weapon-preview','relic-collection']){
+  for(const f of ['run-rules','palette','fairy-patrol','enemy-motion','pebble-boundary','fairy-attack','enemy-preview','weapon-balance','flower-growth','dashed-grid-preview','item-cards','hero-weapon-preview','relic-collection']){
     new Function('window','document','URLSearchParams',sources[f])(w,doc,URLSearchParams);
   }
   const R=w.GardenRunRules,E=w.GardenEnemyPreview,M=w.GardenEnemyMotion,B=w.GardenPebbleBoundary,A=w.GardenHeroWeaponPreview,L=w.GardenRelicCollection,V=w.GardenWeaponBalance;
@@ -41,6 +41,22 @@ function runAudit(sources){
   check(R.uprootOutline(0,0,23,0).length===0,'no outline at completion');
   const spec={width:960,height:540,top:32,bottom:44,blueprint:{x:8,y:39,width:93,height:116},garden:{x:364,y:148,columns:10,rows:10,cell:22,line:1,pitch:23,outer:24,size:231}};
   const g=spec.garden;
+  const grid=w.GardenDashedGridPreview;
+  const planted=new Set([34,44,45]),candidate=new Set([33,35]);
+  for(const hover of [null,-1,33,34]){
+    const corners=grid.rectangles(g,planted,candidate,hover,new Set([34]));
+    const pixels=new Map();
+    for(const r of corners)for(let y=r.y;y<r.y+r.h;y++)for(let x=r.x;x<r.x+r.w;x++){
+      const key=x+','+y;check(!pixels.has(key),'corner pixels do not overlap');pixels.set(key,r.color);
+      const id=Math.floor(y/g.pitch)*10+Math.floor(x/g.pitch);check(planted.has(id)||candidate.has(id),'corner stays inside shown cell');
+      check((r.color===grid.colors.wrong)===(id===34),'only mature mismatch has red corner');
+    }
+    const colorAt=id=>pixels.get(((id%10)*g.pitch+1)+','+(Math.floor(id/10)*g.pitch+1));
+    check(colorAt(44)===grid.colors.base&&colorAt(45)===grid.colors.base,'adjacent correct corners stay gray');
+    check(colorAt(33)===(hover===null?grid.colors.base:grid.colors.active),'candidate highlight preserved');
+    check(colorAt(35)===(hover===null||hover===33?grid.colors.base:grid.colors.active),'target-specific candidate highlight');
+  }
+  check(grid.rectangles(g,planted,candidate,null,new Set()).every(r=>r.color===grid.colors.base),'no red before maturity or after removal');
   const rect={left:g.x+3*g.pitch,right:g.x+6*g.pitch+g.outer,top:g.y+3*g.pitch,bottom:g.y+6*g.pitch+g.outer};
   const boundary=B.layout(spec,rect,40,{frequency:1.6,lift:.5,tilt:1.25,lean:.5},1);
   const patrol={boundary,occupied:[44,45,54,55],finished:false};
@@ -199,6 +215,6 @@ function runAudit(sources){
   }
   return {checks,counts,idleResults};
 }
-const files=['run-rules','palette','fairy-patrol','enemy-motion','pebble-boundary','fairy-attack','enemy-preview','weapon-balance','flower-growth','item-cards','hero-weapon-preview','relic-collection'];
+const files=['run-rules','palette','fairy-patrol','enemy-motion','pebble-boundary','fairy-attack','enemy-preview','weapon-balance','flower-growth','dashed-grid-preview','item-cards','hero-weapon-preview','relic-collection'];
 const sources=Object.fromEntries(files.map(f=>[f,readFileSync('src/'+f+'.js','utf8')]));
 console.log('PASS playable run',runAudit(sources));
