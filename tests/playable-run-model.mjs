@@ -1,6 +1,7 @@
 import {readFileSync} from 'node:fs';
 function runAudit(sources){
-  const w={location:{search:''}},doc={documentElement:{dataset:{playable:'true'}}};
+  // Audit the historical baseline explicitly; live devel trial is tested separately.
+  const w={location:{search:''},GardenSimulationConfig:{}},doc={documentElement:{dataset:{playable:'true'}}};
   for(const f of ['run-rules','palette','fairy-patrol','enemy-motion','pebble-boundary','fairy-attack','enemy-preview','weapon-balance','flower-growth','dashed-grid-preview','item-cards','hero-weapon-preview','relic-collection']){
     new Function('window','document','URLSearchParams',sources[f])(w,doc,URLSearchParams);
   }
