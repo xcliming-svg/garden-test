@@ -9,9 +9,14 @@ export function createEngine(w,{seed=1,dt=1/60,maxSeconds=1800,trace=false,geome
   const R=w.GardenRunRules,F=w.GardenFairyPatrol,E=w.GardenEnemyPreview,A=w.GardenHeroWeaponPreview,
     L=w.GardenRelicCollection,I=w.GardenItemCards,B=w.GardenWeaponBalance,G=w.GardenGameLayout;
   const progression=research?.progression??'none';
-  if(!['none','duplicate','timed-drop'].includes(progression))throw Error('Invalid research progression');
+  if(!['none','duplicate','timed-drop','campaign-drop','campaign-duplicate'].includes(progression))throw Error('Invalid research progression');
   const levelTimes=research?.levelTimes??[180,360];
   if(levelTimes.length!==2||!levelTimes.every(Number.isFinite)||levelTimes[0]<0||levelTimes[1]<=levelTimes[0])throw Error('Invalid levelTimes');
+  const campaign=research?.campaign??null;
+  if(campaign){
+    if(!Array.isArray(campaign.pool)||!campaign.pool.length||campaign.pool.some(c=>!I.entries.some(x=>x.id===c.id)||!Number.isInteger(c.level)||c.level<1||c.level>(B.data[c.id]?3:1)||!(c.weight>0)))throw Error('Invalid campaign pool');
+    if(!Number.isInteger(campaign.itemCap)||campaign.itemCap<1)throw Error('Invalid campaign item cap');
+  }
   const spec=G.spec,entries=new Map(R.initial.map(([cell,name])=>[cell,{name,born:0,stage:3,mature:true}]));
   const occupied=new Set(entries.keys()),required=new Map(R.blueprint),cards=new Map(),gear=Array(R.tuning.maxSlots).fill(null);
   const streams=Object.fromEntries(['enemy','weapon','drop','flower','item','agent'].map(k=>[k,rng(seed,k)]));
@@ -75,13 +80,14 @@ export function createEngine(w,{seed=1,dt=1/60,maxSeconds=1800,trace=false,geome
     return level>1&&B.data[name]?{...item,level,stats:{...item.stats,dps:B.nominalDps(name,level)}}:item;
   }
   function cardItem(c,slot){
-    const old=gear[slot],level=progression==='duplicate'&&B.data[c.name]&&old?.id===c.name?Math.min(3,(old.level||1)+1):c.level||1;
+    const old=gear[slot],cap=progression==='campaign-duplicate'?(campaign.levelCaps[c.name]??1):3;
+    const level=['duplicate','campaign-duplicate'].includes(progression)&&B.data[c.name]&&old?.id===c.name?Math.min(cap,(old.level||1)+1):c.level||1;
     return leveled(c.name,level);
   }
   if(research?.fixedLoadout){
     // Controlled combat fixture, never a player-accessible starting inventory.
     if(!Array.isArray(research.fixedLoadout)||research.fixedLoadout.length!==run.state.slotCount)throw Error('fixedLoadout must fill unlocked slots');
-    research.fixedLoadout.forEach((id,slot)=>equip(slot,leveled(id)));
+    research.fixedLoadout.forEach((entry,slot)=>equip(slot,leveled(typeof entry==='string'?entry:entry.id,typeof entry==='string'?1:entry.level)));
     if(!gear.some(i=>i?.stats.dps>0))throw Error('fixedLoadout needs damage');
   }
   function candidates(name,correctOnly=false){
@@ -98,11 +104,16 @@ export function createEngine(w,{seed=1,dt=1/60,maxSeconds=1800,trace=false,geome
     return 'no_valid_slot';
   }
   function spawnCard(kind,x,y){
-    const name=kind==='flower'?R.chooseFlower(entries,streams.flower):R.pickItem(run.state.elapsed,streams.item);
+    let selected=null;
+    if(kind==='item'&&campaign){
+      let roll=streams.item()*campaign.pool.reduce((sum,c)=>sum+c.weight,0);
+      selected=campaign.pool.find(c=>(roll-=c.weight)<0)??campaign.pool.at(-1);
+    }
+    const name=kind==='flower'?R.chooseFlower(entries,streams.flower):selected?.id??R.pickItem(run.state.elapsed,streams.item);
     const size=G.assets[kind].dropSize;
     const p=R.cardPosition(spec,x,y,size,[...cards.values()]);
     if(!p)throw Error('No legal card position');
-    const level=kind==='item'&&progression==='timed-drop'&&B.data[name]?1+levelTimes.filter(at=>t>=at).length:1;
+    const level=selected?.level??(kind==='item'&&progression==='timed-drop'&&B.data[name]?1+levelTimes.filter(at=>t>=at).length:1);
     const c={id:serial++,kind,name,level,x:p.x,y:p.y,size,age:0,born:t,everUsable:false};
     cards.set(c.id,c);const reason=cardReason(c);c.everUsable=reason==='usable'||reason==='equippable';
     if(kind==='flower'&&reason==='usable'&&firstUsableFlower===null)firstUsableFlower=t;
@@ -114,7 +125,7 @@ export function createEngine(w,{seed=1,dt=1/60,maxSeconds=1800,trace=false,geome
     if(firstKill===null)firstKill=t;
     emit('enemy_kill',{id:e.id,species:e.entry.id,lifetime:pop.elapsed-e.spawnTime,x,y});
     const c=relic.death(x,y,boundary.patrol);if(c)spawnCard(c.kind,x,y);
-  },true);
+  },true,campaign?emit:undefined);
   const spawned=new Set();
   function logSpawns(){
     for(const e of pop.actors)if(!spawned.has(e.id)){spawned.add(e.id);emit('enemy_spawn',{id:e.id,species:e.entry.id,hp:e.hp,x:e.pose.x,y:e.pose.ground,wave:R.waveAt(pop.elapsed).start});}
