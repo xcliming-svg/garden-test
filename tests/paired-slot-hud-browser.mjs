@@ -88,8 +88,8 @@ try {
     assert.equal(state.spec.paired,true);
     assert.equal(state.layout.left,10);
     assert.equal(state.layout.right,720);
-    assert.equal(state.layout.sideWidth,230);
-    assert.equal(state.layout.statColumnWidth,230/3);
+    assert.equal(state.layout.sideWidth,240);
+    assert.equal(state.layout.statColumnWidth,80);
     assert.equal(state.layout.totalWidth,707);
     assert.equal(state.layout.centerY,520);
     assert.equal(state.layout.slotLeft,10);
@@ -115,26 +115,29 @@ try {
     }
     assert.equal(state.layout.slots[9].x+68,717);
     assert.equal(state.layout.right-717,3,'3px gap between the last paired slot and stats');
-    assert.equal(960-(state.layout.right+state.layout.sideWidth),10,'right 10px inset retained');
+    assert.equal(960-(state.layout.right+state.layout.sideWidth),0,
+      'the previously unused 10px participates in the three-column calculation');
     assert.equal(state.spec.y-(state.spec.top+state.spec.field+2),3);
     assert.equal(540-(state.spec.y+state.spec.size),3);
-    // Divide the full 230px remainder into three equal 76.67px columns; do not
-    // distribute the visible glyphs edge-to-edge or leave an extra right-side cell.
+    // Divide (230px stats + 10px former tail) equally into 80px columns.
+    // The text itself must still be at least 10px from the screen edge.
     for(const [index,row] of state.stats.entries()) {
-      const expectedCenter=Math.round(720+230*(index+.5)/3);
-      const left=720+230*index/3,right=720+230*(index+1)/3;
+      const expectedCenter=760+80*index;
+      const left=720+80*index,right=720+80*(index+1);
       assert.equal(row.labelX,expectedCenter,'label should sit at the equal-width column center');
       assert.equal(row.valueX,expectedCenter,'value should sit at the equal-width column center');
       assert.ok(row.labelInk.left>=left-1&&row.labelInk.right<=right+1,
         'label should remain within its one-third column: '+JSON.stringify(row));
       assert.ok(row.valueInk.left>=left-1&&row.valueInk.right<=right+1,
         'value should remain within its one-third column: '+JSON.stringify(row));
+      assert.ok(row.labelInk.right<=950&&row.valueInk.right<=950,
+        'painted text must preserve the original 10px right padding: '+JSON.stringify(row));
       assert.ok(row.labelInk.top>=state.spec.top+state.spec.field,
         'label exceeds HUD top edge: '+JSON.stringify(row));
       assert.ok(row.valueInk.bottom<=540,
         'value exceeds HUD bottom edge: '+JSON.stringify(row));
     }
-    assert.deepEqual(state.stats.map(row=>row.labelX),[758,835,912],
+    assert.deepEqual(state.stats.map(row=>row.labelX),[760,840,920],
       'three stat centers are spaced according to full remaining area');
     await page.evaluate(()=>{
       const s=window.__slotTestGame.scene.getScene('Game');

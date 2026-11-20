@@ -371,10 +371,12 @@
     const totalWidth = s.paired ? s.max * s.size * 2 + (s.max - 1) * s.pairGap : s.max * s.size + (s.max - 1) * s.gap;
     const left = 10, rightPadding = 10;
     const slotLeft = s.paired ? left : Math.floor((spec.width - totalWidth) / 2);
-    // Paired HUD: 3px after the last pair, then divide all space up to the fixed 10px right inset into three columns.
+    // Paired HUD: use the full remaining 240px (including the former 10px
+    // unused tail) for three equal 80px columns. Keep the painted text inside
+    // the original 10px right safety inset.
     const right = s.paired ? slotLeft + totalWidth + s.pairGap :
       spec.width - rightPadding - bottomStats.columnWidth * bottomStats.columns;
-    const sideWidth = spec.width - rightPadding - right;
+    const sideWidth = spec.width - (s.paired ? 0 : rightPadding) - right;
     const statColumnWidth = sideWidth / bottomStats.columns;
     if (s.paired && (sideWidth <= 0 || slotLeft + totalWidth > right)) throw Error('Paired slots overlap bottom HUD stats');
     const top = spec.top + spec.fieldHeight;
