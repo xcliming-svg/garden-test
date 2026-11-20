@@ -55,10 +55,8 @@ try {
           top:obj.y-obj.displayOriginY+ink.top/z,bottom:obj.y-obj.displayOriginY+ink.bottom/z};
       };
       const stats=['dps','defense','moveSpeed'].map(key=>{
-        const label=s.children.getByName('stat-label:'+key),value=s.children.getByName('stat-value:'+key),
-          labelInk=painted(label),valueInk=painted(value);
-        return {key,labelInk,valueInk,block:{left:Math.min(labelInk.left,valueInk.left),
-          right:Math.max(labelInk.right,valueInk.right)}};
+        const label=s.children.getByName('stat-label:'+key),value=s.children.getByName('stat-value:'+key);
+        return {key,labelX:label.x,valueX:value.x,labelInk:painted(label),valueInk:painted(value)};
       });
       const item=window.GardenItemCards.createDrop(s,L.spec,L.assets,'item','rock',100,120,'pair-sizing-test',1);
       const fieldCard={width:item.marker.width,height:item.marker.height,frame:item.marker.list[0].width,
@@ -120,26 +118,24 @@ try {
     assert.equal(960-(state.layout.right+state.layout.sideWidth),10,'right 10px inset retained');
     assert.equal(state.spec.y-(state.spec.top+state.spec.field+2),3);
     assert.equal(540-(state.spec.y+state.spec.size),3);
-    for(const row of state.stats) {
-      assert.ok(row.block.left>=719,'stats should not overlap paired slots: '+JSON.stringify(row));
-      assert.ok(row.block.right<=951,'stats should respect the right inset: '+JSON.stringify(row));
-      const labelCenter=(row.labelInk.left+row.labelInk.right)/2;
-      const valueCenter=(row.valueInk.left+row.valueInk.right)/2;
-      assert.ok(Math.abs(labelCenter-valueCenter)<=1.1,
-        'value and label must be optically centered: '+JSON.stringify(row));
+    // Divide the full 230px remainder into three equal 76.67px columns; do not
+    // distribute the visible glyphs edge-to-edge or leave an extra right-side cell.
+    for(const [index,row] of state.stats.entries()) {
+      const expectedCenter=Math.round(720+230*(index+.5)/3);
+      const left=720+230*index/3,right=720+230*(index+1)/3;
+      assert.equal(row.labelX,expectedCenter,'label should sit at the equal-width column center');
+      assert.equal(row.valueX,expectedCenter,'value should sit at the equal-width column center');
+      assert.ok(row.labelInk.left>=left-1&&row.labelInk.right<=right+1,
+        'label should remain within its one-third column: '+JSON.stringify(row));
+      assert.ok(row.valueInk.left>=left-1&&row.valueInk.right<=right+1,
+        'value should remain within its one-third column: '+JSON.stringify(row));
       assert.ok(row.labelInk.top>=state.spec.top+state.spec.field,
-        'label exceeds top HUD band: '+JSON.stringify(row));
-      assert.ok(row.valueInk.bottom<=540,'value exceeds bottom HUD band: '+JSON.stringify(row));
+        'label exceeds HUD top edge: '+JSON.stringify(row));
+      assert.ok(row.valueInk.bottom<=540,
+        'value exceeds HUD bottom edge: '+JSON.stringify(row));
     }
-    assert.ok(Math.abs(state.stats[0].block.left-720)<=1,
-      'first group should start near last slot plus 3px: '+JSON.stringify(state.stats));
-    assert.ok(Math.abs(state.stats[2].block.right-950)<=1,
-      'last painted text should stop at 10px right padding: '+JSON.stringify(state.stats));
-    const gap1=state.stats[1].block.left-state.stats[0].block.right;
-    const gap2=state.stats[2].block.left-state.stats[1].block.right;
-    assert.ok(gap1>0&&gap2>0,'three stat groups must not overlap');
-    assert.ok(Math.abs(gap1-gap2)<=2,
-      'gaps between painted text groups should match: '+JSON.stringify({gap1,gap2,stats:state.stats}));
+    assert.deepEqual(state.stats.map(row=>row.labelX),[758,835,912],
+      'three stat centers are spaced according to full remaining area');
     await page.evaluate(()=>{
       const s=window.__slotTestGame.scene.getScene('Game');
       s.run.credit(200);

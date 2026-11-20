@@ -670,53 +670,25 @@
       const next = dragging && target >= 0 ? getPreviewStats(equipped, target, dragging.item) : current;
       if(combatSpeed!==undefined){current.moveSpeed=combatSpeed;next.moveSpeed=combatSpeed;}
       const rows = layout.alignCost();
-      const metrics = stats.map(row => {
+      stats.forEach(row => {
         const d = Math.round((next[row.key] - current[row.key])*10)/10;
         row.value.setText(String(next[row.key]));
         row.delta.setText(d ? signed(d) : '').setColor(d > 0 ? R.hex.green : d < 0 ? R.hex.redText : colors.value)
           .setVisible(d !== 0);
-        const labelInk = bottomInk(row.label, colors.hud), valueInk = bottomInk(row.value, colors.hud);
-        const deltaInk = d ? bottomInk(row.delta, colors.hud) : null;
-        const labelWidth = (labelInk.right - labelInk.left) / rows.zoom;
-        const valueWidth = (valueInk.right - valueInk.left) / rows.zoom;
-        const deltaWidth = deltaInk ? (deltaInk.right - deltaInk.left) / rows.zoom : 0;
+        // 레이블 하단과 보석 하단, 모든 숫자의 가시 상단을 동일한 픽셀 행에 정렬한다.
+        // 증감이 있을 때는 값과 증감 사이 2px를 두고 전체 행을 중앙 정렬한다.
+        const valueWidth = row.value.width;
+        const deltaWidth = d ? row.delta.width : 0;
         const gap = d ? bottomStats.deltaGap : 0;
-        return { row, d, labelInk, valueInk, deltaInk, labelWidth, valueWidth, deltaWidth, gap,
-          blockWidth: Math.max(labelWidth, valueWidth + gap + deltaWidth) };
-      });
-      // Paired HUD: distribute the actual visible text groups, not three equal empty
-      // columns. The first group meets the stats region's left edge; the last group's
-      // right edge meets the existing 10px screen inset. Internal gaps are equal.
-      const totalTextWidth = metrics.reduce((sum, m) => sum + m.blockWidth, 0);
-      const freeSpace = layout.sideWidth - totalTextWidth;
-      const justify = s.paired && freeSpace >= 0 && metrics.length > 1;
-      const between = justify ? freeSpace / (metrics.length - 1) : 0;
-      let cursor = layout.right;
-      metrics.forEach(m => {
-        const { row, d, labelInk, valueInk, deltaInk, labelWidth, valueWidth, deltaWidth, gap } = m;
-        const center = justify ? cursor + m.blockWidth / 2 : row.x;
+        const rowWidth = valueWidth + gap + deltaWidth;
+        const labelInk = bottomInk(row.label, colors.hud), valueInk = bottomInk(row.value, colors.hud);
         const labelY = (rows.upperBottom - labelInk.bottom) / rows.zoom + row.label.displayOriginY;
         const valueY = (rows.numberTop - valueInk.top) / rows.zoom + row.value.displayOriginY;
-        if (justify) {
-          // Position by painted glyph edges; Phaser text boxes include transparent padding.
-          const labelLeft = center - labelWidth / 2;
-          const valueLeft = center - (valueWidth + gap + deltaWidth) / 2;
-          row.label.setPosition(labelLeft - labelInk.left / rows.zoom + row.label.displayOriginX, labelY);
-          row.value.setPosition(valueLeft - valueInk.left / rows.zoom + row.value.displayOriginX, valueY);
-          if (d) {
-            const deltaY = (rows.numberBottom - deltaInk.bottom) / rows.zoom + row.delta.displayOriginY;
-            row.delta.setPosition(valueLeft + valueWidth + gap - deltaInk.left / rows.zoom + row.delta.displayOriginX, deltaY);
-          }
-          cursor += m.blockWidth + between;
-        } else {
-          // Preserve original lab/simulation comparison alignment and overflow behavior.
-          const rowWidth = row.value.width + gap + (d ? row.delta.width : 0);
-          const left = center - rowWidth / 2;
-          row.label.setPosition(center, labelY);
-          row.value.setPosition(left + row.value.width / 2, valueY);
-          const deltaY = d ? (rows.numberBottom - deltaInk.bottom) / rows.zoom + row.delta.displayOriginY : valueY;
-          row.delta.setPosition(left + row.value.width + gap + (d ? row.delta.width : 0) / 2, deltaY);
-        }
+        const left = row.x - rowWidth / 2;
+        row.label.setPosition(row.x, labelY);
+        row.value.setPosition(left + valueWidth / 2, valueY);
+        const deltaY = d ? (rows.numberBottom - bottomInk(row.delta, colors.hud).bottom) / rows.zoom + row.delta.displayOriginY : valueY;
+        row.delta.setPosition(left + valueWidth + gap + deltaWidth / 2, deltaY);
       });
     }
     function slotAnchor(index) {
