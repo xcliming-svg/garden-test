@@ -29,18 +29,29 @@ try{
       '--use-angle=swiftshader','--enable-unsafe-swiftshader']});
   for(const [width,height] of [[960,540],[1280,720]]){
     const page=await browser.newPage({viewport:{width,height}}),errors=[];
-    page.on('pageerror',e=>errors.push(String(e.stack||e)));
-    page.on('requestfailed',r=>errors.push('request failed '+r.url()));
+    page.on('pageerror',e=>{errors.push(String(e.stack||e));console.error('PAGE ERROR',String(e.stack||e));});
+    page.on('console',msg=>{if(msg.type()==='error')console.error('BROWSER CONSOLE ERROR',msg.text());});
+    page.on('requestfailed',r=>{errors.push('request failed '+r.url());console.error('REQUEST FAILED',r.url());});
     await page.goto('http://127.0.0.1:'+server.address().port+'/');
     await page.waitForFunction(()=>window.__survivalTestGame?.scene.isActive('MainMenu'));
     assert.equal(await page.locator('#blueprint-select').count(),0,'no stage/blueprint selector');
     const canvas=await page.locator('canvas').boundingBox();
     const point=(x,y)=>[canvas.x+x*canvas.width/960,canvas.y+y*canvas.height/540];
     await page.mouse.click(...point(480,252));
-    await page.waitForFunction(()=>{
-      const scene=window.__survivalTestGame?.scene.getScene('Game');
-      return scene?.runDrops&&scene?.flowerGrowth?.entries.size===84&&scene?.runEquipment?.equipped.length===20;
-    },{timeout:25000});
+    try{
+      await page.waitForFunction(()=>{
+        const scene=window.__survivalTestGame?.scene.getScene('Game');
+        return scene?.runDrops&&scene?.flowerGrowth?.entries.size===84&&scene?.runEquipment?.equipped.length===20;
+      },null,{timeout:60000});
+    }catch(error){
+      const state=await page.evaluate(()=>{
+        const game=window.__survivalTestGame,scene=game?.scene.getScene('Game');
+        return {gameActive:game?.scene.isActive('Game'),gameLoading:game?.scene.isSleeping('Game'),
+          flowers:scene?.flowerGrowth?.entries.size,equipment:scene?.runEquipment?.equipped.length,
+          runDrops:!!scene?.runDrops,sceneStatus:scene?.sys?.settings?.status};
+      }).catch(e=>({inspectionError:String(e)}));
+      throw Error('Survival scene initialization failed: '+JSON.stringify({state,errors,error:String(error)}));
+    }
     const state=await page.evaluate(()=>{
       const scene=window.__survivalTestGame.scene.getScene('Game'),L=window.GardenGameLayout,
         R=window.GardenRunRules,C=window.GardenFairyCombinations;
