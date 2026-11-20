@@ -22,7 +22,6 @@ try{
   browser=await chromium.launch({channel:'chrome',headless:true,args:['--no-sandbox','--disable-dev-shm-usage','--use-gl=angle','--use-angle=swiftshader','--enable-unsafe-swiftshader']});
   for(const [width,height] of [[960,540],[1280,720]]){
     const page=await browser.newPage({viewport:{width,height}}),errors=[];
-    await page.addInitScript(()=>{window.GardenFlowerCarryDisabled=true;});
     page.on('pageerror',e=>{errors.push(String(e));console.error('PAGE ERROR',e.stack||String(e));});page.on('requestfailed',r=>errors.push(r.url()));
     await page.goto('http://127.0.0.1:'+server.address().port+'/?enemies=0&weapons=0');
     await page.waitForFunction(()=>window.__previewGame?.scene.isActive('MainMenu'));

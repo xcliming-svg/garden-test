@@ -18,18 +18,9 @@
 <body>
   <main id="game" aria-label="Garden Test 게임 씬 화면"></main>
   <script src="https://cdn.jsdelivr.net/npm/phaser@3.90.0/dist/phaser.min.js"></script>
-  <script>
-    if (location.search) {
-      const params = new URLSearchParams(location.search);
-      const pairs = params.get('slotPairs');
-      const preview = pairs === '9' || pairs === '10' ? '?slotPairs=' + pairs : '';
-      history.replaceState(null, '', location.pathname + preview + location.hash);
-    }
-  </script>
+  <script>if(location.search)history.replaceState(null,"",location.pathname+location.hash);</script>
   <script src="./src/campaign-v3.js"></script>
-  <script src="./src/fairy-flowerbeds.js"></script>
   <script src="./src/run-rules.js"></script>
-  <script src="./src/flower-carry.js"></script>
   <script src="./src/palette.js"></script>
   <script src="./src/svg-palette.js"></script>
   <script src="./src/ui.js"></script>
@@ -56,7 +47,6 @@
   <script src="./src/hero-weapon-preview.js"></script>
   <script src="./src/relic-collection.js"></script>
   <script src="./src/game-layout.js"></script>
-  <script src="./src/slot-pairs-demo.js"></script>
   <script src="./src/run-drops.js"></script>
   <script src="./src/scenes.js"></script>
   <script src="./src/main.js"></script>

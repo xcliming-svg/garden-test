@@ -208,7 +208,6 @@
     const actors=[];let bag=[],directionBag=[],serial=0,elapsed=0,spawned=0,completed=0,kills=0;
     const schedule=playable&&target===window.GardenRunRules.population, introduced=new Set();let nextSpawn=0,formationIndex=0;
     const formations=schedule?window.GardenRunRules.formations:[];
-    const stress=schedule&&window.GardenFairyFlowerbeds?.stress;let stressSeeded=false;
     function nextEntry(){
       if(schedule){
         const wave=window.GardenRunRules.waveAt(elapsed),ids=wave.pool.map(([id])=>id),pool=entries.filter(e=>ids.includes(e.id));
@@ -271,20 +270,6 @@
         }
         const wanted=target(elapsed);
         if(schedule){
-          if(stress&&!stressSeeded){
-            stressSeeded=true;
-            // Spread 48 live enemies in two lateral groups, fully inside the field.
-            // Real routes, movement, damage and drops; no frozen preview sprites.
-            for(let i=0;i<wanted;i++){
-              const entry=nextEntry(),side=i%2===0?'left':'right',j=Math.floor(i/2),col=j%4,row=Math.floor(j/4);
-              const profile=M.profiles[entry.id],margin=entry.span*.74+12,top=spec.top+entry.span*(1+profile.squash)+profile.lift+profile.bob+12,bottom=spec.height-spec.bottom-12;
-              const maxX=spec.garden.x-entry.span/2-15;
-              const offset=margin+(maxX-margin)*(col+.25)/4;
-              const point={side,x:side==='left'?offset:spec.width-offset,y:top+(bottom-top)*(row+.5)/6};
-              spawn(entry,point);
-            }
-            nextSpawn=elapsed+window.GardenRunRules.waveAt(elapsed).interval;
-          }
           while(formationIndex<formations.length&&formations[formationIndex][0]<=elapsed+1e-7){
             const [at,kind,id,requested]=formations[formationIndex],group=formationIndex++;
             const entry=entries.find(e=>e.id===id),count=Math.max(0,Math.min(requested,wanted-actors.length));

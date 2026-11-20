@@ -24,9 +24,11 @@
   const width = U.W, height = U.H;
   const topHudHeight = 32;
   const bottomGap = 3, bottomBoundary = 2;
-  // 32px 기본 슬롯 + 상하 3px 여백 + HUD 경계선 2px. 비교 URL은 유지한다.
+  // devel 기본 플레이는 main 규칙을 유지하고, 장착 슬롯 외형만 34px 쌍 배치로 비교한다.
+  // 명시적 시뮬레이션/과거 비교 화면에서는 원래 36px 또는 URL 비교 값을 유지한다.
+  const pairedSlots = playable && !window.GardenSimulationConfig;
   const slotMode = new URLSearchParams(window.location.search).get('slots');
-  const slotSize = playable?36:slotMode === '24' ? 24 : slotMode === '36' ? 36 : 32;
+  const slotSize = pairedSlots ? 34 : playable ? 36 : slotMode === '24' ? 24 : slotMode === '36' ? 36 : 32;
   const bottomHudHeight = bottomBoundary + slotSize + 2 * bottomGap;
   const fieldHeight = height - topHudHeight - bottomHudHeight;
   const blueprintTopGap = hudPadding;
@@ -42,24 +44,23 @@
   // 인접한 셀은 1px 경계 하나를 공유한다: 외형 24, 내부 22, 피치 23.
   const cellLine = 1, gardenPitch = gardenCell + cellLine;
   const gardenOuter = gardenPitch + cellLine;
-  const iconSize = unit * 2, flowerDropSize = 24, itemDropSize = 32;
+  const iconSize = unit * 2, flowerDropSize = 24, itemDropSize = pairedSlots ? slotSize : 32;
   // 비교 링크의 실제 실행 규격을 브라우저 탭 제목에서 식별할 수 있게 한다.
   if (['24', '32', '36'].includes(slotMode) || params.has('flower') || params.has('garden') || params.has('person'))
     document.title = 'Garden Test | 꽃 '+gardenCell+'px · 수호자 '+window.GardenFlowerHeadPreview.guardianSize+'px · 슬롯 '+slotSize+'px';
-  const flowerbeds=!!window.GardenFairyFlowerbeds?.enabled,gardenColumns=flowerbeds?9:10;
-  const gardenSize = gardenColumns * gardenPitch + cellLine;
+  const gardenSize = 10 * gardenPitch + cellLine;
   const spec = Object.freeze({
     width, height,
     top: topHudHeight, fieldHeight, bottom: bottomHudHeight,
-    garden: Object.freeze({ x: Math.floor((width - gardenSize) / 2), y: Math.floor(topHudHeight + (fieldHeight - gardenSize) / 2), columns: gardenColumns, rows: gardenColumns, cell: gardenCell, line: cellLine, gap: 0, pitch: gardenPitch, outer: gardenOuter, size: gardenSize }),
+    garden: Object.freeze({ x: Math.floor((width - gardenSize) / 2), y: Math.floor(topHudHeight + (fieldHeight - gardenSize) / 2), columns: 10, rows: 10, cell: gardenCell, line: cellLine, gap: 0, pitch: gardenPitch, outer: gardenOuter, size: gardenSize }),
     blueprint: Object.freeze({
       x: hudPadding, y: blueprintY, padding: blueprintPadding, gap: blueprintGap, topGap: blueprintTopGap, header: blueprintHeader, fontSize: blueprintFontSize,
       columns: 10, rows: 10, cell: blueprintCell, line: blueprintLine, pitch: blueprintPitch, frame: blueprintFrame,
-      width: flowerbeds?210:blueprintGrid,
-      height: flowerbeds?180:blueprintHeader + blueprintGap + blueprintGrid,
+      width: blueprintGrid,
+      height: blueprintHeader + blueprintGap + blueprintGrid,
       gridX: hudPadding, gridY: blueprintY + blueprintHeader + blueprintGap
     }),
-    slots: Object.freeze({ size: slotSize, cell: slotSize - 2 * cellLine, line: cellLine, gap: bottomGap, initial: playable?window.GardenRunRules.tuning.initialSlots:4, preview: playable?(!window.GardenSimulationConfig?10:window.GardenRunRules.tuning.maxSlots):balancedCombat?window.GardenWeaponBalance.slots:9, max: playable&&window.GardenSimulationConfig?window.GardenRunRules.tuning.maxSlots:10, y: height - bottomHudHeight + bottomBoundary + bottomGap, exampleCost: 999 })
+    slots: Object.freeze({ size: slotSize, cell: slotSize - 2 * cellLine, line: cellLine, gap: bottomGap, paired: pairedSlots, pairGap: bottomGap, initial: playable?window.GardenRunRules.tuning.initialSlots:4, preview: playable?(!window.GardenSimulationConfig?10:window.GardenRunRules.tuning.maxSlots):balancedCombat?window.GardenWeaponBalance.slots:9, max: playable&&window.GardenSimulationConfig?window.GardenRunRules.tuning.maxSlots:10, y: height - bottomHudHeight + bottomBoundary + bottomGap, exampleCost: 999 })
   });
 
   const hud = Object.freeze({
@@ -253,7 +254,7 @@
     const c = columns.progress;
     // 게이지 오른쪽 끝은 고정. 짧은 번역도 실제 레이블 끝에서 5px 뒤에 게이지를 표시한다.
     const barX = spec.width - hud.padding - c.barWidth;
-    const progressLabel = text(scene, 0, hud.centerY, flowerbeds?'정원':labels.progress, hud.labelSize, colors.hudLabel, 'left');
+    const progressLabel = text(scene, 0, hud.centerY, labels.progress, hud.labelSize, colors.hudLabel, 'left');
     const barY = hud.centerY - hud.barHeight / 2;
     U.pixelFrame(g, barX, barY, c.barWidth, hud.barHeight, R.n.barFrame, colors.progressBorder);
     const progressGraphics=U.pixelGraphics(scene).setName('hud-progress-fill');
@@ -367,17 +368,49 @@
 
   function bottomLayout() {
     const s = spec.slots;
-    const totalWidth = s.max * s.size + (s.max - 1) * s.gap;
-    const slotLeft = Math.floor((spec.width - totalWidth) / 2);
+    const totalWidth = s.paired ? s.max * s.size * 2 + (s.max - 1) * s.pairGap : s.max * s.size + (s.max - 1) * s.gap;
     const sideWidth = bottomStats.columnWidth * bottomStats.columns;
+    const left = 10, right = spec.width - 10 - sideWidth;
+    const slotLeft = s.paired ? left : Math.floor((spec.width - totalWidth) / 2);
+    if (s.paired && slotLeft + totalWidth > right) throw Error('Paired slots overlap bottom HUD stats');
     const top = spec.top + spec.fieldHeight;
     return {
-      top, centerY: spec.slots.y + s.size / 2, slotLeft, totalWidth, sideWidth,
-      left: 10, right: spec.width - 10 - sideWidth,
+      top, centerY: s.y + s.size / 2, slotLeft, totalWidth, sideWidth,
+      left, right,
       slots: Array.from({ length: s.max }, (_, index) => ({
-        x: slotLeft + index * (s.size + s.gap), y: s.y, size: s.size
+        x: slotLeft + index * (s.paired ? s.size * 2 + s.pairGap : s.size + s.gap), y: s.y, size: s.size
       }))
     };
+  }
+
+  // A pair is one usable left slot plus an intentionally inactive right-side specimen.
+  // Single outer corners and one shared 1px seam; the existing ten-slot game rules are unchanged.
+  function pairPrimaryFrame(scene, slot, fill, border, index) {
+    const size = slot.size, g = U.pixelGraphics(scene).setPosition(slot.x+size/2, slot.y+size/2);
+    g.width = size; g.height = size; g.fillColor = fill; g.strokeColor = border;
+    const draw = () => {
+      const x = -size/2, y = -size/2;
+      g.clear().fillStyle(g.strokeColor, 1);
+      g.fillRect(x+1,y,size-1,1);
+      g.fillRect(x,y+1,size,size-2);
+      g.fillRect(x+1,y+size-1,size-1,1);
+      g.fillStyle(g.fillColor,1).fillRect(x+1,y+1,size-2,size-2);
+    };
+    g.setFillStyle = (color) => { g.fillColor = color; draw(); return g; };
+    g.setStrokeStyle = (_width, color) => { g.strokeColor = color; draw(); return g; };
+    draw();
+    return g.setName('slot-frame:'+index);
+  }
+
+  function pairSecondaryFrame(scene, slot, index) {
+    const size = slot.size, g = U.pixelGraphics(scene).setPosition(slot.x+size, slot.y);
+    g.width = size; g.height = size;
+    g.fillStyle(colors.normalBorder,1);
+    g.fillRect(0,0,size-1,1);
+    g.fillRect(0,1,size,size-2);
+    g.fillRect(0,size-1,size-1,1);
+    g.fillStyle(colors.emptySlotFill,1).fillRect(0,1,size-1,size-2);
+    return g.setDepth(D.slotFrame).setName('slot-pair-secondary:'+index);
   }
 
   function drawSlots(scene) {
@@ -389,25 +422,28 @@
     const layout = bottomLayout();
     layout.slotFrames = layout.slots.map((slot,i) => {
       const disabled=i>=s.preview;
-      const frame=U.pixelBox(scene,slot.x+slot.size/2,slot.y+slot.size/2,slot.size,slot.size,disabled?colors.disabledFill:colors.emptySlotFill,{strokeWidth:s.line,border:disabled?colors.disabledBorder:colors.normalBorder}).setName('slot-frame:'+i);
+      const fill=disabled?colors.disabledFill:colors.emptySlotFill;
+      const border=disabled?colors.disabledBorder:colors.normalBorder;
+      const frame=s.paired?pairPrimaryFrame(scene,slot,fill,border,i):
+        U.pixelBox(scene,slot.x+slot.size/2,slot.y+slot.size/2,slot.size,slot.size,fill,{strokeWidth:s.line,border}).setName('slot-frame:'+i);
       if(disabled&&i===s.preview||s.preview===s.max&&i===s.max-1)layout.alignCost=drawSlotCost(scene,slot.x+s.line,slot.y+s.line,s.cell,s.exampleCost,disabled);
       if(playable)frame.setDepth(D.slotFrame);
       return frame;
     });
+    if(s.paired)layout.pairSecondaryFrames=layout.slots.map((slot,i)=>pairSecondaryFrame(scene,slot,i));
     if(playable){
       const count=()=>scene.run.state.slotCount;
-      const priceFor=n=>window.GardenFlowerCarry?.enabled?null:window.GardenRunRules.cost(n);
       const buyZone=scene.add.zone(0,s.y+s.size/2,s.size,s.size).setDepth(D.purchase).setName('run-slot-purchase').setInteractive({useHandCursor:true});
       layout.updateSlots=()=>{
-        const n=count(),shown=Math.min(n+(priceFor(n)!==null?1:0),s.max),left=Math.floor((spec.width-shown*s.size-(shown-1)*s.gap)/2);
-        layout.slots.forEach((slot,i)=>{slot.x=left+i*(s.size+s.gap);const f=layout.slotFrames[i],locked=i===n;f.setPosition(slot.x+s.size/2,s.y+s.size/2).setFillStyle(locked?colors.disabledFill:colors.emptySlotFill).setStrokeStyle(s.line,locked?colors.disabledBorder:colors.normalBorder).setVisible(i<shown);});
-        const price=priceFor(n),show=price!==null,slot=layout.slots[Math.min(n,s.max-1)];
+        const n=count(),shown=Math.min(n+(window.GardenRunRules.cost(n)!==null?1:0),s.max),left=s.paired?layout.slotLeft:Math.floor((spec.width-shown*s.size-(shown-1)*s.gap)/2);
+        layout.slots.forEach((slot,i)=>{slot.x=left+i*(s.paired?s.size*2+s.pairGap:s.size+s.gap);const f=layout.slotFrames[i],locked=s.paired?i>=n:i===n;f.setPosition(slot.x+s.size/2,s.y+s.size/2).setFillStyle(locked?colors.disabledFill:colors.emptySlotFill).setStrokeStyle(s.line,locked?colors.disabledBorder:colors.normalBorder).setVisible(s.paired||i<shown);});
+        const price=window.GardenRunRules.cost(n),show=price!==null,slot=layout.slots[Math.min(n,s.max-1)];
         buyZone.setPosition(slot.x+s.size/2,s.y+s.size/2).setVisible(show);if(show)buyZone.setInteractive({useHandCursor:true});else buyZone.disableInteractive();
         layout.alignCost.move(slot,price,show,scene.run.state.gems>=price);
         scene.runEquipment?.refreshSlots();
       };
-      buyZone.on('pointerdown',()=>{if(!window.GardenFlowerCarry?.enabled&&!scene.runGarden?.holding&&scene.run.buy())layout.updateSlots();});
-      layout.updateCost=()=>{const n=count(),price=priceFor(n);layout.alignCost.move(layout.slots[Math.min(n,s.max-1)],price,price!==null,scene.run.state.gems>=price);};
+      buyZone.on('pointerdown',()=>{if(!scene.runGarden?.holding&&scene.run.buy())layout.updateSlots();});
+      layout.updateCost=()=>{const n=count(),price=window.GardenRunRules.cost(n);layout.alignCost.move(layout.slots[Math.min(n,s.max-1)],price,price!==null,scene.run.state.gems>=price);};
       layout.updateSlots();
     }
     return layout;
@@ -595,7 +631,7 @@
   function drawItemPreview(scene, layout, cards, combatSpeed, ballMode=false) {
     const U = window.GardenUI;
     const s = spec.slots;
-    const equipped = Array(playable?s.max:s.preview).fill(null),fifoOrder=[];
+    const equipped = Array(playable?s.max:s.preview).fill(null);
     const unlocked=()=>playable?scene.run.state.slotCount:s.preview;
     let hovered = null, pinned = null, dragging = null, target = -1;
     const clickable = new Set();
@@ -629,7 +665,6 @@
       const current = sumPreviewStats(equipped);
       const next = dragging && target >= 0 ? getPreviewStats(equipped, target, dragging.item) : current;
       if(combatSpeed!==undefined){current.moveSpeed=combatSpeed;next.moveSpeed=combatSpeed;}
-      if(playable&&window.GardenFlowerCarry?.enabled){current.moveSpeed+=window.GardenFlowerCarry.speedBonus;if(next!==current)next.moveSpeed+=window.GardenFlowerCarry.speedBonus;}
       const rows = layout.alignCost();
       stats.forEach(row => {
         const d = Math.round((next[row.key] - current[row.key])*10)/10;
@@ -848,7 +883,7 @@
       marker.on('dragend', pointer => { if (dragging === card) finishDrag(pointer, true); });
     }
     cards.forEach(bindCard);
-    function register(card){if(playable&&window.GardenFlowerCarry?.enabled)return;cards.push(card);bindCard(card);}
+    function register(card){cards.push(card);bindCard(card);}
     function unregister(card){
       const i=cards.indexOf(card);if(i>=0)cards.splice(i,1);
       clickable.delete(card.marker);
@@ -886,10 +921,7 @@
         if(card&&index<equipped.length&&scene.heroWeaponPreview.equip(index,id,card.item.level))equipped[index]=card.item;
       });refresh();
     }
-    const controller={applyLoadout,register,unregister,equipped,refreshSlots,get fifoOrder(){return [...fifoOrder];},collectAutomatic(item){
-      const C=window.GardenFlowerCarry;if(!playable||!C?.enabled||!item||C.isInstallation(item.id))return false;
-      const i=C.fifoSlot(fifoOrder,C.slotLimit);equipItem(i,item);refresh();return true;
-    },equipInitial(){const C=window.GardenFlowerCarry,gear=window.GardenRunRules.startingGear;const start=C?.enabled?gear.filter(x=>!C.isInstallation(x.id)).slice(0,C.slotLimit):gear;start.forEach(({id,level},i)=>{equipItem(i,window.GardenItemCards.runItem(scene,id,level));if(C?.enabled)fifoOrder.push(i);});refresh();},isDragging:card=>dragging===card,defense:()=>sumPreviewStats(equipped).defense};
+    const controller={applyLoadout,register,unregister,equipped,refreshSlots,equipInitial(){window.GardenRunRules.startingGear.forEach(({id,level},i)=>equipItem(i,window.GardenItemCards.runItem(scene,id,level)));refresh();},isDragging:card=>dragging===card,defense:()=>sumPreviewStats(equipped).defense};
     if(playable){scene.runEquipment=controller;refreshSlots();scene.events.once('shutdown',()=>delete scene.runEquipment);}else refresh();
     return controller;
   }
@@ -1149,7 +1181,7 @@
     g.fillStyle(colors.field, 1).fillRect(0, spec.top, spec.width, spec.fieldHeight);
     if(P.uiType===1)window.GardenLightFieldPreview.field(scene,spec);
     else window.GardenDarkFieldPreview.field(scene,spec);
-    if(playable){scene.run=window.GardenRunRules.create(window.GardenSimulationEvent);if(window.GardenFlowerCarry?.enabled)scene.run.state.slotCount=window.GardenFlowerCarry.slotLimit;}
+    if(playable)scene.run=window.GardenRunRules.create(window.GardenSimulationEvent);
     const updateHud=drawHud(scene);
     const layout=drawSlots(scene);
     if(!playable)drawBlueprint(scene);
@@ -1167,7 +1199,7 @@
       const label='테스트 전투 · 공 '+count+'개';
       if(status.text!==label)status.setText(label);
     },itemPreview,markers.flowers);
-    if(playable){itemPreview.equipInitial();if(flowerbeds)window.GardenFairyFlowerbeds.attach(scene,spec);else drawBlueprint(scene);window.GardenRunDrops.attach(scene,spec,assets,itemPreview,layout);window.GardenFlowerCarry?.attach(scene,spec);}
+    if(playable){itemPreview.equipInitial();drawBlueprint(scene);window.GardenRunDrops.attach(scene,spec,assets,itemPreview,layout);}
   }
 
   window.GardenGameLayout = Object.freeze({ spec, assets, colors, spacing, hud, slotCost, formatHudTime, formatHudCount, hudColumns, bottomStats, itemTooltip, replacementTitle, bottomLayout, sumPreviewStats, getPreviewStats, tooltipPosition, gardenCandidates, gardenGridRects, gardenRaster, gardenHit, patrolBounds, patrolPosition, nearestPatrolDistance, floatingDrop, animateFloatingDrops, draw });
