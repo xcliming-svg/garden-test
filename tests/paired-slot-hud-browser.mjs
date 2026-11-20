@@ -34,6 +34,8 @@ try {
     page.on('pageerror',e=>errors.push(String(e)));
     await page.goto('http://127.0.0.1:'+server.address().port+'/');
     await page.waitForFunction(()=>window.__slotTestGame?.scene.isActive('MainMenu'));
+    // Stage 2 retains a purchasable left slot (stage 1 already starts at its cap).
+    await page.locator('#blueprint-select').selectOption('stage-2');
     const canvas=await page.locator('canvas').boundingBox();
     await page.mouse.click(canvas.x+480*canvas.width/960,canvas.y+252*canvas.height/540);
     await page.waitForFunction(()=>{
