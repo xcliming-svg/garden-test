@@ -158,6 +158,11 @@ try{
     const left=await dragCard('boomerang',0);
     assert.equal(left.id,'boomerang');
     assert.equal(left.partner,true);
+    const nominal=await page.evaluate(()=>{
+      const s=window.__survivalTestGame.scene.getScene('Game');
+      return window.GardenGameLayout.sumPreviewStats(s.runEquipment.equipped);
+    });
+    assert.equal(nominal.dps,21.9,'two boomerang fairies should count three boomerangs in HUD nominal DPS');
     const shots=await page.evaluate(()=>{
       const scene=window.__survivalTestGame.scene.getScene('Game'),H=window.GardenHeroWeaponPreview,
         spec=window.GardenGameLayout.spec,I=window.GardenItemCards,
@@ -199,6 +204,42 @@ try{
     assert.ok(enemies.spawned>=7,'frequent enemy spawning by 8 seconds: '+JSON.stringify(enemies));
     assert.equal(enemies.stage,null);
     assert.equal(enemies.formations,0);
+    await dragCard('shoe',2);
+    const shoePartner=await dragCard('shoe',3);
+    assert.equal(shoePartner.id,'shoe');
+    assert.equal(shoePartner.actors,3);
+    const speeds=await page.evaluate(()=>{
+      const s=window.__survivalTestGame.scene.getScene('Game'),p=s.fairyPatrol,
+        L=window.GardenGameLayout,
+        at=a=>L.nearestPatrolDistance(p.bounds,a.center.x,a.center.y);
+      const pair1=p.actors.find(a=>a.index===1),pair2=p.actors.find(a=>a.index===2);
+      const a0=at(pair1),b0=at(pair2);p.advance(1);
+      const a1=at(pair1),b1=at(pair2);
+      return {normal:(a1-a0+p.length)%p.length,shoes:(b1-b0+p.length)%p.length,
+        dualVisible:pair2.partner.visible};
+    });
+    assert.ok(Math.abs(speeds.normal-40)<1,'non-shoe pair retains 40px/s: '+JSON.stringify(speeds));
+    assert.ok(Math.abs(speeds.shoes-72)<1,'double-shoe pair moves at 72px/s: '+JSON.stringify(speeds));
+    assert.equal(speeds.dualVisible,true);
+    const shieldSolo=await dragCard('shield',4);
+    const shields=await dragCard('shield',5);
+    assert.equal(shieldSolo.id,'shield');
+    assert.equal(shields.partner,true);
+    const protection=await page.evaluate(()=>{
+      const s=window.__survivalTestGame.scene.getScene('Game'),p=s.fairyPatrol.actors.find(a=>a.index===3);
+      const flowers=[...s.relicCollection.state.flowers.values()].sort((a,b)=>
+        Math.hypot(a.x-p.center.x,a.y-p.center.y)-Math.hypot(b.x-p.center.x,b.y-p.center.y));
+      const nearest=flowers[0],furthest=flowers.at(-1);
+      return {nearDistance:Math.hypot(nearest.x-p.center.x,nearest.y-p.center.y),
+        near:s.runEquipment.defenseAt(nearest.id),
+        farDistance:Math.hypot(furthest.x-p.center.x,furthest.y-p.center.y),
+        far:s.runEquipment.defenseAt(furthest.id),
+        shoeOnly:window.GardenFairyCombinations.resolve('shoe','shoe').base};
+    });
+    assert.ok(protection.nearDistance<=185,JSON.stringify(protection));
+    assert.equal(protection.near,12,'dual shield protects nearby flowers');
+    assert.equal(protection.far,0,'dual shield does not protect distant flowers');
+    assert.equal(protection.shoeOnly,null,'double-shoe pair has no attack');
     assert.deepEqual(errors,[],'browser errors '+width+'x'+height);
     console.log('Survival PASS',width,height,'84 mature flowers, 20 interactive slots, water-fairy cards, heart revival, 3 boomerangs, frequent continuous enemies');
     await page.close();

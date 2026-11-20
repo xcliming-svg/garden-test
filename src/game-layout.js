@@ -344,7 +344,7 @@
   // 9개 일반 + 마지막 확장 슬롯을 최대 폭에서 검토한다. 실제 초기 슬롯 정책은 4개로 유지.
   const statKeys = Object.freeze(['dps', 'defense', 'moveSpeed']);
   const statLabels = Object.freeze({
-    dps: balancedCombat?'기준 DPS':'초당 피해량', defense: '방어력', moveSpeed: '이동 속도'
+    dps: balancedCombat||survival?'기준 DPS':'초당 피해량', defense: '방어력', moveSpeed: '이동 속도'
   });
   // 모든 수치는 UI 비교용 임시 값. 실제 게임 계산식/단위/확률과 무관하다.
   const baseStats = Object.freeze(balancedCombat?{dps:0,defense:0,moveSpeed:window.GardenFairyPatrol.speed}:{dps:20,defense:12,moveSpeed:100});
@@ -363,6 +363,15 @@
     });
     if(survival){
       const pairs=Array.from({length:10},(_,i)=>equipped.slice(i*2,i*2+2)).filter(pair=>pair.some(Boolean));
+      // A duo fires one fused weapon pattern, not two independent weapons.
+      // The HUD reports base nominal DPS for that pattern; special secondary
+      // effects and actual hit probabilities are deliberately excluded.
+      result.dps=Math.round(pairs.reduce((sum,pair)=>{
+        const fusion=window.GardenFairyCombinations.resolve(pair[0],pair[1]);
+        if(!fusion?.base)return sum;
+        const level=Math.max(...pair.map(item=>item?.level||1));
+        return sum+window.GardenWeaponBalance.nominalDps(fusion.base,level)*(fusion.volley||1);
+      },0)*10)/10;
       result.moveSpeed=pairs.length?Math.round(pairs.reduce((total,pair)=>{
         const shoes=pair.filter(item=>item?.id==='shoe').length;
         return total+window.GardenFairyPatrol.speed*(shoes===2?1.8:shoes===1?1.35:1);
