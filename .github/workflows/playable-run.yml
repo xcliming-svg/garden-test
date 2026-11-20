@@ -22,3 +22,4 @@ jobs:
         env:
           PLAYWRIGHT_SKIP_BROWSER_DOWNLOAD: '1'
       - run: node tests/playable-run-browser.mjs
+      - run: node tests/slot-pairs-demo-browser.mjs
