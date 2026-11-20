@@ -1,7 +1,7 @@
 name: Survival garden and paired water fairies
 on:
   push:
-    branches: [feature/devel-survival-fairy-pairs, feature/devel-survival-ci-compat, devel]
+    branches: [feature/devel-survival-fairy-pairs, feature/devel-survival-ci-compat, devel, main]
   workflow_dispatch:
 permissions:
   contents: read
