@@ -1,7 +1,7 @@
 name: Devel early pace trial verification
 on:
   push:
-    branches: [feature/devel-early-pace-trial, feature/devel-stage-gear-trial, feature/random-stage-gear, devel]
+    branches: [feature/devel-early-pace-trial, feature/devel-stage-gear-trial, feature/random-stage-gear]
   workflow_dispatch:
 permissions:
   contents: read

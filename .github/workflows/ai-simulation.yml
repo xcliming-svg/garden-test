@@ -1,9 +1,7 @@
 name: AI simulation verification
 on:
   push:
-    branches: [feature/ai-simulation-system, devel, main]
-  pull_request:
-    branches: [devel]
+    branches: [feature/ai-simulation-system, main]
 permissions:
   contents: read
 jobs:

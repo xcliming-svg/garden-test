@@ -1,7 +1,7 @@
 name: Hero weapon preview verification
 on:
   push:
-    branches: [feature/hero-weapon-preview, feature/weapon-balance-v1, devel]
+    branches: [feature/hero-weapon-preview, feature/weapon-balance-v1]
 permissions:
   contents: read
 jobs:

@@ -10,7 +10,11 @@ export function sourceSet(){
   const sources=Object.fromEntries(SOURCE_ORDER.map(id=>[id,readFileSync(join(root,'src',id+'.js'),'utf8')]));
   const html=readFileSync(join(root,'index.html'),'utf8');
   const order=[...html.matchAll(/src="\.\/src\/([^"]+)\.js"/g)].map(m=>m[1]).filter(id=>id!=='main'&&id!=='scenes');
-  if(JSON.stringify(order)!==JSON.stringify(SOURCE_ORDER))throw Error('Source load order changed; update simulation/models.mjs');
+  // The campaign module remains a historical simulation fixture but was
+  // intentionally removed from the live, stage-free survival entry point.
+  const liveOrder=SOURCE_ORDER.filter(id=>id!=='campaign-v3');
+  if(JSON.stringify(order)!==JSON.stringify(liveOrder))
+    throw Error('Source load order changed; update simulation/models.mjs');
   return sources;
 }
 export function fingerprints(sources){

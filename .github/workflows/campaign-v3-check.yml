@@ -1,7 +1,5 @@
 name: Campaign V3 regression
 on:
-  pull_request:
-    branches: [devel]
   push:
     branches: [feature/campaign-v3-playable]
 permissions:
