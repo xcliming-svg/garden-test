@@ -52,7 +52,9 @@ try {
       const stats=['dps','defense','moveSpeed'].map(key=>{
         const label=s.children.getByName('stat-label:'+key),value=s.children.getByName('stat-value:'+key);
         return {key,label:{x:label.x,y:label.y},labelBounds:{left:label.getBounds().left,right:label.getBounds().right,
-          top:label.getBounds().top,bottom:label.getBounds().bottom},valueBounds:{top:value.getBounds().top,bottom:value.getBounds().bottom}};
+          top:label.getBounds().top,bottom:label.getBounds().bottom},
+          valueBounds:{left:value.getBounds().left,right:value.getBounds().right,
+            top:value.getBounds().top,bottom:value.getBounds().bottom}};
       });
       const item=window.GardenItemCards.createDrop(s,L.spec,L.assets,'item','rock',100,120,'pair-sizing-test',1);
       const fieldCard={width:item.marker.width,height:item.marker.height,frame:item.marker.list[0].width,
@@ -63,7 +65,8 @@ try {
           gap:slots.gap,paired:slots.paired,pairGap:slots.pairGap,itemDrop:L.assets.item.dropSize,
           card:L.assets.item.cardSize},
         layout:{left:b.left,right:b.right,totalWidth:b.totalWidth,centerY:b.centerY,
-          slotLeft:b.slotLeft,slots:b.slots.map(v=>({x:v.x,y:v.y,size:v.size}))},
+          slotLeft:b.slotLeft,sideWidth:b.sideWidth,statColumnWidth:b.statColumnWidth,
+          slots:b.slots.map(v=>({x:v.x,y:v.y,size:v.size}))},
         frames:pairFrames.map(x=>({x:x.x,y:x.y,width:x.width,height:x.height,interactive:!!x.input})),
         zones:inputZones.map(x=>({x:x.x,y:x.y,width:x.width,height:x.height,interactive:!!x.input?.enabled})),
         stats,fieldCard,
@@ -82,7 +85,9 @@ try {
     assert.equal(state.spec.pairGap,3);
     assert.equal(state.spec.paired,true);
     assert.equal(state.layout.left,10);
-    assert.equal(state.layout.right,740);
+    assert.equal(state.layout.right,720);
+    assert.equal(state.layout.sideWidth,230);
+    assert.equal(state.layout.statColumnWidth,230/3);
     assert.equal(state.layout.totalWidth,707);
     assert.equal(state.layout.centerY,520);
     assert.equal(state.layout.slotLeft,10);
@@ -107,12 +112,20 @@ try {
       assert.equal(state.zones[i].height,34);
     }
     assert.equal(state.layout.slots[9].x+68,717);
-    assert.equal(state.layout.right-717,23);
+    assert.equal(state.layout.right-717,3,'3px gap between the last paired slot and stats');
+    assert.equal(960-(state.layout.right+state.layout.sideWidth),10,'right 10px inset retained');
     assert.equal(state.spec.y-(state.spec.top+state.spec.field+2),3);
     assert.equal(540-(state.spec.y+state.spec.size),3);
-    for(const row of state.stats) {
-      assert.ok(row.labelBounds.left>=740,'stat overlaps paired slots: '+JSON.stringify(row));
-      assert.ok(row.labelBounds.right<=950,'stat exceeds right HUD: '+JSON.stringify(row));
+    for(const [index,row] of state.stats.entries()) {
+      const expectedCenter=Math.round(720+230*(index+.5)/3);
+      const left=720+230*index/3,right=720+230*(index+1)/3;
+      assert.equal(row.label.x,expectedCenter,'label should be centered in its expanded stat column');
+      assert.ok(row.labelBounds.left>=left-.5,'stat label crosses its left column edge: '+JSON.stringify(row));
+      assert.ok(row.labelBounds.right<=right+.5,'stat label crosses its right column edge: '+JSON.stringify(row));
+      assert.ok(row.valueBounds.left>=left-.5,'stat value crosses its left column edge: '+JSON.stringify(row));
+      assert.ok(row.valueBounds.right<=right+.5,'stat value crosses its right column edge: '+JSON.stringify(row));
+      assert.ok(Math.abs((row.valueBounds.left+row.valueBounds.right)/2-expectedCenter)<=.6,
+        'stat value should be centered with label: '+JSON.stringify(row));
       assert.ok(row.labelBounds.top>=state.spec.top+state.spec.field,
         'stat exceeds top HUD band: '+JSON.stringify(row));
       assert.ok(row.valueBounds.bottom<=540,'stat exceeds bottom HUD band: '+JSON.stringify(row));

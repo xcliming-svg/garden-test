@@ -369,13 +369,17 @@
   function bottomLayout() {
     const s = spec.slots;
     const totalWidth = s.paired ? s.max * s.size * 2 + (s.max - 1) * s.pairGap : s.max * s.size + (s.max - 1) * s.gap;
-    const sideWidth = bottomStats.columnWidth * bottomStats.columns;
-    const left = 10, right = spec.width - 10 - sideWidth;
+    const left = 10, rightPadding = 10;
     const slotLeft = s.paired ? left : Math.floor((spec.width - totalWidth) / 2);
-    if (s.paired && slotLeft + totalWidth > right) throw Error('Paired slots overlap bottom HUD stats');
+    // Paired HUD: 3px after the last pair, then divide all space up to the fixed 10px right inset into three columns.
+    const right = s.paired ? slotLeft + totalWidth + s.pairGap :
+      spec.width - rightPadding - bottomStats.columnWidth * bottomStats.columns;
+    const sideWidth = spec.width - rightPadding - right;
+    const statColumnWidth = sideWidth / bottomStats.columns;
+    if (s.paired && (sideWidth <= 0 || slotLeft + totalWidth > right)) throw Error('Paired slots overlap bottom HUD stats');
     const top = spec.top + spec.fieldHeight;
     return {
-      top, centerY: s.y + s.size / 2, slotLeft, totalWidth, sideWidth,
+      top, centerY: s.y + s.size / 2, slotLeft, totalWidth, sideWidth, statColumnWidth,
       left, right,
       slots: Array.from({ length: s.max }, (_, index) => ({
         x: slotLeft + index * (s.paired ? s.size * 2 + s.pairGap : s.size + s.gap), y: s.y, size: s.size
@@ -645,9 +649,9 @@
     ghost.list[0].setVisible(false);
     ghost.list[1].setVisible(false);
 
-    // 우하단에만 동일 폭 열 3개. 좌하단은 비워 두고 슬롯은 기존 위치를 유지한다.
+    // Keep the right 10px inset; center each stat in a third of the space after the paired slots.
     const stats = statKeys.map((key, index) => {
-      const x = layout.right + bottomStats.columnWidth * (index + 0.5);
+      const x = Math.round(layout.right + layout.statColumnWidth * (index + 0.5));
       const size = bottomStats.fontSize;
       return {
         key, x,

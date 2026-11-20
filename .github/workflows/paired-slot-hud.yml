@@ -1,7 +1,7 @@
 name: Main-based paired slot HUD
 on:
   push:
-    branches: [feature/main-paired-slot-hud-34, devel]
+    branches: [feature/main-paired-slot-hud-34, feature/devel-hud-stats-spacing, devel]
   workflow_dispatch:
 permissions:
   contents: read
