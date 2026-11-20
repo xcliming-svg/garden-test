@@ -462,6 +462,9 @@
     });
     if(s.paired&&!survival)layout.pairSecondaryFrames=layout.slots.map((slot,i)=>pairSecondaryFrame(scene,slot,i));
     if(survival){
+      // The stat rows reuse the gem/text baseline measurement without exposing
+      // any slot purchase UI or interactive purchasing behavior.
+      layout.alignCost=drawSlotCost(scene,0,s.y+s.line,s.cell,s.exampleCost,false);
       // Every half of all ten pairs is a live inventory slot. No purchase zone.
       layout.updateSlots=()=>scene.runEquipment?.refreshSlots();
       layout.updateCost=()=>{};
