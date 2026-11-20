@@ -10,6 +10,7 @@
     return Number.isFinite(n)&&n>=rockSizeLimits.min&&n<=rockSizeLimits.max?n:rockSizeLimits.default;
   }
   const playable=!!window.GardenRunRules?.active;
+  const survival=!!window.GardenRunRules?.survival;
   const combat=playable||window.GardenEnemyPreview.enabled&&params.get('weapons')==='1'&&params.get('attack')!=='0';
   const enabled=window.GardenFairyPatrol.enabled&&(!window.GardenEnemyPreview.enabled||combat)&&
     window.GardenFlowerGrowth.enabled&&params.get('cards')!=='0'&&params.get('cards')!=='legacy';
@@ -51,7 +52,7 @@
   // Right/down are clockwise, left/up counter-clockwise in screen coordinates.
   const wheelSign=(dx,dy)=>Math.abs(dx)>=Math.abs(dy)?Math.sign(dx)||1:Math.sign(dy)||1;
   function wheelTravel(s){
-    const t=Math.max(0,s.age),w=tuning.wheel;
+    const t=Math.max(0,s.age-(s.travelFrom||0)),w=tuning.wheel;
     // Integral of v(t)=min+(initial-min)*exp(-drag*t). Independent of direction,
     // aim distance and distance to the boundary; residual rolling speed stays positive.
     return w.minSpeed*t+(w.initialSpeed-w.minSpeed)*(1-Math.exp(-w.drag*t))/w.drag;
@@ -244,7 +245,7 @@
     const B=window.GardenWeaponBalance;
     if(balanced&&!B)throw Error('Missing weapon balance');
     const previousTargets=new Map();
-    const state={selected:'',equipped:[],levels:[],shots:[],fired:0,hits:0,damage:0,elapsed:0};
+    const state={selected:'',equipped:[],levels:[],shots:[],effects:[],fired:0,hits:0,damage:0,elapsed:0};
     let serial=0;
     const next=new Map();
     function select(id){
@@ -253,17 +254,27 @@
       state.shots=state.shots.filter(s=>!s.preview);next.delete(-1);return true;
     }
     function equip(index,id,level=1){
-      if(!Number.isInteger(index)||index<0||index>=(balanced?10:9))return false;
-      const weapon=ids.includes(id)?id:'',lvl=balanced?Math.max(1,Math.min(3,Math.trunc(level)||1)):1;
+      if(!Number.isInteger(index)||index<0||index>=(survival?20:balanced?10:9))return false;
+      const weapon=ids.includes(id)||survival&&['shoe','shield'].includes(id)?id:'',lvl=balanced?Math.max(1,Math.min(3,Math.trunc(level)||1)):1;
       if((state.equipped[index]||'')===weapon&&(!weapon||state.levels[index]===lvl))return true;
-      state.equipped[index]=weapon;state.levels[index]=lvl;next.delete(index);
-      if(balanced&&weapon)next.set(index,state.elapsed+B.stats(weapon,lvl).cooldown*index/10);
+      state.equipped[index]=weapon;state.levels[index]=lvl;
+      const triggerIndex=survival?index-index%2:index;
+      next.delete(triggerIndex);
+      if(balanced&&weapon&&!survival)next.set(index,state.elapsed+B.stats(weapon,lvl).cooldown*index/10);
       if(weapon){state.selected='';next.delete(-1);}
-      state.shots=state.shots.filter(s=>s.slot!==index&&!s.preview);
+      state.shots=state.shots.filter(s=>s.slot!==triggerIndex&&!s.preview);
+      if(survival)state.effects=state.effects.filter(e=>e.slot!==triggerIndex);
       return true;
     }
     function startLeg(s,x,y,tx,ty,age,speed){
       s.leg={x,y,tx,ty,age,speed,duration:Math.max(.04,Math.hypot(tx-x,ty-y)/speed)};
+    }
+    function effect(kind,p,shot){
+      const life=kind==='glue'?3.5:kind==='spray'?3.2:kind==='pot'?.85:.52;
+      const e={kind,x:p.x,y:p.y,age:0,life,level:shot.level,owner:shot.owner,slot:shot.slot,
+        triggered:false,lastPulse:-.5,record:new Set()};
+      state.effects.push(e);
+      onEvent?.('fusion_effect',{fusion:shot.fusion?.key||null,kind,x:e.x,y:e.y,slot:shot.slot});
     }
     function step(dt,hero,targets=[],damage=null,slow=null,patrol=null,push=null,companions=[]){
       if(!(dt>0))return;
@@ -271,22 +282,52 @@
       if(playable){const owners=new Set(companions.map(a=>a.index));state.shots=state.shots.filter(s=>s.owner===0||owners.has(s.owner));for(const key of next.keys())if(key<=-100&&!owners.has(-100-key))next.delete(key);}
       const live=targets.filter(e=>e.x>=0&&e.x<=spec.width&&e.y>=spec.top&&e.y<=spec.height-spec.bottom);
       const dead=new Set(),garden=gardenOf(patrol),battle=balanced&&!!damage;
+      if(survival){
+        for(const fx of state.effects){
+          fx.age+=dt;
+          const groundOnly=fx.kind==='glue'||fx.kind==='spray'||fx.kind==='splash'||fx.kind==='pot';
+          const targetsIn=live.filter(e=>(!groundOnly||B.groundContact(e))&&
+            distance(groundOnly?B.ground(e):e,fx)<=
+              (fx.kind==='pot'?38:fx.kind==='spray'?44:fx.kind==='glue'?28:fx.kind==='push'?48:fx.kind==='stones'?36:35)+(e.radius||0));
+          if(fx.kind==='glue'){
+            for(const e of targetsIn)slow?.(e.id,.42,.35);
+          }else if(fx.kind==='spray'&&fx.age-fx.lastPulse>=.45){
+            fx.lastPulse=fx.age;
+            for(const e of targetsIn){
+              const result=damage?.(e.id,B.stats('sprinkler',fx.level).damage);
+              if(result){state.hits++;state.damage+=B.stats('sprinkler',fx.level).damage;}
+            }
+          }else if(!fx.triggered&&(fx.kind==='splash'||fx.kind==='stones'||fx.kind==='pot'&&fx.age>=.52||fx.kind==='push')){
+            fx.triggered=true;
+            for(const e of targetsIn){
+              if(fx.kind==='push'){push?.(e.id,12);continue;}
+              const amount=fx.kind==='pot'?B.stats('flowerpot',fx.level).damage[1]:
+                fx.kind==='stones'?Math.max(2,Math.round(B.stats('rock',fx.level).damage*.35)):
+                Math.max(2,Math.round(B.stats('balloon',fx.level).damage*.4));
+              const result=damage?.(e.id,amount);
+              if(result){state.hits++;state.damage+=amount;onEvent?.('fusion_hit',{kind:fx.kind,enemy:e.id,amount,owner:fx.owner});}
+            }
+          }
+        }
+        state.effects=state.effects.filter(e=>e.age<e.life);
+      }
       const remaining=new Map(live.map(e=>[e.id,e.hp??10]));
       // Planting may expand the garden while an attack is already active.
       // Remove only ground attacks whose remaining footprint becomes unsafe.
       for(const s of state.shots){
+        const owner=survival&&s.owner>0?companions.find(a=>a.index===s.owner)||hero:hero;
         if(installations.has(s.kind)&&!installationSafe(spec,s.kind,{x:s.tx,y:s.ty},garden,sizeOf(s))){s.done=true;continue;}
         if(s.kind==='wheel'&&garden){
-          const p=pose(s,hero),end={x:s.x+s.dx*s.exitDistance,y:s.y+s.dy*s.exitDistance};
+          const p=pose(s,owner),end={x:s.x+s.dx*s.exitDistance,y:s.y+s.dy*s.exitDistance};
           if(segmentIntersects(p,end,expanded(garden,wheelRadius(sizeOf(s))+1))){s.done=true;continue;}
         }
-        const previous=s.previous||pose(s,hero),oldAge=s.age;
+        const previous=s.previous||pose(s,owner),oldAge=s.age;
         s.age=Math.min(shotLife(s),s.age+dt);
         const delta=s.age-oldAge;
-        if(s.kind==='paper-plane'){
+        if((s.kind==='paper-plane'||s.fusion?.homing)&&!s.fusion?.returning){
           const target=live.find(e=>e.id===s.targetId&&!dead.has(e.id));
           if(target&&(battle?distance(target,s.origin)<=B.stats(s.kind,s.level).range:inAttackRange(target,s.origin))){s.tx=target.x;s.ty=target.y;}
-          const cfg=tuning[s.kind],q=s.glide;
+          const cfg=tuning[s.fusion?.homing?'paper-plane':s.kind],q=s.glide;
           if(s.targetId===null){
             // Empty-field preview is a stable glide with a gentle bow, ending
             // exactly at its randomly selected point.
@@ -304,7 +345,7 @@
             else{q.x+=Math.cos(q.heading)*travel;q.y+=Math.sin(q.heading)*travel;}
           }
         }
-        const p=pose(s,hero);
+        const p=pose(s,owner);
         if(!s.preview&&battle){
           const st=B.stats(s.kind,s.level),kind=s.kind,phase=s.age<=s.flight?'out':'back';
           const repeat=kind==='sprinkler'||kind==='broom',drops=kind==='sprinkler'?sprinklerDrops(s):null;
@@ -318,7 +359,9 @@
             if(dead.has(e.id))continue;
             const r=e.radius||0,q=groundHit(e);
             const record=s.hitRecords.get(e.id)||{count:0,last:-Infinity,phases:new Set()};
-            if(kind==='boomerang'?record.phases.has(phase):repeat?record.count>=st.maxHits||s.age-record.last+1e-8<st.repeat:kind!=='yellow-floor'&&s.hit.has(e.id))continue;
+            if(kind==='boomerang'||s.fusion?.returning?
+              record.phases.has(phase):repeat?record.count>=st.maxHits||s.age-record.last+1e-8<st.repeat:
+              kind!=='yellow-floor'&&s.hit.has(e.id))continue;
             let hit=false,direct=false;
             if(kind==='flowerpot'){
               // Descending pot can physically contact an airborne body directly.
@@ -353,9 +396,13 @@
           }
           hits.sort((a,b)=>distance(previous,a.e)-distance(previous,b.e)||a.e.id-b.e.id);
           if(kind==='yellow-floor'){
-            for(const {e} of hits)if(!(e.attackType==='charge'&&e.phase==='strike')){if(slow?.(e.id,st.slow,.25))onEvent?.('weapon_slow',{weapon:kind,slot:s.slot,owner:s.owner,enemy:e.id,amount:st.slow});}
+            for(const {e} of hits)if(!(e.attackType==='charge'&&e.phase==='strike')){
+              const power=Math.min(.9,st.slow+(s.fusion?.slowBonus||0));
+              if(slow?.(e.id,power,.25))onEvent?.('weapon_slow',{weapon:kind,slot:s.slot,owner:s.owner,enemy:e.id,amount:power});
+            }
           }else{
-            const single=['rock','paper-plane','bouncy-ball'].includes(kind);
+            const single=['rock','paper-plane','bouncy-ball'].includes(kind)&&
+              !(kind==='paper-plane'&&(s.fusion?.pierce||s.fusion?.returning||s.fusion?.chainMax));
             for(const {e,direct,record} of single?hits.slice(0,1):hits){
               if(kind==='flowerpot'&&s.age<tuning.flowerpot.fall&&s.directDone)continue;
               const primary=direct&&!s.directDone;
@@ -368,12 +415,33 @@
               s.hit.add(e.id);record.count++;record.last=s.age;record.phases.add(phase);s.hitRecords.set(e.id,record);state.hits++;
               if(result.killed)dead.add(e.id);
               if(kind==='broom'&&!result.killed&&push?.(e.id,st.push))onEvent?.('weapon_push',{weapon:kind,slot:s.slot,owner:s.owner,enemy:e.id,pixels:st.push});
+              if(s.fusion?.impact&&(!Number.isFinite(s.effectAt)||s.age-s.effectAt>.24)){
+                effect(s.fusion.impact,kind==='balloon'||kind==='flowerpot'?{x:s.tx,y:s.ty}:e,s);
+                s.effectAt=s.age;
+              }
+              if(s.fusion?.ricochet&&kind==='wheel'&&!s.ricocheted){
+                const other=live.filter(q=>q.id!==e.id&&!s.hit.has(q.id)).sort((a,b)=>distance(p,a)-distance(p,b))[0];
+                if(other){
+                  const len=Math.hypot(other.x-p.x,other.y-p.y)||1;
+                  s.x=p.x;s.y=p.y;s.dx=(other.x-p.x)/len;s.dy=(other.y-p.y)/len;
+                  s.tx=other.x;s.ty=other.y;s.travelFrom=s.age;
+                  s.exitDistance=wheelExit(spec,s.x,s.y,s.dx,s.dy,wheelRadius(sizeOf(s)));
+                  s.ricocheted=true;
+                }
+              }
+              if(kind==='paper-plane'&&s.fusion?.chainMax){
+                const other=live.filter(q=>q.id!==e.id&&!s.hit.has(q.id)&&distance(q,p)<140)
+                  .sort((a,b)=>distance(a,p)-distance(b,p))[0];
+                if(other&&s.hit.size<s.fusion.chainMax){s.targetId=other.id;}
+                else s.done=true;
+              }
               if(kind==='bouncy-ball'){
                 const options=live.filter(q=>q.id!==e.id&&!dead.has(q.id)&&!s.hit.has(q.id)&&distance(p,q)<=tuning['bouncy-ball'].chainRange&&distance(q,s.origin)<=st.range);
                 options.sort((a,b)=>distance(p,a)-distance(p,b)||a.id-b.id);
                 const other=options[0];
-                if(other&&s.hit.size<3){startLeg(s,p.x,p.y,other.x,other.y,s.age,Math.max(180,s.leg.speed*.82));s.targetId=other.id;}
-                else s.done=true;
+                if(other&&s.hit.size<(s.fusion?.chainMax||3)){
+                  if(!s.fusion?.returning){startLeg(s,p.x,p.y,other.x,other.y,s.age,Math.max(180,s.leg.speed*.82));s.targetId=other.id;}
+                }else if(!s.fusion?.returning)s.done=true;
               }else if(single)s.done=true;
             }
           }
@@ -418,23 +486,40 @@
             }
           }
         }
+        if(survival&&s.fusion?.impact&&
+           (s.kind==='balloon'&&s.age>=s.flight||s.kind==='flowerpot'&&s.age>=tuning.flowerpot.fall)&&!s.impactFired){
+          s.impactFired=true;effect(s.fusion.impact,{x:s.tx,y:s.ty},s);
+        }
+        if(survival&&s.fusion?.trail&&s.age-(s.lastTrail||0)>.38){
+          s.lastTrail=s.age;
+          effect(s.fusion.trail==='glue'?'glue':s.fusion.trail==='spray'?'spray':'splash',p,s);
+        }
         if(s.kind==='balloon'&&s.age>=s.flight||battle&&s.kind==='flowerpot'&&s.age>=tuning.flowerpot.fall)s.burstDone=true;
-        if(s.kind==='bouncy-ball'&&s.age>=s.leg.age+s.leg.duration+.08)s.done=true;
+        if(s.kind==='bouncy-ball'&&!s.fusion?.returning&&s.age>=s.leg.age+s.leg.duration+.08)s.done=true;
         s.previous=p;
       }
       state.shots=state.shots.filter(s=>!s.done&&s.age<shotLife(s)&&
-        (s.kind!=='wheel'||wheelTravel(s)<s.exitDistance));
+        (s.kind!=='wheel'||s.fusion?.returning||wheelTravel(s)<s.exitDistance));
       previousTargets.clear();for(const e of live)previousTargets.set(e.id,{...e});
       if(!hero||hero.index!==0||hero.type!=='garden'||!patrol?.bounds)return;
-      const slots=state.equipped.flatMap((id,index)=>id?[{id,index,preview:false,actor:hero}]:[]);
-      if(playable)for(const actor of companions)slots.push({id:'rock',index:-100-actor.index,preview:false,actor});
-      if(!slots.length&&state.selected)slots.push({id:state.selected,index:-1,preview:true,actor:hero});
+      const slots=survival?[]:state.equipped.flatMap((id,index)=>id?[{id,index,preview:false,actor:hero}]:[]);
+      if(survival){
+        for(const actor of companions){
+          const index=(actor.index-1)*2;
+          const fusion=window.GardenFairyCombinations.resolve(state.equipped[index],state.equipped[index+1]);
+          if(fusion?.base)slots.push({id:fusion.base,index,preview:false,actor,fusion,
+            level:Math.max(state.levels[index]||1,state.levels[index+1]||1)});
+        }
+      }else if(playable)for(const actor of companions)slots.push({id:'rock',index:-100-actor.index,preview:false,actor});
+      if(!slots.length&&!survival&&state.selected)slots.push({id:state.selected,index:-1,preview:true,actor:hero});
       for(const slot of slots){
         if(state.elapsed+1e-8<(next.get(slot.index)||0))continue;
-        const level=state.levels[slot.index]||1,st=battle&&!slot.preview?B.stats(slot.id,level):null;
+        const level=slot.level||state.levels[slot.index]||1,st=battle&&!slot.preview?B.stats(slot.id,level):null;
         if(st&&slot.id==='boomerang'&&state.shots.some(s=>s.slot===slot.index&&s.kind==='boomerang'))continue;
         const shooter=slot.actor,x=shooter.center.x,y=shooter.center.y,origin={x,y},bounds={...patrol.bounds};
-        const cfg=tuning[slot.id],size=measure(slot.id,cfg.span),heroHeight=shooter.visibleHeight||40;
+        const cfg=tuning[slot.id],visual=slot.fusion?.visual||slot.id;
+        const visualSpan=tuning[visual]?.span??cfg.span;
+        const size=measure(visual,visualSpan),heroHeight=shooter.visibleHeight||40;
         // Ground effects use the actual ground coordinate, never the projected
         // airborne sprite center as a fallback for a forbidden installation.
         const aimOf=e=>({x:e.x,y:groundAim.has(slot.id)&&Number.isFinite(e.ground)?e.ground:e.y});
@@ -446,7 +531,9 @@
         const aim=st?chosen?.aim:target?aimOf(target):randomPoint(spec,origin,garden,random,slot.id,size,heroHeight);
         if(!aim)continue;
         const tx=aim.x,ty=aim.y,d=Math.hypot(tx-x,ty-y)||1,dx=(tx-x)/d,dy=(ty-y)/d;
-        const shot={id:serial++,owner:shooter.index,slot:slot.index,preview:slot.preview,kind:slot.id,x,y,tx,ty,dx,dy,origin,bounds,age:0,targetId:target?.id??null,hit:new Set(),hitRecords:new Map(),level,size,span:cfg.span};
+        const shot={id:serial++,owner:shooter.index,slot:slot.index,preview:slot.preview,kind:slot.id,
+          fusion:slot.fusion||null,visualKind:visual,visualSpan,
+          x,y,tx,ty,dx,dy,origin,bounds,age:0,targetId:target?.id??null,hit:new Set(),hitRecords:new Map(),level,size,span:cfg.span};
         if(slot.id==='balloon'){
           shot.launchY=y+heroHeight*.30;
           shot.flight=balloonFlight(d);shot.life=shot.flight+tuning.balloon.splashLife;
@@ -455,10 +542,11 @@
         if(slot.id==='boomerang'){
           shot.flight=clamp(.12+d/cfg.speed,cfg.minFlight,cfg.maxFlight);shot.life=shot.flight*2;
         }
-        if(slot.id==='paper-plane'){
+        if(slot.id==='paper-plane'||shot.fusion?.homing){
           shot.flight=planeFlight(d);
           if(shot.targetId===null)shot.life=shot.flight;
           shot.glide={x,y,heading:Math.atan2(dy,dx)};
+          if(shot.fusion?.homing)shot.life=tuning['paper-plane'].life;
         }
         if(slot.id==='bouncy-ball')startLeg(shot,x,y,tx,ty,0,cfg.speed);
         if(slot.id==='rock')shot.life=Math.max(.06,d/cfg.speed);
@@ -468,8 +556,33 @@
           shot.x=path.start.x;shot.y=path.start.y;shot.exitDistance=path.exit;
         }
         if(st?.duration)shot.life=st.duration;
-        state.shots.push(shot);
-        state.fired++;onEvent?.('weapon_fire',{weapon:slot.id,slot:slot.index,owner:shooter.index,shot:shot.id,target:shot.targetId});next.set(slot.index,state.elapsed+(st?.cooldown??interval));
+        if(shot.fusion?.returning&&slot.id!=='boomerang'){
+          shot.flight=Math.max(.38,Math.min(1.65,d/tuning.boomerang.speed+.18));
+          shot.life=shot.flight*2;
+        }
+        if(shot.fusion?.sizeScale){
+          shot.size={...shot.size,width:shot.size.width*shot.fusion.sizeScale,height:shot.size.height*shot.fusion.sizeScale};
+        }
+        if(shot.fusion?.speed&&slot.id==='bouncy-ball')shot.leg.speed*=shot.fusion.speed;
+        const volley=shot.fusion?.volley||1;
+        for(let n=0;n<volley;n++){
+          const member=n===0?shot:{...shot,id:serial++,hit:new Set(),hitRecords:new Map(),
+            glide:shot.glide?{...shot.glide}:undefined,leg:shot.leg?{...shot.leg}:undefined};
+          if(volley>1){
+            const spread=(n-(volley-1)/2)*.22,angle=Math.atan2(dy,dx)+spread;
+            const offset=slot.id==='sprinkler'||slot.id==='broom'||slot.id==='flowerpot'?16*(n-(volley-1)/2):0;
+            member.tx=tx-dy*offset+Math.cos(angle)*d*.08;
+            member.ty=ty+dx*offset+Math.sin(angle)*d*.08;
+            member.dx=(member.tx-x)/Math.max(.01,Math.hypot(member.tx-x,member.ty-y));
+            member.dy=(member.ty-y)/Math.max(.01,Math.hypot(member.tx-x,member.ty-y));
+            if(member.glide)member.glide.heading=angle;
+            if(member.leg){member.leg.tx=member.tx;member.leg.ty=member.ty;}
+            if(slot.id==='boomerang')member.origin={...origin};
+          }
+          state.shots.push(member);state.fired++;
+          onEvent?.('weapon_fire',{weapon:slot.id,slot:slot.index,owner:shooter.index,shot:member.id,target:member.targetId,fusion:shot.fusion?.key||null});
+        }
+        next.set(slot.index,state.elapsed+(st?.cooldown??interval));
       }
     }
     return {state,select,equip,step};
@@ -477,6 +590,11 @@
   // In the hidden-enemy mode the target is an invisible preview point.
   function pose(s,hero){
     const t=clamp(s.age/shotLife(s),0,1),a=Math.atan2(s.dy,s.dx);
+    if(s.fusion?.returning&&s.kind!=='boomerang'){
+      const q=boomerangPath(s,hero);
+      return {x:q.x,y:q.y,angle:s.age*18,alpha:1,scale:1,ring:0,t};
+    }
+    if(s.fusion?.homing&&s.glide)return {x:s.glide.x,y:s.glide.y,angle:s.glide.heading,alpha:1,scale:1,ring:0,t};
     const px=-s.dy,py=s.dx;let x=mix(s.x,s.tx,t),y=mix(s.y,s.ty,t),angle=0,alpha=1,scale=1,ring=0,kind=s.kind;
     switch(kind){
       case 'balloon':{
@@ -569,14 +687,15 @@
         if(!obj||obj.phase!==phase){
           if(obj)I.destroyRelic(obj.image);
           const image=(splash?I.effectImage(scene,'water-splash',s.tx,s.ty,tuning.balloon.splashSpan):
-            I.weaponImage(scene,s.kind,s.x,s.y,s.span??tuning[s.kind].span))
+            I.weaponImage(scene,s.visualKind||s.kind,s.x,s.y,s.visualSpan??s.span??tuning[s.kind].span))
             .setDepth(playable?(splash?window.GardenRunRules.depth.groundEffect+.02:s.kind==='yellow-floor'?window.GardenRunRules.depth.groundEffect:['broom','sprinkler'].includes(s.kind)?window.GardenRunRules.depth.installation:window.GardenRunRules.depth.projectile):(splash?.82:s.kind==='yellow-floor'?.8:['broom','sprinkler'].includes(s.kind)?1.8:6)).setMask(mask)
             .setName('hero-weapon:'+s.kind+':'+(splash?'splash:':'')+s.id);
           obj={image,phase,width:image.displayWidth,height:image.displayHeight};images.set(s.id,obj);
         }
-        const p=pose(s,hero),visible=splash||p;
-        obj.image.setPosition(visible.x,visible.y).setRotation(splash?0:p.angle).setAlpha(visible.alpha)
-          .setDisplaySize(obj.width*visible.scale,obj.height*visible.scale);
+        const owner=survival?patrol.actors.find(a=>a.index===s.owner)||hero:hero;
+        const p=pose(s,owner),visible=splash||p;
+        obj.image.setPosition(visible.x,visible.y).setRotation(splash?0:p.angle+(s.fusion?.spin?s.age*10:0)).setAlpha(visible.alpha)
+          .setDisplaySize(obj.width*visible.scale*(s.fusion?.sizeScale||1),obj.height*visible.scale*(s.fusion?.sizeScale||1));
         if(s.kind==='balloon'){
           if(!splash){
             const u=clamp(s.age/s.flight,0,1);
@@ -615,6 +734,21 @@
           const c=s.kind==='flowerpot'?P.n.clay:P.n.skyLight;
           fx.lineStyle(1.5,c,Math.max(.15,1-p.t)).strokeCircle(p.x,p.y,p.ring);
 
+        }
+      }
+      for(const e of model.state.effects){
+        const alpha=Math.max(0,1-e.age/e.life),r=e.kind==='glue'?28:e.kind==='spray'?44:e.kind==='pot'?38:35;
+        if(e.kind==='glue'){
+          groundFx.fillStyle(P.n.gold,.24*alpha).fillEllipse(e.x,e.y,r*2,r*.7);
+        }else if(e.kind==='pot'){
+          fx.lineStyle(2,P.n.clay,alpha).strokeCircle(e.x,e.y,r*.45+e.age*12);
+        }else if(e.kind==='stones'){
+          fx.lineStyle(2,P.n.stone,alpha).strokeCircle(e.x,e.y,r*(1-alpha*.5));
+        }else if(e.kind==='push'){
+          fx.lineStyle(2,P.n.silver,alpha).strokeCircle(e.x,e.y,r*(1-alpha*.4));
+        }else{
+          fx.lineStyle(2,P.n.sky,alpha).strokeCircle(e.x,e.y,r*(1-alpha*.5));
+          fx.fillStyle(P.n.skyLight,.2*alpha).fillEllipse(e.x,e.y,r*.9,r*.5);
         }
       }
       for(const [id,obj] of images)if(!live.has(id)){I.destroyRelic(obj.image);images.delete(id);}

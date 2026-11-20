@@ -36,7 +36,7 @@
       const ids=new Set(cells),g=spec.garden;
       for(const id of state.flowers.keys())if(!ids.has(id))state.flowers.delete(id);
       for(const id of ids)if(!state.flowers.has(id))state.flowers.set(id,{id,energy:tuning.maxEnergy,
-        x:g.x+(id%g.columns)*g.pitch+g.line+g.cell/2,y:g.y+Math.floor(id/g.columns)*g.pitch+g.line+g.cell/2});
+        x:g.x+(id%g.columns)*g.pitch+g.line+g.cell/2,y:g.y+Math.floor(id/g.columns)*(g.pitchY||g.pitch)+g.line+g.cell/2});
     }
     function damageFlower(id,amount=tuning.enemyDamage){
       const f=state.flowers.get(id);
@@ -47,13 +47,14 @@
       let best=null;
       for(const f of state.flowers.values()){
         // Live runs only spend hearts on living flowers that can benefit.
-        if(window.GardenRunRules?.active&&(f.energy<=0||f.energy>=tuning.maxEnergy))continue;
+        if(window.GardenRunRules?.active&&(f.energy>=tuning.maxEnergy||
+          !window.GardenRunRules.survival&&f.energy<=0))continue;
         if(!best||f.energy<best.energy||f.energy===best.energy&&f.id<best.id)best=f;
       }
       return best;
     }
     function spawn(kind,x,y,bounds){
-      const half=6,b=spec.blueprint;
+      const half=6,b=window.GardenRunRules?.survival?null:spec.blueprint;
       x=clamp(x,half,spec.width-half);y=clamp(y,spec.top+half,spec.height-spec.bottom-half);
       if(b&&x-half<b.x+b.width&&y-half<b.y+b.height&&x+half>b.x&&y+half>b.y)x=b.x+b.width+half;
       const pos=reachable({x,y},bounds);

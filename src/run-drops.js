@@ -3,12 +3,14 @@
   const R=window.GardenRunRules;
   function attach(scene,spec,assets,equipment,layout){
     const I=window.GardenItemCards,G=window.GardenFlowerGrowth,L=window.GardenGameLayout;
+    const survival=!!R.survival;
     const drops=new Map();let serial=0;
     function spawn(kind,x,y,id,level=1){
       const size=kind==='flower'?assets.flower.dropSize:assets.item.dropSize;
       const p=R.cardPosition(spec,x,y,size,[...drops.values()].filter(c=>!c.consumed).map(c=>({x:c.x,y:c.y,size:c.marker.width})));
       if(!p)throw Error('No legal card position');
       x=p.x;y=p.y;
+      if(survival&&kind==='flower')return null;
       if(kind==='flower'&&!id){
         // Bias toward outstanding blueprint flowers; preserve random variety.
         id=R.chooseFlower(scene.flowerGrowth.entries,window.GardenSimulationRng?.flower||Math.random);
@@ -32,7 +34,7 @@
       const state=scene.run.state;
       // Freeze the entire run. Only the existing fairy emotion animates from ResultScene.
       scene.blueprintRefresh?.();
-      scene.runGarden.refreshSoil(null);
+      scene.runGarden?.refreshSoil(null);
       scene.fairyPatrol.setState(outcome==='Victory'?'win':'lose');
       scene.scene.pause('Game');
       scene.scene.launch(outcome,{elapsed:state.elapsed,kills:scene.enemyPreview.model.kills,gems:state.gems,progress:R.completion(scene.flowerGrowth.entries)});
@@ -44,15 +46,17 @@
       scene.run.tick(dt);
       for(const card of [...drops.values()]){
         if(card.consumed){discard(card);continue;}
-        const dragging=card.kind==='flower'?scene.runGarden.isDragging(card):equipment.isDragging(card);
+        const dragging=card.kind==='flower'?scene.runGarden?.isDragging(card):equipment.isDragging(card);
         if(!dragging)card.age+=dt;
         if(!dragging&&card.age>=R.tuning.cardLifetime){discard(card);continue;}
         card.float(scene.run.state.elapsed*1000);
       }
       if(lastGems!==scene.run.state.gems){lastGems=scene.run.state.gems;layout.updateCost();}
       scene.fairyPatrol.refreshHud();
-      if(!scene.runGarden.occupied.size)result('Defeat');
-      else if(R.completion(scene.flowerGrowth.entries)===100)result('Victory');
+      if(!survival){
+        if(!scene.runGarden.occupied.size)result('Defeat');
+        else if(R.completion(scene.flowerGrowth.entries)===100)result('Victory');
+      }
     }
     scene.runDrops={spawn,consume,drops};
     scene.events.on('update',update);

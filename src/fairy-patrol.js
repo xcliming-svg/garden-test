@@ -15,6 +15,7 @@
   }
   const count=11,speed=window.GardenSimulationConfig?.fairy?.speed??40,maxSpeed=window.GardenSimulationConfig?.fairy?.maxSpeed??80;
   const playable=!!window.GardenRunRules?.active;
+  const survival=!!window.GardenRunRules?.survival;
   const ranks=Object.freeze([0,5]);
   const validRank=rank=>ranks.includes(rank);
   const speedAt=(base,rank,max=base*1.5)=>rank===5?max:base;
@@ -152,15 +153,19 @@
         .setOrigin(m.anchor.x/m.canvas.width,m.anchor.y/m.canvas.height)
         .setDisplaySize(m.canvas.width*scale,m.canvas.height*scale)
         .setDepth(2).setName('fairy:'+type+':'+index);
+      const partner=survival&&index>0?scene.add.image(0,0,key('water','normal'))
+        .setOrigin(m.anchor.x/m.canvas.width,m.anchor.y/m.canvas.height)
+        .setDisplaySize(m.canvas.width*scale,m.canvas.height*scale)
+        .setDepth(2).setName('fairy:water:partner:'+index).setVisible(false):null;
       const tears=[];
       for(const [i,side] of ['left','right'].entries())for(let j=0;j<2;j++){
         const c=m.sourceEyeCenters[side],d=m.characters[type].destinationRects[side];
         const sprite=scene.add.image(0,0,tearsAtlas+':'+side).setOrigin((c.x-i*128)/128,(c.y+65)/256).setVisible(false).setName('fairy:tear:'+index+':'+side+':'+j);
         tears.push({sprite,side,offset:j*.5,rect:d});
       }
-      return {index,type,image,outline,tears,visibleHeight,blink:blinkSchedule(index),expression:'normal',direction:'right',center:{x:0,y:0},phase:index*1.83};
+      return {index,type,image,partner,outline,tears,visibleHeight,blink:blinkSchedule(index),expression:'normal',direction:'right',center:{x:0,y:0},phase:index*1.83};
     });
-    let actors=allActors.slice(0,activeCount);
+    let actors=allActors.slice(0,activeCount),pairItems=Array(10).fill(null),pairDistances=new Map();
     for(const a of allActors.slice(activeCount)){a.image.setVisible(false);a.outline?.setVisible(false);}
     const density=createDensity();
     function updateDensity(near,dt){
@@ -191,7 +196,7 @@
       info=compute();b=info.patrol;length=info.length;spacing=length/activeCount;
       distance=progress*length;
       scale=info.height/m.characters.garden.visibleHeight;
-      for(const a of actors){a.visibleHeight=m.characters[a.type].visibleHeight*scale;a.image.setDisplaySize(m.canvas.width*scale,m.canvas.height*scale);if(a.outline)a.outline.setTexture(outlineKey(scene,a.type,scale));}
+      for(const a of actors){a.visibleHeight=m.characters[a.type].visibleHeight*scale;a.image.setDisplaySize(m.canvas.width*scale,m.canvas.height*scale);a.partner?.setDisplaySize(m.canvas.width*scale,m.canvas.height*scale);if(a.outline)a.outline.setTexture(outlineKey(scene,a.type,scale));}
       border.render(info);
     }
     function setCount(n){
@@ -200,12 +205,26 @@
       for(const a of allActors){const show=a.index<n;a.image.setVisible(show);a.outline?.setVisible(show);if(!show)for(const t of a.tears)t.sprite.setVisible(false);}
       signature='';render();updateDensity(density.snapshot().near,0);
     }
-    function setSpeed(value){currentSpeed=Math.max(speed,Math.min(maxSpeed,value));}
+    function setPairs(items){
+      if(!survival)return false;
+      pairItems=Array.from({length:10},(_,i)=>[items[i*2]?.id||null,items[i*2+1]?.id||null]);
+      actors=[allActors[0],...allActors.slice(1).filter(a=>pairItems[a.index-1].some(Boolean))];
+      activeCount=actors.length;spacing=length/activeCount;
+      for(const a of allActors){
+        const visible=a.index===0||pairItems[a.index-1].some(Boolean);
+        a.image.setVisible(visible);a.outline?.setVisible(visible);
+        a.partner?.setVisible(visible&&pairItems[a.index-1].every(Boolean));
+        if(!visible)for(const tear of a.tears)tear.sprite.setVisible(false);
+        if(visible&&a.index>0&&!pairDistances.has(a.index))pairDistances.set(a.index,(distance+a.index*length/11)%length);
+      }
+      render();return true;
+    }
+    function setSpeed(value){if(survival)return;currentSpeed=Math.max(speed,Math.min(maxSpeed,value));}
     function refreshHud(){updateHud(scene.run?.state.elapsed??elapsed,scene.enemyPreview?.model.kills||0,scene.run?.state.displayGems??scene.relicCollection?.state.gems??0,occupied.size);}
     function render(){
       refreshBoundary();
       for(const a of actors){
-        const d=distance+a.index*spacing;
+        const d=survival&&a.index>0?(pairDistances.get(a.index)||0):distance+a.index*spacing;
         const p=patrolPosition(b,d),q=patrolPosition(b,d+.01);
         const dx=q.x-p.x,dy=q.y-p.y;
         a.direction=Math.abs(dx)>Math.abs(dy)?(dx>0?'right':'left'):(dy>0?'down':'up');
@@ -217,9 +236,16 @@
         // The base art is front-facing only. Mirror horizontally on left/right;
         // up/down retain a front view, with gait and directional lean.
         if(facing)a.image.setFlipX(facing<0);
-        a.image.setPosition(p.x,p.y+a.visibleHeight/2-lift)
+        const together=survival&&!!a.partner&&a.partner.visible;
+        const separation=together?7:0;
+        a.image.setPosition(p.x-separation,p.y+a.visibleHeight/2-lift)
           .setAngle(tilt+facing*gait.lean)
           .setDepth(depthBase+Math.max(0,Math.min(.98,p.y/spec.height)));
+        if(a.partner){
+          a.partner.setPosition(p.x+separation,p.y+a.visibleHeight/2-lift)
+            .setFlipX(facing<0).setAngle(-tilt+facing*gait.lean)
+            .setDepth(a.image.depth+.005);
+        }
         const emotion=emotionPose(state,emotionTime,a.visibleHeight,a.phase);
         if(isResult(state))a.image.setPosition(p.x+emotion.dx,p.y+a.visibleHeight/2-emotion.lift).setAngle(0);
         for(const tear of a.tears){
@@ -230,13 +256,24 @@
           tear.sprite.setPosition(x,y).setDisplaySize(tear.rect.width*scale,tear.rect.height*scale).setAlpha(tear.baseAlpha).setDepth(a.image.depth+.01);
         }
         const expression=emotion.expression||a.blink(elapsed);
-        if(expression!==a.expression){a.expression=expression;a.image.setTexture(key(a.type,expression));}
+        if(expression!==a.expression){a.expression=expression;a.image.setTexture(key(a.type,expression));a.partner?.setTexture(key('water',expression));}
         syncOutline(a);
       }
       refreshHud();
     }
-    function advance(seconds){const dt=Math.max(0,seconds);emotionTime+=dt;if(!isResult(state)){elapsed+=dt;distance=(distance+dt*currentSpeed)%length;}render();return elapsed;}
-    const controller={get actors(){return actors;},border,advance,refreshHud,setCount,setSpeed,setSpeedRank,setState,updateDensity,density,get state(){return state;},get finished(){return isResult(state);},get emotionTime(){return emotionTime;},get speed(){return currentSpeed;},get speedRank(){return rank;},get distance(){return distance;},get bounds(){return b;},get length(){return length;},get spacing(){return spacing;},get boundary(){return info;},get occupied(){return [...occupied];},get elapsed(){return elapsed;}};
+    function advance(seconds){
+      const dt=Math.max(0,seconds);emotionTime+=dt;
+      if(!isResult(state)){
+        elapsed+=dt;distance=(distance+dt*currentSpeed)%length;
+        if(survival)for(const a of actors)if(a.index>0){
+          const shoes=pairItems[a.index-1].filter(id=>id==='shoe').length;
+          const pace=speed*(shoes===2?1.8:shoes===1?1.35:1);
+          pairDistances.set(a.index,((pairDistances.get(a.index)||0)+dt*pace)%length);
+        }
+      }
+      render();return elapsed;
+    }
+    const controller={get actors(){return actors;},border,advance,refreshHud,setCount,setPairs,setSpeed,setSpeedRank,setState,updateDensity,density,get state(){return state;},get finished(){return isResult(state);},get emotionTime(){return emotionTime;},get speed(){return currentSpeed;},get speedRank(){return rank;},get distance(){return distance;},get bounds(){return b;},get length(){return length;},get spacing(){return spacing;},get boundary(){return info;},get occupied(){return [...occupied];},get elapsed(){return elapsed;}};
     scene.fairyPatrol=controller;
     const update=(_time,delta)=>advance(Math.min(.1,Math.max(0,delta/1000)));
     scene.events.on('update',update);

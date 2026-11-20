@@ -4,6 +4,7 @@
   const G=window.GardenFlowerGrowth,U=window.GardenUI,P=window.GardenPalette;
   const params=new URLSearchParams(window.location.search);
   const playable=!!window.GardenRunRules?.active;
+  const survival=!!window.GardenRunRules?.survival;
   const weaponCombat=playable||window.GardenEnemyPreview.enabled&&params.get('weapons')==='1'&&params.get('attack')!=='0';
   const enabled=window.GardenFairyPatrol.enabled&&(!window.GardenEnemyPreview.enabled||weaponCombat)&&G.enabled&&params.get('cards')!=='0'&&params.get('cards')!=='legacy';
   // UI-only specimen values. These never feed patrol, projectile or enemy state.
@@ -23,7 +24,7 @@
     ['rock','돌멩이','4_돌_단일파츠(1).svg','적을 향해 돌멩이를 던져 기본 공격을 합니다.','dps',12],
     ['broom','빗자루','4_빗자루_단일파츠(1).svg','설치 지점 주변을 돌며 적들을 쓸어 공격합니다.','dps',20],
     ['water-fairy','물방울 요정',null,'물방울 요정 카드입니다. 장착 효과는 미정입니다.',null,0]
-  ].map(([id,name,file,desc,stat,value,tooltipEffect])=>Object.freeze({id,name,file,desc,level:minLevel,stats:Object.freeze(stat?{[stat]:value}:{}),tooltipEffect})));
+  ].filter(([id])=>!survival||id!=='water-fairy').map(([id,name,file,desc,stat,value,tooltipEffect])=>Object.freeze({id,name,file,desc,level:minLevel,stats:Object.freeze(stat?{[stat]:value}:{}),tooltipEffect})));
   // The source's bristle centre (1097,572) and handle tip (1183,380)
   // define its longitudinal axis. Rotate that axis to -45° before cropping,
   // so the diagonal can occupy the card without enlarging the card itself.
@@ -157,8 +158,21 @@
     const baseBorder=flower?R.flowerFrame:R.tabBorder;
     const border=flower?U.cornerFrame(scene,0,0,size,baseBorder):U.pixelBox(scene,0,0,size,size,baseBorder);
     const face=U.pixelBox(scene,0,0,size-2,size-2,R.tab,{cut:false,alpha:flower?0:1});
-    const image=fit(scene.add.image(0,0,texture),texture,kind==='item'?itemSpan(size):size-6);
-    const group=scene.add.container(x,y,[border,face,image]).setSize(size,size).setDepth(playable?window.GardenRunRules.depth.card:5);
+    let image,group;
+    if(survival&&kind==='item'){
+      // Every card uses the approved water fairy as its backdrop; the existing
+      // item's original cropped SVG is placed visibly in the fairy's hands.
+      const fairyKey=window.GardenFairyPatrol.key('water','normal');
+      if(!scene.textures.exists(fairyKey))window.GardenFairyPatrol.install(scene);
+      const fairy=fit(scene.add.image(-3,-3,fairyKey),fairyKey,size-6).setAlpha(.78).setName('water-fairy-card-backdrop');
+      image=fit(scene.add.image(6,6,texture||fairyKey),texture||fairyKey,Math.min(20,itemSpan(size))).setName('water-fairy-card-item');
+      image.setVisible(!!texture);
+      group=scene.add.container(x,y,[border,face,fairy,image]).setSize(size,size).setDepth(playable?window.GardenRunRules.depth.card:5);
+      group.survivalCard=true;
+    }else{
+      image=fit(scene.add.image(0,0,texture),texture,kind==='item'?itemSpan(size):size-6);
+      group=scene.add.container(x,y,[border,face,image]).setSize(size,size).setDepth(playable?window.GardenRunRules.depth.card:5);
+    }
     group.setStrokeStyle=(_width,_color,alpha)=>{
       border.setFillStyle(alpha?(kind==='flower'?R.flowerBorder:R.itemBorder):baseBorder,1);return group;
     };
@@ -195,8 +209,15 @@
     label.setVisible(true);
   }
   function setIcon(group,item){
-    if(item?.texture)fit(group.list[2],item.texture,itemSpan(group.width));
+    if(group.survivalCard){
+      const icon=group.list[3];
+      if(item?.texture){fit(icon,item.texture,Math.min(20,itemSpan(group.width)));icon.setVisible(true);}
+      else icon.setVisible(false);
+    }else if(item?.texture)fit(group.list[2],item.texture,itemSpan(group.width));
     setLevelLabel(group,item?.texture?item.level:undefined);
+  }
+  function slotCard(scene,x,y,size){
+    return card(scene,x,y,size,survival?null:key('rock'),'item','');
   }
   // Combat art uses visible height, except the approved longest-side boomerang.
   // Card/relic sizing stays independent. The sprinkler's original hub is not
@@ -295,5 +316,5 @@
     scene.events.once('shutdown',()=>delete scene.itemCardPreview);
     return {cards,flowers};
   }
-  window.GardenItemCards=Object.freeze({enabled,entries,relics,preload,draw,runItem,runItemData,createDrop,disposeCard,setIcon,key,broomRotation,itemSpan,minLevel,maxLevel,setLevelLabel,gemIcon,gemInk,relicImage,destroyRelic,weaponImage,effectImage,attackSize});
+  window.GardenItemCards=Object.freeze({enabled,entries,relics,preload,draw,runItem,runItemData,createDrop,disposeCard,setIcon,slotCard,key,broomRotation,itemSpan,minLevel,maxLevel,setLevelLabel,gemIcon,gemInk,relicImage,destroyRelic,weaponImage,effectImage,attackSize});
 }());

@@ -10,8 +10,9 @@
   function geometry(spec,occupied,guardianWidth,guardianHeight){
     const g=spec.garden,candidates=window.GardenRunRules?.active?window.GardenRunRules.plantCandidates(occupied):window.GardenGameLayout.gardenCandidates(occupied);
     const keys=[...visible(occupied,candidates)],xs=keys.map(i=>i%g.columns),ys=keys.map(i=>Math.floor(i/g.columns));
-    const garden={left:g.x+Math.min(...xs)*g.pitch,top:g.y+Math.min(...ys)*g.pitch,
-      right:g.x+Math.max(...xs)*g.pitch+g.outer,bottom:g.y+Math.max(...ys)*g.pitch+g.outer};
+    const py=g.pitchY||g.pitch;
+    const garden={left:g.x+Math.min(...xs)*g.pitch,top:g.y+Math.min(...ys)*py,
+      right:g.x+Math.max(...xs)*g.pitch+g.outer,bottom:g.y+Math.max(...ys)*py+g.outer};
     const gap=5;
     const patrol={left:garden.left-gap-guardianWidth/2,right:garden.right+gap+guardianWidth/2,
       top:garden.top-gap-guardianHeight/2,bottom:garden.bottom+gap+guardianHeight/2};

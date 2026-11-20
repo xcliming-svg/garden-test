@@ -95,7 +95,7 @@
     // Stones are decorative. Target an occupied flower, not the wall.
     const side=directions.includes(options.side)?options.side:'right',g=spec.garden;
     const mid=(boundary.garden.top+boundary.garden.bottom)/2;
-    const cells=occupied.map(index=>({index,x:g.x+(index%g.columns)*g.pitch+g.line+g.cell/2,y:g.y+Math.floor(index/g.columns)*g.pitch+g.line+g.cell-1}));
+    const cells=occupied.map(index=>({index,x:g.x+(index%g.columns)*g.pitch+g.line+g.cell/2,y:g.y+Math.floor(index/g.columns)*(g.pitchY||g.pitch)+g.line+g.cell-1}));
     if(!cells.length)throw Error('Enemy preview needs a planted flower');
     const M=window.GardenEnemyMotion,p=M.profiles[e.id],b=boundary.border,m=boundary.frame/2;
     const margin=e.span*.74+12,top=spec.top+e.span*(1+p.squash)+p.lift+p.bob+12,bottom=spec.height-spec.bottom-12;
@@ -206,9 +206,14 @@
   function createPopulation(spec,patrol,entries,random=Math.random,target=targetCount,onDeath=null,balanced=false,onEvent=null){
     const M=window.GardenEnemyMotion,F=window.GardenFairyPatrol;
     const actors=[];let bag=[],directionBag=[],serial=0,elapsed=0,spawned=0,completed=0,kills=0;
-    const schedule=playable&&target===window.GardenRunRules.population, introduced=new Set();let nextSpawn=0,formationIndex=0;
+    const survival=!!window.GardenRunRules?.survival;
+    const schedule=playable&&!survival&&target===window.GardenRunRules.population, introduced=new Set();let nextSpawn=0,formationIndex=0;
     const formations=schedule?window.GardenRunRules.formations:[];
     function nextEntry(){
+      if(survival){
+        const ids=window.GardenRunRules.eligibleEnemies(elapsed),pool=entries.filter(e=>ids.includes(e.id));
+        return pool[Math.min(pool.length-1,Math.floor(random()*pool.length))]||entries[0];
+      }
       if(schedule){
         const wave=window.GardenRunRules.waveAt(elapsed),ids=wave.pool.map(([id])=>id),pool=entries.filter(e=>ids.includes(e.id));
         const fresh=ids.map(id=>pool.find(e=>e.id===id)).find(e=>e&&!introduced.has(e.id));
@@ -265,11 +270,16 @@
           const a=actors[i];
           const slowed=elapsed<(a.slowUntil||0)&&(!balanced||!(a.entry.attackType==='charge'&&a.pose.phase==='strike')&&a.pose.lift<=3);
           const step=dt*(slowed?1-(a.slowAmount||0):1);a.age+=step;
+          if(survival&&a.motionAge>45){actors.splice(i,1);completed++;continue;}
           if(playable){if(!patrol.occupied.includes(a.path.flower))retarget(a);a.motionAge+=step;updateActor(a);}
           else if(a.age>=a.duration){actors.splice(i,1);completed++;}else updateActor(a);
         }
         const wanted=target(elapsed);
-        if(schedule){
+        if(survival){
+          if(actors.length<wanted&&elapsed+1e-7>=nextSpawn){
+            spawn();nextSpawn=elapsed+window.GardenRunRules.spawnInterval(elapsed);
+          }
+        }else if(schedule){
           while(formationIndex<formations.length&&formations[formationIndex][0]<=elapsed+1e-7){
             const [at,kind,id,requested]=formations[formationIndex],group=formationIndex++;
             const entry=entries.find(e=>e.id===id),count=Math.max(0,Math.min(requested,wanted-actors.length));
@@ -374,10 +384,14 @@
           model.advance(step);
           relics.model.syncFlowers(patrol.occupied);
           for(const e of model.actors){
-            if(playable){if(e.pendingHits){const damage=window.GardenRunRules.damageToFlower(e.entry,scene.runEquipment?.defense()||0);relics.model.damageFlower(e.path.flower,damage*e.pendingHits);e.pendingHits=0;}}
+            if(playable){if(e.pendingHits){
+               const defense=scene.runEquipment?.defenseAt?.(e.path.flower)??scene.runEquipment?.defense()??0;
+               const damage=window.GardenRunRules.damageToFlower(e.entry,defense);
+               relics.model.damageFlower(e.path.flower,damage*e.pendingHits);e.pendingHits=0;
+             }}
             else if(!e.flowerHit&&(e.pose.phase==='recover'||e.pose.phase==='return')){e.flowerHit=true;relics.model.damageFlower(e.path.flower);}
           }
-          if(playable){for(const [id,f] of relics.state.flowers)if(f.energy<=0)scene.runGarden?.remove(id);if(!patrol.occupied.length)break;}
+          if(playable&&!window.GardenRunRules.survival){for(const [id,f] of relics.state.flowers)if(f.energy<=0)scene.runGarden?.remove(id);if(!patrol.occupied.length)break;}
           attack?.step(step,previous);relics.step(step);
         }
       }

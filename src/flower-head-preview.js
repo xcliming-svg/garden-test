@@ -148,6 +148,7 @@
   }
   function draw(scene, spec, colors, gardenRaster, patrolBounds, patrolPosition, updateHud, itemPreview, previewFlowers=[]) {
     const playable=!!window.GardenRunRules?.active;
+    const survival=!!window.GardenRunRules?.survival;
     const fairy=window.GardenFairyPatrol.enabled;
     install(scene,spec.garden.cell);if(!fairy)installEnemy(scene);
     const g=spec.garden,params=new URLSearchParams(window.location.search),occupied=playable?new Set(window.GardenRunRules.initial.map(([id])=>id)):fairy&&params.get('full')!=='1'?new Set([44,45,54,55]):window.GardenCombatPreview.initialGarden(spec);
@@ -161,8 +162,9 @@
     const visible=grid.all(g);
     let hover=null,mismatchKey='';
     const wrongCells=()=>new Set([...growth.entries.keys()].filter(id=>window.GardenRunRules.blueprintStatus(growth.entries,id)==='wrong'));
-    function refreshMismatch(){if(playable&&[...wrongCells()].sort((a,b)=>a-b).join(',')!==mismatchKey)refreshSoil();}
+    function refreshMismatch(){if(!survival&&playable&&[...wrongCells()].sort((a,b)=>a-b).join(',')!==mismatchKey)refreshSoil();}
     function refreshSoil(target=hover){
+      if(survival){soil.setVisible(false);return;}
       hover=target;
       const candidates=playable?window.GardenRunRules.plantCandidates(occupied):window.GardenGameLayout.gardenCandidates(occupied);
       const z=scene.cameras.main.zoom,raster=gardenRaster(visible,g,z);
@@ -175,7 +177,7 @@
       renderer(texture.getContext(),g,z,raster,occupied,candidates,hover,wrong);
       texture.refresh();texture.setFilter(Phaser.Textures.FilterMode.NEAREST);
     }
-    function center(i){return {x:g.x+(i%g.columns)*g.pitch+g.line+g.cell/2,y:g.y+Math.floor(i/g.columns)*g.pitch+g.line+g.cell/2};}
+    function center(i){return {x:g.x+(i%g.columns)*g.pitch+g.line+g.cell/2,y:g.y+Math.floor(i/g.columns)*(g.pitchY||g.pitch)+g.line+g.cell/2};}
     const G=window.GardenFlowerGrowth, growth=G.enabled?G.attach(scene,g):null;
     const types=growth?G.names:flowers;
     function addFlower(i,name,born=0,mature=false){
@@ -201,7 +203,7 @@
       window.GardenEnemyPreview.attach(scene,spec,patrol);
       window.GardenHeroWeaponPreview?.attach(scene,spec,patrol);
       if(!playable)itemPreview?.applyLoadout?.();
-      if(playable||previewFlowers.length){
+      if(!survival&&(playable||previewFlowers.length)){
         // Static card inspection: plant into the existing garden, never create combat loot.
         const L=window.GardenGameLayout;
         const ghost=scene.add.image(0,0,growth?G.key(types[0],1):key(types[0],g.cell))

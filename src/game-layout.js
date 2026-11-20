@@ -5,6 +5,7 @@
   // 실제 전투, 획득, 재화 소비, 슬롯 확장 및 저장 로직은 없다.
   // 픽셀 로그라이크의 정보 밀도/여백을 참고. 8px 배수는 강제하지 않는다.
   const playable=!!window.GardenRunRules?.active;
+  const survival=!!window.GardenRunRules?.survival;
   const D=window.GardenRunRules?.depth;
   const P = window.GardenPalette;
   const R = P.reference;
@@ -48,11 +49,17 @@
   // 비교 링크의 실제 실행 규격을 브라우저 탭 제목에서 식별할 수 있게 한다.
   if (['24', '32', '36'].includes(slotMode) || params.has('flower') || params.has('garden') || params.has('person'))
     document.title = 'Garden Test | 꽃 '+gardenCell+'px · 수호자 '+window.GardenFlowerHeadPreview.guardianSize+'px · 슬롯 '+slotSize+'px';
+  // Extra vertical pitch makes the fixed 14×6 flowerbed ~16:9 without
+  // stretching, cropping or altering the original square flower artwork.
+  const gardenColumns=survival?14:10,gardenRows=survival?6:10;
+  const gardenPitchY=survival?30:gardenPitch;
+  const gardenWidth=gardenColumns*gardenPitch+cellLine;
+  const gardenHeight=gardenRows*gardenPitchY+cellLine;
   const gardenSize = 10 * gardenPitch + cellLine;
   const spec = Object.freeze({
     width, height,
     top: topHudHeight, fieldHeight, bottom: bottomHudHeight,
-    garden: Object.freeze({ x: Math.floor((width - gardenSize) / 2), y: Math.floor(topHudHeight + (fieldHeight - gardenSize) / 2), columns: 10, rows: 10, cell: gardenCell, line: cellLine, gap: 0, pitch: gardenPitch, outer: gardenOuter, size: gardenSize }),
+    garden: Object.freeze({ x: Math.floor((width - gardenWidth) / 2), y: Math.floor(topHudHeight + (fieldHeight - gardenHeight) / 2), columns: gardenColumns, rows: gardenRows, cell: gardenCell, line: cellLine, gap: 0, pitch: gardenPitch, pitchY: gardenPitchY, outer: gardenOuter, size: survival?gardenWidth:gardenSize, width:gardenWidth,height:gardenHeight }),
     blueprint: Object.freeze({
       x: hudPadding, y: blueprintY, padding: blueprintPadding, gap: blueprintGap, topGap: blueprintTopGap, header: blueprintHeader, fontSize: blueprintFontSize,
       columns: 10, rows: 10, cell: blueprintCell, line: blueprintLine, pitch: blueprintPitch, frame: blueprintFrame,
@@ -60,7 +67,7 @@
       height: blueprintHeader + blueprintGap + blueprintGrid,
       gridX: hudPadding, gridY: blueprintY + blueprintHeader + blueprintGap
     }),
-    slots: Object.freeze({ size: slotSize, cell: slotSize - 2 * cellLine, line: cellLine, gap: bottomGap, paired: pairedSlots, pairGap: bottomGap, initial: playable?window.GardenRunRules.tuning.initialSlots:4, preview: playable?(!window.GardenSimulationConfig?10:window.GardenRunRules.tuning.maxSlots):balancedCombat?window.GardenWeaponBalance.slots:9, max: playable&&window.GardenSimulationConfig?window.GardenRunRules.tuning.maxSlots:10, y: height - bottomHudHeight + bottomBoundary + bottomGap, exampleCost: 999 })
+    slots: Object.freeze({ size: slotSize, cell: slotSize - 2 * cellLine, line: cellLine, gap: bottomGap, paired: pairedSlots, pairGap: bottomGap, initial: playable?window.GardenRunRules.tuning.initialSlots:4, preview: playable?window.GardenRunRules.tuning.maxSlots:balancedCombat?window.GardenWeaponBalance.slots:9, max: playable?window.GardenRunRules.tuning.maxSlots:10, y: height - bottomHudHeight + bottomBoundary + bottomGap, exampleCost: 999 })
   });
 
   const hud = Object.freeze({
@@ -254,12 +261,13 @@
     const c = columns.progress;
     // 게이지 오른쪽 끝은 고정. 짧은 번역도 실제 레이블 끝에서 5px 뒤에 게이지를 표시한다.
     const barX = spec.width - hud.padding - c.barWidth;
-    const progressLabel = text(scene, 0, hud.centerY, labels.progress, hud.labelSize, colors.hudLabel, 'left');
+    const progressLabel = survival?null:text(scene, 0, hud.centerY, labels.progress, hud.labelSize, colors.hudLabel, 'left');
     const barY = hud.centerY - hud.barHeight / 2;
-    U.pixelFrame(g, barX, barY, c.barWidth, hud.barHeight, R.n.barFrame, colors.progressBorder);
-    const progressGraphics=U.pixelGraphics(scene).setName('hud-progress-fill');
-    const progressText=text(scene,barX+c.barWidth/2,hud.centerY,'4%',U.fontSize.compact,colors.value,'center').setName('hud-progress-value');
+    if(!survival)U.pixelFrame(g, barX, barY, c.barWidth, hud.barHeight, R.n.barFrame, colors.progressBorder);
+    const progressGraphics=survival?null:U.pixelGraphics(scene).setName('hud-progress-fill');
+    const progressText=survival?null:text(scene,barX+c.barWidth/2,hud.centerY,'4%',U.fontSize.compact,colors.value,'center');
     function setProgress(progress){
+      if(survival)return;
       progressGraphics.clear().fillStyle(colors.progressTrack,1).fillRect(barX+2,barY+2,c.barWidth-4,hud.barHeight-4);
       const fillWidth=Math.round((c.barWidth-4)*progress/100);
       if(fillWidth>0)progressGraphics.fillStyle(colors.progressFill,1).fillRect(barX+2,barY+2,fillWidth,hud.barHeight-4);
@@ -278,7 +286,7 @@
       const y0=Math.round(hud.centerY*z-height/2);
       icon.setPosition((x0-bounds.left)/z,(y0-bounds.top)/z);
       placeLeft(gemNumber,x0+width+gap);
-      progressLabel.setX((Math.round(barX*z)-gap-ink(progressLabel).right)/z + progressLabel.displayOriginX);
+      if(progressLabel)progressLabel.setX((Math.round(barX*z)-gap-ink(progressLabel).right)/z + progressLabel.displayOriginX);
     };
     align();
     scene.scale.on('resize',align);
@@ -353,7 +361,13 @@
     equipped.forEach(item => {
       if (item) statKeys.forEach(key => { result[key] += item.stats[key] || 0; });
     });
-    if(playable)result.moveSpeed=Math.min(window.GardenFairyPatrol.maxSpeed,result.moveSpeed);
+    if(survival){
+      const pairs=Array.from({length:10},(_,i)=>equipped.slice(i*2,i*2+2)).filter(pair=>pair.some(Boolean));
+      result.moveSpeed=pairs.length?Math.round(pairs.reduce((total,pair)=>{
+        const shoes=pair.filter(item=>item?.id==='shoe').length;
+        return total+window.GardenFairyPatrol.speed*(shoes===2?1.8:shoes===1?1.35:1);
+      },0)/pairs.length):window.GardenFairyPatrol.speed;
+    }else if(playable)result.moveSpeed=Math.min(window.GardenFairyPatrol.maxSpeed,result.moveSpeed);
     if(balancedCombat)result.dps=Math.round(result.dps*10)/10;
     return result;
   }
@@ -368,7 +382,8 @@
 
   function bottomLayout() {
     const s = spec.slots;
-    const totalWidth = s.paired ? s.max * s.size * 2 + (s.max - 1) * s.pairGap : s.max * s.size + (s.max - 1) * s.gap;
+    const pairCount=survival?Math.ceil(s.max/2):s.max;
+    const totalWidth = s.paired ? pairCount * s.size * 2 + (pairCount - 1) * s.pairGap : s.max * s.size + (s.max - 1) * s.gap;
     const left = 10, rightPadding = 10;
     const slotLeft = s.paired ? left : Math.floor((spec.width - totalWidth) / 2);
     // Paired HUD: use the full remaining 240px (including the former 10px
@@ -384,7 +399,8 @@
       top, centerY: s.y + s.size / 2, slotLeft, totalWidth, sideWidth, statColumnWidth,
       left, right,
       slots: Array.from({ length: s.max }, (_, index) => ({
-        x: slotLeft + index * (s.paired ? s.size * 2 + s.pairGap : s.size + s.gap), y: s.y, size: s.size
+        x: survival ? slotLeft + Math.floor(index/2)*(2*s.size+s.pairGap)+(index%2)*s.size :
+          slotLeft + index * (s.paired ? s.size * 2 + s.pairGap : s.size + s.gap), y: s.y, size: s.size
       }))
     };
   }
@@ -411,11 +427,17 @@
   function pairSecondaryFrame(scene, slot, index) {
     const size = slot.size, g = U.pixelGraphics(scene).setPosition(slot.x+size, slot.y);
     g.width = size; g.height = size;
-    g.fillStyle(colors.normalBorder,1);
-    g.fillRect(0,0,size-1,1);
-    g.fillRect(0,1,size,size-2);
-    g.fillRect(0,size-1,size-1,1);
-    g.fillStyle(colors.emptySlotFill,1).fillRect(0,1,size-1,size-2);
+    g.fillColor=colors.emptySlotFill;g.strokeColor=colors.normalBorder;
+    const draw=()=>{
+      g.clear().fillStyle(g.strokeColor,1);
+      g.fillRect(0,0,size-1,1);
+      g.fillRect(0,1,size,size-2);
+      g.fillRect(0,size-1,size-1,1);
+      g.fillStyle(g.fillColor,1).fillRect(0,1,size-1,size-2);
+    };
+    g.setFillStyle=color=>{g.fillColor=color;draw();return g;};
+    g.setStrokeStyle=(_w,color)=>{g.strokeColor=color;draw();return g;};
+    draw();
     return g.setDepth(D.slotFrame).setName('slot-pair-secondary:'+index);
   }
 
@@ -430,13 +452,21 @@
       const disabled=i>=s.preview;
       const fill=disabled?colors.disabledFill:colors.emptySlotFill;
       const border=disabled?colors.disabledBorder:colors.normalBorder;
-      const frame=s.paired?pairPrimaryFrame(scene,slot,fill,border,i):
+      const frame=survival&&i%2?pairSecondaryFrame(scene,{...slot,x:slot.x-slot.size},Math.floor(i/2)):
+        s.paired?pairPrimaryFrame(scene,slot,fill,border,i):
         U.pixelBox(scene,slot.x+slot.size/2,slot.y+slot.size/2,slot.size,slot.size,fill,{strokeWidth:s.line,border}).setName('slot-frame:'+i);
-      if(disabled&&i===s.preview||s.preview===s.max&&i===s.max-1)layout.alignCost=drawSlotCost(scene,slot.x+s.line,slot.y+s.line,s.cell,s.exampleCost,disabled);
+      if(!survival&&(disabled&&i===s.preview||s.preview===s.max&&i===s.max-1))
+        layout.alignCost=drawSlotCost(scene,slot.x+s.line,slot.y+s.line,s.cell,s.exampleCost,survival?false:disabled);
       if(playable)frame.setDepth(D.slotFrame);
       return frame;
     });
-    if(s.paired)layout.pairSecondaryFrames=layout.slots.map((slot,i)=>pairSecondaryFrame(scene,slot,i));
+    if(s.paired&&!survival)layout.pairSecondaryFrames=layout.slots.map((slot,i)=>pairSecondaryFrame(scene,slot,i));
+    if(survival){
+      // Every half of all ten pairs is a live inventory slot. No purchase zone.
+      layout.updateSlots=()=>scene.runEquipment?.refreshSlots();
+      layout.updateCost=()=>{};
+      return layout;
+    }
     if(playable){
       const count=()=>scene.run.state.slotCount;
       const buyZone=scene.add.zone(0,s.y+s.size/2,s.size,s.size).setDepth(D.purchase).setName('run-slot-purchase').setInteractive({useHandCursor:true});
@@ -645,7 +675,8 @@
     const slots = layout.slots.slice(0, playable?s.max:s.preview);
     const slotZones=[];
     // 꽃과 동일하게 스냅 미리보기는 아이콘만 표시한다. 외곽선과 면은 슬롯이 담당한다.
-    const makeCard=(x,y)=>ballMode?window.GardenLootPreview.card(scene,x,y,assets.item.cardSize,assets.item.size):testSprites.itemCard(scene,x,y,'wheelbarrow',assets.item.cardSize,assets.item.size);
+    const makeCard=(x,y)=>survival?window.GardenItemCards.slotCard(scene,x,y,assets.item.cardSize):
+      ballMode?window.GardenLootPreview.card(scene,x,y,assets.item.cardSize,assets.item.size):testSprites.itemCard(scene,x,y,'wheelbarrow',assets.item.cardSize,assets.item.size);
     const ghost = makeCard(0,0)
       .setDepth(playable?D.slotGhost:22).setAlpha(0.45).setVisible(false).setName('item-preview-ghost');
     ghost.list[0].setVisible(false);
@@ -830,7 +861,8 @@
     }
     function equipItem(index,item){
       equipped[index]=item;scene.heroWeaponPreview?.equip(index,item.id,item.level);
-      if(playable){const stats=sumPreviewStats(equipped);scene.fairyPatrol?.setSpeed(stats.moveSpeed);scene.fairyPatrol?.setCount(1+equipped.filter(i=>i?.id==='water-fairy').length);}
+      if(survival)scene.fairyPatrol?.setPairs(equipped);
+      else if(playable){const stats=sumPreviewStats(equipped);scene.fairyPatrol?.setSpeed(stats.moveSpeed);scene.fairyPatrol?.setCount(1+equipped.filter(i=>i?.id==='water-fairy').length);}
     }
     function canEquip(index,item){
       if(!playable)return true;
@@ -927,7 +959,27 @@
         if(card&&index<equipped.length&&scene.heroWeaponPreview.equip(index,id,card.item.level))equipped[index]=card.item;
       });refresh();
     }
-    const controller={applyLoadout,register,unregister,equipped,refreshSlots,equipInitial(){window.GardenRunRules.startingGear.forEach(({id,level},i)=>equipItem(i,window.GardenItemCards.runItem(scene,id,level)));refresh();},isDragging:card=>dragging===card,defense:()=>sumPreviewStats(equipped).defense};
+    function defenseAt(id){
+      if(!survival)return sumPreviewStats(equipped).defense;
+      const flower=scene.relicCollection?.state.flowers.get(id);
+      if(!flower)return 0;
+      let protection=0;
+      for(const actor of scene.fairyPatrol?.actors||[]){
+        if(actor.index===0)continue;
+        const pair=equipped.slice((actor.index-1)*2,(actor.index-1)*2+2);
+        const shields=pair.filter(item=>item?.id==='shield').length;
+        if(!shields)continue;
+        const radius=shields===2?185:140;
+        if(Math.hypot(actor.center.x-flower.x,actor.center.y-flower.y)<=radius)protection=Math.max(protection,shields===2?12:6);
+      }
+      return protection;
+    }
+    const controller={applyLoadout,register,unregister,equipped,refreshSlots,equipInitial(){
+      if(survival)scene.fairyPatrol?.setPairs(equipped);
+      const gear=survival?[{id:'rock',level:1}]:window.GardenRunRules.startingGear;
+      gear.forEach(({id,level},i)=>equipItem(i,window.GardenItemCards.runItem(scene,id,level)));
+      refresh();
+    },isDragging:card=>dragging===card,defense:()=>survival?0:sumPreviewStats(equipped).defense,defenseAt};
     if(playable){scene.runEquipment=controller;refreshSlots();scene.events.once('shutdown',()=>delete scene.runEquipment);}else refresh();
     return controller;
   }
@@ -1199,13 +1251,13 @@
     const status=playable?null:text(scene,spec.width-10,spec.top+spacing.base,fairy?(weaponCombat?'장착 무기 · 나뭇잎 요정':window.GardenEnemyPreview.enabled&&window.GardenFairyAttack.enabled?'자동 공격 · 요정 11명':'정원 순찰 · 요정 11명'):'테스트 전투 · 공 1개',bottomStats.fontSize,colors.label,'right').setDepth(16).setName(fairy?'fairy-patrol-status':'combat-ball-count');
     window.GardenFlowerHeadPreview.draw(scene,spec,colors,gardenRaster,patrolBounds,patrolPosition,(elapsed,kills,gems,occupied)=>{
       if(scene.flowerGrowth)scene.flowerGrowth.render(elapsed);
-      updateHud(elapsed,kills,gems,playable&&scene.flowerGrowth?window.GardenRunRules.completion(scene.flowerGrowth.entries):occupied);
+      updateHud(elapsed,kills,gems,survival?84:playable&&scene.flowerGrowth?window.GardenRunRules.completion(scene.flowerGrowth.entries):occupied);
       if(fairy)return;
       const count=scene.combatPreview.state.ballCount;
       const label='테스트 전투 · 공 '+count+'개';
       if(status.text!==label)status.setText(label);
     },itemPreview,markers.flowers);
-    if(playable){itemPreview.equipInitial();drawBlueprint(scene);window.GardenRunDrops.attach(scene,spec,assets,itemPreview,layout);}
+    if(playable){itemPreview.equipInitial();if(!survival)drawBlueprint(scene);window.GardenRunDrops.attach(scene,spec,assets,itemPreview,layout);}
   }
 
   window.GardenGameLayout = Object.freeze({ spec, assets, colors, spacing, hud, slotCost, formatHudTime, formatHudCount, hudColumns, bottomStats, itemTooltip, replacementTitle, bottomLayout, sumPreviewStats, getPreviewStats, tooltipPosition, gardenCandidates, gardenGridRects, gardenRaster, gardenHit, patrolBounds, patrolPosition, nearestPatrolDistance, floatingDrop, animateFloatingDrops, draw });

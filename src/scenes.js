@@ -22,7 +22,7 @@
   // Keep the existing new-game button coordinates and hide it on overlays.
   function attachBlueprintSelector(scene){
     const R=window.GardenRunRules;
-    if(!R?.active||window.GardenSimulationConfig?.blueprint||window.GardenSimulationConfig?.initial)return;
+    if(!R?.active||R.survival||window.GardenSimulationConfig?.blueprint||window.GardenSimulationConfig?.initial)return;
     const parent=scene.game.canvas.parentElement;
     const label=document.createElement('label'),select=document.createElement('select');
     label.id='blueprint-select-control';
@@ -250,8 +250,10 @@
       if(!live){centered(this, 480, 176, '런 결과 화면 · UI 미리보기', U.fontSize.menuBase, U.C.muted);U.rule(this, innerLeft(480), 190, innerRight(480), 190, U.C.border, 1);}
 
       const r=this.runResult;
-      const labels = r?['정원 완성도','플레이 시간','처치 수','남은 보석']:['진행 구역', '플레이 시간', '기록', '획득 항목'];
-      const seconds=Math.floor(r?.elapsed||0),values=r?[r.progress+'%',window.GardenGameLayout.formatHudTime(Math.floor(seconds/3600),Math.floor(seconds/60)%60,seconds%60),String(r.kills),String(r.gems)]:[];
+      const labels = r?(window.GardenRunRules?.survival?['생존 시간','처치 수','획득 보석','만개 꽃밭']:['정원 완성도','플레이 시간','처치 수','남은 보석']):['진행 구역', '플레이 시간', '기록', '획득 항목'];
+      const seconds=Math.floor(r?.elapsed||0),values=r?(window.GardenRunRules?.survival?
+        [window.GardenGameLayout.formatHudTime(Math.floor(seconds/3600),Math.floor(seconds/60)%60,seconds%60),String(r.kills),String(r.gems),'14×6']:
+        [r.progress+'%',window.GardenGameLayout.formatHudTime(Math.floor(seconds/3600),Math.floor(seconds/60)%60,seconds%60),String(r.kills),String(r.gems)]):[];
       labels.forEach((name, index) => {
         const x = index % 2 === 0 ? innerLeft(480) : 480 + pad;
         const y = (live?193:210) + Math.floor(index / 2) * (live?64:48);
@@ -260,7 +262,7 @@
       });
       if(!live)centered(this, 480, 350, '결과 데이터 계산·저장은 미구현 상태입니다.', U.fontSize.menuBase, U.C.muted);
       const leave=key=>{if(live)this.scene.stop('Game');this.scene.start(key);};
-      const R=window.GardenRunRules,stage=live?R.campaign?.stage:null,next=!!(this.victory&&stage&&stage<50);
+      const R=window.GardenRunRules,stage=live&&!R.survival?R.campaign?.stage:null,next=!!(this.victory&&stage&&stage<50);
       U.button(this, 480 - pairOffset(200), footerCenter(410), 200, next?'다음 스테이지':'새 게임', () => {if(next)R.selectBlueprint('stage-'+(stage+1));leave('Game');}, { primary: true, height: menu.buttonHeight });
       U.button(this, 480 + pairOffset(200), footerCenter(410), 200, '메인 메뉴', () => leave('MainMenu'), { height: menu.buttonHeight, fontSize: U.fontSize.menuBase });
     }

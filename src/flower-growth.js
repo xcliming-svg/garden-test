@@ -3,6 +3,8 @@
   // Preserve the original vector files. The optional palette copies change only
   // vector fills, not shape or resolution. Phaser rasterizes with linear sampling.
   const names=Object.freeze(['daisy','sunflower','tulip','hydrangea','rose','lavender']);
+  const survival=!!window.GardenRunRules?.survival;
+  const stages=survival?[3]:[1,2,3];
   const enabled=new URLSearchParams(window.location.search).get('flowerheads')!=='1';
   const maxStage=3;
   const sequence=Object.freeze([[1,100],[2,100],[3,100],[3,66],[3,33],[2,100],[2,66],[2,33],[1,100],[1,66],[1,33]].map(Object.freeze));
@@ -24,18 +26,18 @@
   }
   function preload(scene){
     if(!enabled)return;
-    for(const name of names)for(let stage=1;stage<=maxStage;stage++){
+    for(const name of names)for(const stage of stages){
       const id=key(name,stage);
       if(!scene.textures.exists(id))scene.load.svg(id,path(name,stage),{width:sourceSize,height:sourceSize});
     }
   }
   function install(scene){
-    for(const name of names)for(let stage=1;stage<=maxStage;stage++){
+    for(const name of names)for(const stage of stages){
       const id=key(name,stage);
       if(!scene.textures.exists(id))throw Error('Missing original SVG: '+id);
       scene.textures.get(id).setFilter(Phaser.Textures.FilterMode.LINEAR);
       const D=window.GardenFlowerDamage,source=D.prepare(scene.textures.get(id).getSourceImage(),sourceSize);
-      for(const hp of [66,33]){
+      for(const hp of survival?[33]:[66,33]){
         const k=key(name,stage,hp);
         if(scene.textures.exists(k))continue;
         const t=scene.textures.createCanvas(k,sourceSize,sourceSize);
@@ -51,17 +53,20 @@
     const entries=new Map();
     function plant(index,name,center,born=0,mature=false){
       const size=displaySize(g.cell);
-      const image=scene.add.image(center.x,center.y+g.cell/2-1,key(name,1))
+      const image=scene.add.image(center.x,center.y+g.cell/2-1,key(name,survival?3:1))
         .setOrigin(.5,.856).setDisplaySize(size,size).setDepth(window.GardenRunRules?.active?window.GardenRunRules.depth.flower+center.y/2000:1).setName('garden-preview-flower:'+index);
-      entries.set(index,{name,born,image,last:'1:100',stage:1,mature,center});
+      entries.set(index,{name,born,image,last:survival?'3:100':'1:100',stage:survival?3:1,mature,center});
       return image;
     }
     function render(elapsed){
       for(const [index,entry] of entries){
-        const sample=stateAt(elapsed-entry.born),stage=window.GardenRunRules?.active?(entry.mature?3:window.GardenRunRules.stageAt(elapsed-entry.born)):sample.stage;
+        const sample=survival?null:stateAt(elapsed-entry.born);
+        const stage=survival?3:window.GardenRunRules?.active?(entry.mature?3:window.GardenRunRules.stageAt(elapsed-entry.born)):sample.stage;
         entry.stage=stage;
         const energy=scene.relicCollection?.state.flowers.get(index)?.energy;
-        const hp=window.GardenRunRules?.active?(energy===undefined||energy>=67?100:energy>=34?66:33):energy===undefined?sample.hp:energy>=100?100:energy>33?66:33;
+        // In survival, there is no growth/intermediate art: only full bloom
+        // or the existing stage-3 wilt SVG, both permanent and healable.
+        const hp=survival?(energy===0?33:100):window.GardenRunRules?.active?(energy===undefined||energy>=67?100:energy>=34?66:33):energy===undefined?sample.hp:energy>=100?100:energy>33?66:33;
         const state=stage+':'+hp;
         if(state===entry.last)continue;
         entry.last=state;
