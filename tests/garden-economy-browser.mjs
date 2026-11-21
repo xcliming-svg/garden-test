@@ -106,7 +106,18 @@ try{
     await page.keyboard.down('Space');
     await page.waitForFunction(id=>window.__economyTestGame.scene.getScene('Game').gardenEconomy.state.plots[id].phase==='bloom',plotId);
     await page.keyboard.up('Space');
-    await page.waitForFunction(id=>window.__economyTestGame.scene.getScene('Game').gardenEconomy.state.plots[id].phase==='flight',plotId,{timeout:10000});
+    try{
+      await page.waitForFunction(id=>window.__economyTestGame.scene.getScene('Game').gardenEconomy.state.plots[id].phase==='flight',plotId,{timeout:10000});
+    }catch(e){
+      const state=await page.evaluate(id=>{
+        const g=window.__economyTestGame,s=g.scene.getScene('Game'),h=s.gardenEconomy;
+        return {active:g.scene.isActive('Game'),paused:g.scene.isPaused('Game'),
+          elapsed:h.state.elapsed,plot:h.state.plots[id],water:h.state.water,
+          held:s.fairyPatrol.paused,sceneState:s.run.state.result,
+          flights:s.children.list.filter(x=>x.name?.startsWith('garden-harvest-flight:')).length};
+      },plotId);
+      throw Error('Harvest flight not observed: '+JSON.stringify({state,errors,error:String(e)}));
+    }
     const flying=await page.evaluate(()=>{
       const s=window.__economyTestGame.scene.getScene('Game');
       return s.children.list.filter(x=>x.name?.startsWith('garden-harvest-flight:')).length;
