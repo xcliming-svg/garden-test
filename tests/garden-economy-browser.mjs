@@ -31,6 +31,8 @@ try{
     const page=await browser.newPage({viewport:{width,height}}),errors=[];
     page.on('pageerror',e=>{errors.push(String(e.stack||e));console.error('PAGE ERROR',e.stack||String(e));});
     page.on('requestfailed',r=>errors.push('request failed '+r.url()));
+    // Stabilize the expected 97% water / 3% heart drop for this integration path.
+    await page.addInitScript(()=>{window.GardenSimulationRng={drop:()=>.5};});
     await page.goto('http://127.0.0.1:'+server.address().port+'/');
     await page.waitForFunction(()=>window.__economyTestGame?.scene.isActive('MainMenu'));
     const canvas=await page.locator('canvas').boundingBox();
