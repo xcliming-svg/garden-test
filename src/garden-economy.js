@@ -111,7 +111,8 @@
       if(pos<0)return null;
       const up=state.upgrades[id];
       const level=type==='buy'?0:up?.[type]||0;
-      if(type!=='buy'&&(!state.owned.has(id)||level>=3))return null;
+      const max=type==='power'&&products[pos].weapon?2:3;
+      if(type!=='buy'&&(!state.owned.has(id)||level>=max))return null;
       if(type==='buy'&&state.owned.has(id))return null;
       // Each resource is relevant across the catalog. Costs remain gentle.
       const base=type==='buy'?2:2+level*2;

@@ -164,7 +164,8 @@
         sections.forEach(([type,title,desc],i)=>{
           const x=122+i*242;
           const count=state.upgrades[product.id][type];
-          U.text(this,x,380,title+'   '+count+'/3',11,U.C.text).setName('garden-shop-upgrade:'+type);
+          const max=type==='power'&&product.weapon?2:3;
+          U.text(this,x,380,title+'   '+count+'/'+max,11,U.C.text).setName('garden-shop-upgrade:'+type);
           U.text(this,x,398,desc,9,U.C.muted);
           const cost=economy.cost(product.id,type);
           U.text(this,x,417,formatCost(cost),9,U.C.text);
