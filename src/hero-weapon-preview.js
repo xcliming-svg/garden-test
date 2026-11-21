@@ -11,6 +11,7 @@
   }
   const playable=!!window.GardenRunRules?.active;
   const survival=!!window.GardenRunRules?.survival;
+  const farming=!!window.GardenEconomy?.enabled;
   const combat=playable||window.GardenEnemyPreview.enabled&&params.get('weapons')==='1'&&params.get('attack')!=='0';
   const enabled=window.GardenFairyPatrol.enabled&&(!window.GardenEnemyPreview.enabled||combat)&&
     window.GardenFlowerGrowth.enabled&&params.get('cards')!=='0'&&params.get('cards')!=='legacy';
@@ -241,7 +242,7 @@
     }
     return null;
   }
-  function create(spec,random=Math.random,measure=defaultSize,balanced=false,onEvent=null){
+  function create(spec,random=Math.random,measure=defaultSize,balanced=false,onEvent=null,getBonus=()=>null){
     const B=window.GardenWeaponBalance;
     if(balanced&&!B)throw Error('Missing weapon balance');
     const previousTargets=new Map();
@@ -254,11 +255,11 @@
       state.shots=state.shots.filter(s=>!s.preview);next.delete(-1);return true;
     }
     function equip(index,id,level=1){
-      if(!Number.isInteger(index)||index<0||index>=(survival?20:balanced?10:9))return false;
+      if(!Number.isInteger(index)||index<0||index>=(farming?10:survival?20:balanced?10:9))return false;
       const weapon=ids.includes(id)||survival&&['shoe','shield'].includes(id)?id:'',lvl=balanced?Math.max(1,Math.min(3,Math.trunc(level)||1)):1;
       if((state.equipped[index]||'')===weapon&&(!weapon||state.levels[index]===lvl))return true;
       state.equipped[index]=weapon;state.levels[index]=lvl;
-      const triggerIndex=survival?index-index%2:index;
+      const triggerIndex=survival&&!farming?index-index%2:index;
       next.delete(triggerIndex);
       if(balanced&&weapon&&!survival)next.set(index,state.elapsed+B.stats(weapon,lvl).cooldown*index/10);
       if(weapon){state.selected='';next.delete(-1);}
@@ -502,8 +503,8 @@
         (s.kind!=='wheel'||s.fusion?.returning||wheelTravel(s)<s.exitDistance));
       previousTargets.clear();for(const e of live)previousTargets.set(e.id,{...e});
       if(!hero||hero.index!==0||hero.type!=='garden'||!patrol?.bounds)return;
-      const slots=survival?[]:state.equipped.flatMap((id,index)=>id?[{id,index,preview:false,actor:hero}]:[]);
-      if(survival){
+      const slots=survival&&!farming?[]:state.equipped.flatMap((id,index)=>id?[{id,index,preview:false,actor:hero}]:[]);
+      if(survival&&!farming){
         for(const actor of companions){
           const index=(actor.index-1)*2;
           const fusion=window.GardenFairyCombinations.resolve(state.equipped[index],state.equipped[index+1]);
@@ -564,7 +565,7 @@
           shot.size={...shot.size,width:shot.size.width*shot.fusion.sizeScale,height:shot.size.height*shot.fusion.sizeScale};
         }
         if(shot.fusion?.speed&&slot.id==='bouncy-ball')shot.leg.speed*=shot.fusion.speed;
-        const volley=shot.fusion?.volley||1;
+        const volley=Math.max(shot.fusion?.volley||1,farming?(getBonus(slot.id)?.volley||1):1);
         for(let n=0;n<volley;n++){
           const member=n===0?shot:{...shot,id:serial++,hit:new Set(),hitRecords:new Map(),
             glide:shot.glide?{...shot.glide}:undefined,leg:shot.leg?{...shot.leg}:undefined};
@@ -582,7 +583,7 @@
           state.shots.push(member);state.fired++;
           onEvent?.('weapon_fire',{weapon:slot.id,slot:slot.index,owner:shooter.index,shot:member.id,target:member.targetId,fusion:shot.fusion?.key||null});
         }
-        next.set(slot.index,state.elapsed+(st?.cooldown??interval));
+        next.set(slot.index,state.elapsed+(st?.cooldown??interval)/(1+(farming?(getBonus(slot.id)?.speed||0):0)));
       }
     }
     return {state,select,equip,step};
@@ -654,7 +655,7 @@
   }
   function attach(scene,spec,patrol){
     if(!enabled)return null;
-    const I=window.GardenItemCards,P=window.GardenPalette,model=create(spec,window.GardenSimulationRng?.weapon||Math.random,(id,height)=>I.attackSize(scene,id,height),combat,window.GardenSimulationEvent),images=new Map();
+    const I=window.GardenItemCards,P=window.GardenPalette,model=create(spec,window.GardenSimulationRng?.weapon||Math.random,(id,height)=>I.attackSize(scene,id,height),combat,window.GardenSimulationEvent,id=>scene.gardenEconomy?.bonus(id)),images=new Map();
     const clip=scene.make.graphics({x:0,y:0,add:false});
     clip.fillStyle(0xffffff,1).fillRect(0,spec.top,spec.width,spec.height-spec.top-spec.bottom);
     const mask=clip.createGeometryMask();

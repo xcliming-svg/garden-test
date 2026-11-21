@@ -219,7 +219,7 @@
       }
       render();return true;
     }
-    function setSpeed(value){if(survival)return;currentSpeed=Math.max(speed,Math.min(maxSpeed,value));}
+    function setSpeed(value){if(survival&&!window.GardenEconomy?.enabled)return;currentSpeed=Math.max(speed,Math.min(maxSpeed,value));}
     function refreshHud(){updateHud(scene.run?.state.elapsed??elapsed,scene.enemyPreview?.model.kills||0,scene.run?.state.displayGems??scene.relicCollection?.state.gems??0,occupied.size);}
     function render(){
       refreshBoundary();

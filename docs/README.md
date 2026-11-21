@@ -1,5 +1,7 @@
 # 개발 문서
 
+> **2026-11-22 새 main 기반 정원 생산·상점 설계:** [4개 3×3 꽃밭, 물방울 자석 수집, 공통 정원 HP, 꽃 재화, 모든 무기 자동 사용 및 상점](./main-garden-economy.md). 이전 14×6·물요정 20칸 설명은 과거 main 규격이며 새 브랜치 적용 기준에서 제외됩니다.
+
 > **2026-11-20 main·devel 기본 생존 모드:** [14×6 고정 만개 꽃밭·20칸 물요정·78종 조합·빈번한 적 출현](./survival-fairy-pairs.md). 이전 10실장착/10표시, 50스테이지, 도안·꽃 성장·드래그 사양은 기본 플레이에 적용되지 않으며 아래 문서에 역사적 기록으로 남깁니다.
 
 > **과거 devel 기본 HUD (main 재기준) 기록:** [10쌍 34px 슬롯·필드 아이템 통일](./paired-slot-hud.md). main 플레이 소스에 화면 변경만 추가하고 기존 devel 9×9 요정 화단 실험은 활성화하지 않습니다. 오른쪽 짝 칸은 기능 미지정 표시용입니다.
@@ -65,6 +67,7 @@
 | [ui-color-guide.md](./ui-color-guide.md) | Garden 20 v10 공통 UI·에셋 색상 원본, 명도/소재/상태 규칙, 신규 객체 제작 및 검증 |
 | [ui-scale-audit.md](./ui-scale-audit.md) | 960×540 논리 규격·실제 화면 간격·배율 감사 |
 | [ui-metrics-benchmark.md](./ui-metrics-benchmark.md) | 실제 브라우저 10개 UI 시안 비교, 측정 기준, 순위 및 J안 선정 |
+| [main-garden-economy.md](./main-garden-economy.md) | 2026-11-22 main 기반 6×6 정원·물주기·꽃 재화·상점 구현 규격 |
 | [implementation.md](./implementation.md) | 현재 게임의 설계 및 구현 상태. 시스템별 적용 사항, 확정된 미구현 사항, 코드 위치 |
 | [ui-spec.md](./ui-spec.md) | 공통 UI 상태·조작 규칙 및 과거 main 디자인 규격; devel 세부 수치는 960×540 현행 규격 우선 |
 | [ui-decisions.md](./ui-decisions.md) | 2026-11-12 UI 디자인 확정 기록. 레이아웃, HUD, Garden 32, 보더, 폰트·렌더링 최종 결정 및 제약 |

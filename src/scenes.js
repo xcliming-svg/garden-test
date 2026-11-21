@@ -103,6 +103,82 @@
     }
   }
 
+  class GardenShopScene extends Phaser.Scene {
+    constructor(){super('GardenShop');this.selected='rock';}
+    init(data){this.selected=data?.selected||'rock';}
+    create(){
+      const game=this.scene.get('Game'),economy=game?.gardenEconomy;
+      if(!economy){this.scene.stop('GardenShop');this.scene.resume('Game');return;}
+      U.overlay(this).setName('garden-shop-overlay');
+      U.panel(this,480,270,760,450,{fill:U.C.panel,stroke:U.C.border}).setName('garden-shop-panel');
+      U.panelHeader(this,480,46,760);
+      U.text(this,122,64,'정원 상점',16,U.C.text,{originY:.5}).setName('garden-shop-title');
+      U.button(this,812,66,76,'닫기',()=>this.close(),{height:26,fontSize:11}).setName('garden-shop-close');
+      const products=window.GardenEconomy.products;
+      const C=window.GardenGameLayout.colors;
+      const positions=[];
+      for(let i=0;i<products.length;i++){
+        const x=198+(i%4)*185,y=135+Math.floor(i/4)*59;
+        positions.push({x,y});
+        const product=products[i];
+        const owned=economy.state.owned.has(product.id);
+        const selected=this.selected===product.id;
+        const surface=U.pixelBox(this,x,y,174,52,selected?U.C.panelAlt:U.C.button,
+          {border:selected?U.C.white:U.C.subtle}).setName('garden-shop-item:'+product.id);
+        surface.setInteractive(new Phaser.Geom.Rectangle(-87,-26,174,52),Phaser.Geom.Rectangle.Contains);
+        surface.input.cursor='pointer';
+        surface.on('pointerdown',()=>this.scene.restart({selected:product.id}));
+        // All icons use the original item SVG textures already loaded by Game.
+        try{
+          window.GardenItemCards.weaponImage(this,product.id,x-57,y,28)
+            .setDepth(1).setName('garden-shop-icon:'+product.id);
+        }catch(_error){
+          // Preserve a usable text-based shop if one optional icon fails.
+        }
+        U.text(this,x-30,y-5,product.name,12,U.C.text,{originY:.5}).setName('garden-shop-label:'+product.id);
+        U.text(this,x-30,y+13,owned?'보유':'미보유',9,owned?U.C.green:U.C.muted,{originY:.5});
+      }
+      const state=economy.state;
+      U.text(this,122,316,window.GardenEconomy.labels.map((label,i)=>label+' '+state.plots[i].count).join('     '),11,U.C.text)
+        .setName('garden-shop-wallet');
+      U.rule(this,122,343,838,343,U.C.border,1);
+      const product=products.find(p=>p.id===this.selected)||products[0];
+      const owned=state.owned.has(product.id);
+      U.text(this,122,354,product.name+'  ·  '+(owned?'강화':'구매'),13,U.C.text)
+        .setName('garden-shop-detail-title');
+      const formatCost=cost=>cost?cost.map((n,i)=>n?window.GardenEconomy.labels[i]+'×'+n:'').filter(Boolean).join('  '):'최대 강화';
+      if(!owned){
+        const cost=economy.cost(product.id,'buy');
+        U.text(this,122,383,'최초 구매: '+formatCost(cost),11,U.C.text).setName('garden-shop-price');
+        const valid=economy.affordable(cost);
+        U.button(this,735,402,168,valid?'구매':'꽃 부족',()=>{
+          if(economy.buy(product.id))this.scene.restart({selected:product.id});
+        },{height:32,disabled:!valid,primary:valid,fontSize:12}).setName('garden-shop-buy');
+        U.text(this,122,428,'구매한 장비는 자동으로 적용되며 이후 이 자리에서 강화할 수 있습니다.',10,U.C.muted);
+      }else{
+        const sections=product.weapon?[
+          ['power','위력','기본 공격 단계'],
+          ['volley','다중 발사','투사체 추가'],
+          ['speed','공격 속도','발사 간격 감소']
+        ]:[['power',product.id==='shoe'?'이동 속도':'방어력','패시브 강화']];
+        sections.forEach(([type,title,desc],i)=>{
+          const x=122+i*242;
+          const count=state.upgrades[product.id][type];
+          U.text(this,x,380,title+'   '+count+'/3',11,U.C.text).setName('garden-shop-upgrade:'+type);
+          U.text(this,x,398,desc,9,U.C.muted);
+          const cost=economy.cost(product.id,type);
+          U.text(this,x,417,formatCost(cost),9,U.C.text);
+          const valid=economy.affordable(cost);
+          U.button(this,x+78,458,156,cost?(valid?'강화':'꽃 부족'):'MAX',()=>{
+            if(economy.upgrade(product.id,type))this.scene.restart({selected:product.id});
+          },{height:29,disabled:!valid,fontSize:11,primary:valid});
+        });
+      }
+      U.bindEscape(this,()=>this.close());
+    }
+    close(){this.scene.stop('GardenShop');this.scene.resume('Game');}
+  }
+
   class PauseScene extends Phaser.Scene {
     constructor() { super('Pause'); }
     create() {
@@ -252,7 +328,7 @@
       const r=this.runResult;
       const labels = r?(window.GardenRunRules?.survival?['생존 시간','처치 수','획득 보석','만개 꽃밭']:['정원 완성도','플레이 시간','처치 수','남은 보석']):['진행 구역', '플레이 시간', '기록', '획득 항목'];
       const seconds=Math.floor(r?.elapsed||0),values=r?(window.GardenRunRules?.survival?
-        [window.GardenGameLayout.formatHudTime(Math.floor(seconds/3600),Math.floor(seconds/60)%60,seconds%60),String(r.kills),String(r.gems),'14×6']:
+        [window.GardenGameLayout.formatHudTime(Math.floor(seconds/3600),Math.floor(seconds/60)%60,seconds%60),String(r.kills),String(r.gems),'6×6']:
         [r.progress+'%',window.GardenGameLayout.formatHudTime(Math.floor(seconds/3600),Math.floor(seconds/60)%60,seconds%60),String(r.kills),String(r.gems)]):[];
       labels.forEach((name, index) => {
         const x = index % 2 === 0 ? innerLeft(480) : 480 + pad;
@@ -283,6 +359,7 @@
     BootScene: BootScene,
     MainMenuScene: MainMenuScene,
     GameScene: GameScene,
+    GardenShopScene: GardenShopScene,
     PauseScene: PauseScene,
     SettingsScene: SettingsScene,
     CodexScene: CodexScene,

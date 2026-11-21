@@ -6,6 +6,7 @@
   // 픽셀 로그라이크의 정보 밀도/여백을 참고. 8px 배수는 강제하지 않는다.
   const playable=!!window.GardenRunRules?.active;
   const survival=!!window.GardenRunRules?.survival;
+  const farming=!!window.GardenEconomy?.enabled;
   const D=window.GardenRunRules?.depth;
   const P = window.GardenPalette;
   const R = P.reference;
@@ -51,8 +52,8 @@
     document.title = 'Garden Test | 꽃 '+gardenCell+'px · 수호자 '+window.GardenFlowerHeadPreview.guardianSize+'px · 슬롯 '+slotSize+'px';
   // Extra vertical pitch makes the fixed 14×6 flowerbed ~16:9 without
   // stretching, cropping or altering the original square flower artwork.
-  const gardenColumns=survival?14:10,gardenRows=survival?6:10;
-  const gardenPitchY=survival?30:gardenPitch;
+  const gardenColumns=survival?6:10,gardenRows=survival?6:10;
+  const gardenPitchY=gardenPitch;
   const gardenWidth=gardenColumns*gardenPitch+cellLine;
   const gardenHeight=gardenRows*gardenPitchY+cellLine;
   const gardenSize = 10 * gardenPitch + cellLine;
@@ -255,8 +256,8 @@
     pairs[0].number.setName('hud-time-value');pairs[1].number.setName('hud-kills-value');
 
     const gem = columns.gems, iconX = gem.x + hud.padding;
-    const icon = window.GardenItemCards.gemIcon(scene,hud.iconSize).setName('hud-gem-icon');
-    const gemNumber = text(scene, iconX + hud.iconSize + hud.gap, hud.centerY, count, hud.valueSize, colors.value, 'left').setName('hud-gems-value');
+    const icon = window.GardenItemCards.gemIcon(scene,hud.iconSize).setName('hud-gem-icon').setVisible(!farming);
+    const gemNumber = text(scene, iconX + hud.iconSize + hud.gap, hud.centerY, count, hud.valueSize, colors.value, 'left').setName('hud-gems-value').setVisible(!farming);
 
     const c = columns.progress;
     // 게이지 오른쪽 끝은 고정. 짧은 번역도 실제 레이블 끝에서 5px 뒤에 게이지를 표시한다.
@@ -456,6 +457,7 @@
     if(playable)g.setDepth(D.hud);
     g.fillStyle(colors.hud, 1).fillRect(0, spec.top + spec.fieldHeight, spec.width, spec.bottom);
     hudBoundary(g, spec.top + spec.fieldHeight);
+    if(farming)return {slots:[],updateSlots(){},updateCost(){}};
     const layout = bottomLayout();
     layout.slotFrames = layout.slots.map((slot,i) => {
       const disabled=i>=s.preview;
@@ -1259,17 +1261,39 @@
     const weaponCombat=!!(window.GardenHeroWeaponPreview?.enabled&&window.GardenHeroWeaponPreview.combat);
     const cardMode=fairy&&(!window.GardenEnemyPreview.enabled||weaponCombat)&&params.get('cards')!=='0';
     const markers=playable?{cards:[],flowers:[]}:cardMode?(window.GardenItemCards.enabled?window.GardenItemCards.draw(scene,spec,assets,!weaponCombat):drawMarkers(scene,['flower','item'])):{cards:[],flowers:[]};
-    const itemPreview=drawItemPreview(scene,layout,markers.cards,cardMode?undefined:window.GardenCombatPreview.tuning.walkSpeed,!cardMode);
+    const itemPreview=farming?null:drawItemPreview(scene,layout,markers.cards,cardMode?undefined:window.GardenCombatPreview.tuning.walkSpeed,!cardMode);
     const status=playable?null:text(scene,spec.width-10,spec.top+spacing.base,fairy?(weaponCombat?'장착 무기 · 나뭇잎 요정':window.GardenEnemyPreview.enabled&&window.GardenFairyAttack.enabled?'자동 공격 · 요정 11명':'정원 순찰 · 요정 11명'):'테스트 전투 · 공 1개',bottomStats.fontSize,colors.label,'right').setDepth(16).setName(fairy?'fairy-patrol-status':'combat-ball-count');
     window.GardenFlowerHeadPreview.draw(scene,spec,colors,gardenRaster,patrolBounds,patrolPosition,(elapsed,kills,gems,occupied)=>{
       if(scene.flowerGrowth)scene.flowerGrowth.render(elapsed);
-      updateHud(elapsed,kills,gems,survival?84:playable&&scene.flowerGrowth?window.GardenRunRules.completion(scene.flowerGrowth.entries):occupied);
+      updateHud(elapsed,kills,gems,survival?36:playable&&scene.flowerGrowth?window.GardenRunRules.completion(scene.flowerGrowth.entries):occupied);
       if(fairy)return;
       const count=scene.combatPreview.state.ballCount;
       const label='테스트 전투 · 공 '+count+'개';
       if(status.text!==label)status.setText(label);
     },itemPreview,markers.flowers);
-    if(playable){itemPreview.equipInitial();if(!survival)drawBlueprint(scene);window.GardenRunDrops.attach(scene,spec,assets,itemPreview,layout);}
+    if(playable&&!farming){itemPreview.equipInitial();if(!survival)drawBlueprint(scene);window.GardenRunDrops.attach(scene,spec,assets,itemPreview,layout);}
+    if(farming){
+      const names=['기준 DPS','방어력','이동 속도'],keys=['dps','defense','moveSpeed'];
+      const values=keys.map((key,i)=>text(scene,760+80*i,525,'0',bottomStats.valueSize,colors.value,'center')
+        .setDepth(D.hudContent).setName('stat-value:'+key));
+      names.forEach((label,i)=>text(scene,760+80*i,511,label,bottomStats.fontSize,colors.hudLabel,'center')
+        .setDepth(D.hudContent).setName('stat-label:'+keys[i]));
+      let last='';
+      const refresh=()=>{
+        const h=scene.gardenEconomy;if(!h)return;
+        const state=h.state,B=window.GardenWeaponBalance;
+        const dps=window.GardenEconomy.weapons.reduce((sum,id)=>state.owned.has(id)?
+          sum+B.nominalDps(id,h.bonus(id).level)*h.bonus(id).volley*(1+h.bonus(id).speed):sum,0);
+        const next=[Math.round(dps*10)/10,h.model.defense(),h.model.speed()].join('|');
+        if(next!==last){last=next;next.split('|').forEach((v,i)=>values[i].setText(v));}
+      };
+      scene.events.on('update',refresh);scene.events.once('shutdown',()=>scene.events.off('update',refresh));
+      const shop=U.button(scene,890,16,124,'상점 가기',()=>{
+        if(scene.run?.state.result)return;
+        scene.scene.pause('Game');scene.scene.launch('GardenShop');
+      },{height:24,fontSize:11});
+      shop.setDepth(D.hudContent).setName('garden-shop-link');
+    }
   }
 
   window.GardenGameLayout = Object.freeze({ spec, assets, colors, spacing, hud, slotCost, formatHudTime, formatHudCount, hudColumns, bottomStats, itemTooltip, replacementTitle, bottomLayout, sumPreviewStats, getPreviewStats, tooltipPosition, gardenCandidates, gardenGridRects, gardenRaster, gardenHit, patrolBounds, patrolPosition, nearestPatrolDistance, floatingDrop, animateFloatingDrops, draw });

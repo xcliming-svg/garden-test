@@ -200,8 +200,10 @@
     scene.events.once('shutdown',()=>scene.scale.off('resize',resize));
     if(fairy){
       const patrol=window.GardenFairyPatrol.attach(scene,spec,occupied,geometry,patrolPosition,updateHud,guardianSize);
+      if(window.GardenEconomy?.enabled)window.GardenEconomy.attach(scene,spec,patrol);
       window.GardenEnemyPreview.attach(scene,spec,patrol);
       window.GardenHeroWeaponPreview?.attach(scene,spec,patrol);
+      scene.gardenEconomy?.sync();
       if(!playable)itemPreview?.applyLoadout?.();
       if(!survival&&(playable||previewFlowers.length)){
         // Static card inspection: plant into the existing garden, never create combat loot.
