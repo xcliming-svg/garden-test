@@ -17,20 +17,21 @@ assert.equal(R.catalog.length,0);
 assert.equal(R.campaign,null);
 assert.equal(R.blueprint.length,0);
 const expectedRows=[
-  '...SSS..RRR...',
-  '...SSS..RRR...',
-  '...SSS..RRR...',
-  '...HHH..LLL...',
-  '...HHH..LLL...',
-  '...HHH..LLL...'
+  'SSSRRR',
+  'SSSRRR',
+  'SSSRRR',
+  'HHHLLL',
+  'HHHLLL',
+  'HHHLLL'
 ];
 const species={S:'sunflower',R:'rose',H:'hydrangea',L:'lavender'};
-const expectedFlowers=expectedRows.flatMap((row,y)=>[...row].flatMap((token,x)=>
-  species[token]?[[y*14+x,species[token]]]:[]));
-assert.ok(expectedRows.every(row=>row.length===14));
+const expectedFlowers=expectedRows.flatMap((row,y)=>[...row].map((token,x)=>
+  [y*6+x,species[token]]));
+assert.ok(expectedRows.every(row=>row.length===6));
 assert.equal(R.initial.length,36);
-assert.deepEqual(R.initial,expectedFlowers,'four 3×3 flower blocks in the 14×6 garden');
-assert.equal(new Set(R.initial.map(([id])=>id)).size,36);
+assert.deepEqual(R.initial,expectedFlowers,'four touching 3×3 quadrants in a complete 6×6 square');
+assert.deepEqual(R.initial.map(([id])=>id),Array.from({length:36},(_,id)=>id),
+  'all 36 grid positions must be occupied consecutively, with no empty cells');
 for(const name of Object.values(species))
   assert.equal(R.initial.filter(([,flower])=>flower===name).length,9);
 assert.equal(new Set(R.initial.map(([,flower])=>flower)).size,4);
@@ -83,4 +84,4 @@ assert.equal(legacy.GardenRunRules.survival,false);
 assert.equal(legacy.GardenRunRules.tuning.initialSlots,4);
 assert.equal(legacy.GardenRunRules.initial.length,4);
 assert.equal(legacy.GardenRunRules.rollDrop(()=>.8),'flower');
-console.log('Survival model PASS: four distinct 3×3 flower blocks (36 total), 20 slots, 78 unordered fusions, fast continuous spawns, legacy simulation retained');
+console.log('Survival model PASS: contiguous 6×6 square with four 3×3 quadrants (36 flowers), 20 slots, 78 unordered fusions, continuous enemies, legacy simulation retained');

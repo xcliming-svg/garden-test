@@ -49,10 +49,10 @@
   // 비교 링크의 실제 실행 규격을 브라우저 탭 제목에서 식별할 수 있게 한다.
   if (['24', '32', '36'].includes(slotMode) || params.has('flower') || params.has('garden') || params.has('person'))
     document.title = 'Garden Test | 꽃 '+gardenCell+'px · 수호자 '+window.GardenFlowerHeadPreview.guardianSize+'px · 슬롯 '+slotSize+'px';
-  // Extra vertical pitch makes the fixed 14×6 flowerbed ~16:9 without
-  // stretching, cropping or altering the original square flower artwork.
-  const gardenColumns=survival?14:10,gardenRows=survival?6:10;
-  const gardenPitchY=survival?30:gardenPitch;
+  // Survival uses a compact, true 6×6 square; adjacent flowers have identical
+  // horizontal and vertical pitch, preserving each original SVG's proportions.
+  const gardenColumns=survival?6:10,gardenRows=survival?6:10;
+  const gardenPitchY=gardenPitch;
   const gardenWidth=gardenColumns*gardenPitch+cellLine;
   const gardenHeight=gardenRows*gardenPitchY+cellLine;
   const gardenSize = 10 * gardenPitch + cellLine;

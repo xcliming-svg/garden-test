@@ -85,18 +85,21 @@ try{
     });
     assert.equal(state.survival,true);
     assert.equal(state.initial,36);
-    assert.deepEqual(state.garden,{columns:14,rows:6,width:323,height:181,pitchY:30});
-    assert.ok(Math.abs(state.garden.width/state.garden.height-16/9)<.02);
+    assert.deepEqual(state.garden,{columns:6,rows:6,width:139,height:139,pitchY:23});
+    assert.equal(state.garden.width,state.garden.height,'flowerbed must be square');
+    assert.equal(state.garden.pitchY,state.gardenOrigin.pitch,'flowers must touch in both axes');
     assert.equal(state.flowerCount,36);
     const expectedFlowers=[
-      {name:'sunflower',col:3,row:0},{name:'rose',col:8,row:0},
-      {name:'hydrangea',col:3,row:3},{name:'lavender',col:8,row:3}
+      {name:'sunflower',col:0,row:0},{name:'rose',col:3,row:0},
+      {name:'hydrangea',col:0,row:3},{name:'lavender',col:3,row:3}
     ].flatMap(({name,col,row})=>Array.from({length:9},(_,i)=>{
       const x=col+i%3,y=row+Math.floor(i/3),g=state.gardenOrigin;
-      return {id:y*14+x,name,x:g.x+x*g.pitch+g.line+g.cell/2,
+      return {id:y*6+x,name,x:g.x+x*g.pitch+g.line+g.cell/2,
         y:g.y+y*state.garden.pitchY+g.line+g.cell-1};
     })).sort((a,b)=>a.id-b.id);
-    assert.deepEqual(state.flowerPlacement,expectedFlowers,'four rendered 3×3 groups must match exact position and species');
+    assert.deepEqual(state.flowerPlacement,expectedFlowers,'all 36 flowers must form four adjoining 3×3 groups');
+    assert.deepEqual(state.flowerPlacement.map(f=>f.id),Array.from({length:36},(_,i)=>i),
+      'the square must contain no empty cells');
     assert.deepEqual(state.flowerStages,[3]);
     assert.deepEqual(state.flowerTextures,['3']);
     for(const name of ['blueprint','selector','progress','soilVisible','flowerGhost','uproot','buyZone'])
@@ -251,7 +254,7 @@ try{
     assert.equal(protection.far,0,'dual shield does not protect distant flowers');
     assert.equal(protection.shoeOnly,null,'double-shoe pair has no attack');
     assert.deepEqual(errors,[],'browser errors '+width+'x'+height);
-    console.log('Survival PASS',width,height,'36 mature flowers in four 3×3 groups, 20 interactive slots, water-fairy cards, heart revival, 3 boomerangs, frequent continuous enemies');
+    console.log('Survival PASS',width,height,'6×6 square, four touching 3×3 flower quadrants, 20 interactive slots, heart revival, boomerang fusion, frequent enemies');
     await page.close();
   }
 }finally{
