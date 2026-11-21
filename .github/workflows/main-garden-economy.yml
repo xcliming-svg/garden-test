@@ -2,6 +2,8 @@ name: Main-derived garden economy
 on:
   push:
     branches: [feature/main-garden-water-shop-v2, devel]
+  pull_request:
+    branches: [devel]
   workflow_dispatch:
 permissions:
   contents: read
