@@ -11,7 +11,7 @@
   const sequence=Object.freeze([[1,100],[2,100],[3,100],[3,66],[3,33],[2,100],[2,66],[2,33],[1,100],[1,66],[1,33]].map(Object.freeze));
   const stepSeconds=5,period=sequence.length*stepSeconds,sourceSize=512;
   const key=(name,stage,hp=100)=>'flower-svg:'+name+':'+stage+':'+hp;
-  // Preserve the original filenames: logical stages 1–3 use art 2–4.
+  // Farming compares original leaf/bud/bloom SVGs 01/03/04; legacy uses 02/03/04.
   function sourceStage(stage){
     if(!Number.isInteger(stage)||stage<1||stage>maxStage)throw Error('Unknown flower stage');
     return farming?[1,3,4][stage-1]:stage+1;
