@@ -51,6 +51,7 @@
       S.BootScene,
       S.MainMenuScene,
       S.GameScene,
+      S.GardenShopScene,
       S.PauseScene,
       S.SettingsScene,
       S.CodexScene,

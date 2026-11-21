@@ -1,0 +1,32 @@
+name: Main-derived garden economy
+on:
+  push:
+    branches: [feature/main-garden-water-shop-v2, devel]
+  pull_request:
+    branches: [devel]
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  model:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v6
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      - run: for file in src/*.js tests/garden-economy-*.mjs; do node --check "$file"; done
+      - run: node tests/garden-economy-model.mjs
+      - run: node tests/playable-run-model.mjs
+  browser:
+    runs-on: ubuntu-latest
+    timeout-minutes: 12
+    steps:
+      - uses: actions/checkout@v6
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      - run: npm install --no-save --package-lock=false phaser@3.90.0 playwright@1.51.1
+        env:
+          PLAYWRIGHT_SKIP_BROWSER_DOWNLOAD: '1'
+      - run: node tests/garden-economy-browser.mjs

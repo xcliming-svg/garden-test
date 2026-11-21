@@ -338,7 +338,7 @@
       return {...e,scale,width:e.bounds.width*scale,height:e.bounds.height*scale};
     });
     const A=window.GardenFairyAttack;
-    const weaponCombat=!window.GardenHarvest?.enabled&&window.GardenHeroWeaponPreview?.combat&&window.GardenHeroWeaponPreview.enabled;
+    const weaponCombat=window.GardenHeroWeaponPreview?.combat&&window.GardenHeroWeaponPreview.enabled;
     const fixed=weaponCombat?window.GardenWeaponBalance.enemyCount:null;
     const finite=weaponCombat?window.GardenWeaponBalance.balanceWave:null;
     let model;
@@ -383,14 +383,20 @@
           const previous=new Map((attack?.positions()||[]).map(e=>[e.id,e]));
           model.advance(step);
           relics.model.syncFlowers(patrol.occupied);
+          let gardenHits=0;
           for(const e of model.actors){
             if(playable){if(e.pendingHits){
-               const defense=scene.runEquipment?.defenseAt?.(e.path.flower)??scene.runEquipment?.defense()??0;
-               const damage=window.GardenRunRules.damageToFlower(e.entry,defense);
-               relics.model.damageFlower(e.path.flower,damage*e.pendingHits);e.pendingHits=0;
-             }}
+              if(scene.gardenEconomy)gardenHits+=e.pendingHits;
+              else{
+                const defense=scene.runEquipment?.defenseAt?.(e.path.flower)??scene.runEquipment?.defense()??0;
+                const damage=window.GardenRunRules.damageToFlower(e.entry,defense);
+                relics.model.damageFlower(e.path.flower,damage*e.pendingHits);
+              }
+              e.pendingHits=0;
+            }}
             else if(!e.flowerHit&&(e.pose.phase==='recover'||e.pose.phase==='return')){e.flowerHit=true;relics.model.damageFlower(e.path.flower);}
           }
+          if(gardenHits)scene.gardenEconomy?.damage(gardenHits,step);
           if(playable&&!window.GardenRunRules.survival){for(const [id,f] of relics.state.flowers)if(f.energy<=0)scene.runGarden?.remove(id);if(!patrol.occupied.length)break;}
           attack?.step(step,previous);relics.step(step);
         }

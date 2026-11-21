@@ -3,18 +3,11 @@
   const active=typeof document!=='undefined'&&document.documentElement.dataset.playable==='true';
   const survival=active&&!window.GardenSimulationConfig;
   const config=window.GardenSimulationConfig||{};
-  // Full 6×6 square: four adjoining 3×3 flower quadrants, no empty cells.
-  // Top-left sunflower, top-right rose; bottom-left hydrangea, bottom-right lavender.
-  const survivalFlowerGroups=Object.freeze([
-    Object.freeze({name:'sunflower',col:0,row:0}),
-    Object.freeze({name:'rose',col:3,row:0}),
-    Object.freeze({name:'hydrangea',col:0,row:3}),
-    Object.freeze({name:'lavender',col:3,row:3})
-  ]);
-  const survivalFlowers=Object.freeze(survivalFlowerGroups.flatMap(({name,col,row})=>
-    Array.from({length:9},(_,i)=>Object.freeze([
-      (row+Math.floor(i/3))*6+col+i%3,name
-    ]))).sort((a,b)=>a[0]-b[0]));
+  // Four adjoining 3x3 flower beds on a full 6x6 field.
+  const survivalFlowers=Object.freeze(Array.from({length:36},(_,id)=>Object.freeze([
+    id,['sunflower','rose','hydrangea','lavender'][
+      Math.floor((id%6)/3)+2*Math.floor(Math.floor(id/6)/3)]
+  ])));
   const defaultInitial=[[44,'daisy'],[45,'sunflower'],[54,'tulip'],[55,'hydrangea']];
   const freezeCells=rows=>Object.freeze(rows.map(row=>Object.freeze([...row])).sort((a,b)=>a[0]-b[0]));
   const flowerNames=Object.freeze({D:'daisy',S:'sunflower',T:'tulip',H:'hydrangea',R:'rose',L:'lavender'});
@@ -34,7 +27,7 @@
   let initial=survival?survivalFlowers:freezeCells(config.initial||campaign?.initial||legacyCatalog[0].initial);
   let blueprint=survival?Object.freeze([]):freezeCells(config.blueprint||campaign?.blueprint||legacyCatalog[0].blueprint);
   const flowerWeights=Object.freeze({...Object.fromEntries(Object.values(flowerNames).map(name=>[name,1])),...config.flowerWeights});
-  const baseTuning=Object.freeze({initialSlots:survival?20:4,maxSlots:survival?20:10,costs:Object.freeze([40,60,85,115,150,200]),growthSeconds:8,uprootSeconds:3,cardLifetime:45,dropWeights:Object.freeze(survival?[.66,.12,0,.22]:[.69,.10,.18,.03]),itemInterval:survival?12:30,starterRock:'rock',enemyDamage:4,enemyDamagePerLevel:2,spawnCap:65,neededFlowerBias:.75,startingGems:0,gemValue:1,...config.run});
+  const baseTuning=Object.freeze({initialSlots:survival?20:4,maxSlots:survival?20:10,costs:Object.freeze([40,60,85,115,150,200]),growthSeconds:8,uprootSeconds:3,cardLifetime:45,dropWeights:Object.freeze(survival?[.97,.03,0,0]:[.69,.10,.18,.03]),itemInterval:survival?12:30,starterRock:'rock',enemyDamage:4,enemyDamagePerLevel:2,spawnCap:65,neededFlowerBias:.75,startingGems:0,gemValue:1,...config.run});
   let tuning=baseTuning;
   const damageToFlower=(entry,defense=0)=>Math.max(1,(config.enemyDamage?.[entry.id]??(tuning.enemyDamage+(entry.level-1)*tuning.enemyDamagePerLevel))-defense);
   const canEquip=(equipped,index,item)=>{if(survival)return index>=0&&index<20;const next=equipped.slice();next[index]=item;return next.some(i=>i?.stats.dps>0);};
@@ -103,7 +96,7 @@
   // Introduce one species at a time; never force the entire roster at the start.
   const enemyUnlocks=Object.freeze((config.enemyUnlocks||[[0,'3_caterpillar'],[180,'4_beetle'],[300,'2_grasshopper'],[420,'2_gray_bug'],[540,'1_butterfly'],[660,'2_frog'],[780,'1_cat'],[900,'6_sparrow'],[1020,'6_mouse'],[1140,'6_rabbit'],[1260,'5_bulldog'],[1380,'6_pigeon']]).map(Object.freeze));
   function eligibleEnemies(seconds){
-    if(survival)return enemyUnlocks.filter(([at])=>seconds>=at/4).map(([,id])=>id);
+    if(survival)return enemyUnlocks.filter(([at])=>seconds>=at*3).map(([,id])=>id);
     return (campaign?.patch.enemyUnlocks||enemyUnlocks).filter(([at])=>seconds>=at).map(([,id])=>id);
   }
   // Each row is [start, interval, live cap, batch, weighted NEW arrivals].
@@ -149,8 +142,8 @@
   // Continuous survival progression: no named stages, wave breaks or formation bursts.
   // Extra frequent enemies in the devel survival test: one entry every
   // 1.05s initially, accelerating smoothly to 0.4s; no formation bursts.
-  function population(seconds){return survival?Math.min(65,8+Math.floor(Math.max(0,seconds)/2)):waveAt(seconds).cap;}
-  function spawnInterval(seconds){return survival?Math.max(.4,1.05-Math.max(0,seconds)/550):waveAt(seconds).interval;}
+  function population(seconds){return survival?Math.min(32,8+Math.floor(Math.max(0,seconds)/300)):waveAt(seconds).cap;}
+  function spawnInterval(seconds){return survival?Math.max(.8,1.4-Math.max(0,seconds)/18000):waveAt(seconds).interval;}
   const baseItemUnlocks=Object.freeze((config.itemUnlocks||[[0,['rock','boomerang','shoe','shield']],[90,['water-fairy','balloon']],[180,['wheel','flowerpot']],[300,['paper-plane','bouncy-ball']],[420,['yellow-floor','broom']],[540,['sprinkler']]]).map(([at,ids])=>Object.freeze([at,Object.freeze(ids)])));
   const classicItemUnlocks=Object.freeze([Object.freeze([0,Object.freeze(['rock','boomerang'])])]);
   const survivalItems=Object.freeze([Object.freeze([0,Object.freeze(['rock','boomerang','shoe','shield','balloon','wheel','flowerpot','paper-plane','bouncy-ball','yellow-floor','broom','sprinkler'])])]);

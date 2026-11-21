@@ -6,6 +6,7 @@
   // Smooth outward axis: normalized rectangle coordinates rotate continuously
   // through corners, without assigning any corner to a preferred edge.
   const halfAngleCos=Math.cos(tuning.magnetAngle*Math.PI/360);
+  const farming=!!window.GardenEconomy?.enabled;
   function eligible(drop,hero,patrol){
     if(!hero||!patrol||Math.hypot(hero.x-drop.x,hero.y-drop.y)>tuning.pickupRange)return false;
     const dx=drop.x-hero.x,dy=drop.y-hero.y,dist=Math.hypot(dx,dy);
@@ -28,8 +29,8 @@
     const k=Math.max(0,range-8)/dist;
     return {x:x+dx*k,y:y+dy*k};
   }
-  function create(spec,random=Math.random,chooseDrop=null,onEvent=null){
-    const state={drops:[],flowers:new Map(),gems:0,hearts:0,expired:0,spawnedGems:0,spawnedHearts:0};
+  function create(spec,random=Math.random,chooseDrop=null,onEvent=null,canWater=()=>true){
+    const state={drops:[],flowers:new Map(),gems:0,water:0,hearts:0,expired:0,spawnedGems:0,spawnedWater:0,spawnedHearts:0};
     let serial=0;
     const clamp=(v,min,max)=>Math.max(min,Math.min(max,v));
     function syncFlowers(cells){
@@ -60,10 +61,11 @@
       const pos=reachable({x,y},bounds);
       const d={id:serial++,kind,...pos,age:0,speed:0,attracted:false};
       state.drops.push(d);onEvent?.('relic_spawn',{id:d.id,kind,x:d.x,y:d.y});
-      if(kind==='gem')state.spawnedGems++;else state.spawnedHearts++;
+      if(kind==='gem')state.spawnedGems++;else if(kind==='water')state.spawnedWater++;else state.spawnedHearts++;
       return d;
     }
     function death(x,y,bounds){
+      if(farming){const kind=(chooseDrop?chooseDrop(random):window.GardenRunRules.rollDrop(random))==='heart'?'heart':'water';spawn(kind,x,y,bounds);return null;}
       if(window.GardenRunRules?.active){const kind=chooseDrop?chooseDrop(random):window.GardenRunRules.rollDrop(random);if(kind==='gem'||kind==='heart')spawn(kind,x,y,bounds);else return {kind,x,y};return null;}
       spawn('gem',x,y,bounds);
       if(random()<tuning.heartChance)spawn('heart',x+12,y,bounds);
@@ -79,7 +81,7 @@
         d.lifetime=Math.max(d.lifetime||tuning.lifetime,tuning.lifetime,lap+tuning.settleSeconds+1);
         let target=null;
         if(d.age>=tuning.settleSeconds-1e-8&&(d.attracted||eligible(d,hero,patrol))){
-          target=d.kind==='gem'?hero:weakest();
+          target=d.kind==='water'&&!canWater()?null:d.kind==='gem'||d.kind==='water'||farming&&d.kind==='heart'?hero:weakest();
         }
         if(!target&&d.age>=d.lifetime-1e-8){state.expired++;onEvent?.('relic_expire',{id:d.id,kind:d.kind,age:d.age});continue;}
         if(target){
@@ -87,6 +89,8 @@
           const dx=target.x-d.x,dy=target.y-d.y,dist=Math.hypot(dx,dy),travel=d.speed*dt;
           if(dist<=travel+tuning.collectRadius){
             if(d.kind==='gem'){state.gems++;onEvent?.('gem_collect',{id:d.id,age:d.age});}
+            else if(d.kind==='water'){state.water++;onEvent?.('water_collect',{id:d.id,age:d.age});}
+            else if(farming){state.hearts++;onEvent?.('garden_heal',{id:d.id,age:d.age});}
             else{const before=target.energy;target.energy=Math.min(tuning.maxEnergy,target.energy+tuning.heal);state.hearts++;onEvent?.('flower_heal',{id:d.id,cell:target.id,amount:tuning.heal,effective:target.energy-before,energy:target.energy,age:d.age});}
             continue;
           }
@@ -99,32 +103,37 @@
     return {state,syncFlowers,damageFlower,weakest,death,step};
   }
   function attach(scene,spec,patrol){
-    const model=create(spec,window.GardenSimulationRng?.drop||Math.random,scene.run?.rewardDrop,window.GardenSimulationEvent),images=new Map(),I=window.GardenItemCards;
+    const model=create(spec,window.GardenSimulationRng?.drop||Math.random,scene.run?.rewardDrop,window.GardenSimulationEvent,()=>scene.gardenEconomy?.canCollectWater()??true),images=new Map(),I=window.GardenItemCards;
     model.syncFlowers(patrol.occupied);
     function step(dt){
       model.syncFlowers(patrol.occupied);
       const hero=patrol.actors[0];
-      const before=model.state.gems;
+      const before=model.state.gems,water=model.state.water,hearts=model.state.hearts;
       model.step(dt,hero?.center,{bounds:patrol.bounds,direction:hero?.direction,length:patrol.length,speed:patrol.speed});
       if(scene.run&&model.state.gems>before)scene.run.credit(model.state.gems-before);
+      if(scene.gardenEconomy){
+        if(model.state.water>water)scene.gardenEconomy.gainWater((model.state.water-water)*window.GardenEconomy.tuning.waterPerDrop);
+        if(model.state.hearts>hearts)scene.gardenEconomy.heal((model.state.hearts-hearts)*window.GardenEconomy.tuning.heartRecovery);
+      }
     }
     function render(){
       const alive=new Set();
       for(const d of model.state.drops){
         alive.add(d.id);
-        if(!images.has(d.id))images.set(d.id,I.relicImage(scene,d.kind,d.x,d.y).setName('ground-relic:'+d.kind+':'+d.id));
+        if(!images.has(d.id)){
+          const image=d.kind==='water'?scene.add.graphics().setDepth(window.GardenRunRules.depth.relic):I.relicImage(scene,d.kind,d.x,d.y);
+          if(d.kind==='water'){
+            const P=window.GardenPalette.n;
+            image.fillStyle(P.sky,1).fillCircle(0,3,6).fillTriangle(0,-10,-6,1,6,1);
+            image.lineStyle(1,P.paper,.8).strokeCircle(0,3,6);
+          }
+          images.set(d.id,image.setName('ground-relic:'+d.kind+':'+d.id));
+        }
         images.get(d.id).setPosition(d.x,d.y);
       }
-      for(const [id,image] of images)if(!alive.has(id)){I.destroyRelic(image);images.delete(id);}
+      for(const [id,image] of images)if(!alive.has(id)){if(image.type==='Graphics')image.destroy();else I.destroyRelic(image);images.delete(id);}
     }
-    const controller={model,state:model.state,step,render,death:(x,y)=>{
-      if(window.GardenHarvest?.enabled){
-        scene.gardenHarvest?.gainWater();
-        return;
-      }
-      const drop=model.death(x,y,patrol.bounds);
-      if(drop)scene.runDrops?.spawn(drop.kind,x,y);
-    }};
+    const controller={model,state:model.state,step,render,death:(x,y)=>{const drop=model.death(x,y,patrol.bounds);if(drop)scene.runDrops?.spawn(drop.kind,x,y);}};
     scene.relicCollection=controller;
     scene.events.once('shutdown',()=>{images.clear();delete scene.relicCollection;});
     return controller;

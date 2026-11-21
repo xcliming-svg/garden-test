@@ -1,7 +1,7 @@
 name: Relic collection verification
 on:
   push:
-    branches: [feature/loot-collection, feature/relic-patrol-range, devel]
+    branches: [feature/loot-collection, feature/relic-patrol-range]
 permissions:
   contents: read
 jobs:
