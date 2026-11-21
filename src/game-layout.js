@@ -52,7 +52,7 @@
     document.title = 'Garden Test | 꽃 '+gardenCell+'px · 수호자 '+window.GardenFlowerHeadPreview.guardianSize+'px · 슬롯 '+slotSize+'px';
   // Extra vertical pitch makes the fixed 14×6 flowerbed ~16:9 without
   // stretching, cropping or altering the original square flower artwork.
-  const gardenColumns=survival?6:10,gardenRows=survival?6:10;
+  const gardenColumns=10,gardenRows=10;
   const gardenPitchY=gardenPitch;
   const gardenWidth=gardenColumns*gardenPitch+cellLine;
   const gardenHeight=gardenRows*gardenPitchY+cellLine;
@@ -1265,7 +1265,7 @@
     const status=playable?null:text(scene,spec.width-10,spec.top+spacing.base,fairy?(weaponCombat?'장착 무기 · 나뭇잎 요정':window.GardenEnemyPreview.enabled&&window.GardenFairyAttack.enabled?'자동 공격 · 요정 11명':'정원 순찰 · 요정 11명'):'테스트 전투 · 공 1개',bottomStats.fontSize,colors.label,'right').setDepth(16).setName(fairy?'fairy-patrol-status':'combat-ball-count');
     window.GardenFlowerHeadPreview.draw(scene,spec,colors,gardenRaster,patrolBounds,patrolPosition,(elapsed,kills,gems,occupied)=>{
       if(scene.flowerGrowth)scene.flowerGrowth.render(elapsed);
-      updateHud(elapsed,kills,gems,survival?36:playable&&scene.flowerGrowth?window.GardenRunRules.completion(scene.flowerGrowth.entries):occupied);
+      updateHud(elapsed,kills,gems,survival?100:playable&&scene.flowerGrowth?window.GardenRunRules.completion(scene.flowerGrowth.entries):occupied);
       if(fairy)return;
       const count=scene.combatPreview.state.ballCount;
       const label='테스트 전투 · 공 '+count+'개';

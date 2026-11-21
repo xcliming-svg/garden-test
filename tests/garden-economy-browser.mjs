@@ -41,7 +41,7 @@ try{
     await page.waitForFunction(()=>{
       const scene=window.__economyTestGame?.scene.getScene('Game');
       return !!scene?.gardenEconomy&&!!scene?.heroWeaponPreview&&
-        !!scene?.enemyPreview&&scene.flowerGrowth?.entries.size===36;
+        !!scene?.enemyPreview&&scene.flowerGrowth?.entries.size===4;
     },null,{timeout:60000});
     const initial=await page.evaluate(()=>{
       const s=window.__economyTestGame.scene.getScene('Game'),g=window.GardenGameLayout.spec.garden;
@@ -56,9 +56,9 @@ try{
         weapon:s.heroWeaponPreview.model.state.equipped[0],
         noRunDrops:!s.runDrops};
     });
-    assert.deepEqual(initial.grid,[6,6]);
-    assert.equal(initial.names.length,36);
-    assert.deepEqual(initial.names.slice(0,6),['sunflower','sunflower','sunflower','rose','rose','rose']);
+    assert.deepEqual(initial.grid,[10,10]);
+    assert.equal(initial.names.length,4);
+    assert.deepEqual(initial.names,['sunflower','rose','hydrangea','lavender']);
     assert.deepEqual(initial.stages,[1]);
     assert.equal(initial.actors,1);
     assert.equal(initial.slots,false);
@@ -66,7 +66,7 @@ try{
     assert.equal(initial.stats,true);
     assert.equal(initial.shopLink,true);
     assert.equal(initial.water,0);
-    assert.equal(initial.hp,1000);
+    assert.equal(initial.hp,1200);
     assert.equal(initial.weapon,'rock');
     assert.equal(initial.noRunDrops,true);
 
@@ -134,11 +134,15 @@ try{
       return {amount:p.count,progress:p.progress,others:s.gardenEconomy.state.plots.filter(x=>x.id!==id).map(x=>x.count),
         label:s.children.getByName('harvest-count:'+p.name)?.text};
     },plotId);
-    assert.ok(harvest.amount>=1&&harvest.amount<=9);
+    assert.equal(harvest.amount,1,'one flower per initial bed');
     assert.equal(harvest.progress,0);
     assert.deepEqual(harvest.others,[0,0,0]);
     assert.equal(harvest.label,String(harvest.amount));
 
+    await page.evaluate(()=>{
+      const s=window.__economyTestGame.scene.getScene('Game');
+      for(const p of s.gardenEconomy.state.plots)p.count=10000;
+    });
     await page.mouse.click(...point(890,16));
     await page.waitForFunction(()=>window.__economyTestGame.scene.isActive('GardenShop'));
     assert.equal(await page.evaluate(()=>window.__economyTestGame.scene.isPaused('Game')),true);
@@ -146,10 +150,22 @@ try{
       const s=window.__economyTestGame.scene.getScene('GardenShop');
       return s.children.list.filter(x=>x.name?.startsWith('garden-shop-item:')).length;
     }),12);
-    await page.evaluate(()=>{
+    for(let side=2;side<=5;side++){
+      await page.mouse.click(...point(755,300));
+      await page.waitForFunction(expected=>{
+        const s=window.__economyTestGame.scene.getScene('Game');
+        return s.gardenEconomy.state.side===expected&&
+          s.flowerGrowth.entries.size===4*expected*expected&&
+          s.fairyPatrol.occupied.length===4*expected*expected;
+      },side,{timeout:45000});
+    }
+    const expanded=await page.evaluate(()=>{
       const s=window.__economyTestGame.scene.getScene('Game');
-      for(const p of s.gardenEconomy.state.plots)p.count=100;
+      return {flowers:s.flowerGrowth.entries.size,side:s.gardenEconomy.state.side,
+        species:[0,1,2,3].map(i=>[...s.flowerGrowth.entries.values()].filter(x=>x.name===window.GardenEconomy.names[i]).length),
+        price:s.gardenEconomy.expansionCost()};
     });
+    assert.deepEqual(expanded,{flowers:100,side:5,species:[25,25,25,25],price:null});
     await page.mouse.click(...point(198+185,135));
     await page.waitForFunction(()=>window.__economyTestGame.scene.getScene('GardenShop').selected==='boomerang');
     await page.mouse.click(...point(735,402));
@@ -168,7 +184,7 @@ try{
     await page.waitForFunction(()=>window.__economyTestGame.scene.isActive('Game'));
     assert.equal(await page.evaluate(()=>window.__economyTestGame.scene.isActive('GardenShop')),false);
     assert.deepEqual(errors,[],JSON.stringify(errors));
-    console.log('PASS browser',width,height,'6x6 garden, water magnet, Space, bloom/wilt/flight, shop purchase/upgrade, simultaneous weapons');
+    console.log('PASS browser',width,height,'10x10 garden, synced 1→4→9→16→25 expansion, water, full harvest, shop, simultaneous weapons');
     await page.close();
   }
 } finally {

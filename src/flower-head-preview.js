@@ -186,7 +186,15 @@
       else scene.add.image(p.x,p.y,key(name,g.cell)).setDisplaySize(g.cell,g.cell).setDepth(1).setName('garden-preview-flower:'+i);
     }
     if(playable)window.GardenRunRules.initial.forEach(([i,name])=>addFlower(i,name,0,true));
-    else [...occupied].forEach((i,n)=>addFlower(i,types[n%types.length],0,false));
+    if(window.GardenEconomy?.enabled){
+      scene.gardenFarm={occupied,addCells(cells){
+        for(const [id,name] of cells)if(!occupied.has(id)){
+          occupied.add(id);addFlower(id,name,scene.run?.state.elapsed??0,false);
+        }
+      }};
+      scene.events.once('shutdown',()=>{delete scene.gardenFarm;});
+    }
+    if(!playable)[...occupied].forEach((i,n)=>addFlower(i,types[n%types.length],0,false));
     function clampedBounds(keys){return geometry(keys).patrol;}
     function plant(model,drop,index){
       const next=new Set(occupied);next.add(index);
