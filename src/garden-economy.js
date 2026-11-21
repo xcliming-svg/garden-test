@@ -220,6 +220,7 @@
     scene.input.on('gameout',cancel);
     window.addEventListener('blur',cancel);
     const targets=icons.map(icon=>({x:icon.x,y:icon.y}));
+    const lastCounts=Array(4).fill(-1);let lastHp=-1;
     function fly(id){
       const p=state.plots[id];
       for(let i=0;i<p.flowers.length;i++){
@@ -238,12 +239,13 @@
       panelBars.clear();
       panelBars.fillStyle(P.slate,1).fillRect(left+10,top+30,w-20,8);
       panelBars.fillStyle(P.red,1).fillRect(left+11,top+31,Math.round((w-22)*state.hp/tuning.gardenHp),6);
-      hpValue.setText(Math.ceil(state.hp).toString());
+      const currentHp=Math.ceil(state.hp);
+      if(currentHp!==lastHp){lastHp=currentHp;hpValue.setText(String(currentHp));}
       state.plots.forEach((p,i)=>{
         const x=left+12+(i%2)*82,y=top+48+Math.floor(i/2)*63;
         panelBars.fillStyle(P.slate,1).fillRect(x,y+36,70,7);
         if(p.progress>0)panelBars.fillStyle(P.sky,1).fillRect(x+1,y+37,Math.round(68*model.ratio(i)),5);
-        counts[i].setText(String(p.count));
+        if(p.count!==lastCounts[i]){lastCounts[i]=p.count;counts[i].setText(String(p.count));}
       });
       const hero=patrol.actors[0];
       if(!hero)return;
