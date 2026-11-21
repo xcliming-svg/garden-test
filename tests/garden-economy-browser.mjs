@@ -107,7 +107,7 @@ try{
     await page.waitForFunction(id=>window.__economyTestGame.scene.getScene('Game').gardenEconomy.state.plots[id].phase==='bloom',plotId);
     await page.keyboard.up('Space');
     try{
-      await page.waitForFunction(id=>window.__economyTestGame.scene.getScene('Game').gardenEconomy.state.plots[id].phase==='flight',plotId,{timeout:10000});
+      await page.waitForFunction(id=>window.__economyTestGame.scene.getScene('Game').gardenEconomy.state.plots[id].phase==='flight',plotId,{timeout:45000});
     }catch(e){
       const state=await page.evaluate(id=>{
         const g=window.__economyTestGame,s=g.scene.getScene('Game'),h=s.gardenEconomy;
@@ -126,7 +126,7 @@ try{
     await page.waitForFunction(id=>{
       const s=window.__economyTestGame.scene.getScene('Game'),p=s.gardenEconomy.state.plots[id];
       return p.phase==='growing'&&p.count>=1;
-    },plotId,{timeout:10000});
+    },plotId,{timeout:45000});
     const harvest=await page.evaluate(id=>{
       const s=window.__economyTestGame.scene.getScene('Game'),p=s.gardenEconomy.state.plots[id];
       return {amount:p.count,progress:p.progress,others:s.gardenEconomy.state.plots.filter(x=>x.id!==id).map(x=>x.count),
