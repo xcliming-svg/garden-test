@@ -177,7 +177,7 @@
       return value;
     }
     updateDensity(0,0);
-    let elapsed=0,rank=0,currentSpeed=speed,state='normal',emotionTime=0;
+    let elapsed=0,rank=0,currentSpeed=speed,state='normal',emotionTime=0,paused=false;
     let distance=(b.right-b.left)/2;
     // Retained for future upgrades and combat/result events; no preview UI.
     function setState(next){
@@ -230,8 +230,8 @@
         a.direction=Math.abs(dx)>Math.abs(dy)?(dx>0?'right':'left'):(dy>0?'down':'up');
         a.center=p;
         const phase=elapsed*gait.frequency*Math.PI*2+a.phase;
-        const lift=Math.abs(Math.sin(phase))*gait.lift*(a.visibleHeight/40);
-        const tilt=Math.sin(phase)*gait.tilt;
+        const lift=paused?0:Math.abs(Math.sin(phase))*gait.lift*(a.visibleHeight/40);
+        const tilt=paused?0:Math.sin(phase)*gait.tilt;
         const facing=a.direction==='left'?-1:a.direction==='right'?1:0;
         // The base art is front-facing only. Mirror horizontally on left/right;
         // up/down retain a front view, with gait and directional lean.
@@ -264,7 +264,7 @@
     function advance(seconds){
       const dt=Math.max(0,seconds);emotionTime+=dt;
       if(!isResult(state)){
-        elapsed+=dt;distance=(distance+dt*currentSpeed)%length;
+        elapsed+=dt;if(!paused)distance=(distance+dt*currentSpeed)%length;
         if(survival)for(const a of actors)if(a.index>0){
           const shoes=pairItems[a.index-1].filter(id=>id==='shoe').length;
           const pace=speed*(shoes===2?1.8:shoes===1?1.35:1);
@@ -273,7 +273,8 @@
       }
       render();return elapsed;
     }
-    const controller={get actors(){return actors;},border,advance,refreshHud,setCount,setPairs,setSpeed,setSpeedRank,setState,updateDensity,density,get state(){return state;},get finished(){return isResult(state);},get emotionTime(){return emotionTime;},get speed(){return currentSpeed;},get speedRank(){return rank;},get distance(){return distance;},get bounds(){return b;},get length(){return length;},get spacing(){return spacing;},get boundary(){return info;},get occupied(){return [...occupied];},get elapsed(){return elapsed;}};
+    function setPaused(value){paused=!!value;render();}
+    const controller={get actors(){return actors;},border,advance,refreshHud,setCount,setPairs,setSpeed,setSpeedRank,setState,setPaused,updateDensity,density,get paused(){return paused;},get state(){return state;},get finished(){return isResult(state);},get emotionTime(){return emotionTime;},get speed(){return currentSpeed;},get speedRank(){return rank;},get distance(){return distance;},get bounds(){return b;},get length(){return length;},get spacing(){return spacing;},get boundary(){return info;},get occupied(){return [...occupied];},get elapsed(){return elapsed;}};
     scene.fairyPatrol=controller;
     const update=(_time,delta)=>advance(Math.min(.1,Math.max(0,delta/1000)));
     scene.events.on('update',update);
