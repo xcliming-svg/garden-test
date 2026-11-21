@@ -1,7 +1,7 @@
 name: Survival garden and paired water fairies
 on:
   push:
-    branches: [feature/devel-survival-fairy-pairs, feature/devel-survival-ci-compat, feature/four-flower-3x3-layout, feature/survival-square-6x6, feature/garden-water-harvest-modes, feature/mobile-touch-water-harvest, main]
+    branches: [feature/devel-survival-fairy-pairs, feature/devel-survival-ci-compat, feature/four-flower-3x3-layout, feature/survival-square-6x6, feature/garden-water-harvest-modes, feature/mobile-touch-water-harvest]
   workflow_dispatch:
 permissions:
   contents: read
