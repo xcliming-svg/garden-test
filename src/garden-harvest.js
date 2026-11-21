@@ -78,7 +78,8 @@
     let bonusTime=0;
     const key=scene.input.keyboard.addKey(Phaser.Input.Keyboard.KeyCodes.SPACE);
     scene.input.keyboard.addCapture(Phaser.Input.Keyboard.KeyCodes.SPACE);
-    let pressBlocked=false,keyHeld=false;
+    let pressBlocked=false,keyHeld=false,touchPointer=null;
+    const held=()=>keyHeld||touchPointer!==null;
     const nearest=()=>{
       const hero=patrol.actors[0]?.center;
       if(!hero)return -1;
@@ -103,9 +104,9 @@
       bonusTime=tuning.noticeSeconds;
       refreshCounts();
     }
-    function onDown(){
-      if(keyHeld)return;
-      keyHeld=true;
+    // Space and a touch on the game canvas are two sources for the same
+    // held action. Only the first press can start watering or harvest a crop.
+    function beginHold(){
       const id=nearest();
       if(config.harvest==='space'&&model.isReady(id)){
         if(model.harvest(id))showHarvest(id);
@@ -113,13 +114,48 @@
       }
       patrol.setPaused(true);
     }
-    function onUp(){
-      keyHeld=false;
+    function endHold(){
       pressBlocked=false;
       patrol.setPaused(false);
     }
+    function onDown(){
+      if(keyHeld)return;
+      const alreadyHeld=held();
+      keyHeld=true;
+      if(!alreadyHeld)beginHold();
+    }
+    function onUp(){
+      if(!keyHeld)return;
+      keyHeld=false;
+      if(!held())endHold();
+    }
+    const isTouch=pointer=>pointer?.wasTouch===true||
+      pointer?.event?.pointerType==='touch'||
+      pointer?.event?.type?.startsWith('touch');
+    function onTouchDown(pointer){
+      if(!isTouch(pointer)||touchPointer!==null)return;
+      const alreadyHeld=held();
+      touchPointer=pointer.id;
+      if(!alreadyHeld)beginHold();
+    }
+    function onTouchUp(pointer){
+      if(pointer.id!==touchPointer)return;
+      touchPointer=null;
+      if(!held())endHold();
+    }
+    function cancelTouch(){
+      if(touchPointer===null)return;
+      touchPointer=null;
+      if(!held())endHold();
+    }
     scene.input.keyboard.on('keydown-SPACE',onDown);
     scene.input.keyboard.on('keyup-SPACE',onUp);
+    scene.input.on('pointerdown',onTouchDown);
+    scene.input.on('pointerup',onTouchUp);
+    scene.input.on('pointerupoutside',onTouchUp);
+    scene.input.on('gameout',cancelTouch);
+    scene.game.canvas.addEventListener('touchcancel',cancelTouch);
+    window.addEventListener('blur',cancelTouch);
     const colors=[P.gold,P.red,P.sky,P.lavender];
     function render(){
       gauges.clear();
@@ -148,7 +184,7 @@
     function update(_time,delta){
       const dt=Math.min(.1,Math.max(0,delta/1000));
       scene.run?.tick(dt);
-      if(key.isDown&&!pressBlocked){
+      if(held()&&!pressBlocked){
         const id=nearest();
         const before=model.isReady(id);
         model.water(dt,id);
@@ -174,6 +210,12 @@
       scene.events.off('update',update);
       scene.input.keyboard.off('keydown-SPACE',onDown);
       scene.input.keyboard.off('keyup-SPACE',onUp);
+      scene.input.off('pointerdown',onTouchDown);
+      scene.input.off('pointerup',onTouchUp);
+      scene.input.off('pointerupoutside',onTouchUp);
+      scene.input.off('gameout',cancelTouch);
+      scene.game.canvas.removeEventListener('touchcancel',cancelTouch);
+      window.removeEventListener('blur',cancelTouch);
       scene.input.keyboard.removeCapture(Phaser.Input.Keyboard.KeyCodes.SPACE);
       patrol.setPaused(false);
       delete scene.gardenHarvest;
