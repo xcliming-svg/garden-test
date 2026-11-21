@@ -41,7 +41,7 @@ try{
     try{
       await page.waitForFunction(()=>{
         const scene=window.__survivalTestGame?.scene.getScene('Game');
-        return scene?.runDrops&&scene?.flowerGrowth?.entries.size===84&&scene?.runEquipment?.equipped.length===20;
+        return scene?.runDrops&&scene?.flowerGrowth?.entries.size===36&&scene?.runEquipment?.equipped.length===20;
       },null,{timeout:60000});
     }catch(error){
       const state=await page.evaluate(()=>{
@@ -67,6 +67,8 @@ try{
       return {survival:R.survival,initial:R.initial.length,
         garden:{columns:g.columns,rows:g.rows,width:g.width,height:g.height,pitchY:g.pitchY},
         flowerCount:scene.flowerGrowth.entries.size,
+        gardenOrigin:{x:g.x,y:g.y,cell:g.cell,line:g.line,pitch:g.pitch},
+        flowerPlacement:[...scene.flowerGrowth.entries].map(([id,f])=>({id,name:f.name,x:f.image.x,y:f.image.y})),
         flowerStages:[...new Set([...scene.flowerGrowth.entries.values()].map(x=>x.stage))],
         flowerTextures:[...new Set([...scene.flowerGrowth.entries.values()].map(x=>x.image.texture.key.split(':').at(-2)))],
         blueprint:!!scene.children.getByName('blueprint-body'),
@@ -82,10 +84,19 @@ try{
         enemySpawnInterval:R.spawnInterval(0),enemyCap:R.population(0)};
     });
     assert.equal(state.survival,true);
-    assert.equal(state.initial,84);
+    assert.equal(state.initial,36);
     assert.deepEqual(state.garden,{columns:14,rows:6,width:323,height:181,pitchY:30});
     assert.ok(Math.abs(state.garden.width/state.garden.height-16/9)<.02);
-    assert.equal(state.flowerCount,84);
+    assert.equal(state.flowerCount,36);
+    const expectedFlowers=[
+      {name:'sunflower',col:3,row:0},{name:'rose',col:8,row:0},
+      {name:'hydrangea',col:3,row:3},{name:'lavender',col:8,row:3}
+    ].flatMap(({name,col,row})=>Array.from({length:9},(_,i)=>{
+      const x=col+i%3,y=row+Math.floor(i/3),g=state.gardenOrigin;
+      return {id:y*14+x,name,x:g.x+x*g.pitch+g.line+g.cell/2,
+        y:g.y+y*state.garden.pitchY+g.line+g.cell-1};
+    })).sort((a,b)=>a.id-b.id);
+    assert.deepEqual(state.flowerPlacement,expectedFlowers,'four rendered 3×3 groups must match exact position and species');
     assert.deepEqual(state.flowerStages,[3]);
     assert.deepEqual(state.flowerTextures,['3']);
     for(const name of ['blueprint','selector','progress','soilVisible','flowerGhost','uproot','buyZone'])
@@ -113,23 +124,22 @@ try{
 
     const healed=await page.evaluate(()=>{
       const scene=window.__survivalTestGame.scene.getScene('Game'),r=scene.relicCollection.model;
-      const f=r.state.flowers.get(0),flower=scene.flowerGrowth.entries.get(0);
-      const count=scene.flowerGrowth.entries.size;
-      r.damageFlower(0,10000);scene.flowerGrowth.render(0);
+      const id=scene.fairyPatrol.occupied[0],f=r.state.flowers.get(id),flower=scene.flowerGrowth.entries.get(id);
+      r.damageFlower(id,10000);scene.flowerGrowth.render(0);
       const wilt={energy:f.energy,texture:flower.image.texture.key};
       r.state.drops.push({id:99999,kind:'heart',x:f.x,y:f.y,age:.4,speed:0,attracted:true,lifetime:20});
       r.step(.1,{x:f.x,y:f.y},{bounds:scene.fairyPatrol.bounds,
         direction:'right',length:scene.fairyPatrol.length,speed:40});
       scene.flowerGrowth.render(0);
       return {wilt,after:{energy:f.energy,texture:flower.image.texture.key},
-        entries:scene.flowerGrowth.entries.size,hearts:r.state.hearts,stillOccupied:scene.fairyPatrol.occupied.length===84,
+        entries:scene.flowerGrowth.entries.size,hearts:r.state.hearts,stillOccupied:scene.fairyPatrol.occupied.length===36,
         spawned:scene.enemyPreview.model.spawned};
     });
     assert.equal(healed.wilt.energy,0);
     assert.ok(healed.wilt.texture.endsWith(':3:33'));
     assert.ok(healed.after.energy>0);
     assert.ok(healed.after.texture.endsWith(':3:100'));
-    assert.equal(healed.entries,84);
+    assert.equal(healed.entries,36);
     assert.equal(healed.stillOccupied,true);
     assert.ok(healed.hearts>0);
 
@@ -241,7 +251,7 @@ try{
     assert.equal(protection.far,0,'dual shield does not protect distant flowers');
     assert.equal(protection.shoeOnly,null,'double-shoe pair has no attack');
     assert.deepEqual(errors,[],'browser errors '+width+'x'+height);
-    console.log('Survival PASS',width,height,'84 mature flowers, 20 interactive slots, water-fairy cards, heart revival, 3 boomerangs, frequent continuous enemies');
+    console.log('Survival PASS',width,height,'36 mature flowers in four 3×3 groups, 20 interactive slots, water-fairy cards, heart revival, 3 boomerangs, frequent continuous enemies');
     await page.close();
   }
 }finally{

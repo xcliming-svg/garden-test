@@ -16,9 +16,24 @@ assert.equal(R.survival,true);
 assert.equal(R.catalog.length,0);
 assert.equal(R.campaign,null);
 assert.equal(R.blueprint.length,0);
-assert.equal(R.initial.length,84);
-assert.deepEqual(R.initial.map(([id])=>id),Array.from({length:84},(_,id)=>id));
-assert.equal(new Set(R.initial.map(([,flower])=>flower)).size,6);
+const expectedRows=[
+  '...SSS..RRR...',
+  '...SSS..RRR...',
+  '...SSS..RRR...',
+  '...HHH..LLL...',
+  '...HHH..LLL...',
+  '...HHH..LLL...'
+];
+const species={S:'sunflower',R:'rose',H:'hydrangea',L:'lavender'};
+const expectedFlowers=expectedRows.flatMap((row,y)=>[...row].flatMap((token,x)=>
+  species[token]?[[y*14+x,species[token]]]:[]));
+assert.ok(expectedRows.every(row=>row.length===14));
+assert.equal(R.initial.length,36);
+assert.deepEqual(R.initial,expectedFlowers,'four 3×3 flower blocks in the 14×6 garden');
+assert.equal(new Set(R.initial.map(([id])=>id)).size,36);
+for(const name of Object.values(species))
+  assert.equal(R.initial.filter(([,flower])=>flower===name).length,9);
+assert.equal(new Set(R.initial.map(([,flower])=>flower)).size,4);
 assert.equal(R.tuning.initialSlots,20);
 assert.equal(R.tuning.maxSlots,20);
 assert.equal(R.create().state.slotCount,20);
@@ -68,4 +83,4 @@ assert.equal(legacy.GardenRunRules.survival,false);
 assert.equal(legacy.GardenRunRules.tuning.initialSlots,4);
 assert.equal(legacy.GardenRunRules.initial.length,4);
 assert.equal(legacy.GardenRunRules.rollDrop(()=>.8),'flower');
-console.log('Survival model PASS: 84 full-bloom cells, unlimited 20 slots, 78 unordered fusions, fast continuous spawns, legacy simulation retained');
+console.log('Survival model PASS: four distinct 3×3 flower blocks (36 total), 20 slots, 78 unordered fusions, fast continuous spawns, legacy simulation retained');

@@ -3,11 +3,18 @@
   const active=typeof document!=='undefined'&&document.documentElement.dataset.playable==='true';
   const survival=active&&!window.GardenSimulationConfig;
   const config=window.GardenSimulationConfig||{};
-  // 14 columns × 6 rows, permanently occupied; deterministic mixed full-bloom SVGs.
-  const survivalFlowers=Object.freeze(Array.from({length:84},(_,id)=>Object.freeze([
-    id,['daisy','sunflower','tulip','hydrangea','rose','lavender'][
-      ((id%14)*3+Math.floor(id/14)*5+Math.floor((id%14)/3))%6]
-  ])));
+  // Keep the 14×6 coordinate grid; render four separated 3×3 flower blocks.
+  // Top: sunflower / rose. Bottom: hydrangea / lavender. Empty cells stay empty.
+  const survivalFlowerGroups=Object.freeze([
+    Object.freeze({name:'sunflower',col:3,row:0}),
+    Object.freeze({name:'rose',col:8,row:0}),
+    Object.freeze({name:'hydrangea',col:3,row:3}),
+    Object.freeze({name:'lavender',col:8,row:3})
+  ]);
+  const survivalFlowers=Object.freeze(survivalFlowerGroups.flatMap(({name,col,row})=>
+    Array.from({length:9},(_,i)=>Object.freeze([
+      (row+Math.floor(i/3))*14+col+i%3,name
+    ]))).sort((a,b)=>a[0]-b[0]));
   const defaultInitial=[[44,'daisy'],[45,'sunflower'],[54,'tulip'],[55,'hydrangea']];
   const freezeCells=rows=>Object.freeze(rows.map(row=>Object.freeze([...row])).sort((a,b)=>a[0]-b[0]));
   const flowerNames=Object.freeze({D:'daisy',S:'sunflower',T:'tulip',H:'hydrangea',R:'rose',L:'lavender'});
