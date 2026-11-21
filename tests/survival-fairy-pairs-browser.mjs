@@ -32,7 +32,7 @@ try{
     page.on('pageerror',e=>{errors.push(String(e.stack||e));console.error('PAGE ERROR',String(e.stack||e));});
     page.on('console',msg=>{if(msg.type()==='error')console.error('BROWSER CONSOLE ERROR',msg.text());});
     page.on('requestfailed',r=>{errors.push('request failed '+r.url());console.error('REQUEST FAILED',r.url());});
-    await page.goto('http://127.0.0.1:'+server.address().port+'/');
+    await page.goto('http://127.0.0.1:'+server.address().port+'/?farm=legacy');
     await page.waitForFunction(()=>window.__survivalTestGame?.scene.isActive('MainMenu'));
     assert.equal(await page.locator('#blueprint-select').count(),0,'no stage/blueprint selector');
     const canvas=await page.locator('canvas').boundingBox();

@@ -6,6 +6,7 @@
   // 픽셀 로그라이크의 정보 밀도/여백을 참고. 8px 배수는 강제하지 않는다.
   const playable=!!window.GardenRunRules?.active;
   const survival=!!window.GardenRunRules?.survival;
+  const farming=!!window.GardenHarvest?.enabled;
   const D=window.GardenRunRules?.depth;
   const P = window.GardenPalette;
   const R = P.reference;
@@ -255,8 +256,8 @@
     pairs[0].number.setName('hud-time-value');pairs[1].number.setName('hud-kills-value');
 
     const gem = columns.gems, iconX = gem.x + hud.padding;
-    const icon = window.GardenItemCards.gemIcon(scene,hud.iconSize).setName('hud-gem-icon');
-    const gemNumber = text(scene, iconX + hud.iconSize + hud.gap, hud.centerY, count, hud.valueSize, colors.value, 'left').setName('hud-gems-value');
+    const icon = window.GardenItemCards.gemIcon(scene,hud.iconSize).setName('hud-gem-icon').setVisible(!farming);
+    const gemNumber = text(scene, iconX + hud.iconSize + hud.gap, hud.centerY, count, hud.valueSize, colors.value, 'left').setName('hud-gems-value').setVisible(!farming);
 
     const c = columns.progress;
     // 게이지 오른쪽 끝은 고정. 짧은 번역도 실제 레이블 끝에서 5px 뒤에 게이지를 표시한다.
@@ -281,11 +282,13 @@
       const left = o => Math.round((o.x - o.displayOriginX) * z);
       const placeLeft = (o, x) => o.setX((x - ink(o).left) / z + o.displayOriginX);
       pairs.forEach(({caption, number}) => placeLeft(number, left(caption) + ink(caption).right + gap));
-      const bounds=window.GardenItemCards.gemInk(icon);
-      const x0=Math.round(iconX*z),width=bounds.right-bounds.left,height=bounds.bottom-bounds.top;
-      const y0=Math.round(hud.centerY*z-height/2);
-      icon.setPosition((x0-bounds.left)/z,(y0-bounds.top)/z);
-      placeLeft(gemNumber,x0+width+gap);
+      if(!farming){
+        const bounds=window.GardenItemCards.gemInk(icon);
+        const x0=Math.round(iconX*z),width=bounds.right-bounds.left,height=bounds.bottom-bounds.top;
+        const y0=Math.round(hud.centerY*z-height/2);
+        icon.setPosition((x0-bounds.left)/z,(y0-bounds.top)/z);
+        placeLeft(gemNumber,x0+width+gap);
+      }
       if(progressLabel)progressLabel.setX((Math.round(barX*z)-gap-ink(progressLabel).right)/z + progressLabel.displayOriginX);
     };
     align();
@@ -456,6 +459,15 @@
     if(playable)g.setDepth(D.hud);
     g.fillStyle(colors.hud, 1).fillRect(0, spec.top + spec.fieldHeight, spec.width, spec.bottom);
     hudBoundary(g, spec.top + spec.fieldHeight);
+    if(farming){
+      const names=window.GardenHarvest.names,labels=window.GardenHarvest.korean;
+      names.forEach((name,i)=>{
+        text(scene,spec.width*(i+.5)/4,spec.top+spec.fieldHeight+spec.bottom/2,
+          labels[i]+' 0',14,colors.value,'center')
+          .setDepth(D.hudContent).setName('harvest-count:'+name);
+      });
+      return {slots:[],updateSlots(){},updateCost(){}};
+    }
     const layout = bottomLayout();
     layout.slotFrames = layout.slots.map((slot,i) => {
       const disabled=i>=s.preview;
@@ -1259,7 +1271,7 @@
     const weaponCombat=!!(window.GardenHeroWeaponPreview?.enabled&&window.GardenHeroWeaponPreview.combat);
     const cardMode=fairy&&(!window.GardenEnemyPreview.enabled||weaponCombat)&&params.get('cards')!=='0';
     const markers=playable?{cards:[],flowers:[]}:cardMode?(window.GardenItemCards.enabled?window.GardenItemCards.draw(scene,spec,assets,!weaponCombat):drawMarkers(scene,['flower','item'])):{cards:[],flowers:[]};
-    const itemPreview=drawItemPreview(scene,layout,markers.cards,cardMode?undefined:window.GardenCombatPreview.tuning.walkSpeed,!cardMode);
+    const itemPreview=farming?null:drawItemPreview(scene,layout,markers.cards,cardMode?undefined:window.GardenCombatPreview.tuning.walkSpeed,!cardMode);
     const status=playable?null:text(scene,spec.width-10,spec.top+spacing.base,fairy?(weaponCombat?'장착 무기 · 나뭇잎 요정':window.GardenEnemyPreview.enabled&&window.GardenFairyAttack.enabled?'자동 공격 · 요정 11명':'정원 순찰 · 요정 11명'):'테스트 전투 · 공 1개',bottomStats.fontSize,colors.label,'right').setDepth(16).setName(fairy?'fairy-patrol-status':'combat-ball-count');
     window.GardenFlowerHeadPreview.draw(scene,spec,colors,gardenRaster,patrolBounds,patrolPosition,(elapsed,kills,gems,occupied)=>{
       if(scene.flowerGrowth)scene.flowerGrowth.render(elapsed);
@@ -1269,7 +1281,7 @@
       const label='테스트 전투 · 공 '+count+'개';
       if(status.text!==label)status.setText(label);
     },itemPreview,markers.flowers);
-    if(playable){itemPreview.equipInitial();if(!survival)drawBlueprint(scene);window.GardenRunDrops.attach(scene,spec,assets,itemPreview,layout);}
+    if(playable&&!farming){itemPreview.equipInitial();if(!survival)drawBlueprint(scene);window.GardenRunDrops.attach(scene,spec,assets,itemPreview,layout);}
   }
 
   window.GardenGameLayout = Object.freeze({ spec, assets, colors, spacing, hud, slotCost, formatHudTime, formatHudCount, hudColumns, bottomStats, itemTooltip, replacementTitle, bottomLayout, sumPreviewStats, getPreviewStats, tooltipPosition, gardenCandidates, gardenGridRects, gardenRaster, gardenHit, patrolBounds, patrolPosition, nearestPatrolDistance, floatingDrop, animateFloatingDrops, draw });

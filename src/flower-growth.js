@@ -4,7 +4,8 @@
   // vector fills, not shape or resolution. Phaser rasterizes with linear sampling.
   const names=Object.freeze(['daisy','sunflower','tulip','hydrangea','rose','lavender']);
   const survival=!!window.GardenRunRules?.survival;
-  const stages=survival?[3]:[1,2,3];
+  const farming=!!window.GardenHarvest?.enabled;
+  const stages=survival&&!farming?[3]:[1,2,3];
   const enabled=new URLSearchParams(window.location.search).get('flowerheads')!=='1';
   const maxStage=3;
   const sequence=Object.freeze([[1,100],[2,100],[3,100],[3,66],[3,33],[2,100],[2,66],[2,33],[1,100],[1,66],[1,33]].map(Object.freeze));
@@ -13,7 +14,7 @@
   // Preserve the original filenames: logical stages 1–3 use art 2–4.
   function sourceStage(stage){
     if(!Number.isInteger(stage)||stage<1||stage>maxStage)throw Error('Unknown flower stage');
-    return stage+1;
+    return farming?[1,3,4][stage-1]:stage+1;
   }
   function path(name,stage){
     if(!names.includes(name))throw Error('Unknown flower name');
@@ -52,25 +53,30 @@
     install(scene);
     const entries=new Map();
     function plant(index,name,center,born=0,mature=false){
-      const size=displaySize(g.cell);
-      const image=scene.add.image(center.x,center.y+g.cell/2-1,key(name,survival?3:1))
-        .setOrigin(.5,.856).setDisplaySize(size,size).setDepth(window.GardenRunRules?.active?window.GardenRunRules.depth.flower+center.y/2000:1).setName('garden-preview-flower:'+index);
-      entries.set(index,{name,born,image,last:survival?'3:100':'1:100',stage:survival?3:1,mature,center});
+      const start=survival&&!farming?3:1;
+      const single=farming&&window.GardenHarvest.config.plot==='a';
+      const centerPlot=single&&[7,10,25,28].includes(index);
+      const size=displaySize(g.cell)*(centerPlot?2.3:1);
+      const image=scene.add.image(center.x,center.y+g.cell/2-1,key(name,start))
+        .setOrigin(.5,.856).setDisplaySize(size,size)
+        .setDepth(window.GardenRunRules?.active?window.GardenRunRules.depth.flower+center.y/2000:1)
+        .setName('garden-preview-flower:'+index).setVisible(!single||centerPlot);
+      entries.set(index,{name,born,image,last:start+':100',stage:start,mature,center});
       return image;
     }
     function render(elapsed){
       for(const [index,entry] of entries){
         const sample=survival?null:stateAt(elapsed-entry.born);
-        const stage=survival?3:window.GardenRunRules?.active?(entry.mature?3:window.GardenRunRules.stageAt(elapsed-entry.born)):sample.stage;
+        const stage=farming?(scene.gardenHarvest?.stageAt(index)||1):survival?3:window.GardenRunRules?.active?(entry.mature?3:window.GardenRunRules.stageAt(elapsed-entry.born)):sample.stage;
         entry.stage=stage;
         const energy=scene.relicCollection?.state.flowers.get(index)?.energy;
-        // In survival, there is no growth/intermediate art: only full bloom
-        // or the existing stage-3 wilt SVG, both permanent and healable.
-        const hp=survival?(energy===0?33:100):window.GardenRunRules?.active?(energy===undefined||energy>=67?100:energy>=34?66:33):energy===undefined?sample.hp:energy>=100?100:energy>33?66:33;
+        // The harvesting trial uses plot growth instead of damage HP for art.
+        // Legacy survival keeps the full-bloom / withered appearance.
+        const hp=farming?100:survival?(energy===0?33:100):window.GardenRunRules?.active?(energy===undefined||energy>=67?100:energy>=34?66:33):energy===undefined?sample.hp:energy>=100?100:energy>33?66:33;
         const state=stage+':'+hp;
         if(state===entry.last)continue;
         entry.last=state;
-        const size=displaySize(g.cell);
+        const size=displaySize(g.cell)*(farming&&window.GardenHarvest.config.plot==='a'&&[7,10,25,28].includes(index)?2.3:1);
         entry.image.setTexture(key(entry.name,stage,hp)).setDisplaySize(size,size);
       }
       scene.runGarden?.refreshMismatch();

@@ -18,8 +18,15 @@
 <body>
   <main id="game" aria-label="Garden Test 게임 씬 화면"></main>
   <script src="https://cdn.jsdelivr.net/npm/phaser@3.90.0/dist/phaser.min.js"></script>
-  <script>if(location.search)history.replaceState(null,"",location.pathname+location.hash);</script>
+  <script>
+    // Keep the explicitly supported harvest comparison params; discard unrelated
+    // query flags on the production survival entry point.
+    const requested=new URLSearchParams(location.search),allowed=new URLSearchParams();
+    for(const key of ['plot','harvest','farm'])if(requested.has(key))allowed.set(key,requested.get(key));
+    if(allowed.toString()!==requested.toString())history.replaceState(null,'',location.pathname+(allowed.size?'?'+allowed:'')+location.hash);
+  </script>
   <script src="./src/run-rules.js"></script>
+  <script src="./src/garden-harvest.js"></script>
   <script src="./src/palette.js"></script>
   <script src="./src/svg-palette.js"></script>
   <script src="./src/ui.js"></script>

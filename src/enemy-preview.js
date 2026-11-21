@@ -338,7 +338,7 @@
       return {...e,scale,width:e.bounds.width*scale,height:e.bounds.height*scale};
     });
     const A=window.GardenFairyAttack;
-    const weaponCombat=window.GardenHeroWeaponPreview?.combat&&window.GardenHeroWeaponPreview.enabled;
+    const weaponCombat=!window.GardenHarvest?.enabled&&window.GardenHeroWeaponPreview?.combat&&window.GardenHeroWeaponPreview.enabled;
     const fixed=weaponCombat?window.GardenWeaponBalance.enemyCount:null;
     const finite=weaponCombat?window.GardenWeaponBalance.balanceWave:null;
     let model;

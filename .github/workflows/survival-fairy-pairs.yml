@@ -1,7 +1,7 @@
 name: Survival garden and paired water fairies
 on:
   push:
-    branches: [feature/devel-survival-fairy-pairs, feature/devel-survival-ci-compat, feature/four-flower-3x3-layout, feature/survival-square-6x6, devel, main]
+    branches: [feature/devel-survival-fairy-pairs, feature/devel-survival-ci-compat, feature/four-flower-3x3-layout, feature/survival-square-6x6, feature/garden-water-harvest-modes, devel, main]
   workflow_dispatch:
 permissions:
   contents: read
@@ -15,6 +15,7 @@ jobs:
           node-version: 22
       - run: for file in src/*.js tests/*.mjs; do node --check "$file"; done
       - run: node tests/survival-fairy-pairs-model.mjs
+      - run: node tests/garden-harvest-model.mjs
       - run: node tests/playable-run-model.mjs
       - run: node tests/simulation-model.mjs && node tests/blueprint-selection-model.mjs
   browser:
@@ -29,3 +30,4 @@ jobs:
         env:
           PLAYWRIGHT_SKIP_BROWSER_DOWNLOAD: '1'
       - run: node tests/survival-fairy-pairs-browser.mjs
+      - run: node tests/garden-harvest-browser.mjs

@@ -117,7 +117,14 @@
       }
       for(const [id,image] of images)if(!alive.has(id)){I.destroyRelic(image);images.delete(id);}
     }
-    const controller={model,state:model.state,step,render,death:(x,y)=>{const drop=model.death(x,y,patrol.bounds);if(drop)scene.runDrops?.spawn(drop.kind,x,y);}};
+    const controller={model,state:model.state,step,render,death:(x,y)=>{
+      if(window.GardenHarvest?.enabled){
+        scene.gardenHarvest?.gainWater();
+        return;
+      }
+      const drop=model.death(x,y,patrol.bounds);
+      if(drop)scene.runDrops?.spawn(drop.kind,x,y);
+    }};
     scene.relicCollection=controller;
     scene.events.once('shutdown',()=>{images.clear();delete scene.relicCollection;});
     return controller;
