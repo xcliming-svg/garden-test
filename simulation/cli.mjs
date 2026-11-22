@@ -34,7 +34,9 @@ async function batch(p,prof,opts,seeds,workers){
 function seedsFor(opts){const n=int(o.runs,'runs',1,100000);if(opts.seed+n-1>0xffffffff)throw Error('Seed range overflow');return Array.from({length:n},(_,i)=>opts.seed+i);}
 async function main(){
   if(command==='help'){
-    console.log('Garden simulation: defaults | agents | run | batch | sweep | replay | capture-geometry\n'+
+    console.log('LEGACY stage/card simulator only — NOT current flower-economy survival.\n'+
+      'For survival: node simulation/survival-preflight.mjs, then node simulation/garden-economy-balance.mjs simulation/experiments/garden-economy-10x10.json --summary.\n'+
+      'Historical commands: defaults | agents | run | batch | sweep | replay | capture-geometry\n'+
       'run/batch: --config JSON --geometry JSON --agent NAME --agent-config JSON --seed N --dt SECONDS --seconds N --output FILE\n'+
       'run: --trace --engine model|browser; batch/sweep: --runs N --workers N; sweep/replay: --input FILE\n'+
       'capture-geometry: --output FILE [--browser chrome|chromium]');

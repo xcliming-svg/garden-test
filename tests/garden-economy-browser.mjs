@@ -41,7 +41,7 @@ try{
     await page.waitForFunction(()=>{
       const scene=window.__economyTestGame?.scene.getScene('Game');
       return !!scene?.gardenEconomy&&!!scene?.heroWeaponPreview&&
-        !!scene?.enemyPreview&&scene.flowerGrowth?.entries.size===36;
+        !!scene?.enemyPreview&&scene.flowerGrowth?.entries.size===4;
     },null,{timeout:60000});
     const initial=await page.evaluate(()=>{
       const s=window.__economyTestGame.scene.getScene('Game'),g=window.GardenGameLayout.spec.garden;
@@ -56,9 +56,9 @@ try{
         weapon:s.heroWeaponPreview.model.state.equipped[0],
         noRunDrops:!s.runDrops};
     });
-    assert.deepEqual(initial.grid,[6,6]);
-    assert.equal(initial.names.length,36);
-    assert.deepEqual(initial.names.slice(0,6),['sunflower','sunflower','sunflower','rose','rose','rose']);
+    assert.deepEqual(initial.grid,[10,10]);
+    assert.equal(initial.names.length,4);
+    assert.deepEqual(initial.names,['sunflower','rose','hydrangea','lavender']);
     assert.deepEqual(initial.stages,[1]);
     assert.equal(initial.actors,1);
     assert.equal(initial.slots,false);
@@ -66,7 +66,7 @@ try{
     assert.equal(initial.stats,true);
     assert.equal(initial.shopLink,true);
     assert.equal(initial.water,0);
-    assert.equal(initial.hp,1000);
+    assert.equal(initial.hp,1200);
     assert.equal(initial.weapon,'rock');
     assert.equal(initial.noRunDrops,true);
 
@@ -87,27 +87,37 @@ try{
     await page.waitForFunction(()=>window.__economyTestGame.scene.getScene('Game').gardenEconomy.state.water>0,
       null,{timeout:10000});
 
-    await page.keyboard.down('Space');
-    await page.waitForFunction(()=>{
-      const s=window.__economyTestGame.scene.getScene('Game');
-      return s.fairyPatrol.paused&&s.gardenEconomy.state.plots.some(p=>p.progress>0);
-    });
-    const stop=await page.evaluate(()=>window.__economyTestGame.scene.getScene('Game').fairyPatrol.distance);
-    await page.waitForTimeout(180);
-    const distance=await page.evaluate(()=>window.__economyTestGame.scene.getScene('Game').fairyPatrol.distance);
-    assert.ok(Math.abs(distance-stop)<.0001);
-    await page.keyboard.up('Space');
-    await page.waitForFunction(()=>!window.__economyTestGame.scene.getScene('Game').fairyPatrol.paused);
-
     const plotId=await page.evaluate(()=>window.__economyTestGame.scene.getScene('Game').gardenEconomy.nearest());
-    await page.evaluate(id=>{
-      const s=window.__economyTestGame.scene.getScene('Game'),e=s.gardenEconomy;
-      e.state.plots[id].progress=e.state.plots[id].required-.1;
-      e.state.water=100;
-    },plotId);
     await page.keyboard.down('Space');
-    await page.waitForFunction(id=>window.__economyTestGame.scene.getScene('Game').gardenEconomy.state.plots[id].phase==='bloom',plotId);
+    await page.waitForTimeout(150);
+    const partial=await page.evaluate(id=>{
+      const s=window.__economyTestGame.scene.getScene('Game');
+      return {water:s.gardenEconomy.state.water,progress:s.gardenEconomy.state.plots[id].progress,
+        paused:s.fairyPatrol.paused};
+    },plotId);
+    assert.deepEqual(partial,{water:20,progress:0,paused:false},'non-MAX cannot water or stop patrol');
     await page.keyboard.up('Space');
+
+    await page.evaluate(()=>{
+      const s=window.__economyTestGame.scene.getScene('Game');
+      s.gardenEconomy.gainWater(80);
+    });
+    await page.keyboard.down('Space');
+    const poured=await page.evaluate(id=>{
+      const s=window.__economyTestGame.scene.getScene('Game');
+      return {water:s.gardenEconomy.state.water,phase:s.gardenEconomy.state.plots[id].phase,
+        progress:s.gardenEconomy.state.plots[id].progress,
+        paused:s.fairyPatrol.paused};
+    },plotId);
+    assert.deepEqual(poured,{water:0,phase:'bloom',progress:1,paused:true},
+      'one MAX tank must drain completely and bloom first 1/1 bed');
+    const stop=await page.evaluate(()=>window.__economyTestGame.scene.getScene('Game').fairyPatrol.distance);
+    await page.waitForTimeout(140);
+    const distance=await page.evaluate(()=>window.__economyTestGame.scene.getScene('Game').fairyPatrol.distance);
+    assert.ok(Math.abs(distance-stop)<.0001,'fairy must briefly stop to pour');
+    await page.keyboard.up('Space');
+    await page.waitForFunction(()=>!window.__economyTestGame.scene.getScene('Game').fairyPatrol.paused,
+      null,{timeout:20000});
     try{
       await page.waitForFunction(id=>window.__economyTestGame.scene.getScene('Game').gardenEconomy.state.plots[id].phase==='flight',plotId,{timeout:45000});
     }catch(e){
@@ -134,11 +144,15 @@ try{
       return {amount:p.count,progress:p.progress,others:s.gardenEconomy.state.plots.filter(x=>x.id!==id).map(x=>x.count),
         label:s.children.getByName('harvest-count:'+p.name)?.text};
     },plotId);
-    assert.ok(harvest.amount>=1&&harvest.amount<=9);
+    assert.equal(harvest.amount,1,'one flower per initial bed');
     assert.equal(harvest.progress,0);
     assert.deepEqual(harvest.others,[0,0,0]);
     assert.equal(harvest.label,String(harvest.amount));
 
+    await page.evaluate(()=>{
+      const s=window.__economyTestGame.scene.getScene('Game');
+      for(const p of s.gardenEconomy.state.plots)p.count=10000;
+    });
     await page.mouse.click(...point(890,16));
     await page.waitForFunction(()=>window.__economyTestGame.scene.isActive('GardenShop'));
     assert.equal(await page.evaluate(()=>window.__economyTestGame.scene.isPaused('Game')),true);
@@ -146,15 +160,52 @@ try{
       const s=window.__economyTestGame.scene.getScene('GardenShop');
       return s.children.list.filter(x=>x.name?.startsWith('garden-shop-item:')).length;
     }),12);
-    await page.evaluate(()=>{
+    for(let side=2;side<=5;side++){
+      await page.mouse.click(...point(755,300));
+      await page.waitForFunction(expected=>{
+        const s=window.__economyTestGame.scene.getScene('Game');
+        return s.gardenEconomy.state.side===expected&&
+          s.flowerGrowth.entries.size===4*expected*expected&&
+          s.fairyPatrol.occupied.length===4*expected*expected;
+      },side,{timeout:45000});
+    }
+    const expanded=await page.evaluate(()=>{
       const s=window.__economyTestGame.scene.getScene('Game');
-      for(const p of s.gardenEconomy.state.plots)p.count=100;
+      return {flowers:s.flowerGrowth.entries.size,side:s.gardenEconomy.state.side,
+        species:[0,1,2,3].map(i=>[...s.flowerGrowth.entries.values()].filter(x=>x.name===window.GardenEconomy.names[i]).length),
+        price:s.gardenEconomy.expansionCost()};
     });
+    assert.deepEqual(expanded,{flowers:100,side:5,species:[25,25,25,25],price:null});
+    assert.deepEqual(await page.evaluate(()=>{
+      const s=window.__economyTestGame.scene.getScene('Game');
+      return s.gardenEconomy.state.plots.map(p=>[p.progress,p.required]);
+    }),[[0,5],[0,5],[0,5],[0,5]],'max garden requires five MAX applications per bed');
     await page.mouse.click(...point(198+185,135));
     await page.waitForFunction(()=>window.__economyTestGame.scene.getScene('GardenShop').selected==='boomerang');
     await page.mouse.click(...point(735,402));
     await page.waitForFunction(()=>window.__economyTestGame.scene.getScene('Game').gardenEconomy.state.owned.has('boomerang'));
+    await page.waitForFunction(()=>window.__economyTestGame.scene.getScene('GardenShop')?.selected==='boomerang');
+    await page.waitForFunction(()=>{
+      const scene=window.__economyTestGame.scene.getScene('GardenShop');
+      return scene?.children?.list.some(x=>x.name==='garden-shop-upgrade:power');
+    },null,{timeout:45000});
+    assert.deepEqual(await page.evaluate(()=>{
+      const scene=window.__economyTestGame.scene.getScene('GardenShop');
+      return scene.children.list.filter(x=>x.name?.startsWith('garden-shop-upgrade:'))
+        .map(x=>x.name);
+    }),['garden-shop-upgrade:power','garden-shop-upgrade:speed'],
+    'non-rock items must not show the multishot upgrade');
     await page.mouse.click(...point(198,135));
+    await page.waitForFunction(()=>window.__economyTestGame.scene.getScene('GardenShop')?.selected==='rock');
+    await page.waitForFunction(()=>{
+      const scene=window.__economyTestGame.scene.getScene('GardenShop');
+      return scene?.children?.list.some(x=>x.name==='garden-shop-upgrade:volley');
+    },null,{timeout:45000});
+    assert.deepEqual(await page.evaluate(()=>{
+      const scene=window.__economyTestGame.scene.getScene('GardenShop');
+      return scene.children.list.filter(x=>x.name?.startsWith('garden-shop-upgrade:'))
+        .map(x=>x.name);
+    }),['garden-shop-upgrade:power','garden-shop-upgrade:volley','garden-shop-upgrade:speed']);
     await page.waitForFunction(()=>window.__economyTestGame.scene.getScene('GardenShop').selected==='rock');
     await page.mouse.click(...point(200,458));
     await page.waitForFunction(()=>window.__economyTestGame.scene.getScene('Game').gardenEconomy.bonus('rock').level===2);
@@ -168,7 +219,7 @@ try{
     await page.waitForFunction(()=>window.__economyTestGame.scene.isActive('Game'));
     assert.equal(await page.evaluate(()=>window.__economyTestGame.scene.isActive('GardenShop')),false);
     assert.deepEqual(errors,[],JSON.stringify(errors));
-    console.log('PASS browser',width,height,'6x6 garden, water magnet, Space, bloom/wilt/flight, shop purchase/upgrade, simultaneous weapons');
+    console.log('PASS browser',width,height,'1–5 full-MAX water count, garden growth, harvest, shop and all owned weapons');
     await page.close();
   }
 } finally {

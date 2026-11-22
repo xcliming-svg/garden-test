@@ -1,5 +1,15 @@
 # 개발 문서
 
+> **2026-11-22 현재 생존 무기 역할·시뮬레이션 인계:** [돌멩이만 다중 발사, 신규/변경/삭제 시 의존관계·회귀 검사](./balance-change-protocol.md) · [기존 시뮬레이터 구분, 사전 점검·재현 실행 및 다음 세션 작업 지시](./survival-simulation-handoff.md). 새 물요정 기능은 아직 미정이며 전투 전체 headless 검증은 별도로 필요합니다.
+
+> **밸런스 의존관계·상하한·직관 규칙 (2026-11-22):** [적/무기 상대 역할, 12종 속도·HP, 5회/초 회전 기준, 물·꽃 경제 루프, 피해 상한과 자동 경고·검증 순서](./balance-dependencies-guardrails.md). 논리적 필수값과 사람의 직관에 따른 경고선을 분리합니다.
+
+> **전체 밸런스 수치 결정 목록 v0.1 (2026-11-22):** [KPI 4개 영역, 실제 수치 범주 9개, 적 12종·무기 10종·상품 12종 개별 값, 시간대별 이론 출현표](./balance-parameter-inventory.md). 현재 코드값은 최종 승인값이 아닙니다.
+
+> **밸런스 목표 정의서 v0.1 (2026-11-22):** [All Aboard! 근거 자료, 10·30·60·120·180분 경험 목표, 현행 고정 규칙·조정 변수·데이터 수집 계획](./balance-goals-benchmark.md). **관찰된 사실과 아직 승인하지 않은 목표 수치를 구분**합니다. 코드는 변경하지 않았습니다.
+
+> **2026-11-22 `devel` 신규 성장·밸런스:** [중앙 2×2에서 10×10까지 일괄 확장, 1/4/9/16/25 전부 수확, 상점 가격과 36회 경제 시뮬레이션](./garden-expansion-balance.md). 기존 6×6 및 A/C 비교 설명은 역사적 기록으로 유지합니다.
+
 > **2026-11-22 새 main 기반 정원 생산·상점 설계:** [4개 3×3 꽃밭, 물방울 자석 수집, 공통 정원 HP, 꽃 재화, 모든 무기 자동 사용 및 상점](./main-garden-economy.md). 이전 14×6·물요정 20칸 설명은 과거 main 규격이며 새 브랜치 적용 기준에서 제외됩니다.
 
 > **2026-11-21 `devel` 현행 물주기·수확 A/C 비교:** [4개 URL 파라미터 조합, 성장 3단계, Space 물주기/수동 수확, 물방울·꽃 보유 수량·테스트 범위](./garden-harvest-modes.md). 기존 [생존형 20슬롯/물요정 기록](./survival-fairy-pairs.md)은 `?farm=legacy`에서 유지한다.
@@ -55,6 +65,11 @@
 
 | 문서 | 역할 |
 | --- | --- |
+| [balance-change-protocol.md](./balance-change-protocol.md) | 돌멩이만 다중 투사체 강화, 콘텐츠 추가·삭제·변경에 따른 검증 규칙 |
+| [survival-simulation-handoff.md](./survival-simulation-handoff.md) | 새 세션에서 생존 시뮬레이션을 재현하고 확장하는 실행 지침 |
+| [balance-dependencies-guardrails.md](./balance-dependencies-guardrails.md) | 밸런스 변수의 의존 그래프, 상·하한, 적/무기의 직관적 상대관계와 자동 검증 경고선 |
+| [balance-parameter-inventory.md](./balance-parameter-inventory.md) | 실제 생존 게임의 수치·의미·고정/조정 상태를 정리한 전수 목록 및 미정 KPI 목록 |
+| [balance-goals-benchmark.md](./balance-goals-benchmark.md) | All Aboard! 기반 플레이 경험·시간대별 KPI·검증/승인 절차를 정의한 밸런스 목표 초안 |
 | [simulation-design.md](./simulation-design.md) | AI 자동 플레이, 외부 밸런스 설정, 실행·병렬 실험·재현·로그·검증 및 재미 평가 기준 |
 | [blueprint-balance-baseline.md](./blueprint-balance-baseline.md) | 도안 선택 6종, 1차 579회 기준 실험, 꽃 희귀도/성장/무기 조합/고밀도 검증 및 후속 기준 |
 | [flower-removal-defense-pressure.md](./flower-removal-defense-pressure.md) | 만개 후 오배치 표시, 3초 제거, 슬롯 흰색 및 무조작 방어 압박 |
@@ -71,6 +86,7 @@
 | [ui-color-guide.md](./ui-color-guide.md) | Garden 20 v10 공통 UI·에셋 색상 원본, 명도/소재/상태 규칙, 신규 객체 제작 및 검증 |
 | [ui-scale-audit.md](./ui-scale-audit.md) | 960×540 논리 규격·실제 화면 간격·배율 감사 |
 | [ui-metrics-benchmark.md](./ui-metrics-benchmark.md) | 실제 브라우저 10개 UI 시안 비교, 측정 기준, 순위 및 J안 선정 |
+| [garden-expansion-balance.md](./garden-expansion-balance.md) | 1→25 꽃밭 일괄 확장, 장기 물·가격·적 밸런스 시뮬레이션 |
 | [main-garden-economy.md](./main-garden-economy.md) | main 기반 꽃밭 4구역, 정원 HP, 꽃 재화와 상점 |
 | [implementation.md](./implementation.md) | 현재 게임의 설계 및 구현 상태. 시스템별 적용 사항, 확정된 미구현 사항, 코드 위치 |
 | [ui-spec.md](./ui-spec.md) | 공통 UI 상태·조작 규칙 및 과거 main 디자인 규격; devel 세부 수치는 960×540 현행 규격 우선 |

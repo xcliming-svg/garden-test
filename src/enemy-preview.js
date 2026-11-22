@@ -244,7 +244,11 @@
       if(forced)introduced.add(entry.id);
       const initialPath=route(spec,patrol.boundary,entry,patrol.occupied,point?{side,spawnPoint:point}:{side,random});
       const path=playable?runPath(initialPath):initialPath;
-      const actor={id:serial++,entry,path,formation:group,age:0,spawnTime:elapsed,blink:F.blinkSchedule(serial+11),expressionState:'auto',expression:'normal',pose:null,hp:balanced?window.GardenWeaponBalance.hp(entry):entry.level,hitUntil:0,populationTime:elapsed,motionAge:0,strikes:0,pendingHits:0,persistent:playable};
+      // Infinite survival: gradual enemy durability after the introductory 10 minutes.
+      // Non-survival comparison models retain their original health exactly.
+      const endurance=survival?1+Math.min(1.5,Math.max(0,elapsed-600)/7200):1;
+      const enemyHp=balanced?Math.round(window.GardenWeaponBalance.hp(entry)*endurance*10)/10:entry.level;
+      const actor={id:serial++,entry,path,formation:group,age:0,spawnTime:elapsed,blink:F.blinkSchedule(serial+11),expressionState:'auto',expression:'normal',pose:null,hp:enemyHp,hitUntil:0,populationTime:elapsed,motionAge:0,strikes:0,pendingHits:0,persistent:playable};
       actor.duration=M.duration(entry,'auto',path,spawning.rank);actors.push(actor);spawned++;
       updateActor(actor);return actor;
     }

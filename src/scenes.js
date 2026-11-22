@@ -136,35 +136,46 @@
           // Preserve a usable text-based shop if one optional icon fails.
         }
         U.text(this,x-30,y-5,product.name,12,U.C.text,{originY:.5}).setName('garden-shop-label:'+product.id);
-        U.text(this,x-30,y+13,owned?'보유':'미보유',9,owned?U.C.green:U.C.muted,{originY:.5});
+        U.text(this,x-30,y+13,!economy.available(product.id)?'꽃밭 '+product.unlock+'×'+product.unlock+' 필요':owned?'보유':'미보유',9,
+          owned?U.C.green:U.C.muted,{originY:.5});
       }
       const state=economy.state;
-      U.text(this,122,316,window.GardenEconomy.labels.map((label,i)=>label+' '+state.plots[i].count).join('     '),11,U.C.text)
+      const expansion=economy.expansionCost();
+      const canExpand=economy.affordable(expansion)&&state.plots.every(p=>p.phase==='growing');
+      U.text(this,122,299,expansion?
+        '꽃밭 일괄 확장  '+state.side*state.side+' → '+(state.side+1)**2+'  ·  꽃 4종 각각 ×'+expansion[0]:
+        '꽃밭 최대 크기  25 × 4 = 100송이',11,U.C.text).setName('garden-expand-price');
+      U.button(this,755,300,150,expansion?(canExpand?'전체 확장':'확장 대기'):'MAX',()=>{
+        if(economy.expand())this.scene.restart({selected:this.selected});
+      },{height:28,fontSize:11,disabled:!canExpand,primary:canExpand}).setName('garden-expand');
+      U.text(this,122,326,window.GardenEconomy.labels.map((label,i)=>label+' '+state.plots[i].count).join('     '),11,U.C.text)
         .setName('garden-shop-wallet');
-      U.rule(this,122,343,838,343,U.C.border,1);
+      U.rule(this,122,349,838,349,U.C.border,1);
       const product=products.find(p=>p.id===this.selected)||products[0];
       const owned=state.owned.has(product.id);
-      U.text(this,122,354,product.name+'  ·  '+(owned?'강화':'구매'),13,U.C.text)
+      U.text(this,122,357,product.name+'  ·  '+(!economy.available(product.id)?'잠금':owned?'강화':'구매'),13,U.C.text)
         .setName('garden-shop-detail-title');
       const formatCost=cost=>cost?cost.map((n,i)=>n?window.GardenEconomy.labels[i]+'×'+n:'').filter(Boolean).join('  '):'최대 강화';
       if(!owned){
         const cost=economy.cost(product.id,'buy');
         U.text(this,122,383,'최초 구매: '+formatCost(cost),11,U.C.text).setName('garden-shop-price');
-        const valid=economy.affordable(cost);
-        U.button(this,735,402,168,valid?'구매':'꽃 부족',()=>{
+        const unlocked=economy.available(product.id),valid=unlocked&&economy.affordable(cost);
+        U.button(this,735,402,168,!unlocked?'확장 후 해금':valid?'구매':'꽃 부족',()=>{
           if(economy.buy(product.id))this.scene.restart({selected:product.id});
         },{height:32,disabled:!valid,primary:valid,fontSize:12}).setName('garden-shop-buy');
         U.text(this,122,428,'구매한 장비는 자동으로 적용되며 이후 이 자리에서 강화할 수 있습니다.',10,U.C.muted);
       }else{
-        const sections=product.weapon?[
-          ['power','위력','기본 공격 단계'],
-          ['volley','다중 발사','투사체 추가'],
-          ['speed','공격 속도','발사 간격 감소']
-        ]:[['power',product.id==='shoe'?'이동 속도':'방어력','패시브 강화']];
-        sections.forEach(([type,title,desc],i)=>{
-          const x=122+i*242;
+        const descriptions={
+          power:[product.weapon?'위력':product.id==='shoe'?'이동 속도':'방어력',
+            product.weapon?'기본 공격 단계':'패시브 강화'],
+          volley:['다중 발사','돌멩이만 투사체 추가'],
+          speed:['공격 속도','발사 간격 감소']
+        };
+        const sections=window.GardenEconomy.upgradeTypes(product.id);
+        sections.forEach((type,i)=>{
+          const [title,desc]=descriptions[type],x=122+i*242;
           const count=state.upgrades[product.id][type];
-          const max=type==='power'&&product.weapon?2:3;
+          const max=window.GardenEconomy.upgradeLimits[product.id][type];
           U.text(this,x,380,title+'   '+count+'/'+max,11,U.C.text).setName('garden-shop-upgrade:'+type);
           U.text(this,x,398,desc,9,U.C.muted);
           const cost=economy.cost(product.id,type);
