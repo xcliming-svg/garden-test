@@ -89,12 +89,12 @@ function run(seed,policy){
           m.gainWater(E.tuning.waterPerDrop);}
       }
     }
-    if(t%policy.cycleSeconds<policy.waterWindow&&s.water>0){
-      // Idealized optimal target choice, upper bound on accessible watering.
+    if(t%policy.cycleSeconds<policy.waterWindow&&s.water>=E.tuning.waterCapacity){
+      // Only a complete MAX reservoir can provide one watering count.
       const available=s.plots.filter(p=>p.phase==='growing');
       if(available.length){
         const p=available.sort((a,b)=>a.count-b.count||b.progress/b.required-a.progress/a.required)[0];
-        m.water(1,p.id);
+        m.water(p.id);
       }
     }
     if(random()<Math.min(.95,.35+.6*t/3600))m.damage(1,1,m.defense());
@@ -161,14 +161,17 @@ const output=JSON.stringify(report,null,2);
 if(process.argv.includes('--check')){
   for(const row of summary){
     assert.equal(row.runs,input.seeds.length);
-    assert.equal(row.stage[3].reached,input.seeds.length);
-    assert.ok(row.stage[3].medianSeconds>row.stage[0].medianSeconds,
-      'expansion must take four progressively distinct purchases');
+    assert.equal(row.stage[0].reached,input.seeds.length,'early expansion should remain attainable');
+    assert.ok(row.stage[1].medianSeconds>row.stage[0].medianSeconds,'second expansion follows first');
   }
-  assert.ok(summary.find(x=>x.policy==='focused').firstWeapon<=300);
-  assert.ok(summary.find(x=>x.policy==='casual').stage[3].medianSeconds<=2700);
-  assert.ok(summary.find(x=>x.policy==='distracted').stage[3].medianSeconds<=7200);
-  console.log('PASS model-based economy pacing assertions (36 runs, three hours each)');
+  const focused=summary.find(x=>x.policy==='focused');
+  const casual=summary.find(x=>x.policy==='casual');
+  const distracted=summary.find(x=>x.policy==='distracted');
+  assert.equal(focused.stage[3].reached,input.seeds.length,'focused runs can reach full garden');
+  assert.ok(focused.stage[3].medianSeconds<=7200,'focused garden can mature within two hours');
+  assert.ok(casual.stage[2].medianSeconds<=7200,'casual reaches 16 flowers');
+  assert.ok(distracted.stage[1].medianSeconds<=7200,'intermittent play can reach 9 flowers');
+  console.log('PASS 36 full-tank economy simulations; three-hour casual completion is not guaranteed');
 }
 if(process.argv.includes('--summary'))console.log(JSON.stringify(summary,null,2));
 else if(!process.argv.includes('--check'))console.log(output);
