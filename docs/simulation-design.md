@@ -1,5 +1,7 @@
 # AI 자동 플레이·밸런스 시뮬레이션
 
+> **중요: 이 문서는 과거 도안/카드 중심 시뮬레이션의 역사적 명세다.** 현재 `main`/ `devel` 생존 모드의 MAX 물주기·꽃 상점·동시 무기·물요정 예정 상황을 검증하려면 먼저 [생존 시뮬레이션 인계/실행 안내](./survival-simulation-handoff.md)와 [사전 점검](../simulation/survival-preflight.mjs)을 확인한다. `simulation/cli.mjs`의 승률·생존 시간은 현재 생존 모드의 실측치가 아니다.
+
 > 1차 도안/꽃 가중치/무기 성장·조합/군집 반복 실험 및 재실행: [초반 도안 밸런스 기준](./blueprint-balance-baseline.md).
 2026-11-19 · 기준 main 8741ee2 · Phaser 3.90.0 / Node 22
 이 시스템은 테스트 도구다. index.html의 일반 게임·lab.html 비교 모드는 그대로이며 테스트용 설정은 CLI의 독립 실행에서만 주입한다. 기본 밸런스 수치 변경 및 자동 적용, XP/강화/스테이지 구현은 하지 않는다. 후속 [도안 선택 및 1차 실험](./blueprint-balance-baseline.md)에서 일반 플레이의 메인 메뉴 도안 셀렉트 6종 및 별도 모델 전용 레벨/조합 실험을 추가했다.

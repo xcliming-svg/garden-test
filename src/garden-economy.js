@@ -20,6 +20,13 @@
   ]);
   const products=Object.freeze(inventory.map(([id,name,price,unlock])=>
     Object.freeze({id,name,price,unlock,weapon:weapons.includes(id)})));
+  // One capability table governs the shop, economy and simulated weapon output.
+  // Only rocks can fan out multiple projectiles. Other weapons keep their
+  // identity through AoE, chaining, returning, slowing and other effects.
+  const upgradeLimits=Object.freeze(Object.fromEntries(products.map(p=>[p.id,
+    Object.freeze({power:p.weapon?2:3,volley:p.id==='rock'?3:0,speed:p.weapon?3:0})])));
+  const upgradeTypes=id=>Object.entries(upgradeLimits[id]||{})
+    .filter(([,limit])=>limit>0).map(([type])=>type);
   const tuning=Object.freeze({
     waterCapacity:100,waterPerDrop:20,wateringHoldSeconds:.65,
     bloomHold:1.5,flightDuration:.85,
@@ -38,7 +45,7 @@
     Array.from({length:side*side},(_,i)=>[localCell(id,i,side),name]));
   // Every full tank counts as one watering. Required counts are 1,2,3,4,5.
   const requiredAt=(_seconds,side=1)=>clamp(Math.trunc(side),1,tuning.maxSide);
-  function create(_random=Math.random){
+  function create(_random=Math.random,onEvent=null){
     const state={
       side:1,water:0,elapsed:0,hp:tuning.gardenHp,totalHarvested:0,
       plots:names.map((name,id)=>({id,name,progress:0,required:requiredAt(0,1),count:0,
@@ -46,6 +53,7 @@
       owned:new Set(['rock']),upgrades:Object.create(null)
     };
     for(const p of products)state.upgrades[p.id]={power:0,volley:0,speed:0};
+    const emit=(type,data={})=>onEvent?.(type,{...data,time:state.elapsed});
     function ratio(id){
       const p=state.plots[id];
       return p?clamp(p.progress/p.required,0,1):0;
@@ -61,18 +69,22 @@
       if(!(amount>0))return 0;
       const before=state.water;
       state.water=clamp(state.water+amount,0,tuning.waterCapacity);
-      return state.water-before;
+      const gained=state.water-before;
+      if(gained)emit('garden_water_collect',{amount:gained,water:state.water});
+      return gained;
     }
     function beginBloom(plot){
       plot.yield=state.side*state.side;
       plot.flowers=Array.from({length:plot.yield},(_,i)=>i);
       plot.phase='bloom';plot.phaseSeconds=0;
+      emit('garden_bloom',{plot:plot.id,species:plot.name,side:state.side,yield:plot.yield});
     }
     function water(id){
       const p=state.plots[id];
       if(!p||p.phase!=='growing'||state.water<tuning.waterCapacity)return 0;
       state.water=0;
       p.progress++;
+      emit('garden_water_use',{plot:id,species:p.name,progress:p.progress,required:p.required,spent:tuning.waterCapacity});
       if(p.progress>=p.required){p.progress=p.required;beginBloom(p);}
       return 1;
     }
@@ -88,6 +100,7 @@
           p.phase='flight';p.phaseSeconds=0;flown.push(p.id);
         }else if(p.phase==='flight'&&p.phaseSeconds>=tuning.flightDuration){
           p.count+=p.yield;state.totalHarvested+=p.yield;
+          emit('garden_harvest',{plot:p.id,species:p.name,side:state.side,flowers:p.yield,stock:p.count});
           p.progress=0;p.required=requiredAt(state.elapsed,state.side);
           p.phase='growing';p.phaseSeconds=0;p.yield=0;p.flowers=[];
         }
@@ -101,12 +114,15 @@
       const reduction=Math.max(.15,1-defense*.035);
       const amount=Math.min(maxPerSecond*dt,hits*tuning.damagePerHit)*reduction;
       state.hp=Math.max(0,state.hp-amount);
+      if(amount)emit('garden_damage',{hits,amount,hp:state.hp,defense});
       return amount;
     }
     function heal(amount=tuning.heartRecovery){
       const before=state.hp;
       state.hp=clamp(state.hp+Math.max(0,amount),0,tuning.gardenHp);
-      return state.hp-before;
+      const healed=state.hp-before;
+      if(healed)emit('garden_heal',{amount:healed,hp:state.hp});
+      return healed;
     }
     const expansionCost=()=>state.side>=tuning.maxSide?null:
       Array(4).fill(tuning.expansionCosts[state.side-1]);
@@ -118,13 +134,15 @@
     }
     function expand(){
       if(state.plots.some(p=>p.phase!=='growing'))return false;
-      if(!spend(expansionCost()))return false;
+      const price=expansionCost();
+      if(!spend(price))return false;
       state.side++;
       for(const p of state.plots){
         // Preserve completed MAX-tank applications; never create fractional credits.
         p.required=requiredAt(state.elapsed,state.side);
         p.progress=Math.min(p.progress,p.required-1);
       }
+      emit('garden_expand',{side:state.side,price});
       return true;
     }
     const available=id=>{const p=products.find(p=>p.id===id);return !!p&&state.side>=p.unlock;};
@@ -132,10 +150,9 @@
       const p=products.find(p=>p.id===id),pos=products.indexOf(p);
       if(!p)return null;
       const level=type==='buy'?0:state.upgrades[id]?.[type]||0;
-      const maximum=type==='power'&&p.weapon?2:3;
       if(type==='buy'&&state.owned.has(id))return null;
-      if(type!=='buy'&&(!state.owned.has(id)||!['power','volley','speed'].includes(type)||
-          !p.weapon&&type!=='power'||level>=maximum))return null;
+      if(type!=='buy'&&(!state.owned.has(id)||!upgradeLimits[id]?.[type]||
+          level>=upgradeLimits[id][type]))return null;
       const mult=type==='buy'?1:
         type==='power'?(p.weapon?[1.5,4][level]:[2,5,12][level]):
         type==='volley'?[2.5,8,20][level]:[1,3.5,9][level];
@@ -151,17 +168,25 @@
     }
     function purchase(id){
       if(!available(id)||state.owned.has(id))return false;
-      if(!spend(cost(id,'buy')))return false;
-      state.owned.add(id);return true;
+      const price=cost(id,'buy');
+      if(!spend(price))return false;
+      state.owned.add(id);
+      emit('garden_purchase',{item:id,price});
+      return true;
     }
     function upgrade(id,type){
-      if(!available(id)||!spend(cost(id,type)))return false;
+      if(!available(id)||!upgradeLimits[id]?.[type])return false;
+      const price=cost(id,type);
+      if(!spend(price))return false;
       state.upgrades[id][type]++;
+      emit('garden_upgrade',{item:id,type,level:state.upgrades[id][type],price});
       return true;
     }
     const bonus=id=>{
-      const u=state.upgrades[id]||{power:0,volley:0,speed:0};
-      return {level:Math.min(3,1+u.power),volley:1+u.volley,speed:u.speed*.15};
+      const u=state.upgrades[id]||{power:0,volley:0,speed:0},limits=upgradeLimits[id];
+      return {level:Math.min(3,1+u.power),
+        volley:1+Math.min(u.volley,limits?.volley||0),
+        speed:Math.min(u.speed,limits?.speed||0)*.15};
     };
     const defense=()=>state.owned.has('shield')?6+state.upgrades.shield.power*6:0;
     const speed=()=>40+(state.owned.has('shoe')?8+state.upgrades.shoe.power*6:0);
@@ -170,7 +195,8 @@
   }
   function attach(scene,spec,patrol){
     if(!enabled)return null;
-    const model=create(window.GardenSimulationRng?.flower||Math.random),state=model.state;
+    const model=create(window.GardenSimulationRng?.flower||Math.random,
+      window.GardenSimulationEvent),state=model.state;
     const D=window.GardenRunRules.depth,U=window.GardenUI,P=window.GardenPalette.n,g=spec.garden;
     const centerFor=(id,side)=>({
       x:g.x+(5+(id%2===0?-side/2:side/2))*g.pitch+.5,
@@ -379,6 +405,6 @@
     render();
     return controller;
   }
-  window.GardenEconomy={enabled,names,labels,locations,weapons,products,tuning,
+  window.GardenEconomy={enabled,names,labels,locations,weapons,products,upgradeLimits,upgradeTypes,tuning,
     indexOfCell,localCell,cellsForSide,requiredAt,create,attach,active:null};
 }());

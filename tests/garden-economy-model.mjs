@@ -7,6 +7,12 @@ assert.equal(E.enabled,true);
 assert.deepEqual([44,45,54,55].map(E.indexOfCell),[0,1,2,3]);
 assert.equal(E.tuning.waterCapacity,100);
 assert.equal(E.tuning.waterPerDrop,20);
+assert.deepEqual(E.upgradeTypes('rock'),['power','volley','speed']);
+assert.deepEqual(E.upgradeTypes('boomerang'),['power','speed']);
+assert.deepEqual(E.upgradeTypes('shoe'),['power']);
+for(const id of E.weapons){
+  assert.equal(E.upgradeLimits[id].volley,id==='rock'?3:0,'only rock offers multishot');
+}
 for(let side=1;side<=5;side++){
   assert.equal(E.requiredAt(0,side),side);
   assert.equal(E.requiredAt(10800,side),side,'time cannot increase minimum watering count');
@@ -82,10 +88,24 @@ assert.equal(carry.state.plots[0].progress,0);
 assert.ok(m.purchase('boomerang'));
 assert.ok(!m.purchase('boomerang'));
 assert.ok(m.purchase('sprinkler'));
+for(const id of E.weapons.filter(x=>x!=='rock')){
+  s.owned.add(id);
+  const before=s.plots.map(p=>p.count);
+  assert.equal(m.cost(id,'volley'),null,id+' must not price volley');
+  assert.equal(m.upgrade(id,'volley'),false,id+' must refuse volley');
+  assert.deepEqual(s.plots.map(p=>p.count),before,'invalid upgrade must not spend flowers');
+  assert.equal(m.bonus(id).volley,1,id+' always emits one base projectile');
+}
+assert.ok(m.cost('rock','volley'),'rock retains a separate multishot cost');
 assert.ok(m.upgrade('rock','power'));
 assert.ok(m.upgrade('rock','volley'));
 assert.ok(m.upgrade('rock','speed'));
 assert.deepEqual(m.bonus('rock'),{level:2,volley:2,speed:.15});
+assert.ok(m.upgrade('rock','volley'));
+assert.ok(m.upgrade('rock','volley'));
+assert.equal(m.bonus('rock').volley,4,'existing three volley upgrades allow four stones');
+assert.equal(m.cost('rock','volley'),null,'rock volley upgrade has an upper bound');
+assert.equal(m.upgrade('rock','volley'),false,'cannot exceed rock cap');
 assert.ok(m.upgrade('rock','power'));
 assert.equal(m.upgrade('rock','power'),false);
 assert.ok(m.purchase('shield'));
@@ -99,4 +119,16 @@ const hp=s.hp;
 assert.ok(m.damage(100,1)>0);
 assert.ok(s.hp<hp);
 assert.ok(m.heal(2)>0);
-console.log('PASS: 1–5 full-MAX watering counts per bed; no partial credits; full harvest; expansion, shop and HP');
+// The same core model emits opt-in deterministic events for later headless simulation.
+const events=[],telemetry=E.create(()=>.5,(type,data)=>events.push({type,...data}));
+assert.equal(telemetry.gainWater(100),100);
+assert.equal(telemetry.water(0),1);
+telemetry.tick(1.5);telemetry.tick(.85);
+assert.deepEqual(events.map(e=>e.type),
+  ['garden_water_collect','garden_water_use','garden_bloom','garden_harvest']);
+assert.equal(events[1].spent,100);
+assert.equal(events[2].yield,1);
+assert.equal(events[3].flowers,1);
+assert.equal(events[3].stock,1);
+assert.equal(events[3].time,2.35);
+console.log('PASS: MAX watering, rock-only volley, no spent flowers for disabled upgrades, telemetry, harvest and HP');

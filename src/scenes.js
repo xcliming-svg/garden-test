@@ -165,15 +165,17 @@
         },{height:32,disabled:!valid,primary:valid,fontSize:12}).setName('garden-shop-buy');
         U.text(this,122,428,'구매한 장비는 자동으로 적용되며 이후 이 자리에서 강화할 수 있습니다.',10,U.C.muted);
       }else{
-        const sections=product.weapon?[
-          ['power','위력','기본 공격 단계'],
-          ['volley','다중 발사','투사체 추가'],
-          ['speed','공격 속도','발사 간격 감소']
-        ]:[['power',product.id==='shoe'?'이동 속도':'방어력','패시브 강화']];
-        sections.forEach(([type,title,desc],i)=>{
-          const x=122+i*242;
+        const descriptions={
+          power:[product.weapon?'위력':product.id==='shoe'?'이동 속도':'방어력',
+            product.weapon?'기본 공격 단계':'패시브 강화'],
+          volley:['다중 발사','돌멩이만 투사체 추가'],
+          speed:['공격 속도','발사 간격 감소']
+        };
+        const sections=window.GardenEconomy.upgradeTypes(product.id);
+        sections.forEach((type,i)=>{
+          const [title,desc]=descriptions[type],x=122+i*242;
           const count=state.upgrades[product.id][type];
-          const max=type==='power'&&product.weapon?2:3;
+          const max=window.GardenEconomy.upgradeLimits[product.id][type];
           U.text(this,x,380,title+'   '+count+'/'+max,11,U.C.text).setName('garden-shop-upgrade:'+type);
           U.text(this,x,398,desc,9,U.C.muted);
           const cost=economy.cost(product.id,type);

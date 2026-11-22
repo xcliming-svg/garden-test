@@ -1,7 +1,7 @@
 name: Main-derived garden economy
 on:
   push:
-    branches: [feature/main-garden-water-shop-v2, feature/devel-garden-expansion-balance, devel]
+    branches: [feature/main-garden-water-shop-v2, feature/devel-garden-expansion-balance, devel, main]
   pull_request:
     branches: [devel]
   workflow_dispatch:
@@ -16,6 +16,8 @@ jobs:
         with:
           node-version: 22
       - run: for file in src/*.js tests/garden-economy-*.mjs; do node --check "$file"; done
+      - run: node --check simulation/survival-preflight.mjs && node --check simulation/cli.mjs
+      - run: node simulation/survival-preflight.mjs
       - run: node tests/garden-economy-model.mjs
       - run: node tests/playable-run-model.mjs
       - run: node --check simulation/garden-economy-balance.mjs
