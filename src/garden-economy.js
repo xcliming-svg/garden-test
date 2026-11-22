@@ -21,8 +21,7 @@
   const products=Object.freeze(inventory.map(([id,name,price,unlock])=>
     Object.freeze({id,name,price,unlock,weapon:weapons.includes(id)})));
   const tuning=Object.freeze({
-    waterCapacity:100,waterPerDrop:20,waterPerSecond:24,
-    growthInitial:42,growthPerExpansion:6,growthHour:7,growthCeiling:92,
+    waterCapacity:100,waterPerDrop:20,wateringHoldSeconds:.65,
     bloomHold:1.5,flightDuration:.85,
     expansionCosts:Object.freeze([3,18,50,140]),maxSide:5,
     gardenHp:1200,damagePerHit:.6,damageCapStart:.20,damageCapHour:.14,
@@ -37,13 +36,12 @@
   };
   const cellsForSide=side=>names.flatMap((name,id)=>
     Array.from({length:side*side},(_,i)=>[localCell(id,i,side),name]));
-  const requiredAt=(seconds,side=1)=>Math.min(tuning.growthCeiling,
-    tuning.growthInitial+(side-1)*tuning.growthPerExpansion+
-      Math.max(0,seconds)*tuning.growthHour/3600);
+  // Every full tank counts as one watering. Required counts are 1,2,3,4,5.
+  const requiredAt=(_seconds,side=1)=>clamp(Math.trunc(side),1,tuning.maxSide);
   function create(_random=Math.random){
     const state={
       side:1,water:0,elapsed:0,hp:tuning.gardenHp,totalHarvested:0,
-      plots:names.map((name,id)=>({id,name,progress:0,required:tuning.growthInitial,count:0,
+      plots:names.map((name,id)=>({id,name,progress:0,required:requiredAt(0,1),count:0,
         phase:'growing',phaseSeconds:0,flowers:[],yield:0})),
       owned:new Set(['rock']),upgrades:Object.create(null)
     };
@@ -70,14 +68,13 @@
       plot.flowers=Array.from({length:plot.yield},(_,i)=>i);
       plot.phase='bloom';plot.phaseSeconds=0;
     }
-    function water(dt,id){
+    function water(id){
       const p=state.plots[id];
-      if(!p||p.phase!=='growing'||!(dt>0)||state.water<=0)return 0;
-      const amount=Math.min(state.water,tuning.waterPerSecond*dt,p.required-p.progress);
-      if(!(amount>0))return 0;
-      state.water-=amount;p.progress+=amount;
-      if(p.progress>=p.required-1e-8){p.progress=p.required;beginBloom(p);}
-      return amount;
+      if(!p||p.phase!=='growing'||state.water<tuning.waterCapacity)return 0;
+      state.water=0;
+      p.progress++;
+      if(p.progress>=p.required){p.progress=p.required;beginBloom(p);}
+      return 1;
     }
     function tick(dt){
       if(!(dt>0))return [];
@@ -124,9 +121,9 @@
       if(!spend(expansionCost()))return false;
       state.side++;
       for(const p of state.plots){
-        const fraction=p.progress/p.required;
+        // Preserve completed MAX-tank applications; never create fractional credits.
         p.required=requiredAt(state.elapsed,state.side);
-        p.progress=fraction*p.required;
+        p.progress=Math.min(p.progress,p.required-1);
       }
       return true;
     }
@@ -197,14 +194,16 @@
     const hpLabel=U.text(scene,left+10,top+12,'정원 HP',10,U.C.text).setDepth(D.blueprintText).setName('garden-hp-label');
     const hpValue=U.text(scene,left+w-9,top+12,'1000',10,U.C.text,{originX:1}).setDepth(D.blueprintText).setName('garden-hp-value');
     const panelBars=scene.add.graphics().setDepth(D.blueprintText).setName('garden-economy-bars');
-    const icons=[],counts=[];
+    const icons=[],counts=[],charges=[];
     for(let id=0;id<4;id++){
       const x=left+12+(id%2)*82,y=top+48+Math.floor(id/2)*63;
       const icon=scene.add.image(x+13,y+12,window.GardenFlowerGrowth.key(names[id],3))
         .setDisplaySize(27,27).setDepth(D.blueprintIcon).setName('garden-economy-icon:'+names[id]);
       const count=U.text(scene,x+54,y+11,'0',12,U.C.text,{originX:.5,originY:.5})
         .setDepth(D.blueprintText).setName('harvest-count:'+names[id]);
-      icons.push(icon);counts.push(count);
+      const charge=U.text(scene,x+35,y+27,'0/1',9,U.C.text,{originX:.5,originY:.5})
+        .setDepth(D.blueprintText).setName('garden-water-count:'+names[id]);
+      icons.push(icon);counts.push(count);charges.push(charge);
     }
     const marker=scene.add.graphics().setDepth(D.effects+.2).setName('garden-water-gauge');
     const maxText=U.text(scene,0,0,'MAX',11,U.C.text,{originX:.5,originY:.5})
@@ -212,9 +211,8 @@
     const splashes=[];
     const key=scene.input.keyboard.addKey(Phaser.Input.Keyboard.KeyCodes.SPACE);
     scene.input.keyboard.addCapture(Phaser.Input.Keyboard.KeyCodes.SPACE);
-    let down=false,touchId=null,watered=-1,atMax=false;
-    const held=()=>down||touchId!==null;
-    function resume(){patrol.setPaused(false);watered=-1;}
+    let down=false,touchId=null,wateringSeconds=0,atMax=false;
+    function resume(){patrol.setPaused(false);}
     const nearest=()=>{
       const hero=patrol.actors[0]?.center;
       if(!hero)return -1;
@@ -226,26 +224,30 @@
       });
       return best;
     };
+    function startWatering(){
+      if(wateringSeconds>0||state.water<tuning.waterCapacity)return false;
+      const id=nearest();
+      if(id<0||!model.water(id))return false;
+      wateringSeconds=tuning.wateringHoldSeconds;
+      patrol.setPaused(true);
+      return true;
+    }
     function onDown(){
       if(down)return;
       down=true;
-      if(state.water>0&&nearest()>=0)patrol.setPaused(true);
+      startWatering();
     }
-    function onUp(){
-      down=false;
-      if(!held())resume();
-    }
+    function onUp(){down=false;}
     function touchDown(pointer){
       if(touchId!==null||!pointer?.wasTouch)return;
       touchId=pointer.id;
-      if(state.water>0&&nearest()>=0)patrol.setPaused(true);
+      startWatering();
     }
     function touchUp(pointer){
       if(touchId!==pointer.id)return;
       touchId=null;
-      if(!held())resume();
     }
-    function cancel(){down=false;touchId=null;resume();}
+    function cancel(){down=false;touchId=null;wateringSeconds=0;resume();}
     scene.input.keyboard.on('keydown-SPACE',onDown);
     scene.input.keyboard.on('keyup-SPACE',onUp);
     scene.input.on('pointerdown',touchDown);
@@ -254,7 +256,7 @@
     scene.input.on('gameout',cancel);
     window.addEventListener('blur',cancel);
     const targets=icons.map(icon=>({x:icon.x,y:icon.y}));
-    const lastCounts=Array(4).fill(-1);let lastHp=-1;
+    const lastCounts=Array(4).fill(-1),lastCharges=Array(4).fill('');let lastHp=-1;
     function fly(id){
       const p=state.plots[id];
       for(let i=0;i<p.flowers.length;i++){
@@ -281,6 +283,8 @@
         panelBars.fillStyle(P.slate,1).fillRect(x,y+36,70,7);
         if(p.progress>0)panelBars.fillStyle(P.sky,1).fillRect(x+1,y+37,Math.round(68*model.ratio(i)),5);
         if(p.count!==lastCounts[i]){lastCounts[i]=p.count;counts[i].setText(String(p.count));}
+        const value=p.progress+'/'+p.required;
+        if(value!==lastCharges[i]){lastCharges[i]=value;charges[i].setText(value);}
       });
       const hero=patrol.actors[0];
       if(!hero)return;
@@ -310,15 +314,10 @@
       if(completed)return;
       const dt=Math.min(.1,Math.max(0,delta/1000));
       scene.run?.tick(dt);
-      const started=held()&&state.water>0;
-      const id=started?nearest():-1;
-      if(id>=0){
-        patrol.setPaused(true);
-        model.water(dt,id);
-        watered=id;
-      }else if(patrol.paused&&held()&&state.water<=0)resume();
-      else if(!held()&&patrol.paused)resume();
-      for(const p of state.plots)if(p.phase==='bloom'&&p.phaseSeconds===0&&watered===p.id)watered=-1;
+      if(wateringSeconds>0){
+        wateringSeconds=Math.max(0,wateringSeconds-dt);
+        if(wateringSeconds===0)resume();
+      }
       const flown=model.tick(dt);
       flown.forEach(fly);
       for(const p of state.plots)if(p.phase==='growing')for(let i=0;i<state.side*state.side;i++){
