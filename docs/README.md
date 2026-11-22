@@ -1,5 +1,7 @@
 # 개발 문서
 
+> **2026-11-22 현재 생존 무기 역할·시뮬레이션 인계:** [돌멩이만 다중 발사, 신규/변경/삭제 시 의존관계·회귀 검사](./balance-change-protocol.md) · [기존 시뮬레이터 구분, 사전 점검·재현 실행 및 다음 세션 작업 지시](./survival-simulation-handoff.md). 새 물요정 기능은 아직 미정이며 전투 전체 headless 검증은 별도로 필요합니다.
+
 > **밸런스 의존관계·상하한·직관 규칙 (2026-11-22):** [적/무기 상대 역할, 12종 속도·HP, 5회/초 회전 기준, 물·꽃 경제 루프, 피해 상한과 자동 경고·검증 순서](./balance-dependencies-guardrails.md). 논리적 필수값과 사람의 직관에 따른 경고선을 분리합니다.
 
 > **전체 밸런스 수치 결정 목록 v0.1 (2026-11-22):** [KPI 4개 영역, 실제 수치 범주 9개, 적 12종·무기 10종·상품 12종 개별 값, 시간대별 이론 출현표](./balance-parameter-inventory.md). 현재 코드값은 최종 승인값이 아닙니다.
@@ -63,6 +65,8 @@
 
 | 문서 | 역할 |
 | --- | --- |
+| [balance-change-protocol.md](./balance-change-protocol.md) | 돌멩이만 다중 투사체 강화, 콘텐츠 추가·삭제·변경에 따른 검증 규칙 |
+| [survival-simulation-handoff.md](./survival-simulation-handoff.md) | 새 세션에서 생존 시뮬레이션을 재현하고 확장하는 실행 지침 |
 | [balance-dependencies-guardrails.md](./balance-dependencies-guardrails.md) | 밸런스 변수의 의존 그래프, 상·하한, 적/무기의 직관적 상대관계와 자동 검증 경고선 |
 | [balance-parameter-inventory.md](./balance-parameter-inventory.md) | 실제 생존 게임의 수치·의미·고정/조정 상태를 정리한 전수 목록 및 미정 KPI 목록 |
 | [balance-goals-benchmark.md](./balance-goals-benchmark.md) | All Aboard! 기반 플레이 경험·시간대별 KPI·검증/승인 절차를 정의한 밸런스 목표 초안 |
