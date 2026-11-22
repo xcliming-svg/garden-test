@@ -1,0 +1,34 @@
+name: First-run 50 modeled browser sessions
+on:
+  pull_request:
+    branches: [devel]
+    paths:
+      - 'tests/first-run-playtest.mjs'
+      - '.github/workflows/first-run-playtest.yml'
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  playtest:
+    runs-on: ubuntu-latest
+    timeout-minutes: 40
+    steps:
+      - uses: actions/checkout@v6
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      - run: node --check tests/first-run-playtest.mjs
+      - run: npm install --no-save --package-lock=false phaser@3.90.0 playwright@1.51.1
+        env:
+          PLAYWRIGHT_SKIP_BROWSER_DOWNLOAD: '1'
+      - name: Play model sessions
+        run: node tests/first-run-playtest.mjs
+        env:
+          COUNT: '50'
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: first-run-50-report
+          path: playtest-results/
+          if-no-files-found: warn
+          retention-days: 14
