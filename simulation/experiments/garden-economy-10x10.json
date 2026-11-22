@@ -1,6 +1,6 @@
 {
   "schemaVersion": 1,
-  "description": "Garden expansion 1→4→9→16→25 per species; assumptions are explicit approximations, not empirical player behavior.",
+  "description": "1→5 complete MAX-tank watering applications for 1→4→9→16→25 whole-bed harvests; simplified three-hour economy scenarios",
   "durationSeconds": 10800,
   "seeds": [
     7,
@@ -65,9 +65,9 @@
   "assumptions": {
     "spawns": "uses src/run-rules.js spawnInterval exactly; one spawn opportunity per cooldown, bounded by active cap only approximately",
     "kills": "per spawned enemy approximate kill probability clamp(0.36+0.012*nominalDps/sqrt(enemyEndurance) - t/216000,0.2,0.9) × policy multiplier; enemyEndurance=1+min(1.5,max(0,t-600)/7200)",
-    "drops": "water/hearts from run-rules weights; water collection assumed instantaneous when below capacity",
-    "watering": "fixed-length attention windows; auto-select least-grown available flower bed; maximum water storage enforced",
+    "drops": "Water/heart based on run-rules weights; water collection assumed instantaneous until tank MAX, excess drops cannot be stored",
+    "watering": "Attention windows permit a single discrete action whenever the tank is full (100); each action empties the whole reservoir and increments one independent bed's watering count; requires side length 1–5 actions to bloom; simulated bed selection assumes free access",
     "attacks": "simplified pressure estimate; actual enemy motion/hit/collision requires browser play verification",
-    "upgrades": "garden-first with early boomerang / balloon, then automated affordable purchases and upgrades"
+    "upgrades": "Prioritize expansion with early boomerang/balloon; model does not retune flower prices after changing watering to MAX charges"
   }
 }
