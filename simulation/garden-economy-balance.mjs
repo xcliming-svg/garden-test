@@ -2,6 +2,7 @@
 // spawn schedule and weapon nominal DPS. Combat/attention are explicit assumptions.
 import {readFileSync} from 'node:fs';
 import assert from 'node:assert/strict';
+import {createHash} from 'node:crypto';
 
 const input=JSON.parse(readFileSync(process.argv[2]||'simulation/experiments/garden-economy-10x10.json','utf8'));
 assert.equal(input.schemaVersion,1);
@@ -22,7 +23,8 @@ const rngFrom=seed=>{
 };
 const avg=xs=>xs.reduce((a,b)=>a+b,0)/xs.length;
 function run(seed,policy){
-  const random=rngFrom(seed),m=E.create(random),s=m.state;
+  const random=rngFrom(seed),eventCounts={};
+  const m=E.create(random,type=>{eventCounts[type]=(eventCounts[type]||0)+1;}),s=m.state;
   const milestones={firstWeapon:null,side2:null,side3:null,side4:null,side5:null,firstUpgrade:null};
   const events=[],snapshots={},shopStep=policy.shopInterval;
   let spawned=0,kills=0,waterDropped=0,waterWasted=0,hearts=0;
@@ -116,6 +118,7 @@ function run(seed,policy){
     harvested:s.totalHarvested,side:s.side,owned:s.owned.size,
     upgrades:Object.values(s.upgrades).reduce((v,x)=>v+x.power+x.volley+x.speed,0),
     kills,spawned,waterDropped,waterWasted:Math.round(waterWasted),hearts,
+    waterRemaining:s.water,eventCounts,
     survived:s.hp>0,hp:Math.round(s.hp)};
 }
 const results=input.policies.flatMap(policy=>input.seeds.map(seed=>run(seed,policy)));
@@ -154,11 +157,30 @@ function summarize(){
   });
 }
 const summary=summarize();
-const report={schemaVersion:1,scenario:input.description,assumptions:input.assumptions,
+const sourceHash=createHash('sha256');
+for(const path of ['src/run-rules.js','src/garden-economy.js','src/weapon-balance.js',
+  'simulation/garden-economy-balance.mjs',process.argv[2]||'simulation/experiments/garden-economy-10x10.json']){
+  sourceHash.update(path).update('\0').update(readFileSync(path)).update('\0');
+}
+const report={schemaVersion:1,engine:'garden-survival-economy-approx-v1',
+  fidelity:'economy production model + actual spawn schedule; combat/collection/attention are assumptions',
+  waterFairyIncluded:false,sourceHash:sourceHash.digest('hex'),
+  scenario:input.description,assumptions:input.assumptions,
   tuning:E.tuning,items:E.products.map(p=>({id:p.id,price:p.price,unlock:p.unlock})),
   summary,results};
 const output=JSON.stringify(report,null,2);
 if(process.argv.includes('--check')){
+  for(const row of results){
+    const e=row.eventCounts;
+    assert.equal((e.garden_water_use||0)*E.tuning.waterCapacity+
+      row.waterRemaining+row.waterWasted,row.waterDropped*E.tuning.waterPerDrop,
+      'water balance must conserve every drop');
+    assert.equal((e.garden_expand||0),row.side-1,'expansion event mismatch');
+    assert.equal((e.garden_purchase||0),row.owned-1,'purchases exclude the free rock');
+    assert.equal((e.garden_upgrade||0),row.upgrades,'every upgrade must be counted');
+  }
+  assert.deepEqual(run(input.seeds[0],input.policies[0]),results[0],
+    'same seed and policy must reproduce the same run');
   for(const row of summary){
     assert.equal(row.runs,input.seeds.length);
     assert.equal(row.stage[0].reached,input.seeds.length,'early expansion should remain attainable');
@@ -171,7 +193,7 @@ if(process.argv.includes('--check')){
   assert.ok(focused.stage[3].medianSeconds<=7200,'focused garden can mature within two hours');
   assert.ok(casual.stage[2].medianSeconds<=7200,'casual reaches 16 flowers');
   assert.ok(distracted.stage[1].medianSeconds<=7200,'intermittent play can reach 9 flowers');
-  console.log('PASS 36 full-tank economy simulations; three-hour casual completion is not guaranteed');
+  console.log('PASS 36 reproducible full-tank economic scenarios, event conservation and rock-only multishot; full combat and water fairies NOT modeled');
 }
 if(process.argv.includes('--summary'))console.log(JSON.stringify(summary,null,2));
 else if(!process.argv.includes('--check'))console.log(output);
