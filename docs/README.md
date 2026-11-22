@@ -1,5 +1,7 @@
 # 개발 문서
 
+> **전체 밸런스 수치 결정 목록 v0.1 (2026-11-22):** [KPI 4개 영역, 실제 수치 범주 9개, 적 12종·무기 10종·상품 12종 개별 값, 시간대별 이론 출현표](./balance-parameter-inventory.md). 현재 코드값은 최종 승인값이 아닙니다.
+
 > **밸런스 목표 정의서 v0.1 (2026-11-22):** [All Aboard! 근거 자료, 10·30·60·120·180분 경험 목표, 현행 고정 규칙·조정 변수·데이터 수집 계획](./balance-goals-benchmark.md). **관찰된 사실과 아직 승인하지 않은 목표 수치를 구분**합니다. 코드는 변경하지 않았습니다.
 
 > **2026-11-22 `devel` 신규 성장·밸런스:** [중앙 2×2에서 10×10까지 일괄 확장, 1/4/9/16/25 전부 수확, 상점 가격과 36회 경제 시뮬레이션](./garden-expansion-balance.md). 기존 6×6 및 A/C 비교 설명은 역사적 기록으로 유지합니다.
@@ -59,6 +61,7 @@
 
 | 문서 | 역할 |
 | --- | --- |
+| [balance-parameter-inventory.md](./balance-parameter-inventory.md) | 실제 생존 게임의 수치·의미·고정/조정 상태를 정리한 전수 목록 및 미정 KPI 목록 |
 | [balance-goals-benchmark.md](./balance-goals-benchmark.md) | All Aboard! 기반 플레이 경험·시간대별 KPI·검증/승인 절차를 정의한 밸런스 목표 초안 |
 | [simulation-design.md](./simulation-design.md) | AI 자동 플레이, 외부 밸런스 설정, 실행·병렬 실험·재현·로그·검증 및 재미 평가 기준 |
 | [blueprint-balance-baseline.md](./blueprint-balance-baseline.md) | 도안 선택 6종, 1차 579회 기준 실험, 꽃 희귀도/성장/무기 조합/고밀도 검증 및 후속 기준 |
