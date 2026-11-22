@@ -565,7 +565,10 @@
           shot.size={...shot.size,width:shot.size.width*shot.fusion.sizeScale,height:shot.size.height*shot.fusion.sizeScale};
         }
         if(shot.fusion?.speed&&slot.id==='bouncy-ball')shot.leg.speed*=shot.fusion.speed;
-        const volley=Math.max(shot.fusion?.volley||1,farming?(getBonus(slot.id)?.volley||1):1);
+        // Live flower economy permits extra launched projectiles only for rocks.
+        // Keep legacy water-fairy fusion behavior in non-economy preview modes.
+        const volley=farming?(slot.id==='rock'?Math.min(4,Math.max(1,getBonus('rock')?.volley||1)):1):
+          Math.max(1,shot.fusion?.volley||1);
         for(let n=0;n<volley;n++){
           const member=n===0?shot:{...shot,id:serial++,hit:new Set(),hitRecords:new Map(),
             glide:shot.glide?{...shot.glide}:undefined,leg:shot.leg?{...shot.leg}:undefined};
