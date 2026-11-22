@@ -185,6 +185,10 @@ try{
     await page.mouse.click(...point(735,402));
     await page.waitForFunction(()=>window.__economyTestGame.scene.getScene('Game').gardenEconomy.state.owned.has('boomerang'));
     await page.waitForFunction(()=>window.__economyTestGame.scene.getScene('GardenShop')?.selected==='boomerang');
+    await page.waitForFunction(()=>{
+      const scene=window.__economyTestGame.scene.getScene('GardenShop');
+      return scene?.children?.list.some(x=>x.name==='garden-shop-upgrade:power');
+    },null,{timeout:45000});
     assert.deepEqual(await page.evaluate(()=>{
       const scene=window.__economyTestGame.scene.getScene('GardenShop');
       return scene.children.list.filter(x=>x.name?.startsWith('garden-shop-upgrade:'))
@@ -193,6 +197,10 @@ try{
     'non-rock items must not show the multishot upgrade');
     await page.mouse.click(...point(198,135));
     await page.waitForFunction(()=>window.__economyTestGame.scene.getScene('GardenShop')?.selected==='rock');
+    await page.waitForFunction(()=>{
+      const scene=window.__economyTestGame.scene.getScene('GardenShop');
+      return scene?.children?.list.some(x=>x.name==='garden-shop-upgrade:volley');
+    },null,{timeout:45000});
     assert.deepEqual(await page.evaluate(()=>{
       const scene=window.__economyTestGame.scene.getScene('GardenShop');
       return scene.children.list.filter(x=>x.name?.startsWith('garden-shop-upgrade:'))
