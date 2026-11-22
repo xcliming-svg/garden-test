@@ -99,6 +99,17 @@ export function validateSurvivalCatalog(w){
     if(!unlocked.has(e.id))throw Error('Enemy missing survival unlock '+e.id);
   }
   for(const [,id] of w.GardenRunRules.enemyUnlocks)if(!enemies.has(id))throw Error('Unknown unlocked enemy '+id);
+  const events=w.GardenSurvivalEvents;
+  if(!events?.enabled)throw Error('Survival hostile event module missing');
+  for(const [id,boss] of Object.entries(events.bosses)){
+    if(!enemies.has(boss.enemy))throw Error('Boss species missing '+id);
+    if(!(boss.speed>0&&boss.speed<w.GardenEnemyMotion.profiles[boss.enemy].baseSpeed))
+      throw Error('Boss speed must be slower than species baseline '+id);
+    if(!(boss.size>1&&boss.hpFactor>1))throw Error('Boss visibility / HP invalid '+id);
+    for(const minion of boss.summons)if(!enemies.has(minion))throw Error('Boss minion missing '+id+'/'+minion);
+  }
+  for(const [id,event] of Object.entries(events.raids))
+    for(const enemy of event.enemies)if(!enemies.has(enemy))throw Error('Raid species missing '+id+'/'+enemy);
   if(E.names.length!==4||E.tuning.waterCapacity!==100||E.tuning.waterPerDrop!==20||
     E.tuning.maxSide!==5)throw Error('Fixed four-bed MAX-water contract changed');
   for(let side=1;side<=5;side++)if(E.requiredAt(0,side)!==side||E.cellsForSide(side).length!==4*side*side)
