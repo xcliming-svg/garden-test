@@ -62,7 +62,7 @@ async function runOne(person){
   let outcome='계속 의향(실험 시간 상한)',why='실험 시간 상한 도달',actual=0,menu=[],firstTexts=[],firstShop=[],initialWaitMs=0;
   let waterTries=0,waterSuccess=0,shopVisits=0,purchases=0,upgrades=0,expands=0,shopNoFunds=0,bossSeen=false,bossWarning=false;
   let firstShopTime=null,firstWaterTime=null,firstSpendTime=null,firstUpgradeTime=null;
-  let shopNext=person.shopFirst,spaceNext=40+(person.id*17)%110,triedNoControl=false;
+  let shopNext=person.shopFirst,spaceNext=40+(person.id*17)%110,triedNoControl=false,capturedBoss=false,capturedWarning=false;
   const visibleTexts=()=>page.evaluate(()=>{
     const game=window.__firstRunGame;
     const name=game?.scene.isActive('GardenShop')?'GardenShop':game?.scene.isActive('Game')?'Game':'MainMenu';
@@ -125,11 +125,25 @@ async function runOne(person){
     try{await page.waitForFunction(()=>window.__firstRunGame?.scene.isActive('GardenShop'),null,{timeout:3500});}
     catch{issues.push('상점 열기 실패');return;}
     shopVisits++;if(firstShopTime===null)firstShopTime=actual;
+    if(person.id===1&&shopVisits===1)await page.screenshot({path:join(OUT,'first-shop.png')});
     const labels=await visibleTexts();
     if(!firstShop.length)firstShop=labels;
     const shopText=labels.map(x=>x.text).join(' ');
     if(/꽃 부족|확장 대기/.test(shopText))shopNoFunds++;
-    const chosen=(person.id*5+shopVisits*3)%12;
+    // New players examine affordable-looking familiar items; some skeptics try
+    // locked/expensive options, while optimizers inspect the cheapest entries.
+    const optionsByType={
+      '즉시 전투형':[2,1,0,3],
+      'UI 탐색형':[1,2,0,10,11],
+      '성장 최적화형':[1,0,2,10,11],
+      '방치 관찰형':[0,1,2],
+      '회의적 초보형':[7,3,1,10],
+      '도전 지속형':[1,2,0,3,10],
+      '조작 실험형':[0,2,1,11],
+      '상점 우선형':[1,0,2,10,11]
+    };
+    const options=optionsByType[person.kind]||[1];
+    const chosen=options[(shopVisits-1)%options.length];
     const x=198+(chosen%4)*185,y=135+Math.floor(chosen/4)*59;
     await click(x,y,'상점 장비 선택');
     await page.waitForFunction(id=>window.__firstRunGame?.scene.getScene('GardenShop')?.selected===window.GardenEconomy.products[id]?.id,chosen,{timeout:5000});
@@ -212,15 +226,20 @@ async function runOne(person){
       }
       await forward(chunk);
       const after=await state();actual=after.time;
-      if(after.warning)bossWarning=true;
-      if(after.boss)bossSeen=true;
+      if(after.warning){
+        bossWarning=true;
+        if(!capturedWarning){capturedWarning=true;if(person.id===2)
+          await page.screenshot({path:join(OUT,'first-boss-warning.png')});}
+      }
+      if(after.boss){
+        bossSeen=true;
+        if(!capturedBoss){capturedBoss=true;if(person.id===2)
+          await page.screenshot({path:join(OUT,'first-boss-visible.png')});}
+      }
       if(Math.floor(actual/60)!==Math.floor(before.time/60)||after.warning||after.boss)
         snapshots.push({t:Math.round(actual),hp:after.hp,water:after.water,
           harvested:after.gardenHarvest,owned:after.owned.length,kill:after.killed,
           boss:after.boss,warning:after.warning});
-      if(person.id===1&&actual>=300&&!notes.includes('bossShot')){
-        notes.push('bossShot');await page.screenshot({path:join(OUT,'first-boss-window.png')});
-      }
       // No artificial win/lose script is triggered. Game movement and battle are real scene steps.
     }
   }catch(err){

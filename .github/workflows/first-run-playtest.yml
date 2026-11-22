@@ -24,7 +24,7 @@ jobs:
       - name: Play model sessions
         run: node tests/first-run-playtest.mjs
         env:
-          COUNT: '2'
+          COUNT: '50'
       - uses: actions/upload-artifact@v4
         if: always()
         with:
