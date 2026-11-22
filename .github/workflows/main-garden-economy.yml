@@ -16,6 +16,8 @@ jobs:
         with:
           node-version: 22
       - run: for file in src/*.js tests/garden-economy-*.mjs; do node --check "$file"; done
+      - run: node --check simulation/survival-preflight.mjs && node --check simulation/cli.mjs
+      - run: node simulation/survival-preflight.mjs
       - run: node tests/garden-economy-model.mjs
       - run: node tests/playable-run-model.mjs
       - run: node --check simulation/garden-economy-balance.mjs
