@@ -55,3 +55,22 @@ assert.ok(report.final.gardenHp>=0);
 console.log('PASS survival hostile timeline, baseline speeds, boss override and 330s combat',
   JSON.stringify({sourceHash:source.sourceHash,seed:42,seconds:330,
     bossSpawns:report.final.events.survival_boss_spawn,final:report.final}));
+
+
+const long=makeHeadlessRun({seed:42,seconds:10800,dt:.1,policy:'focused'},null,source)
+  .runTo(10800,[300,900,1800,3600,7200,10800]);
+const reached=Math.floor((long.final.time+1e-7)/300);
+assert.equal(long.final.events.survival_event_start||0,reached,
+  'Long-run events must start once at each reached five-minute mark');
+assert.ok((long.final.events.survival_boss_spawn||0)<=
+  (long.final.events.survival_event_start||0),'Boss count cannot exceed events');
+for(const event of ['survival_event_warning','survival_event_start'])
+  assert.ok((long.final.events[event]||0)>=1,'Missing long-run event '+event);
+console.log('PASS 180-minute hostile headless run (not browser parity)',
+  JSON.stringify({seed:42,policy:'focused',dt:.1,requested:10800,completed:long.final.time,
+    outcome:long.outcome,spawned:long.final.spawned,killed:long.final.killed,
+    eventStarts:long.final.events.survival_event_start||0,
+    bossSpawns:long.final.events.survival_boss_spawn||0,
+    bossKills:long.final.events.survival_boss_kill||0,
+    bossEscapes:long.final.events.survival_boss_escape||0,
+    remainingGardenHp:long.final.gardenHp,sourceHash:long.sourceHash}));
