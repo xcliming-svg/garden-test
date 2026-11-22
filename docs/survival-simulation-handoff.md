@@ -1,5 +1,7 @@
 # 새 세션 인계 — 현재 생존 게임 시뮬레이션 시작 (2026-11-22)
 
+> **이 문서는 구현 이전의 인계 및 적용 범위 판별 기록입니다.** 후속 구현은 별도 기능 브랜치의 [생존 헤드리스 실전 전투 엔진·Phaser 동일 시드 대조·배치 실행 및 검증 한계](./survival-headless-simulation.md)를 참조합니다. 아래의 기존 CLI/경제 근사 적용 한계는 그대로 유효합니다.
+
 이 문서와 [밸런스 변경 프로토콜](./balance-change-protocol.md), [게임 목표](./balance-goals-benchmark.md), [전체 수치](./balance-parameter-inventory.md), [수치 의존관계](./balance-dependencies-guardrails.md)를 함께 읽는다.
 
 ## 1. 도구 사용 가능 여부 — 검증 완료/미완료를 구분
