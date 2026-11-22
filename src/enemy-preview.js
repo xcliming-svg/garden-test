@@ -250,6 +250,7 @@
       const enemyHp=balanced?Math.round(window.GardenWeaponBalance.hp(entry)*endurance*10)/10:entry.level;
       const actor={id:serial++,entry,path,formation:group,age:0,spawnTime:elapsed,blink:F.blinkSchedule(serial+11),expressionState:'auto',expression:'normal',pose:null,hp:enemyHp,hitUntil:0,populationTime:elapsed,motionAge:0,strikes:0,pendingHits:0,persistent:playable};
       actor.duration=M.duration(entry,'auto',path,spawning.rank);actors.push(actor);spawned++;
+      if(survival)onEvent?.('survival_enemy_spawn',{enemy:entry.id,actor:actor.id,level:entry.level,hp:enemyHp,time:elapsed});
       updateActor(actor);return actor;
     }
     function updateActor(a){
@@ -305,7 +306,7 @@
     function damage(id,amount){
       const i=actors.findIndex(a=>a.id===id);if(i<0||!Number.isFinite(amount)||amount<=0)return null;
       const a=actors[i];a.hp=Math.max(0,a.hp-amount);
-      if(a.hp===0){actors.splice(i,1);kills++;onDeath?.(a.pose.x,a.pose.ground,a);return {killed:true,hp:0};}
+      if(a.hp===0){actors.splice(i,1);kills++;if(survival)onEvent?.('survival_enemy_kill',{enemy:a.entry.id,actor:a.id,life:elapsed-a.spawnTime,time:elapsed});onDeath?.(a.pose.x,a.pose.ground,a);return {killed:true,hp:0};}
       a.hitUntil=elapsed+window.GardenFairyAttack.tuning.hitSeconds;updateActor(a);return {killed:false,hp:a.hp};
     }
     function slow(id,amount,duration){
