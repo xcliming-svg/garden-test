@@ -18,7 +18,10 @@
   }).map(([id,v])=>[id,Object.freeze({hz:v[0],bob:v[1],rock:v[2],squash:v[3],lift:v[4],baseSpeed:v[5],reach:v[6],windup:v[7],strike:v[8],impactLift:v[9],attackTilt:v[10],recovery:.55,retreat:.8,...window.GardenSimulationConfig?.enemyMotion?.[id]})])));
   const modes=Object.freeze(['auto','move','attack']),clamp=x=>Math.max(0,Math.min(1,x)),smooth=x=>{x=clamp(x);return x*x*(3-2*x);};
   const lerp=(a,b,t)=>a+(b-a)*t,pi=Math.PI;
-  const speed=(e,rank=0)=>window.GardenFairyPatrol.speedAt(profiles[e.id].baseSpeed,rank);
+  // Individual bosses use a fixed, intentionally slower approach speed. All ordinary
+  // species keep the existing base/max rank contract without modification.
+  const speed=(e,rank=0)=>Number.isFinite(e.bossSpeed)?e.bossSpeed:
+    window.GardenFairyPatrol.speedAt(profiles[e.id].baseSpeed,rank);
   const travelTime=(e,route,rank=0,mode='auto')=>Math.max(.01,Math.abs(route.start-(mode==='move'?route.target:route.stage))/speed(e,rank));
   function duration(e,mode,route,rank=0){const p=profiles[e.id],move=travelTime(e,route,rank,mode),attack=p.windup+p.strike+p.recovery;return mode==='move'?2*move:mode==='attack'?attack+p.retreat:2*move+attack;}
   function gait(e,t,progress,returning,route,moveTime){

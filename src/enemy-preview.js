@@ -207,6 +207,7 @@
     const M=window.GardenEnemyMotion,F=window.GardenFairyPatrol;
     const actors=[];let bag=[],directionBag=[],serial=0,elapsed=0,spawned=0,completed=0,kills=0;
     const survival=!!window.GardenRunRules?.survival;
+    const special=survival&&window.GardenSurvivalEvents?.enabled?window.GardenSurvivalEvents.create(onEvent):null;
     const schedule=playable&&!survival&&target===window.GardenRunRules.population, introduced=new Set();let nextSpawn=0,formationIndex=0;
     const formations=schedule?window.GardenRunRules.formations:[];
     function nextEntry(){
@@ -238,19 +239,27 @@
       a.path=runPath({start:target.x+length,target:target.x,ground:target.y,originX:target.x,originY:target.y,ux:length?dx/length:1,uy:length?dy/length:0,flower:target.index,side:a.path.side});
       a.motionAge=0;a.strikes=0;a.flowerHit=false;
     }
-    function spawn(forced=null,point=null,group=null){
+    function spawn(forced=null,point=null,group=null,bossId=null,bossTier=0){
       if(!forced&&!directionBag.length)directionBag=shuffled(directions,random);
-      const entry=forced||nextEntry(),side=point?.side||directionBag.pop();
-      if(forced)introduced.add(entry.id);
+      const base=forced||nextEntry(),side=point?.side||directionBag.pop();
+      const definition=bossId?window.GardenSurvivalEvents.bosses[bossId]:null;
+      const entry=definition?{...base,span:base.span*definition.size,
+        width:(base.width||base.span)*definition.size,height:(base.height||base.span)*definition.size,
+        scale:(base.scale||1)*definition.size,bossSpeed:definition.speed,bossId}:base;
+      if(forced)introduced.add(base.id);
       const initialPath=route(spec,patrol.boundary,entry,patrol.occupied,point?{side,spawnPoint:point}:{side,random});
       const path=playable?runPath(initialPath):initialPath;
       // Infinite survival: gradual enemy durability after the introductory 10 minutes.
       // Non-survival comparison models retain their original health exactly.
       const endurance=survival?1+Math.min(1.5,Math.max(0,elapsed-600)/7200):1;
-      const enemyHp=balanced?Math.round(window.GardenWeaponBalance.hp(entry)*endurance*10)/10:entry.level;
-      const actor={id:serial++,entry,path,formation:group,age:0,spawnTime:elapsed,blink:F.blinkSchedule(serial+11),expressionState:'auto',expression:'normal',pose:null,hp:enemyHp,hitUntil:0,populationTime:elapsed,motionAge:0,strikes:0,pendingHits:0,persistent:playable};
+      const baseHp=balanced?window.GardenWeaponBalance.hp(entry)*endurance:entry.level;
+      const enemyHp=Math.round(baseHp*(definition?definition.hpFactor*(1+.3*bossTier):1)*10)/10;
+      const boss=definition?{id:bossId,label:definition.label,tier:bossTier,phase:1,
+        hpMax:enemyHp,nextSummonAt:elapsed+11,summonCount:0}:null;
+      const actor={id:serial++,entry,path,formation:group,boss,age:0,spawnTime:elapsed,blink:F.blinkSchedule(serial+11),expressionState:'auto',expression:'normal',pose:null,hp:enemyHp,hitUntil:0,populationTime:elapsed,motionAge:0,strikes:0,pendingHits:0,persistent:playable};
       actor.duration=M.duration(entry,'auto',path,spawning.rank);actors.push(actor);spawned++;
-      if(survival)onEvent?.('survival_enemy_spawn',{enemy:entry.id,actor:actor.id,level:entry.level,hp:enemyHp,time:elapsed});
+      if(survival)onEvent?.('survival_enemy_spawn',{enemy:entry.id,actor:actor.id,level:entry.level,hp:enemyHp,time:elapsed,boss:bossId||null});
+      if(boss)onEvent?.('survival_boss_spawn',{boss:bossId,actor:actor.id,minute:Math.round(elapsed/60),hp:enemyHp,speed:definition.speed,size:definition.size,time:elapsed});
       updateActor(actor);return actor;
     }
     function updateActor(a){
@@ -275,14 +284,51 @@
           const a=actors[i];
           const slowed=elapsed<(a.slowUntil||0)&&(!balanced||!(a.entry.attackType==='charge'&&a.pose.phase==='strike')&&a.pose.lift<=3);
           const step=dt*(slowed?1-(a.slowAmount||0):1);a.age+=step;
-          if(survival&&a.motionAge>45){actors.splice(i,1);completed++;continue;}
+          if(survival&&(a.boss?elapsed-a.spawnTime>180:a.motionAge>45)){
+            if(a.boss)onEvent?.('survival_boss_escape',{boss:a.boss.id,actor:a.id,time:elapsed});
+            actors.splice(i,1);completed++;continue;
+          }
           if(playable){if(!patrol.occupied.includes(a.path.flower))retarget(a);a.motionAge+=step;updateActor(a);}
           else if(a.age>=a.duration){actors.splice(i,1);completed++;}else updateActor(a);
         }
         const wanted=target(elapsed);
         if(survival){
+          // Ordinary spawning retains its existing 2s -> 0.85s cadence and 42 cap.
           if(actors.length<wanted&&elapsed+1e-7>=nextSpawn){
             spawn();nextSpawn=elapsed+window.GardenRunRules.spawnInterval(elapsed);
+          }
+          const event=special?.advance(elapsed);
+          const specialCap=Math.min(54,wanted+8);
+          if(event?.kind==='boss'&&!event.spawned&&actors.length<specialCap){
+            const entry=entries.find(e=>e.id===event.boss.enemy);
+            if(!entry)throw Error('Missing survival boss species '+event.boss.enemy);
+            if(!actors.some(a=>a.boss)){
+              spawn(entry,{side:'right'},'boss:'+event.id,event.id,event.tier);
+              event.spawned=1;
+            }
+          }else if(event?.kind==='raid'&&event.spawned<event.count&&
+            elapsed+1e-7>=event.nextSpawn&&actors.length<specialCap){
+            const id=event.enemies[event.spawned%event.enemies.length],entry=entries.find(e=>e.id===id);
+            if(!entry)throw Error('Missing survival raid species '+id);
+            const point=window.GardenSurvivalEvents.pointFor(event,event.spawned,spec,entry);
+            spawn(entry,point,'raid:'+event.id);
+            event.spawned++;event.nextSpawn=elapsed+2;
+          }
+          for(const actor of [...actors]){
+            if(!actor.boss||elapsed+1e-7<actor.boss.nextSummonAt)continue;
+            actor.boss.nextSummonAt=elapsed+12;
+            const definition=window.GardenSurvivalEvents.bosses[actor.boss.id];
+            const count=Math.min(3,definition.summons.length);
+            let created=0;
+            for(let k=0;k<count&&actors.length<specialCap;k++){
+              const id=definition.summons[(actor.boss.summonCount+k)%definition.summons.length];
+              const entry=entries.find(e=>e.id===id);
+              if(!entry)throw Error('Missing boss minion species '+id);
+              spawn(entry,{side:k%2?'left':'right'},'minion:'+actor.boss.id);
+              created++;
+            }
+            actor.boss.summonCount+=created;
+            if(created)onEvent?.('survival_boss_summon',{boss:actor.boss.id,count:created,time:elapsed});
           }
         }else if(schedule){
           while(formationIndex<formations.length&&formations[formationIndex][0]<=elapsed+1e-7){
@@ -305,8 +351,20 @@
     }
     function damage(id,amount){
       const i=actors.findIndex(a=>a.id===id);if(i<0||!Number.isFinite(amount)||amount<=0)return null;
-      const a=actors[i];a.hp=Math.max(0,a.hp-amount);
-      if(a.hp===0){actors.splice(i,1);kills++;if(survival)onEvent?.('survival_enemy_kill',{enemy:a.entry.id,actor:a.id,life:elapsed-a.spawnTime,time:elapsed});onDeath?.(a.pose.x,a.pose.ground,a);return {killed:true,hp:0};}
+      const a=actors[i];
+      const guard=a.boss?.id==='beetle'&&Math.floor((elapsed-a.spawnTime)/5)%2===0;
+      const effective=guard?amount*.7:amount;
+      a.hp=Math.max(0,a.hp-effective);
+      if(a.boss&&a.boss.phase===1&&a.hp<=a.boss.hpMax*.5){
+        a.boss.phase=2;
+        onEvent?.('survival_boss_phase',{boss:a.boss.id,actor:a.id,phase:2,time:elapsed});
+      }
+      if(a.hp===0){
+        actors.splice(i,1);kills++;
+        if(survival)onEvent?.('survival_enemy_kill',{enemy:a.entry.id,actor:a.id,life:elapsed-a.spawnTime,time:elapsed,boss:a.boss?.id||null});
+        if(a.boss)onEvent?.('survival_boss_kill',{boss:a.boss.id,actor:a.id,time:elapsed});
+        onDeath?.(a.pose.x,a.pose.ground,a);return {killed:true,hp:0};
+      }
       a.hitUntil=elapsed+window.GardenFairyAttack.tuning.hitSeconds;updateActor(a);return {killed:false,hp:a.hp};
     }
     function slow(id,amount,duration){
@@ -334,7 +392,9 @@
       else a.age=Math.max(0,Math.min(a.age,stage)-distance/speed);
       a.pushUntil=elapsed+.6;updateActor(a);return true;
     }
-    return {actors,advance,setExpression,damage,slow,push,get elapsed(){return elapsed;},get spawned(){return spawned;},get completed(){return completed;},get kills(){return kills;}};
+    return {actors,advance,setExpression,damage,slow,push,
+      get warning(){return special?.warning||null;},get activeSpecial(){return special?.active||null;},
+      get elapsed(){return elapsed;},get spawned(){return spawned;},get completed(){return completed;},get kills(){return kills;}};
   }
   function attach(scene,spec,patrol){
     if(!enabled)return null;
@@ -351,7 +411,14 @@
       fixed!==null?()=>fixed:simulation?simulationTarget:targetCount;
     const relics=(A.enabled||weaponCombat)?window.GardenRelicCollection.attach(scene,spec,patrol):null;
     model=createPopulation(spec,patrol,entries,window.GardenSimulationRng?.enemy||Math.random,target,relics?.death,!!weaponCombat,window.GardenSimulationEvent);
-    const sprites=new Map();
+    const sprites=new Map(),bossLabels=new Map();
+    const BOSS_COLOR=0xf6bb5b,PHASE_COLOR=0xf46c60;
+    const bossFx=window.GardenRunRules.survival?scene.add.graphics()
+      .setDepth(window.GardenRunRules.depth.effects+.5):null;
+    const banner=window.GardenRunRules.survival?scene.add.text(spec.width/2,spec.top+7,'',
+      {fontFamily:'sans-serif',fontStyle:'bold',fontSize:'15px',color:'#fff3d7',
+        backgroundColor:'#512b29',padding:{x:10,y:5}}).setOrigin(.5,0)
+      .setDepth(window.GardenRunRules.depth.hud+1).setVisible(false):null;
     const occlusion=window.GardenEnemyOcclusion.attach(scene,spec,patrol);
     // The playable field clips partial entry/exit sprites; HUD is never covered.
     const clip=scene.make.graphics({x:0,y:0,add:false});
@@ -360,7 +427,16 @@
     const attack=A.enabled&&!weaponCombat?A.attach(scene,spec,patrol,model,fieldMask):null;
     function render(){
       const alive=new Set(model.actors.map(a=>a.id));
+      bossFx?.clear();
       for(const [id,sprite] of sprites)if(!alive.has(id)){sprite.image.destroy();sprite.shadow.destroy();sprites.delete(id);}
+      for(const [id,label] of bossLabels)if(!alive.has(id)){label.destroy();bossLabels.delete(id);}
+      const warning=model.warning,active=model.activeSpecial;
+      if(banner){
+        const message=warning?'침입 경고 · '+warning.label+' ('+Math.max(0,Math.ceil(warning.time-model.elapsed))+'초)':
+          active&&model.elapsed-active.started<6?(active.kind==='boss'?'보스 등장 · ':'특수 침입 · ')+active.label:'';
+        banner.setVisible(!!message);
+        if(message)banner.setText(message);
+      }
       for(const actor of model.actors){
         const a=actor.entry,r=a.bounds,p=actor.pose;
         let sprite=sprites.get(actor.id);
@@ -375,6 +451,24 @@
           .setScale(a.scale*sx*(flip?-1:1),a.scale*sy).setAngle(angle).setDepth((playable?window.GardenRunRules.depth.enemy:3)+Math.max(0,Math.min(.99,ground/spec.height)));
         const texture=key(a.id,actor.expression);if(image.texture.key!==texture)image.setTexture(texture);
         shadow.setPosition(x,ground+1).setDisplaySize(a.width*.72*(1-lift*.009),Math.max(2,a.height*.10)).setAlpha(.36/(1+lift*.055));
+        if(actor.boss&&bossFx){
+          const color=actor.boss.phase===2?PHASE_COLOR:BOSS_COLOR;
+          const width=Math.max(48,a.width*1.12),centerY=ground-a.height*sy/2-lift;
+          bossFx.lineStyle(2.3,color,.85)
+            .strokeEllipse(x,centerY,a.width*1.28,a.height*1.30);
+          bossFx.fillStyle(0x271821,.95).fillRoundedRect(x-width/2,centerY-a.height*.72-11,width,8,2);
+          bossFx.fillStyle(color,1).fillRect(x-width/2+2,centerY-a.height*.72-9,
+            Math.max(0,(width-4)*actor.hp/actor.boss.hpMax),4);
+          let label=bossLabels.get(actor.id);
+          if(!label){
+            label=scene.add.text(0,0,'BOSS · '+actor.boss.label,
+              {fontFamily:'sans-serif',fontStyle:'bold',fontSize:'12px',color:'#fff2c5',
+                stroke:'#3c2021',strokeThickness:3}).setOrigin(.5,1)
+              .setDepth(window.GardenRunRules.depth.effects+.7);
+            bossLabels.set(actor.id,label);
+          }
+          label.setPosition(x,centerY-a.height*.72-13);
+        }
       }
     }
     function advance(seconds){
@@ -414,8 +508,11 @@
     function setExpression(id,state){const ok=model.setExpression(id,state);if(ok)render();return ok;}
     const update=(_time,delta)=>advance(Math.min(.1,Math.max(0,delta/1000)));
     scene.events.on('update',update);
-    scene.events.once('shutdown',()=>{scene.events.off('update',update);for(const {image,shadow} of sprites.values()){image.clearMask();shadow.clearMask();}sprites.clear();if(attack){attack.gfx.clearMask();attack.gfx.destroy();}fieldMask.destroy();clip.destroy();delete scene.enemyPreview;});
-    scene.enemyPreview={entries,model,sprites,occlusion,attack,advance,setExpression,get actors(){return model.actors;},get targetCount(){return target(model.elapsed);},get elapsed(){return model.elapsed;}};
+    scene.events.once('shutdown',()=>{scene.events.off('update',update);for(const {image,shadow} of sprites.values()){image.clearMask();shadow.clearMask();}sprites.clear();bossFx?.destroy();banner?.destroy();for(const label of bossLabels.values())label.destroy();bossLabels.clear();if(attack){attack.gfx.clearMask();attack.gfx.destroy();}fieldMask.destroy();clip.destroy();delete scene.enemyPreview;});
+    scene.enemyPreview={entries,model,sprites,bossLabels,bossFx,banner,occlusion,attack,advance,setExpression,
+      get actors(){return model.actors;},get targetCount(){return target(model.elapsed);},
+      get activeSpecial(){return model.activeSpecial;},get warning(){return model.warning;},
+      get elapsed(){return model.elapsed;}};
     advance(0);return scene.enemyPreview;
   }
   window.GardenEnemyPreview=Object.freeze({enabled,roster,preload,attach,key,route,enemyStates,expressionFor,spawning,targetCount,directions,worldPose,runMotion,runAttackIn,createPopulation,simulation,simulationTarget});
