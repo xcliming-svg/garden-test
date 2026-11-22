@@ -19,6 +19,7 @@ const appearance=await withSurvivalBrowser({seed:cfg.seed},async page=>
     const boss=scene.enemyPreview.actors.find(a=>a.boss);
     const sprite=boss&&scene.enemyPreview.sprites.get(boss.id);
     return {bossId:boss?.boss.id,speed:boss?.entry.bossSpeed,scale:boss?.entry.scale,
+      span:boss?.entry.span,baseSpan:window.GardenEnemyPreview.roster.find(e=>e.id===boss?.entry.id)?.span,
       baseline:window.GardenEnemyMotion.profiles[boss?.entry.id]?.baseSpeed,
       label:scene.enemyPreview.bossLabels.get(boss?.id)?.text||'',
       banner:scene.enemyPreview.banner?.visible,
@@ -26,7 +27,7 @@ const appearance=await withSurvivalBrowser({seed:cfg.seed},async page=>
       hp:boss?.hp,maxHp:boss?.boss.hpMax};
   }));
 assert.equal(appearance.bossId,'beetle');
-assert.ok(appearance.scale>1);
+assert.ok(appearance.span>=appearance.baseSpan*2,'Boss must be at least double ordinary display size');
 assert.ok(appearance.speed<appearance.baseline);
 assert.match(appearance.label,/BOSS/);
 assert.equal(appearance.banner,true);
