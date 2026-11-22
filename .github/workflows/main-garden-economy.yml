@@ -1,7 +1,7 @@
 name: Main-derived garden economy
 on:
   push:
-    branches: [feature/main-garden-water-shop-v2, feature/devel-garden-expansion-balance, devel]
+    branches: [feature/main-garden-water-shop-v2, feature/devel-garden-expansion-balance, devel, main]
   pull_request:
     branches: [devel]
   workflow_dispatch:
