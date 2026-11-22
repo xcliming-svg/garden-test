@@ -66,11 +66,20 @@ async function runOne(person){
   const visibleTexts=()=>page.evaluate(()=>{
     const game=window.__firstRunGame;
     const name=game?.scene.isActive('GardenShop')?'GardenShop':game?.scene.isActive('Game')?'Game':'MainMenu';
-    const scene=game?.scene.getScene(name);
-    return (scene?.children?.list||[]).filter(o=>typeof o.text==='string'&&o.visible!==false&&o.alpha>0&&
-      o.x>=-10&&o.x<=970&&o.y>=-10&&o.y<=550)
-      .map(o=>({text:o.text.slice(0,90),x:Math.round(o.x),y:Math.round(o.y),
-        size:Number(o.style?.fontSize)||0,name:o.name||''})).filter(o=>o.text.trim()).slice(0,110);
+    const scene=game?.scene.getScene(name),out=[];
+    // Phaser UI buttons are Containers with Text nested inside, not root-level Text.
+    function walk(nodes,offsetX=0,offsetY=0){
+      for(const o of nodes||[]){
+        if(o.visible===false||o.alpha<=0)continue;
+        const x=offsetX+(o.x||0),y=offsetY+(o.y||0);
+        if(typeof o.text==='string'&&x>=-50&&x<=1010&&y>=-50&&y<=590&&o.text.trim())
+          out.push({text:o.text.slice(0,90),x:Math.round(x),y:Math.round(y),
+            size:Number(o.style?.fontSize)||0,name:o.name||''});
+        if(Array.isArray(o.list))walk(o.list,x,y);
+      }
+    }
+    walk(scene?.children?.list);
+    return out.slice(0,130);
   });
   const state=()=>page.evaluate(()=>{
     const scene=window.__firstRunScene,game=window.__firstRunGame;
@@ -273,7 +282,7 @@ const summary={started,finished,count:len,requested:COUNT,batchWallMs:batchMs,
   purchasing:sessions.filter(s=>s.purchases>0).length,
   upgrading:sessions.filter(s=>s.upgrades>0).length,
   expanding:sessions.filter(s=>s.expands>0).length,
-  bossSeen:num('bossSeen'),bossWarning:num('bossWarning'),inputActions:total('actions.length')};
+  bossSeen:num('bossSeen'),bossWarning:num('bossWarning'),inputActions:sessions.reduce((n,s)=>n+s.actions.length,0)};
 const report={disclaimer:'50 가상 초회 플레이어 정책의 실제 Playwright 클릭·키 입력 및 게임 전투 시뮬레이션. 실제 50명 설문·감정·시선 추적 아님. 게임 시간은 수동 Phaser 업데이트로 가속. wallMs는 실제 자동화 수행시간이며 사람이 앉아 플레이한 시간 아님.',source:'garden-test main, Playwright Chromium, seeded game RNG',parameters:{count:COUNT,dt:0.1,screen:'960x540',gameClock:'accelerated',humanDemographic:'assumed 20s male, 3-4 sessions/week, no real respondents'},summary,sessions};
 writeFileSync(join(OUT,'first-run-report.json'),JSON.stringify(report,null,2));
 const header=['id','profile','wall_ms','game_seconds','result','reason','shop_visits','shop_no_funds','space_attempts','water_successes','purchases','upgrades','expands','boss_seen','issue_notes'];
