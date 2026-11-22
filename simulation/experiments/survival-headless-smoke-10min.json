@@ -1,0 +1,14 @@
+{
+  "schemaVersion": 1,
+  "id": "survival-headless-smoke-10min-v1",
+  "durationSeconds": 600,
+  "dt": 0.05,
+  "seeds": [17, 42],
+  "policies": ["focused", "casual"],
+  "snapshots": [0, 60, 180, 300, 600],
+  "assumptions": [
+    "Synthetic deterministic player policies; not population-weighted observations",
+    "No random manual overrides of weapon power, enemies, purchases, water or HP",
+    "Full survival source models; browser-measured geometry required for parity-grade runs"
+  ]
+}

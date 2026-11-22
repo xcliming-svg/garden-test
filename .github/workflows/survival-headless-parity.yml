@@ -1,0 +1,44 @@
+name: Current survival headless parity
+on:
+  push:
+    branches: [feature/survival-headless-parity-20261122, feature/survival-hostile-events-20261122, devel, main]
+  pull_request:
+    branches: [devel, main]
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  model:
+    runs-on: ubuntu-latest
+    timeout-minutes: 12
+    steps:
+      - uses: actions/checkout@v6
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      - run: for file in simulation/survival-*.mjs tests/survival-*.mjs src/enemy-preview.js src/enemy-motion.js src/survival-events.js; do node --check "$file"; done
+      - run: node tests/survival-events.mjs
+      - run: node simulation/survival-preflight.mjs
+      - run: node tests/garden-economy-model.mjs
+      - run: node simulation/garden-economy-balance.mjs simulation/experiments/garden-economy-10x10.json --check
+      - run: node tests/survival-headless.mjs
+  browser:
+    needs: model
+    runs-on: ubuntu-latest
+    timeout-minutes: 25
+    steps:
+      - uses: actions/checkout@v6
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      - run: npm install --no-save --package-lock=false phaser@3.90.0 playwright@1.51.1
+        env:
+          PLAYWRIGHT_SKIP_BROWSER_DOWNLOAD: '1'
+      - run: node tests/garden-economy-browser.mjs
+      - run: node tests/survival-parity-steps.mjs
+      - run: node tests/survival-parity.mjs
+      - run: node tests/survival-parity-long.mjs
+      - run: node tests/survival-parity-events.mjs
+      - run: |
+          node simulation/survival-cli.mjs --capture --output /tmp/survival-geometry.json
+          node simulation/survival-batch.mjs simulation/experiments/survival-headless-smoke-10min.json --geometry /tmp/survival-geometry.json --check --summary --output /tmp/survival-batch.json
